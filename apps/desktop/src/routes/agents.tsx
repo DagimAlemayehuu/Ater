@@ -222,28 +222,8 @@ function OracleView() {
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0 custom-scrollbar">
         {messages.length === 0 ? (
-          <div className="max-w-2xl mx-auto mt-16 space-y-10">
-            <div className="space-y-4 text-center">
-              <h1 className="text-lg font-black uppercase tracking-[0.25em] text-foreground">Ater Oracle</h1>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">Integrated intelligence for your knowledge base and academic roadmap.</p>
-            </div>
-            <div className="space-y-3">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 block mb-1">Suggested Commands</span>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {quickActions.map((action, i) => {
-                  const Icon = action.icon;
-                  return (
-                    <button key={i} onClick={() => handleSendMessage(action.prompt)} className="flex flex-col items-start text-left p-5 border border-border hover:border-foreground/20 bg-bento-card hover:bg-muted/10 transition-all rounded-[12px] group">
-                      <div className="size-8 bg-bento-bg border border-border group-hover:border-foreground/20 flex items-center justify-center mb-3 rounded-[6px] transition-all">
-                        <Icon size={12} className="text-muted-foreground group-hover:text-foreground" />
-                      </div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">{action.title}</span>
-                      <span className="text-[10px] text-muted-foreground leading-normal">{action.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="h-full flex flex-col items-center justify-center -mt-12">
+            <h1 className="text-[32px] font-black uppercase tracking-tighter text-foreground">Welcome back, {config?.displayName || 'User'}</h1>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto space-y-8">
@@ -282,11 +262,31 @@ function OracleView() {
       </div>
 
       <div className="p-6 border-t border-border/40 bg-muted/10 shrink-0">
-        <div className="max-w-3xl mx-auto flex items-end gap-3">
-          <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Ask the Oracle..." className="flex-1 min-h-[44px] max-h-[120px] bg-bento-bg border border-border p-3 text-sm focus:outline-none focus:border-foreground/30 resize-none placeholder:text-muted-foreground/30 rounded-[12px] transition-all font-mono leading-relaxed text-foreground" rows={1} disabled={isLoading} />
-          <button onClick={() => handleSendMessage()} disabled={isLoading || !input.trim()} className={cn("h-11 px-5 flex items-center justify-center rounded-[12px] border transition-all duration-150", input.trim() && !isLoading ? "bg-foreground text-background border-foreground hover:opacity-90" : "bg-muted/20 border-border text-muted-foreground/30 cursor-not-allowed")}>
-            <Send size={14} />
-          </button>
+        <div className="max-w-3xl mx-auto">
+          <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
+            <textarea 
+              ref={textareaRef} 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
+              placeholder="Ask Ater..." 
+              className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-mono leading-relaxed text-foreground" 
+              rows={1} 
+              disabled={isLoading} 
+            />
+            <button 
+              onClick={() => handleSendMessage()} 
+              disabled={isLoading || !input.trim()} 
+              className={cn(
+                "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150", 
+                input.trim() && !isLoading 
+                  ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40" 
+                  : "text-muted-foreground/30 cursor-not-allowed"
+              )}
+            >
+              <Send size={14} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -902,34 +902,39 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 }
 
  return (
- <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
-    {/* Tab Navigation */}
-    <div className="shrink-0 px-6 py-4 border-b border-border flex items-center justify-center gap-1 bg-muted/10">
+ <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
+    {/* Tab Navigation Bento Box */}
+    <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center justify-center gap-1 shadow-sm z-30">
       <button 
         onClick={() => setSearchParams({ tab: 'ater' })}
         className={cn(
-          "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all",
-          activeTab === 'ater' ? "bg-accent text-foreground shadow-sm" : "text-muted-foreground/40 hover:text-foreground hover:bg-accent/50"
+          "relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
+          activeTab === 'ater' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
         )}
       >
         Ater
+        {activeTab === 'ater' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
       </button>
       <button 
         onClick={() => setSearchParams({ tab: 'pipeline' })}
         className={cn(
-          "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all",
-          activeTab === 'pipeline' ? "bg-accent text-foreground shadow-sm" : "text-muted-foreground/40 hover:text-foreground hover:bg-accent/50"
+          "relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
+          activeTab === 'pipeline' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
         )}
       >
         Pipeline
+        {activeTab === 'pipeline' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
       </button>
     </div>
 
-    {activeTab === 'ater' ? (
-      <OracleView />
-    ) : (
-      <div className="max-w-3xl mx-auto py-12 px-6 w-full h-full flex flex-col overflow-hidden">
+    <div className="flex-1 overflow-hidden">
+      {activeTab === 'ater' ? (
+        <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden flex flex-col">
+          <OracleView />
+        </div>
+      ) : (
+        <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar p-6">
+          <div className="max-w-3xl mx-auto w-full h-full flex flex-col overflow-hidden">
         {/* Pipeline Content (Already exists in AterDashboard return) */}
         {queueStatus?.status !== 'idle' && (
           <div className="flex flex-col h-full overflow-hidden mb-4">
@@ -986,12 +991,8 @@ function AterDashboard({onBack}: {onBack: () => void}) {
         {queueStatus?.status === 'idle' && !selectedInboxFile && (
           <div className="flex flex-col items-center justify-center h-full px-6 overflow-hidden">
            <div className="text-center mb-10 shrink-0">
-           <h2 className="text-4xl font-black uppercase tracking-tighter text-foreground mb-4 mt-8">AI Agents</h2>
-           {config?.autoDeploy ? (
-             <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Drop your file in the folder you set</p>
-           ) : (
-             <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Select a file from your inbox to begin processing.</p>
-           )}
+           <h2 className="text-4xl font-black uppercase tracking-tighter text-foreground mb-4 mt-8">Everything done</h2>
+           <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Drop a PDF in the inbox folder</p>
            </div>
            
            {!config?.autoDeploy && (
@@ -1021,7 +1022,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
              ) : (
              <div className="col-span-full py-20 border border-dashed border-border rounded-[12px] flex flex-col items-center justify-center text-muted-foreground/30 bg-bento-card">
              <Archive size={32} className="mb-4 opacity-50" />
-             <p className="text-[10px] font-black uppercase tracking-widest">Inbox is empty</p>
+             <p className="text-[10px] font-black uppercase tracking-widest">Inbox empty</p>
              </div>
              )}
              </div>
@@ -1149,6 +1150,8 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           )
           })}
           </div>
+          </div>
+          )}
 
           {isCompleted && (
           <div className="py-16 flex flex-col items-center justify-center text-center">
@@ -1166,15 +1169,16 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           </div>
           )}
           </div>
-          )}
-          </div>
-          )}
-          </div>
-          )}
-          </div>
-          </div>
-          )
-          }/* ─── Main Agents Hub ─── */
+        )}
+        </div>
+      </div>
+      )}
+    </div>
+  </div>
+ )
+}
+
+/* ─── Main Agents Hub ─── */
 export default function Agents({onBack}: {onBack?: () => void}) {
  return <AterDashboard onBack={onBack || (() => {})} />
 }

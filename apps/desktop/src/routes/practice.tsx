@@ -795,8 +795,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 }
 
  return (
- <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
+ <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden flex flex-col">
    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
      <div className="flex flex-row items-center justify-between gap-4">
      <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
@@ -888,8 +888,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'history') {
  return (
- <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
+ <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden flex flex-col">
    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
      <div className="flex flex-row items-center justify-between gap-4">
      <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
@@ -934,8 +934,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    { id: 'exam_sim', label: 'Exam Simulation', icon: <Trophy size={11}/>, desc: 'Random sample mimicking real exam conditions' },
   ]
   return (
- <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
+ <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden flex flex-col">
    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
      <div className="flex flex-row items-center justify-between gap-4">
      <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
@@ -957,10 +957,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source Text</div>
        <input value={vaultSourceName} onChange={e => setVaultSourceName(e.target.value)} placeholder="Source name (e.g. Midterm 2024)"
-        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-white/20 text-white placeholder:text-muted-foreground/30 transition-colors"/>
+        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-foreground/20 text-foreground placeholder:text-muted-foreground/30 transition-colors"/>
        <textarea value={vaultSourceText} onChange={e => setVaultSourceText(e.target.value)}
         placeholder="Paste exam questions, worksheet text here..." rows={5}
-        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-white/20 text-white placeholder:text-muted-foreground/30 resize-y transition-colors"/>
+        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-foreground/20 text-foreground placeholder:text-muted-foreground/30 resize-y transition-colors"/>
        <Button onClick={handleVaultUploadText} disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()} className="w-full h-9 font-black uppercase tracking-widest text-[9px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[6px] transition-colors">
         {vaultLoading ? <>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
        </Button>
@@ -980,10 +980,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
           const isSel = vaultSelectedFiles.includes(vf.path)
           return (
            <button key={vf.path} onClick={() => setVaultSelectedFiles(prev => isSel ? prev.filter(p => p !== vf.path) : [...prev, vf.path])}
-            className={cn("w-full text-left p-3 border rounded-[8px] flex items-center justify-between transition-colors", isSel ? "border-white/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-white/20")}>
+            className={cn("w-full text-left p-3 border rounded-[8px] flex items-center justify-between transition-colors", isSel ? "border-foreground/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-foreground/20")}>
             <div className="flex items-center gap-3">
-             <div className={cn("w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors", isSel ? "bg-[#e4e4e7] border-white" : "border-[#242426]")}>{isSel && <Check size={10} className="text-[#151517]"/>}</div>
-             <div><div className="text-[10px] font-black uppercase tracking-tight text-white">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
+             <div className={cn("w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors", isSel ? "bg-[#e4e4e7] border-foreground" : "border-[#242426]")}>{isSel && <Check size={10} className="text-background"/>}</div>
+             <div><div className="text-[10px] font-black uppercase tracking-tight text-foreground">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
             </div>
             <FileText size={12} className="text-muted-foreground/20"/>
            </button>
@@ -998,10 +998,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="grid grid-cols-2 gap-2">
          {MODES.map(m => (
           <button key={m.id} onClick={() => setVaultMode(m.id as any)}
-           className={cn("p-3 border rounded-[8px] text-left transition-colors", vaultMode === m.id ? "border-white/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-white/20")}>
+           className={cn("p-3 border rounded-[8px] text-left transition-colors", vaultMode === m.id ? "border-foreground/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-foreground/20")}>
            <div className="flex items-center gap-2 mb-1">
             <span className="text-muted-foreground/60">{m.icon}</span>
-            <span className="text-[10px] font-black uppercase tracking-tight text-white">{m.label}</span>
+            <span className="text-[10px] font-black uppercase tracking-tight text-foreground">{m.label}</span>
             {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#e4e4e7]"/>}
            </div>
            <p className="text-[8px] text-muted-foreground/40 leading-relaxed">{m.desc}</p>
@@ -1027,11 +1027,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  if (view === 'configuring') {
  const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0)
   return (
-  <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-   <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col p-10">
+  <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+   <div className="flex-1 overflow-hidden flex flex-col p-10">
     <div className="flex items-center justify-between mb-8">
     <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] rounded-[8px] bg-[#1a1a1c] transition-colors">Cancel</button>
-    <div className="text-xl font-black tracking-tight text-white">{totalQuestions} Questions</div>
+    <div className="text-xl font-black tracking-tight text-foreground">{totalQuestions} Questions</div>
     </div>
 
     <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
@@ -1041,7 +1041,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="space-y-2">
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
          <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
-          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-white/20 transition-colors"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 transition-colors"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
           <SelectContent className="border-[#242426] bg-[#1a1a1c]">
              <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
              {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
@@ -1053,7 +1053,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
          <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
           {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
-           <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-[#242426] rounded-[8px] bg-[#232326] peer-data-[state=checked]:bg-[#e4e4e7]/10 peer-data-[state=checked]:border-white/40 peer-data-[state=checked]:text-white items-center justify-center cursor-pointer text-[10px] font-black hover:bg-[#e4e4e7]/5 transition-all">{level.label}</Label></div>
+           <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-[#242426] rounded-[8px] bg-[#232326] peer-data-[state=checked]:bg-[#e4e4e7]/10 peer-data-[state=checked]:border-foreground/40 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-[#e4e4e7]/5 transition-all">{level.label}</Label></div>
           ))}
          </RadioGroup>
         </div>
@@ -1079,8 +1079,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
               return (
                <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-[6px] text-[9px] font-black uppercase hover:bg-[#e4e4e7]/5">
-                <div className={cn("w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors", isSelected ? "bg-[#e4e4e7] border-white text-[#151517]" : "border-[#242426]")}>{isSelected && <Check size={8} />}</div>
-                <span className="truncate text-white/80">{note.title}</span>
+                <div className={cn("w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors", isSelected ? "bg-[#e4e4e7] border-foreground text-background" : "border-[#242426]")}>{isSelected && <Check size={8} />}</div>
+                <span className="truncate text-foreground/80">{note.title}</span>
                </CommandItem>
               ); 
              })}
@@ -1093,7 +1093,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="space-y-2">
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
          <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
-          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-white/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
+          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
           <SelectContent className="border-[#242426] bg-[#1a1a1c]">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
          </Select>
         </div>
@@ -1101,7 +1101,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="space-y-2">
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
          <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
-          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-white/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
+          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
           <SelectContent className="border-[#242426] bg-[#1a1a1c]">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
          </Select>
         </div>
@@ -1115,7 +1115,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="flex items-center gap-4">
          <div className="flex flex-wrap gap-1.5 justify-end">
           {Object.entries(PRESETS).map(([k, p]) => (
-           <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-[#232326] hover:bg-[#e4e4e7]/5 border border-[#242426] text-muted-foreground hover:text-white transition-all rounded-[4px]" title={p.label}>
+           <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-[#232326] hover:bg-[#e4e4e7]/5 border border-[#242426] text-muted-foreground hover:text-foreground transition-all rounded-[4px]" title={p.label}>
             {p.label}
            </button>
           ))}
@@ -1139,16 +1139,16 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         {key: 'scenario', label: 'Scenario Analysis'},
         {key: 'code', label: 'Code / Implementation'}
         ].map(type => (
-         <div key={type.key} className="space-y-2 p-3 bg-[#232326]/50 border border-[#242426] hover:border-white/20 transition-colors rounded-[8px]">
+         <div key={type.key} className="space-y-2 p-3 bg-[#232326]/50 border border-[#242426] hover:border-foreground/20 transition-colors rounded-[8px]">
           <div className="flex justify-between items-center">
            <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
-           <span className="text-[9px] font-black tabular-nums text-white/80">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
+           <span className="text-[9px] font-black tabular-nums text-foreground/80">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
           </div>
           <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals: number[]) => updateDistribution(type.key as any, vals[0])} className="py-1" />
          </div>
         ))}
        </div>
-       <Button onClick={handleStartSession} disabled={isLoading} className="h-11 w-full bg-[#e4e4e7] text-[#151517] border border-white hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors">Start Session</Button>
+       <Button onClick={handleStartSession} disabled={isLoading} className="h-11 w-full bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors">Start Session</Button>
       </div>
     </div>
    </div>
@@ -1159,8 +1159,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'loading') {
  return (
-  <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-    <div className="flex-1 overflow-hidden bg-[#151517] rounded-[12px] border border-[#242426] flex items-center justify-center">
+  <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+    <div className="flex-1 overflow-hidden flex items-center justify-center">
       <BlockingLoader label={genStatus} />
     </div>
   </div>
@@ -1199,7 +1199,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     !unlockedNotes.has(currentCardPath);
 
  return (
- <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden relative">
+ <div className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
     {/* ── Feynman Gate Locked Overlay ── */}
     {isFeynmanLocked && (
       <div className="absolute inset-0 z-40 bg-bento-bg/90 backdrop-blur-md flex items-center justify-center p-6">
@@ -1617,9 +1617,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                 type="checkbox" 
                 checked={keywordChecks[kw] || false} 
                 onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} 
-                className="w-5 h-5 shrink-0 appearance-none border border-[#242426] bg-[#232326] rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-white/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-white/60 after:rotate-45 cursor-pointer transition-all hover:border-white/20"
+                className="w-5 h-5 shrink-0 appearance-none border border-[#242426] bg-[#232326] rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
               />
-              <span className={cn("text-sm font-bold transition-colors", isFound ? "text-white" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3 font-black">(Found in your answer)</span>}</span>
+              <span className={cn("text-sm font-bold transition-colors", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3 font-black">(Found in your answer)</span>}</span>
             </label>
           );
         })}
@@ -1630,7 +1630,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  </div>
  </div>
 
-  <div className="p-6 border-t border-border/10 bg-background">
+  <div className="p-6 border-t border-border/10 bg-transparent">
  <div className="max-w-2xl mx-auto flex items-center justify-between">
  <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exit</Button>
  <div className="flex items-center gap-2">
@@ -1699,14 +1699,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   const bookmarkedQuestions = questions.filter((_,i) => bookmarked.has(i));
 
   return (
-   <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-    <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col p-10">
+   <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+    <div className="flex-1 overflow-hidden flex flex-col p-10">
      <div className="max-w-3xl mx-auto w-full space-y-8 overflow-y-auto pr-2 custom-scrollbar">
       {/* Score hero */}
       <div className="flex items-end justify-between border-b border-[#242426] pb-6">
        <div>
         <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
-        <h1 className="text-9xl font-black tracking-tighter leading-none text-white">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
+        <h1 className="text-9xl font-black tracking-tighter leading-none text-foreground">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
        </div>
        <div className="flex flex-col items-end gap-2 pb-2">
         <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{correct} / {total} correct</div>
@@ -1731,7 +1731,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
             <div key={t} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-2">
              <div className="flex items-center justify-between">
               <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
-              <span className="text-[10px] font-black tabular-nums text-white/80">{pct}%</span>
+              <span className="text-[10px] font-black tabular-nums text-foreground/80">{pct}%</span>
              </div>
              <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
               <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'white' : pct >= 50 ? 'rgba(255,255,255,0.4)' : 'rgba(239, 68, 68, 0.6)'}}/>
@@ -1767,7 +1767,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
       {/* Actions */}
       <div className="flex flex-row gap-3 pt-6 border-t border-[#242426]">
-       <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-[#151517] border border-white hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
+       <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
        <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
        <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Done</Button>
       </div>
@@ -1777,11 +1777,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   );
   }
  return (
- <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
-  <div className="flex-1 overflow-hidden bg-[#151517] rounded-[12px] border border-[#242426] flex items-center justify-center">
+ <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden flex items-center justify-center">
     <div className="text-center space-y-4">
       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Session state invalidated</p>
-      <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] text-white rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
+      <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] text-foreground rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
     </div>
   </div>
  </div>

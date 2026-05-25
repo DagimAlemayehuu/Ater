@@ -113,12 +113,12 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
           </div>
           <div className="flex items-center gap-2">
             {daysLeft !== null && (
-              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft < 0 ? 'border-white bg-[#232326]' : daysLeft <= 3 ? 'border-white/40 bg-[#1a1a1c]' : 'border-[#242426] bg-[#1a1a1c]')}>
-                <div className="text-2xl font-black text-white">{daysLeft < 0 ? Math.abs(daysLeft) : daysLeft}</div>
+              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft < 0 ? 'border-foreground bg-[#232326]' : daysLeft <= 3 ? 'border-foreground/40 bg-[#1a1a1c]' : 'border-[#242426] bg-[#1a1a1c]')}>
+                <div className="text-2xl font-black text-foreground">{daysLeft < 0 ? Math.abs(daysLeft) : daysLeft}</div>
                 <div className="text-[7px] font-black uppercase text-[#a1a1aa]">{daysLeft < 0 ? 'days late' : 'days left'}</div>
               </div>
             )}
-            <button onClick={() => onOpenNote(assignment.path || `database/assignments/${assignment.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-white hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
+            <button onClick={() => onOpenNote(assignment.path || `database/assignments/${assignment.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-foreground hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
             <button onClick={() => { onDelete('assignments', selectedId); setSelectedId(null) }} className="p-2 text-[#a1a1aa] hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
@@ -148,7 +148,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
         {/* Mark complete */}
         <button onClick={e => handleToggleDone(assignment, e)}
           className={cn('px-6 py-3 border rounded-[6px] text-[10px] font-black uppercase tracking-widest w-full transition-colors',
-            isDone ? 'border-[#242426] bg-[#232326]/30 text-[#a1a1aa] hover:bg-[#232326]' : 'border-white bg-white text-[#151517] hover:bg-white/90')}>
+            isDone ? 'border-[#242426] bg-[#232326]/30 text-[#a1a1aa] hover:bg-[#232326]' : 'border-foreground bg-foreground text-background hover:bg-foreground/90')}>
           {isDone ? '↩ Mark Incomplete' : '✓ Mark Complete'}
         </button>
       </div>
@@ -179,7 +179,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
           {(['Pending', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                filter === f ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
+                filter === f ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
               {f}
             </button>
           ))}
@@ -187,13 +187,13 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
         {/* Course filter */}
         <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
-          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
+          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
           {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
         {/* Sort */}
         <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
+          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
           <option value="due">By Due Date</option>
           <option value="priority">By Priority</option>
           <option value="course">By Course</option>
@@ -202,10 +202,10 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
         <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
           <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-white border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -246,11 +246,11 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
                 isDone ? 'opacity-40 border-[#242426] bg-[#1a1a1c]/50' : isLate ? 'border-[#242426] bg-[#1a1a1c] ring-1 ring-destructive/20' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
               <button onClick={e => handleToggleDone(a, e)}
                 className={cn('w-4 h-4 border rounded-[4px] shrink-0 flex items-center justify-center transition-colors',
-                  isDone ? 'bg-white border-white' : 'border-[#242426] hover:border-white')}>
-                {isDone && <Check size={9} strokeWidth={4} className="text-[#151517]" />}
+                  isDone ? 'bg-foreground border-foreground' : 'border-[#242426] hover:border-foreground')}>
+                {isDone && <Check size={9} strokeWidth={4} className="text-background" />}
               </button>
               <div className="flex-1 min-w-0">
-                <span className={cn('text-[11px] font-black uppercase truncate block text-white', isDone && 'line-through text-muted-foreground')}>
+                <span className={cn('text-[11px] font-black uppercase truncate block text-foreground', isDone && 'line-through text-muted-foreground')}>
                   {cleanTitle(a.title)}
                 </span>
                 {course && <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">{course}</span>}

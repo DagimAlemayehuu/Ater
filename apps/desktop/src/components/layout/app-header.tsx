@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useConfig } from '@/lib/ConfigContext'
 import { Timer } from 'lucide-react'
+import { ThemeSwitch } from '@/components/theme-switch'
 
 export function AppHeader() {
   const { goBack, goForward, canGoBack, canGoForward, history, currentIndex } = useNavigation()
@@ -43,7 +44,7 @@ export function AppHeader() {
       const view = searchParams.get('view')
       if (view) subPath = view.charAt(0) + view.slice(1).toLowerCase()
     } else if (entryPath.startsWith('/agents')) {
-      module = 'Agent Orchestrator'
+      module = 'Ater'
     } else if (entryPath.startsWith('/settings')) {
       module = 'System Settings'
       const tab = searchParams.get('tab')
@@ -68,7 +69,7 @@ export function AppHeader() {
   return (
     <header 
       onMouseEnter={() => window.focus()}
-      className="relative h-14 bg-bento-bg flex items-center px-4 justify-between shrink-0 z-40 sticky top-0 select-none border-b border-border/40"
+      className="relative h-14 bg-bento-panel rounded-[12px] border border-border/40 flex items-center px-4 justify-between shrink-0 z-40 select-none shadow-sm"
     >
       {/* Left: Navigation */}
       <div className="flex items-center gap-3 shrink-0 z-10">
@@ -80,7 +81,7 @@ export function AppHeader() {
             className={cn(
               "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoBack 
-                ? "text-[#a1a1aa] hover:text-white hover:bg-bento-item" 
+                ? "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item" 
                 : "text-[#a1a1aa]/20 cursor-not-allowed"
             )}
           >
@@ -94,7 +95,7 @@ export function AppHeader() {
             className={cn(
               "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoForward 
-                ? "text-[#a1a1aa] hover:text-white hover:bg-bento-item" 
+                ? "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item" 
                 : "text-[#a1a1aa]/20 cursor-not-allowed"
             )}
           >
@@ -106,11 +107,11 @@ export function AppHeader() {
         <button 
           onClick={() => setShowOverlay(true)}
           className={cn(
-            "flex items-center gap-1.5 rounded-[8px] border border-[#242426] px-3 py-1 text-xs font-medium text-white bg-bento-item shadow-sm h-8",
-            pomodoroActive && "border-white/20"
+            "flex items-center gap-1.5 rounded-[8px] border border-[#242426] px-3 py-1 text-xs font-medium text-foreground bg-bento-item shadow-sm h-8",
+            pomodoroActive && "border-foreground/20"
           )}
         >
-          <Timer size={14} className={cn("text-[#a1a1aa] shrink-0", pomodoroActive && "text-white")} />
+          <Timer size={14} className={cn("text-[#a1a1aa] shrink-0", pomodoroActive && "text-foreground")} />
           <span>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
         </button>
       </div>
@@ -129,6 +130,9 @@ export function AppHeader() {
       {/* Right: Actions */}
       <div className="flex items-center justify-end gap-2 shrink-0 z-10">
         {rightContent}
+        <div className="size-8 flex items-center justify-center rounded-[8px] hover:bg-bento-item transition-colors">
+          <ThemeSwitch />
+        </div>
       </div>
     </header>
   )

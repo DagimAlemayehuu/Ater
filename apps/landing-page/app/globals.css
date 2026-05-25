@@ -53,21 +53,21 @@
 
 /* DEFAULT: LIGHT THEME */
 :root {
-  --background: #ffffff;
-  --surface: #ffffff;
+  --background: #fdfdfd; /* #fdfdfd - Industrial Light Surface */
+  --surface: #fdfdfd;
   --surface-dim: #f5f5f5;
-  --surface-bright: #ffffff;
-  --surface-container-lowest: #ffffff;
+  --surface-bright: #fdfdfd;
+  --surface-container-lowest: #fdfdfd;
   --surface-container-low: #f9f9f9;
   --surface-container: #f5f5f5;
   --surface-container-high: #e2e2e2;
   --surface-container-highest: #d1d1d1;
   
-  --on-surface: #000000;
+  --on-surface: #111113; /* #111113 - Industrial Text */
   --on-surface-variant: #454747;
   
-  --primary: #000000;
-  --on-primary: #ffffff;
+  --primary: #111113;
+  --on-primary: #fdfdfd;
   --primary-container: #e2e2e2;
   --on-primary-container: #636465;
   --primary-fixed: #e2e2e2;
@@ -87,15 +87,15 @@
   --outline-variant: #e2e2e2;
   --border: #e2e2e2;
   
-  --grid-color: rgba(0, 0, 0, 0.04);
-  --card-shadow: 0 -30px 100px rgba(0, 0, 0, 0.12);
+  --grid-color: rgba(17, 17, 19, 0.04);
+  --card-shadow: 0 -30px 100px rgba(17, 17, 19, 0.12);
 }
 
 /* DARK THEME */
 .dark {
-  --background: #131313;
-  --surface: #131313;
-  --surface-dim: #131313;
+  --background: #111113; /* #111113 - Industrial Surface */
+  --surface: #111113;
+  --surface-dim: #111113;
   --surface-bright: #393939;
   --surface-container-lowest: #0e0e0e;
   --surface-container-low: #1b1b1b;
@@ -103,10 +103,10 @@
   --surface-container-high: #2a2a2a;
   --surface-container-highest: #353535;
   
-  --on-surface: #e2e2e2;
+  --on-surface: #ebebeb; /* #ebebeb - Industrial Text */
   --on-surface-variant: #c4c7c7;
   
-  --primary: #e8e8e8;
+  --primary: #ebebeb;
   --on-primary: #2f3131;
   --primary-container: #cccccc;
   --on-primary-container: #555657;
@@ -127,8 +127,8 @@
   --outline-variant: #444748;
   --border: #444748;
   
-  --grid-color: rgba(255, 255, 255, 0.03);
-  --card-shadow: 0 -40px 120px rgba(255, 255, 255, 0.12);
+  --grid-color: rgba(235, 235, 235, 0.03);
+  --card-shadow: 0 -40px 120px rgba(235, 235, 235, 0.12);
 }
 
 @property --grid-color {

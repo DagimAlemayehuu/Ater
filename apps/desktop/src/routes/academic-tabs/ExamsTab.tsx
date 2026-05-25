@@ -94,12 +94,12 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           </div>
           <div className="flex items-center gap-2">
             {!isPast && daysLeft !== null && (
-              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft <= 3 ? 'border-white bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c]')}>
-                <div className="text-2xl font-black text-white">{daysLeft}</div>
+              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft <= 3 ? 'border-foreground bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c]')}>
+                <div className="text-2xl font-black text-foreground">{daysLeft}</div>
                 <div className="text-[7px] font-black uppercase text-[#a1a1aa]">days</div>
               </div>
             )}
-            <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-white hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
+            <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-foreground hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
             <button onClick={() => { onDelete('exams', selectedId); setSelectedId(null) }} className="p-2 text-[#a1a1aa] hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
@@ -136,16 +136,16 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#a1a1aa]">Preparation</span>
-              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-white">View Hubs →</button>
+              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-foreground">View Hubs →</button>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px]">
                 <span className="text-[8px] font-black uppercase text-[#a1a1aa]">Study Hubs Done</span>
-                <p className="text-xl font-black mt-1 text-white">{studyHubDone} / {examHubs.length}</p>
+                <p className="text-xl font-black mt-1 text-foreground">{studyHubDone} / {examHubs.length}</p>
               </div>
               <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px]">
                 <span className="text-[8px] font-black uppercase text-[#a1a1aa]">Total Study Time</span>
-                <p className="text-xl font-black mt-1 text-white">{totalStudyTime > 0 ? `${Math.round(totalStudyTime / 60)}h` : '--'}</p>
+                <p className="text-xl font-black mt-1 text-foreground">{totalStudyTime > 0 ? `${Math.round(totalStudyTime / 60)}h` : '--'}</p>
               </div>
               <BigPropertyCard label="Confidence" value={getVal(exam, 'Confidence', 'confidence') || ''}
                 schema={{ type: 'select', source: 'database/exams/confidence' }} onUpdate={v => onUpdate('exams', exam.id, { Confidence: v })} />
@@ -158,8 +158,8 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                     <div key={i} onClick={() => onOpenNote(h.path || `database/study planner/${h.id}.md`)}
                       className={cn('flex items-center gap-3 p-2.5 border rounded-[6px] cursor-pointer hover:border-foreground/45 transition-colors',
                         done ? 'border-[#242426] opacity-50 bg-[#1a1a1c]/50' : 'border-[#242426] bg-[#1a1a1c]')}>
-                      <div className={cn('w-3.5 h-3.5 border rounded-[3px] flex items-center justify-center shrink-0', done ? 'bg-white border-white' : 'border-[#242426]')}>
-                        {done && <Check size={8} strokeWidth={4} className="text-[#151517]" />}
+                      <div className={cn('w-3.5 h-3.5 border rounded-[3px] flex items-center justify-center shrink-0', done ? 'bg-foreground border-foreground' : 'border-[#242426]')}>
+                        {done && <Check size={8} strokeWidth={4} className="text-background" />}
                       </div>
                       <span className={cn('text-[10px] font-black uppercase flex-1', done && 'line-through text-[#a1a1aa]')}>
                         {cleanTitle(h.title || h.id)}
@@ -197,11 +197,11 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
             <Target size={12} className="text-[#a1a1aa]" />
             <div>
               <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Next Exam</span>
-              <p className="text-[12px] font-black uppercase text-white">{cleanTitle(next.title)}</p>
+              <p className="text-[12px] font-black uppercase text-foreground">{cleanTitle(next.title)}</p>
             </div>
           </div>
           <div className="text-right">
-            <span className="text-xl font-black text-white">{differenceInDays(new Date(next.date), now)}</span>
+            <span className="text-xl font-black text-foreground">{differenceInDays(new Date(next.date), now)}</span>
             <p className="text-[8px] font-black uppercase text-[#a1a1aa]">days</p>
           </div>
         </div>
@@ -213,22 +213,22 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           {(['Upcoming', 'All', 'Past'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                filter === f ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
+                filter === f ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
               {f}
             </button>
           ))}
         </div>
         <select value={course} onChange={e => setCourse(e.target.value)}
-          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
+          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
           {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
         <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
           <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exams..."
-            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-white border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -263,7 +263,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     {examType && <span className={cn('inline-block px-2 py-0.5 text-[7px] font-black uppercase border rounded-[3px] mb-2', typeColorClass(examType))}>{examType}</span>}
-                    <h3 className="text-[13px] font-black uppercase leading-tight text-white">{cleanTitle(exam.title)}</h3>
+                    <h3 className="text-[13px] font-black uppercase leading-tight text-foreground">{cleanTitle(exam.title)}</h3>
                     {examCourse && <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-1">{examCourse}</p>}
                   </div>
                   {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}

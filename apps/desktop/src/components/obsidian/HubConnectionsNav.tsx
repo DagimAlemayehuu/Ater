@@ -126,7 +126,7 @@ export const HubConnectionsNav = React.memo(({
         <div 
           className={cn(
             "group flex items-center gap-1.5 py-1 px-3 rounded-[4px] cursor-pointer relative mx-1",
-            active ? "bg-[#232326] text-white font-semibold shadow-sm" : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-white"
+            active ? "bg-[#232326] text-foreground font-semibold shadow-sm" : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-foreground"
           )}
         >
           {node.depth > 0 && (
@@ -153,7 +153,7 @@ export const HubConnectionsNav = React.memo(({
               onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
               aria-label={`Toggle check state for ${node.label}`}
               className={cn(
-                "h-3.5 w-3.5 shrink-0 appearance-none border border-[#242426] bg-[#1a1a1c] rounded-[4px] checked:bg-white/10 checked:border-white/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3.5px] after:h-[7.5px] after:border-r-2 after:border-b-2 after:border-white/60 after:rotate-45 cursor-pointer transition-all hover:border-white/20",
+                "h-3.5 w-3.5 shrink-0 appearance-none border border-[#242426] bg-[#1a1a1c] rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3.5px] after:h-[7.5px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20",
                 node.isChecked && "opacity-30"
               )} 
             />

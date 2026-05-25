@@ -40,11 +40,11 @@ const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCanc
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <button onClick={onSave} className="px-4 py-1.5 bg-primary text-primary-foreground border border-primary text-[10px] font-black uppercase tracking-widest hover:opacity-90 rounded-[8px] transition-colors">Save</button>
-              <button onClick={onCancel} className="px-4 py-1.5 bg-[#232326] text-foreground border border-[#242426] text-[10px] font-black uppercase tracking-widest hover:bg-[#232326]/85 rounded-[8px] transition-colors">Abort</button>
+              <button onClick={onSave} className="h-8 px-4 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save</button>
+              <button onClick={onCancel} className="h-8 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Abort</button>
             </>
           ) : (
-            <button onClick={onEdit} className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest border border-[#242426] text-muted-foreground hover:text-foreground hover:border-primary rounded-[8px] bg-[#232326]/50 transition-colors">Edit</button>
+            <button onClick={onEdit} className="h-8 px-4 text-[9px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all">Edit</button>
           )}
         </div>
       </div>
@@ -377,7 +377,7 @@ export default function Settings() {
               </div>
               <button
                 onClick={handleExportLogs}
-                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest border border-[#242426] text-foreground bg-[#232326]/50 hover:bg-[#232326] hover:border-foreground/30 transition-colors rounded-[8px]"
+                className="h-10 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground bg-muted/20 hover:text-foreground hover:bg-muted/30 hover:border-foreground/30 transition-all rounded-[8px]"
               >
                 Export Black Box
               </button>
@@ -408,7 +408,7 @@ export default function Settings() {
                       console.error(e);
                     }
                   }}
-                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary border border-primary hover:bg-primary hover:text-primary-foreground rounded-[8px] transition-colors"
+                  className="h-9 px-5 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground/30 hover:bg-foreground hover:text-background rounded-[8px] transition-all"
                 >
                   Revoke Authorization
                 </button>
@@ -511,8 +511,8 @@ export default function Settings() {
                       className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                     />
                     <div className="flex gap-2 pt-2">
-                      <button onClick={handleAddNewKey} className="flex-1 bg-primary text-primary-foreground py-2 text-[10px] font-black uppercase tracking-widest hover:opacity-90 rounded-[8px] transition-colors">Store</button>
-                      <button onClick={() => setIsAddingKey(false)} className="px-4 bg-[#232326] text-foreground border border-[#242426] py-2 text-[10px] font-black uppercase hover:bg-[#232326]/85 rounded-[8px] transition-colors">Abort</button>
+                      <button onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Store</button>
+                      <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Abort</button>
                     </div>
                   </div>
                 ) : (
@@ -708,11 +708,11 @@ export default function Settings() {
                     onClick={() => handleTestConnection()}
                     disabled={testStatus.loading || (editingKey === 'primary_engine' ? !aiEdit.key : !config?.aiApiKey)}
                     className={cn(
-                      "w-full px-4 py-3 text-[10px] font-black uppercase tracking-widest border transition-colors rounded-[8px]",
-                      testStatus.loading ? "opacity-50 cursor-not-allowed bg-[#232326] text-muted-foreground border-[#242426]" :
-                      testStatus.success === true ? "bg-primary text-primary-foreground border-primary" :
-                      testStatus.success === false ? "bg-background text-foreground border-primary" :
-                      "bg-background hover:bg-[#232326] text-foreground border-[#242426]"
+                      "w-full h-11 text-[10px] font-black uppercase tracking-widest border transition-all rounded-[8px]",
+                      testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground border-border/40" :
+                      testStatus.success === true ? "bg-foreground text-background border-foreground" :
+                      testStatus.success === false ? "bg-background text-foreground border-foreground/50" :
+                      "bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground border-border/40 hover:border-foreground/30"
                     )}
                   >
                     {testStatus.loading ? 'Synchronizing...' : 'Validate Connection'}
@@ -919,19 +919,19 @@ export default function Settings() {
             <CardContent className="flex gap-4">
               <button
                 onClick={handleClearConfig}
-                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest border border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-[8px] transition-colors"
+                className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
               >
                 Reset All Settings
               </button>
               <button
                 onClick={handleResetTrackedData}
-                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest border border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-[8px] transition-colors"
+                className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
               >
                 Delete All Study History
               </button>
               <button
                 onClick={handleFactoryReset}
-                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest bg-primary text-primary-foreground border border-primary hover:opacity-90 rounded-[8px] transition-colors"
+                className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-foreground text-background border border-foreground hover:bg-foreground/90 rounded-[8px] transition-all"
               >
                 Factory Reset System
               </button>
@@ -943,37 +943,40 @@ export default function Settings() {
   }
 
   return (
-    <div className="h-full flex flex-col font-sans bg-[#0e0e0f] text-foreground overflow-hidden">
-      <Tabs.Root defaultValue="general" className="flex-1 flex flex-col overflow-hidden">
-        {/* Sub-Header / Navigation */}
-        <div className="border-b border-[#242426] bg-[#151517]">
-          <div className="max-w-7xl mx-auto px-10 flex items-center justify-between">
-            <Tabs.List className="flex gap-8">
-              <Tabs.Trigger 
-                value="general"
-                className="py-6 text-[11px] font-black uppercase tracking-[0.2em] border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-all outline-none"
-              >
-                General Settings
-              </Tabs.Trigger>
-              <Tabs.Trigger 
-                value="intelligence"
-                className="py-6 text-[11px] font-black uppercase tracking-[0.2em] border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition-all outline-none"
-              >
-                Usage Tracker
-              </Tabs.Trigger>
-            </Tabs.List>
-          </div>
+    <div className="h-full flex flex-col font-sans bg-transparent text-foreground overflow-hidden gap-3">
+      <Tabs.Root defaultValue="general" className="flex-1 flex flex-col overflow-hidden gap-3">
+        {/* Navigation Bento Box */}
+        <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center shadow-sm z-30">
+          <Tabs.List className="flex items-center gap-1 h-full">
+            <Tabs.Trigger 
+              value="general"
+              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
+            >
+              General Settings
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
+            </Tabs.Trigger>
+            <Tabs.Trigger 
+              value="intelligence"
+              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
+            >
+              Usage Tracker
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
+            </Tabs.Trigger>
+          </Tabs.List>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="max-w-7xl mx-auto px-10 py-12">
-            <Tabs.Content value="general" className="outline-none">
-              {renderGeneral()}
-            </Tabs.Content>
-            
-            <Tabs.Content value="intelligence" className="outline-none">
-              <TokenTracker />
-            </Tabs.Content>
+        {/* Content Bento Box */}
+        <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+          <div className="h-full overflow-y-auto custom-scrollbar p-10 pb-24">
+            <div className="max-w-4xl mx-auto">
+              <Tabs.Content value="general" className="outline-none">
+                {renderGeneral()}
+              </Tabs.Content>
+              
+              <Tabs.Content value="intelligence" className="outline-none">
+                <TokenTracker />
+              </Tabs.Content>
+            </div>
           </div>
         </div>
       </Tabs.Root>

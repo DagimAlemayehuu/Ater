@@ -584,7 +584,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
 
       {/* ── Explain More Modal ── */}
       {explainOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-sm">
           <div className="relative w-full max-w-lg mx-4 max-h-[80vh] flex flex-col bg-bento-panel border border-border rounded-[12px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between px-5 py-4 border-b border-border gap-4">
               <div className="min-w-0">

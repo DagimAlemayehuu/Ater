@@ -11,10 +11,11 @@ export function TabButton({ active, onClick, icon, label }: {
 }) {
   return (
     <button onClick={onClick} className={cn(
-      'relative flex-none flex items-center gap-1.5 py-1.5 px-3.5 text-[9px] font-black uppercase tracking-widest whitespace-nowrap rounded-[8px] focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
-      active ? 'text-white bg-[#232326]' : 'text-[#a1a1aa] hover:text-white hover:bg-[#232326]/50'
+      'relative flex-none h-full flex items-center gap-1.5 px-4 text-[9px] font-black uppercase tracking-widest whitespace-nowrap focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
+      active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/10'
     )}>
       {icon}<span>{label}</span>
+      {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
     </button>
   )
 }
@@ -25,12 +26,12 @@ export function SectionHeader({ title, count, onAction, actionLabel }: {
 }) {
   return (
     <div className="flex items-center gap-3">
-      <h2 className="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground shrink-0">{title}</h2>
-      {count !== undefined && <span className="text-[8px] font-black text-muted-foreground">{count}</span>}
-      <div className="h-px flex-1 bg-border" />
+      <h2 className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/50 shrink-0">{title}</h2>
+      {count !== undefined && <span className="text-[9px] font-black text-muted-foreground/30">{count}</span>}
+      <div className="h-px flex-1 bg-border/40" />
       {onAction && (
-        <button onClick={onAction} className="flex items-center gap-1 px-2.5 py-1 text-white border border-[#242426] bg-[#232326]/50 rounded-[8px] text-[8px] font-black uppercase tracking-widest hover:bg-[#232326] transition-colors">
-          <Plus size={8} />{actionLabel || 'Add'}
+        <button onClick={onAction} className="h-7 flex items-center gap-1 px-3 text-muted-foreground border border-border/40 bg-muted/20 rounded-[8px] text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 hover:border-foreground/30 transition-all">
+          <Plus size={10} />{actionLabel || 'Add'}
         </button>
       )}
     </div>
@@ -53,12 +54,12 @@ export function StatCard({ label, value, accent, onClick, sub }: {
 }) {
   return (
     <div onClick={onClick} className={cn(
-      'p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex flex-col gap-1 transition-colors',
-      onClick && 'cursor-pointer hover:bg-[#232326]/30'
+      'p-5 border border-border/40 bg-muted/10 rounded-[8px] flex flex-col gap-1 transition-all',
+      onClick && 'cursor-pointer hover:bg-muted/20 hover:border-foreground/30'
     )}>
-      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]">{label}</span>
-      <span className={cn('text-xl font-black tracking-tighter truncate', accent ? 'text-primary' : 'text-white')}>{value}</span>
-      {sub && <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/50">{sub}</span>}
+      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
+      <span className={cn('text-xl font-black tracking-tighter truncate', accent ? 'text-foreground' : 'text-foreground/90')}>{value}</span>
+      {sub && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{sub}</span>}
     </div>
   )
 }
@@ -132,11 +133,11 @@ export function CreateBanner({ label, onConfirm, onCancel, placeholder }: {
       <Plus size={12} className="text-[#a1a1aa] shrink-0" />
       <input ref={ref} value={name} onChange={e => setName(e.target.value)}
         placeholder={placeholder || `New ${label} name...`}
-        className="flex-1 bg-transparent border-b border-[#242426] focus:border-[#a1a1aa] text-sm font-bold focus:outline-none pb-0.5 text-white placeholder:text-muted-foreground/30"
+        className="flex-1 bg-transparent border-b border-[#242426] focus:border-[#a1a1aa] text-sm font-bold focus:outline-none pb-0.5 text-foreground placeholder:text-muted-foreground/30"
         onKeyDown={e => { if (e.key === 'Enter') onConfirm(name); if (e.key === 'Escape') onCancel() }}
       />
       <button onClick={() => onConfirm(name)} disabled={!name.trim()}
-        className="px-3 py-1.5 text-white border border-[#242426] bg-[#232326]/50 rounded-[8px] text-[9px] font-black uppercase hover:bg-[#232326] disabled:opacity-20 transition-colors">
+        className="h-8 px-4 text-background bg-foreground rounded-[8px] text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 disabled:opacity-20 transition-all">
         Add
       </button>
       <button onClick={onCancel} className="p-1.5 text-muted-foreground"><X size={12} /></button>
@@ -184,9 +185,9 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
       <div className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex flex-col justify-between gap-4 hover:bg-[#232326]/30 transition-colors cursor-pointer" onClick={() => handleSave(!checked)}>
         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]">{displayLabel}</span>
         <div className="flex items-center justify-between">
-          <span className="text-lg font-black uppercase text-white">{checked ? 'Yes' : 'No'}</span>
-          <div className={cn('w-6 h-6 border flex items-center justify-center rounded-[8px]', checked ? 'border-white bg-[#232326]' : 'border-[#242426]')}>
-            {checked && <Check size={12} strokeWidth={3} className="text-white" />}
+          <span className="text-lg font-black uppercase text-foreground">{checked ? 'Yes' : 'No'}</span>
+          <div className={cn('w-6 h-6 border flex items-center justify-center rounded-[8px]', checked ? 'border-foreground bg-[#232326]' : 'border-[#242426]')}>
+            {checked && <Check size={12} strokeWidth={3} className="text-foreground" />}
           </div>
         </div>
       </div>
@@ -204,7 +205,7 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
       {editing ? (
         type === 'select' || type === 'relation' ? (
           <div className="relative">
-            <span className="text-lg font-black tracking-tighter text-white">Select {displayLabel}</span>
+            <span className="text-lg font-black tracking-tighter text-foreground">Select {displayLabel}</span>
             <SelectPropertyEditor value={String(value || '')} source={schema?.source}
               label={displayLabel} onSave={handleSave} onCancel={() => setEditing(false)} />
           </div>
@@ -212,17 +213,17 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
           <input autoFocus type="date" value={editVal}
             onChange={e => setEditVal(e.target.value)}
             onBlur={() => handleSave()}
-            className="bg-transparent text-white px-2 py-1 text-sm font-black outline-none border border-[#242426] rounded-[8px] focus:border-[#a1a1aa] w-full" />
+            className="bg-transparent text-foreground px-2 py-1 text-sm font-black outline-none border border-[#242426] rounded-[8px] focus:border-[#a1a1aa] w-full" />
         ) : (
           <input autoFocus value={editVal}
             onChange={e => setEditVal(e.target.value)}
             onBlur={() => handleSave()}
             onKeyDown={e => e.key === 'Enter' && handleSave()}
-            className="bg-transparent text-white px-2 py-1 text-lg font-black uppercase outline-none border border-[#242426] rounded-[8px] focus:border-[#a1a1aa] w-full" />
+            className="bg-transparent text-foreground px-2 py-1 text-lg font-black uppercase outline-none border border-[#242426] rounded-[8px] focus:border-[#a1a1aa] w-full" />
         )
       ) : (
         <span className={cn('text-lg font-black tracking-tighter truncate leading-none',
-          isEmpty ? 'text-muted-foreground/30 italic text-sm' : 'text-white')}>
+          isEmpty ? 'text-muted-foreground/30 italic text-sm' : 'text-foreground')}>
           {isEmpty ? 'None' : displayVal}
         </span>
       )}
@@ -301,7 +302,7 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
     <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-[#151517] border border-[#242426] rounded-[8px] shadow-2xl z-50 p-2"
       onClick={e => e.stopPropagation()}>
       <input autoFocus placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-        className="w-full bg-[#1a1a1c] text-[10px] font-black uppercase px-3 py-2 mb-2 border border-[#242426] rounded-[8px] focus:outline-none text-white" />
+        className="w-full bg-[#1a1a1c] text-[10px] font-black uppercase px-3 py-2 mb-2 border border-[#242426] rounded-[8px] focus:outline-none text-foreground" />
       <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5">
         {filtered.map(opt => (
           <div key={opt} className={cn('flex items-center justify-between group hover:bg-muted/10', rawValue === opt ? 'bg-primary/5' : '')}>
@@ -406,20 +407,20 @@ export function ProgramSetupForm({ onScaffold }: {
   return (
     <div className="p-10 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex flex-col items-center justify-center text-center space-y-8">
       <div className="space-y-2">
-        <h3 className="text-lg font-black uppercase tracking-tight text-white">Initialize Program</h3>
+        <h3 className="text-lg font-black uppercase tracking-tight text-foreground">Initialize Program</h3>
         <p className="text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]">Works for any academic level</p>
       </div>
       <div className="w-full max-w-sm space-y-4 text-left">
         <div className="flex flex-col gap-1">
           <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Program Name</label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. BSc Computer Science"
-            className="w-full bg-[#151517] border border-[#242426] rounded-[8px] px-4 py-3 text-sm font-bold outline-none focus:border-[#a1a1aa] text-white" />
+            className="w-full bg-[#151517] border border-[#242426] rounded-[8px] px-4 py-3 text-sm font-bold outline-none focus:border-[#a1a1aa] text-foreground" />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Level</label>
             <select value={level} onChange={e => setLevel(e.target.value)}
-              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-[10px] font-black uppercase outline-none text-white">
+              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-[10px] font-black uppercase outline-none text-foreground">
               <option>High School</option>
               <option>Undergraduate</option>
               <option>Master's</option>
@@ -430,16 +431,16 @@ export function ProgramSetupForm({ onScaffold }: {
           <div className="flex flex-col gap-1">
             <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Duration (yrs)</label>
             <input type="number" min={1} max={10} value={years} onChange={e => setYears(parseInt(e.target.value) || 1)}
-              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-white" />
+              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-foreground" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Current Yr</label>
             <input type="number" min={1} max={years} value={currentYear} onChange={e => setCurrentYear(parseInt(e.target.value) || 1)}
-              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-white" />
+              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-foreground" />
           </div>
         </div>
         <button onClick={() => onScaffold(name, years, level, currentYear - 1)} disabled={!name.trim()}
-          className="w-full py-3.5 text-white border border-[#242426] bg-[#232326]/50 rounded-[8px] text-[10px] font-black uppercase tracking-widest hover:bg-[#232326] disabled:opacity-20 transition-colors">
+          className="w-full h-11 text-background bg-foreground rounded-[8px] text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 disabled:opacity-20 transition-all">
           Deploy Roadmap
         </button>
       </div>

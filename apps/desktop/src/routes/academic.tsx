@@ -218,15 +218,26 @@ export default function AcademicDashboard() {
  useEffect(() => {
    setRightContent(
      <div className="flex items-center gap-2 shrink-0">
-       <button aria-label="Sync Vault Databases" onClick={handleSync} className="h-8 px-3 flex items-center justify-center rounded-none bg-background border border-border text-foreground/50 hover:text-foreground hover:bg-foreground/5 hover:border-foreground/40 transition-none   text-[10px] font-black uppercase tracking-widest" title="Sync Vault Databases">
+       <button 
+         aria-label="Sync Vault Databases" 
+         onClick={handleSync} 
+         className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest" 
+         title="Sync Vault Databases"
+       >
          <RefreshCw size={12} />
        </button>
-       <button onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
+       <button 
+         onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
          title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
          aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
-         className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-none text-[8px] font-black uppercase tracking-widest  focus-visible:ring-1 focus-visible:ring-primary outline-none',
-         activeTab === 'CALENDAR' ? 'bg-foreground/10 text-foreground border border-border/50' : 'bg-background border border-border text-foreground/50 hover:text-foreground hover:border-primary shadow-sm')}>
-         <CalendarDays size={11} />
+         className={cn(
+           'h-8 flex items-center gap-1.5 px-3 rounded-[8px] text-[9px] font-black uppercase tracking-widest focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
+           activeTab === 'CALENDAR' 
+             ? 'bg-foreground text-background border border-foreground' 
+             : 'bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30'
+         )}
+       >
+         <CalendarDays size={12} />
          <span className="inline">{activeTab === 'CALENDAR' ? 'Dashboard' : 'Calendar'}</span>
        </button>
      </div>
@@ -338,46 +349,63 @@ export default function AcademicDashboard() {
   ]
 
  return (
-  <div className="h-full flex flex-col bg-[#0e0e0f] p-3 font-sans overflow-hidden">
-   <div className="flex flex-1 overflow-hidden">
-    {/* ── Main Content ── */}
-    <main className="flex-1 flex flex-col overflow-hidden min-w-0 gap-3">
-     {/* Top bar */}
-     <div className={cn("shrink-0 px-6 py-2.5 border border-[#242426] bg-[#151517] rounded-[12px] sticky top-0 z-30", activeTab === 'CALENDAR' && "hidden")}>
-      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
+  <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
+     {/* Top bar Bento Box */}
+     <div className={cn("shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center shadow-sm z-30", activeTab === 'CALENDAR' && "hidden")}>
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide h-full">
         {tabs.map(t => (
          <TabButton key={t.id} active={activeTab === t.id} onClick={() => setSearchParams({ tab: t.id })} icon={t.icon} label={t.label} />
         ))}
       </div>
      </div>
 
-     {/* Tab content */}
-     <div className="flex-1 overflow-hidden bg-[#151517] rounded-[12px] border border-[#242426]">
+     {/* Tab content area */}
+     <div className="flex-1 overflow-hidden">
       {data && (
        <>
         {activeTab === 'CALENDAR' && (
-         <div className="h-full flex flex-col p-4 bg-transparent">
+         <div className="h-full flex flex-col p-4 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm">
           <AcademicCalendar 
            events={calendarEvents} 
            onSelectEvent={(path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`)} 
           />
          </div>
         )}
+        
         {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} />}
-        {activeTab === 'COURSES' && <CoursesTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
-        {activeTab === 'PLANNER' && <StudyPlannerTab {...tabProps} />}
-        {activeTab === 'ASSIGNMENTS' && <AssignmentsTab {...tabProps} />}
-        {activeTab === 'EXAMS' && <ExamsTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
+
+        {activeTab === 'COURSES' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <CoursesTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
+          </div>
+        )}
+
+        {activeTab === 'PLANNER' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <StudyPlannerTab {...tabProps} />
+          </div>
+        )}
+
+        {activeTab === 'ASSIGNMENTS' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <AssignmentsTab {...tabProps} />
+          </div>
+        )}
+
+        {activeTab === 'EXAMS' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <ExamsTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
+          </div>
+        )}
+
         {activeTab === 'PRACTICE' && (
-         <div className="h-full overflow-hidden bg-background">
+         <div className="h-full overflow-hidden bg-bento-panel rounded-[12px] border border-border/40 shadow-sm">
           <PracticeModule noAnimation={true} />
          </div>
         )}
        </>
       )}
      </div>
-    </main>
-   </div>
   </div>
  )
 }

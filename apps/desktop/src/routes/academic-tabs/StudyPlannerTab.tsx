@@ -108,10 +108,10 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
           <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex items-center justify-between">
             <div>
               <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Linked Exam</span>
-              <p className="text-[13px] font-black uppercase mt-0.5 text-white">{cleanTitle(examItem.title)}</p>
+              <p className="text-[13px] font-black uppercase mt-0.5 text-foreground">{cleanTitle(examItem.title)}</p>
             </div>
             <button onClick={() => navigateTo('EXAMS', examItem.id)}
-              className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-white">View →</button>
+              className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-foreground">View →</button>
           </div>
         )}
 
@@ -126,11 +126,11 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
 
         <div className="flex gap-3">
           <button onClick={() => navigateTo('PRACTICE', hub.id)}
-            className="flex-1 px-4 py-3 border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#232326] transition-colors">
+            className="flex-1 px-4 py-3 border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-[#232326] transition-colors">
             Practice This Hub →
           </button>
           <button onClick={() => navigateTo('CALENDAR')}
-            className="flex-1 px-4 py-3 border border-[#242426] bg-[#232326]/30 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-[#a1a1aa] hover:text-white transition-colors">
+            className="flex-1 px-4 py-3 border border-[#242426] bg-[#232326]/30 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-[#a1a1aa] hover:text-foreground transition-colors">
             View in Calendar
           </button>
         </div>
@@ -149,7 +149,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
           {(['Active', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                filter === f ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
+                filter === f ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
               {f}
             </button>
           ))}
@@ -160,7 +160,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
           {(['course', 'status', 'none'] as GroupMode[]).map(g => (
             <button key={g} onClick={() => setGroupMode(g)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                groupMode === g ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
+                groupMode === g ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
               {g === 'none' ? 'Flat' : `By ${g}`}
             </button>
           ))}
@@ -169,10 +169,10 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
         <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
           <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
-            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-white border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -217,13 +217,13 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
                       isDone ? 'border-[#242426] bg-[#1a1a1c]/50 opacity-60' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
                     <div className="flex items-start gap-2">
                       <div className={cn('w-3.5 h-3.5 border rounded-[3px] shrink-0 mt-0.5 flex items-center justify-center',
-                        isDone ? 'bg-white border-white' : 'border-[#242426]')}
+                        isDone ? 'bg-foreground border-foreground' : 'border-[#242426]')}
                         onClick={e => { e.stopPropagation(); onUpdate(DB_ID, hub.id, { status: wrapWL(isDone ? 'Active' : 'Completed') }) }}>
-                        {isDone && <Check size={8} strokeWidth={4} className="text-[#151517]" />}
+                        {isDone && <Check size={8} strokeWidth={4} className="text-background" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className={cn('text-[12px] font-black uppercase truncate leading-tight',
-                          isDone ? 'line-through text-muted-foreground' : 'text-white')}>
+                          isDone ? 'line-through text-muted-foreground' : 'text-foreground')}>
                           {cleanTitle(hub.title || hub.id)}
                         </h3>
                         {course && <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-0.5">{course}</p>}

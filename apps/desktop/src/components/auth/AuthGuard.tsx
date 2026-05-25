@@ -70,7 +70,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           
           <button 
             onClick={resetActivation}
-            className="w-full py-5 bg-destructive text-white border border-destructive text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-90 transition-none"
+            className="w-full py-5 bg-destructive text-foreground border border-destructive text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-90 transition-none"
           >
             Clear Activation
           </button>

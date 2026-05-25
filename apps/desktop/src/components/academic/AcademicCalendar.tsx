@@ -400,13 +400,13 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
   const handleToday = () => setCurrentDate(new Date());
 
   return (
-    <div className="flex h-full w-full bg-background border border-border/40 rounded-[8px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
-      {/* Left Sidebar */}
-      <div className="w-64 border-r border-border/20 flex flex-col bg-muted/30">
-        <div className="p-6 border-b border-border/20">
+    <div className="flex h-full w-full gap-3 overflow-hidden font-sans">
+      {/* Left Sidebar Bento Box */}
+      <div className="w-64 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col overflow-hidden shadow-sm shrink-0">
+        <div className="p-6 border-b border-border/20 bg-muted/5">
           <div className="flex items-center gap-3 text-foreground mb-1">
-            <CalendarIcon size={18} />
-            <h1 className="text-sm font-black uppercase tracking-[0.2em]">Academic</h1>
+            <CalendarIcon size={16} strokeWidth={2.5} />
+            <h1 className="text-xs font-black uppercase tracking-[0.3em]">Calendar</h1>
           </div>
         </div>
         
@@ -419,25 +419,23 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
           />
           
           <div className="px-6 py-4 flex flex-col gap-2 border-t border-border/10 mt-2">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/20">Filters</span>
-              <Filter size={10} className="text-foreground/10" />
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">Filters</span>
+              <Filter size={12} className="text-muted-foreground/40" />
             </div>
             {Object.entries(activeFilters).map(([name, active]) => {
-              const color = "bg-muted-foreground/40";
               return (
                 <button 
                   key={name}
                   onClick={() => toggleFilter(name)}
-                  className="flex items-center justify-between group py-1"
+                  className="flex items-center justify-between group py-1.5"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn("w-2.5 h-2.5 rounded-[8px] transition-none", active ? "bg-foreground" : "bg-transparent border border-foreground/10")} />
-                    <span className={cn("text-[10px] font-black transition-none uppercase tracking-widest", active ? "text-foreground" : "text-foreground/30 group-hover:text-foreground/50")}>
+                    <div className={cn("w-3 h-3 rounded-[4px] transition-all", active ? "bg-foreground" : "bg-muted border border-border/40 group-hover:border-foreground/30")} />
+                    <span className={cn("text-[9px] font-black transition-all uppercase tracking-widest", active ? "text-foreground" : "text-muted-foreground/60 group-hover:text-foreground")}>
                       {name}
                     </span>
                   </div>
-                  {active && <div className={cn("w-1 h-1 rounded-[8px] bg-foreground")} />}
                 </button>
               )
             })}
@@ -445,11 +443,11 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-background">
-        <div className="h-16 border-b border-border/10 flex items-center justify-between px-8 shrink-0 bg-background z-30">
+      {/* Main Content Bento Box */}
+      <div className="flex-1 flex flex-col min-w-0 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+        <div className="h-16 border-b border-border/20 flex items-center justify-between px-8 shrink-0 bg-muted/5 z-30">
           <div className="flex flex-col">
-            <h2 className="text-lg font-black tracking-tight uppercase">
+            <h2 className="text-xl font-black tracking-tight uppercase text-foreground">
               {view === 'day' ? format(currentDate, 'MMMM d, yyyy') :
                view === 'week' ? `${format(startOfWeek(currentDate, {weekStartsOn:1}), 'MMM d')} - ${format(endOfWeek(currentDate, {weekStartsOn:1}), 'MMM d, yyyy')}` :
                view === 'year' ? format(currentDate, 'yyyy') :
@@ -457,15 +455,15 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
             </h2>
           </div>
 
-          <div className="flex items-center gap-8">
-            <div className="flex bg-muted/20 p-1 rounded-[8px] border border-border">
+          <div className="flex items-center gap-6">
+            <div className="flex bg-muted/20 p-1 rounded-[8px] border border-border/40">
               {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
                   className={cn(
-                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-none",
-                    view === v ? "bg-background text-foreground ring-1 ring-border/20" : "text-muted-foreground/40 hover:text-muted-foreground/60"
+                    "px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all",
+                    view === v ? "bg-bento-item text-foreground shadow-sm border border-border/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/30"
                   )}
                 >
                   {v}
@@ -473,13 +471,13 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center p-1 bg-muted/20 rounded-[8px] border border-border">
-                <button onClick={handlePrevious} className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-muted text-muted-foreground hover:text-foreground transition-none "><ChevronLeft size={16}/></button>
-                <div className="w-px h-4 bg-border mx-1" />
-                <button onClick={handleToday} className="px-4 h-8 text-[10px] font-black uppercase tracking-widest rounded-[8px] hover:bg-muted text-muted-foreground hover:text-foreground transition-none">Today</button>
-                <div className="w-px h-4 bg-border mx-1" />
-                <button onClick={handleNext} className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-muted text-muted-foreground hover:text-foreground transition-none "><ChevronRight size={16}/></button>
+            <div className="flex items-center gap-1">
+              <div className="flex items-center p-1 bg-muted/20 rounded-[8px] border border-border/40">
+                <button onClick={handlePrevious} className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all"><ChevronLeft size={16}/></button>
+                <div className="w-px h-4 bg-border/40 mx-1" />
+                <button onClick={handleToday} className="px-4 h-8 text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all">Today</button>
+                <div className="w-px h-4 bg-border/40 mx-1" />
+                <button onClick={handleNext} className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all"><ChevronRight size={16}/></button>
               </div>
             </div>
           </div>

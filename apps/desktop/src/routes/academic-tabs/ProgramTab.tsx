@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Check, Trash2, Plus, ChevronRight, BookOpen, GraduationCap } from 'lucide-react'
+import { CheckCircle, Check, Trash2, Plus, ChevronRight, BookOpen, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle, calcGPA } from './utils'
@@ -176,9 +176,9 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[9px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Course</span>
-                  <span className="text-[9px] font-black text-white">{getVal(c, 'Credits', 'credits')} CR</span>
+                  <span className="text-[9px] font-black text-foreground">{getVal(c, 'Credits', 'credits')} CR</span>
                 </div>
-                <h3 className="text-base font-black uppercase tracking-tight text-white">{cleanTitle(c.title)}</h3>
+                <h3 className="text-base font-black uppercase tracking-tight text-foreground">{cleanTitle(c.title)}</h3>
                 <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/50 mt-1">{getVal(c, 'Status', 'status')}</p>
               </div>
             ))}
@@ -222,18 +222,18 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="flex items-center gap-2">
             {!isCurrentYear && (
               <button onClick={() => handleSetCurrentYear(selectedYearId)}
-                className="px-3 py-1.5 border border-[#242426] bg-[#232326]/50 rounded-[4px] text-[8px] font-black uppercase text-white hover:bg-[#232326] transition-colors">
+                className="px-3 py-1.5 border border-[#242426] bg-[#232326]/50 rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-[#232326] transition-colors">
                 Set Active
               </button>
             )}
             {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
               <button onClick={() => onUpdate('years', selectedYearId, { Status: '[[Completed]]' })}
-                className="px-3 py-1.5 bg-[#232326]/50 border border-[#242426] rounded-[4px] text-[8px] font-black uppercase text-white hover:bg-[#232326] transition-colors">
+                className="px-3 py-1.5 bg-[#232326]/50 border border-[#242426] rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-[#232326] transition-colors">
                 Mark Complete
               </button>
             )}
             <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)}
-              className="p-2 text-[#a1a1aa] hover:text-white hover:bg-[#232326]/50 rounded-[4px] transition-colors">
+              className="p-2 text-[#a1a1aa] hover:text-foreground hover:bg-[#232326]/50 rounded-[4px] transition-colors">
               <BookOpen size={13} />
             </button>
             <button onClick={() => { onDelete('years', selectedYearId); setSelectedYearId(null) }}
@@ -293,12 +293,12 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   className="flex items-center justify-between p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={cn('w-5 h-5 border rounded-[4px] flex items-center justify-center text-[8px] font-black shrink-0',
-                      isDone ? 'border-white bg-white text-[#151517]' :
-                      isActive ? 'border-[#a1a1aa] text-white bg-[#232326]' : 'border-[#242426] text-muted-foreground')}>
+                      isDone ? 'border-foreground bg-foreground text-background' :
+                      isActive ? 'border-[#a1a1aa] text-foreground bg-[#232326]' : 'border-[#242426] text-muted-foreground')}>
                       {isDone ? <Check size={9} strokeWidth={4} /> : idx + 1}
                     </div>
                     <div>
-                      <span className="text-[12px] font-black uppercase text-white">{cleanTitle(s.title)}</span>
+                      <span className="text-[12px] font-black uppercase text-foreground">{cleanTitle(s.title)}</span>
                       <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">{sStatus}</span>
                     </div>
                   </div>
@@ -327,40 +327,43 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   })
 
   return (
-    <div className="h-full flex overflow-hidden">
-      {/* Left Roadmap Panel */}
-      <aside className="w-56 shrink-0 border-r border-[#242426] flex flex-col overflow-hidden bg-transparent">
-        <div className="flex items-center justify-between p-4 border-b border-[#242426]">
-          <span className="text-[8px] font-black uppercase tracking-[0.4em] text-[#a1a1aa] flex items-center gap-1.5">
-            <GraduationCap size={10} /> Roadmap
+    <div className="h-full flex gap-3 overflow-hidden">
+      {/* Left Roadmap Panel Bento Box */}
+      <aside className="w-64 shrink-0 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/5">
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 flex items-center gap-2">
+            <GraduationCap size={12} /> Roadmap
           </span>
           <button onClick={() => setShowSetup(!showSetup)}
-            className="px-2 py-1 bg-[#232326]/50 text-[7px] font-black uppercase tracking-widest hover:bg-[#232326] border border-[#242426] rounded-[4px] text-white transition-colors">
+            className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all">
             {showSetup ? 'Back' : programYears.length > 0 ? 'Edit' : 'Setup'}
           </button>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
           {programYears.length > 0
             ? <AcademicRoadmap items={programYears} semesters={semesters} activeId={selectedYearId} onSelect={setSelectedYearId} />
-            : <p className="text-[9px] font-black uppercase text-foreground/40 text-center mt-8">No program yet</p>
+            : <div className="py-12 flex flex-col items-center justify-center text-center opacity-30">
+                <GraduationCap size={32} className="mb-3" />
+                <p className="text-[10px] font-black uppercase tracking-widest">No program yet</p>
+              </div>
           }
         </div>
       </aside>
 
-      {/* Right: Overview */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-10 pb-24 space-y-10">
+      {/* Right: Overview Bento Box */}
+      <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar p-10 pb-24 space-y-10">
         {programYears.length === 0 || showSetup ? (
           <>
-            {showSetup && <button onClick={() => setShowSetup(false)} className="text-[8px] font-black uppercase tracking-widest text-foreground/50 mb-4">← Back</button>}
+            {showSetup && <button onClick={() => setShowSetup(false)} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-6 transition-colors">← Back to Overview</button>}
             <ProgramSetupForm onScaffold={(n, y, l, c) => { handleScaffold(n, y, l, c); setShowSetup(false) }} />
           </>
         ) : (
           <div className="space-y-10">
             {/* Program Header */}
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-foreground/50 mb-1">Program</p>
-              <h1 className="text-3xl font-black uppercase tracking-tight">{activeProgram || 'Your Program'}</h1>
-              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Academic Program</p>
+              <h1 className="text-4xl font-black uppercase tracking-tight text-foreground">{activeProgram || 'Your Program'}</h1>
+              <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 block mt-1">
                 {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level'))}
               </span>
             </div>
@@ -379,19 +382,19 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
             {/* Active Courses */}
             {activeCourses.length > 0 && (
-              <section className="space-y-4">
+              <section className="space-y-6">
                 <SectionHeader title="Active Courses" count={activeCourses.length} />
                 <div className="grid grid-cols-3 gap-4">
                   {activeCourses.map((c, idx) => (
                     <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                      className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex items-center justify-between cursor-pointer hover:bg-[#232326]/30 transition-colors">
+                      className="p-5 border border-border/40 bg-muted/10 rounded-[12px] flex items-center justify-between cursor-pointer hover:bg-muted/20 hover:border-foreground/30 transition-all shadow-sm">
                       <div>
-                        <span className="text-[13px] font-black uppercase text-white">{cleanTitle(c.title)}</span>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-1">
+                        <span className="text-[14px] font-black uppercase tracking-tight text-foreground">{cleanTitle(c.title)}</span>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1.5">
                           {getVal(c, 'Credits', 'credits')} Credits
                         </p>
                       </div>
-                      <ChevronRight size={14} className="text-[#a1a1aa]" />
+                      <ChevronRight size={14} className="text-muted-foreground/40" />
                     </div>
                   ))}
                 </div>
@@ -399,7 +402,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
             )}
 
             {/* All Years */}
-            <section className="space-y-4">
+            <section className="space-y-6">
               <SectionHeader title="All Years" count={programYears.length} />
               <div className="grid grid-cols-2 gap-4">
                 {programYears.map((y, idx) => {
@@ -409,16 +412,18 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   const ySems = semesters.filter(s => getVal(s, 'Year', 'year').toLowerCase() === String(y.title || '').toLowerCase())
                   return (
                     <div key={idx} onClick={() => setSelectedYearId(y.id)}
-                      className={cn('p-5 border cursor-pointer rounded-[8px] transition-colors',
-                        isActive ? 'border-[#a1a1aa] bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}
+                      className={cn('p-6 border cursor-pointer rounded-[12px] transition-all shadow-sm',
+                        isActive 
+                         ? 'border-foreground/30 bg-muted/20 ring-1 ring-inset ring-foreground/10' 
+                         : 'border-border/40 bg-muted/10 hover:bg-muted/20 hover:border-foreground/20')}
                         style={{ contentVisibility: 'auto' }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Year</span>
-                        {isActive && <div className="w-1.5 h-1.5 bg-white" />}
-                        {isDone && <Check size={11} className="text-white" />}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Year Unit</span>
+                        {isActive && <div className="w-2 h-2 bg-foreground rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]" />}
+                        {isDone && <CheckCircle size={14} className="text-foreground/60" />}
                       </div>
-                      <h3 className="text-xl font-black uppercase tracking-tight text-white">{cleanTitle(y.title)}</h3>
-                      <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/50 mt-1">
+                      <h3 className="text-2xl font-black uppercase tracking-tight text-foreground">{cleanTitle(y.title)}</h3>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mt-2">
                         {status} · {ySems.length} semesters
                       </p>
                     </div>

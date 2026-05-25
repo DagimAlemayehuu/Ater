@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { FileText, Users, Settings, GraduationCap, Zap, LayoutDashboard } from 'lucide-react'
+import { Settings, User, GraduationCap, Book } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/theme-switch'
 
@@ -10,52 +10,54 @@ export function AppSidebar() {
   const linkClass = (isActive: boolean) => cn(
     "relative p-2.5 transition-all rounded-[8px] flex items-center justify-center size-10",
     isActive 
-      ? "text-foreground bg-bento-item shadow-sm" 
+      ? "text-foreground" 
       : "text-muted-foreground hover:text-foreground hover:bg-bento-item"
   );
 
   return (
     <aside 
       onMouseEnter={() => window.focus()}
-      className="w-16 bg-transparent flex flex-col items-center py-6 justify-between shrink-0 z-50 h-full"
+      className="w-16 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col items-center py-6 justify-between shrink-0 z-50 h-full shadow-sm"
     >
-        {/* Navigation Links */}
-        <div className="flex flex-col gap-4 items-center w-full">
-            <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="Ater">
-              {({ isActive }) => (
-                <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
-                  <Zap className="size-5" strokeWidth={1.5} />
-                </>
-              )}
-            </NavLink>
-            <NavLink to="/academic" className={({ isActive }) => linkClass(isActive)} title="Academic Dashboard">
-              {({ isActive }) => (
-                <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
-                  <GraduationCap className="size-5" strokeWidth={1.5} />
-                </>
-              )}
-            </NavLink>
-            <NavLink to="/obsidian" className={({ isActive }) => linkClass(isActive)} title="Knowledge Base">
-              {({ isActive }) => (
-                <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
-                  <FileText className="size-5" strokeWidth={1.5} />
-                </>
-              )}
-            </NavLink>
+        <div className="flex flex-col gap-8 items-center w-full">
+            {/* Empty Branding Space */}
+            <div className="size-10 mb-2" />
+
+            {/* Navigation Links */}
+            <div className="flex flex-col gap-4 items-center w-full">
+                <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="Ater">
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
+                      <User className="size-5" strokeWidth={2.5} />
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/academic" className={({ isActive }) => linkClass(isActive)} title="Academic Dashboard">
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
+                      <GraduationCap className="size-5" strokeWidth={2.5} />
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/obsidian" className={({ isActive }) => linkClass(isActive)} title="Knowledge Base">
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
+                      <Book className="size-5" strokeWidth={2.5} />
+                    </>
+                  )}
+                </NavLink>
+            </div>
         </div>
 
         <div className="flex flex-col gap-4 items-center w-full">
-            <div className="p-2.5 text-muted-foreground hover:text-foreground transition-all rounded-[8px] hover:bg-bento-item cursor-pointer">
-              <ThemeSwitch />
-            </div>
             <NavLink to="/settings" className={({ isActive }) => linkClass(isActive)} title="Settings">
               {({ isActive }) => (
                 <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
-                  <Settings className="size-5" strokeWidth={1.5} />
+                  {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
+                  <Settings className="size-5" strokeWidth={2.5} />
                 </>
               )}
             </NavLink>

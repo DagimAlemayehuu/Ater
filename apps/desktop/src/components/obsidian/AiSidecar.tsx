@@ -182,28 +182,28 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                             </span>
                         )}
                     </div>
-                    <div className="flex bg-muted/30 p-1 rounded-none border border-border/50">
+                    <div className="flex bg-muted/20 p-1 rounded-[10px] border border-border/40">
                         <button
-                            onClick={() => setMode('explain')}
-                            className={cn(
-                                "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none transition-none",
-                                mode === 'explain' 
-                                    ? "bg-background text-foreground shadow-sm border border-border/50" 
-                                    : "text-muted-foreground/50 hover:text-foreground"
-                            )}
+                          onClick={() => setMode('explain')}
+                          className={cn(
+                            "flex-1 h-8 px-3 text-[9px] font-black uppercase tracking-widest rounded-[8px] transition-all",
+                            mode === 'explain' 
+                                ? "bg-foreground text-background shadow-sm" 
+                                : "text-muted-foreground hover:text-foreground"
+                          )}
                         >
-                            Explain
+                          Explain
                         </button>
                         <button
-                            onClick={() => { setMode('quiz'); if (quizQuestions.length === 0) handleInitialQuiz(); }}
-                            className={cn(
-                                "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-none transition-none",
-                                mode === 'quiz' 
-                                    ? "bg-background text-foreground shadow-sm border border-border/50" 
-                                    : "text-muted-foreground/50 hover:text-foreground"
-                            )}
+                          onClick={() => { setMode('quiz'); if (quizQuestions.length === 0) handleInitialQuiz(); }}
+                          className={cn(
+                            "flex-1 h-8 px-3 text-[9px] font-black uppercase tracking-widest rounded-[8px] transition-all",
+                            mode === 'quiz' 
+                                ? "bg-foreground text-background shadow-sm" 
+                                : "text-muted-foreground hover:text-foreground"
+                          )}
                         >
-                            Quiz
+                          Quiz
                         </button>
                     </div>
                 </div>
@@ -344,7 +344,7 @@ export const AiSidecar: React.FC<AiSidecarProps> = ({
                                         </p>
                                         <button 
                                             onClick={nextQuestion}
-                                            className="w-full h-10 bg-foreground/10 hover:bg-foreground/20 text-foreground border border-border/50 rounded-none text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-none  shadow-sm"
+                                            className="w-full h-10 bg-foreground text-background rounded-[8px] text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-foreground/90 shadow-sm"
                                         >
                                             {currentQuestionIndex < quizQuestions.length - 1 ? 'Next' : 'Finish'}
                                             <ArrowRight size={12} />

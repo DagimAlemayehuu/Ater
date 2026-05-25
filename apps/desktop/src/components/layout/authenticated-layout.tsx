@@ -13,9 +13,9 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const { isFullscreen } = useLayout()
   
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-background overflow-hidden font-sans p-3 gap-3">
       {!isFullscreen && <AppSidebar />}
-      <main id="content" className="flex-1 flex flex-col overflow-hidden relative">
+      <main id="content" className="flex-1 flex flex-col overflow-hidden relative gap-3">
         <AppHeader />
         <div className="flex-1 overflow-hidden relative">
           {children ?? <Outlet />}

@@ -40,35 +40,35 @@
   }
 
   .dark {
-    --background: 240 5% 5%; /* #0e0e0f */
-    --foreground: 0 0% 90%; /* Light gray instead of Pure White */
+    --background: 240 5% 7%; /* #111113 - Industrial Surface */
+    --foreground: 0 0% 92%; /* #ebebeb - Industrial Text */
     --card: 240 4% 9%; /* #151517 */
-    --card-foreground: 0 0% 90%;
-    --popover: 240 5% 5%;
-    --popover-foreground: 0 0% 90%;
-    --primary: 0 0% 80%; /* Light gray */
+    --card-foreground: 0 0% 92%;
+    --popover: 240 5% 7%;
+    --popover-foreground: 0 0% 92%;
+    --primary: 0 0% 85%; /* #d9d9d9 */
     --primary-foreground: 0 0% 10%;
     --secondary: 240 4% 9%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary-foreground: 0 0% 92%;
     --muted: 240 4% 12%; /* #1d1d20 */
     --muted-foreground: 240 5% 65%;
     --accent: 240 4% 15%; /* #242426 */
     --accent-foreground: 0 0% 95%;
     --destructive: 0 0% 35%;
-    --destructive-foreground: 0 0% 90%;
+    --destructive-foreground: 0 0% 92%;
     --border: 240 4% 15%; /* #242426 */
     --input: 240 4% 15%;
-    --ring: 0 0% 80%;
-    --sidebar-background: 240 5% 5%; /* #0e0e0f */
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 0% 80%;
+    --ring: 0 0% 85%;
+    --sidebar-background: 240 5% 7%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 0 0% 85%;
     --sidebar-primary-foreground: 0 0% 10%;
     --sidebar-accent: 240 4% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 240 4% 15%;
-    --sidebar-ring: 0 0% 80%;
+    --sidebar-ring: 0 0% 85%;
 
-    --bento-bg: 240 5% 5%;    /* #0e0e0f */
+    --bento-bg: 240 5% 7%;    /* #111113 */
     --bento-panel: 240 4% 9%; /* #151517 */
     --bento-card: 240 4% 11%; /* #1a1a1c */
     --bento-item: 240 4% 15%; /* #232326 */

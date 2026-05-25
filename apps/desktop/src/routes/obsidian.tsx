@@ -1534,8 +1534,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  className={cn(
     "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
     isSelected 
-     ? "bg-[#232326] text-white font-semibold shadow-sm" 
-     : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-white",
+     ? "bg-[#232326] text-foreground font-semibold shadow-sm" 
+     : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-foreground",
     dragOverPath === node.path && "bg-[#232326]/50 ring-1 ring-[#242426] ring-inset",
     draggedPath === node.path && "opacity-40 grayscale"
    )}
@@ -1661,19 +1661,18 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 }
 
   return (
-  <div className="flex flex-row h-full w-full select-none bg-[#0e0e0f] p-3 gap-3 overflow-hidden font-sans">
+  <div className="flex flex-row h-full w-full select-none bg-transparent gap-3 overflow-hidden font-sans relative">
     <style dangerouslySetInnerHTML={{__html: `
       .editor-content p {
         margin-bottom: 1.5rem;
         line-height: 1.7;
-        color: #a1a1aa; 
+        color: #a1a1aa;
       }
       .editor-content strong {
-        color: #ffffff;
+        color: #ebebeb;
         font-weight: 600;
       }
-      .underlined-term {
-        border-bottom: 1px solid #a1a1aa;
+      .underlined-term {        border-bottom: 1px solid #a1a1aa;
         padding-bottom: 2px;
       }
       .custom-scrollbar::-webkit-scrollbar {
@@ -1698,14 +1697,14 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     {!isFullscreen && (
       <aside 
         onMouseEnter={() => window.focus()}
-        className="relative border border-[#242426] flex flex-col bg-[#151517] shrink-0 group/sidebar z-40 rounded-[12px] overflow-hidden panel-transition"
+        className="relative border border-border/40 flex flex-col bg-bento-panel shadow-sm shrink-0 group/sidebar z-40 overflow-hidden rounded-[12px] panel-transition"
         style={{width: `${sidebarWidth}px`}}
       >
         {/* Resize Handle */}
         <div 
           className={cn(
-            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-white/20",
-            isResizing ? "bg-white w-1" : "bg-transparent"
+            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-foreground/20",
+            isResizing ? "bg-foreground w-1" : "bg-transparent"
           )}
           onMouseDown={startResizing}
         />
@@ -1713,14 +1712,14 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         {/* Global Toolbar */}
         <div className="p-4 flex items-center justify-between gap-2">
           <button 
-            className="p-1.5 text-[#a1a1aa] hover:text-white rounded-[4px] hover:bg-[#232326] shrink-0" 
+            className="p-1.5 text-[#a1a1aa] hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
             title="New Note"
             onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
           >
             <Plus className="w-[18px] h-[18px]" />
           </button>
           <button 
-            className="p-1.5 text-[#a1a1aa] hover:text-white rounded-[4px] hover:bg-[#232326] shrink-0" 
+            className="p-1.5 text-[#a1a1aa] hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
             title="New Folder"
             onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
           >
@@ -1740,7 +1739,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 });
               }}
               className={cn(
-                "w-full bg-[#0e0e0f] border border-[#242426] rounded-[4px] py-1.5 pl-9 pr-3 text-xs text-white placeholder:text-[#a1a1aa]/50 focus:outline-none focus:border-[#a1a1aa] transition-colors",
+                "w-full bg-background border border-border/40 rounded-[4px] py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-[#a1a1aa]/50 focus:outline-none focus:border-border transition-colors",
                 isPending && "opacity-75"
               )}
             />
@@ -1749,8 +1748,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             className={cn(
               "p-1.5 rounded-[4px] shrink-0 transition-colors", 
               showGraphView 
-                ? "text-white bg-[#232326]" 
-                : "text-[#a1a1aa] hover:text-white hover:bg-[#232326]"
+                ? "text-foreground bg-bento-item" 
+                : "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item"
             )} 
             onClick={() => setShowGraphView(!showGraphView)} 
             title="Toggle Graph View"
@@ -1760,14 +1759,14 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         </div>
 
         {/* Sidebar Tabs */}
-        <div className="flex border-b border-[#242426] px-4 text-xs font-semibold tracking-[0.02em] mb-2 shrink-0">
+        <div className="flex border-b border-border/40 px-4 text-xs font-semibold tracking-[0.02em] mb-2 shrink-0">
           <button 
             onClick={() => setSidebarTab('explorer')}
             className={cn(
               "px-3 py-3 border-b-2 outline-none transition-none",
               sidebarTab === 'explorer' 
-                ? "text-white border-white font-semibold" 
-                : "text-[#a1a1aa] border-transparent hover:text-white"
+                ? "text-foreground border-foreground font-semibold" 
+                : "text-[#a1a1aa] border-transparent hover:text-foreground"
             )}
           >
             EXPLORER
@@ -1777,8 +1776,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             className={cn(
               "px-3 py-3 border-b-2 outline-none transition-none",
               sidebarTab === 'hubs' 
-                ? "text-white border-white font-semibold" 
-                : "text-[#a1a1aa] border-transparent hover:text-white"
+                ? "text-foreground border-foreground font-semibold" 
+                : "text-[#a1a1aa] border-transparent hover:text-foreground"
             )}
           >
             HUBS
@@ -1788,8 +1787,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             className={cn(
               "px-3 py-3 border-b-2 outline-none transition-none",
               sidebarTab === 'pdfs' 
-                ? "text-white border-white font-semibold" 
-                : "text-[#a1a1aa] border-transparent hover:text-white"
+                ? "text-foreground border-foreground font-semibold" 
+                : "text-[#a1a1aa] border-transparent hover:text-foreground"
             )}
           >
             PDFS
@@ -1825,15 +1824,15 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   <div key={course} className="flex flex-col gap-1">
                     <div className="px-2 py-1 flex items-center gap-2">
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/40">{course}</span>
-                      <div className="h-px flex-1 bg-[#242426]" />
+                      <div className="h-px flex-1 bg-border/40" />
                     </div>
                     {courseHubs.map(hub => (
                       <button 
                         key={hub.id}
                         onClick={() => selectFile(hub.path)}
                         className={cn(
-                          "flex flex-col p-2 rounded-[4px] hover:bg-[#232326] text-left transition-none mx-1",
-                          selectedPath === hub.path ? "bg-[#232326] text-white font-medium" : "text-[#a1a1aa] hover:text-white"
+                          "flex flex-col p-2 rounded-[4px] hover:bg-bento-item text-left transition-none mx-1",
+                          selectedPath === hub.path ? "bg-bento-item text-foreground font-medium" : "text-[#a1a1aa] hover:text-foreground"
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -1856,7 +1855,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 <div key={folder} className="flex flex-col gap-1">
                   <div className="px-2 py-1 flex items-center gap-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/40">{folder}</span>
-                    <div className="h-px flex-1 bg-[#242426]" />
+                    <div className="h-px flex-1 bg-border/40" />
                   </div>
                   {folderPdfs.map(file => (
                     <button 
@@ -1865,13 +1864,13 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                       className={cn(
                         "flex items-center gap-2 p-2 rounded-[4px] text-left transition-all mx-1",
                         selectedPath === file.path 
-                          ? "bg-[#232326] text-white font-medium" 
-                          : "text-[#a1a1aa] hover:text-white hover:bg-[#232326]"
+                          ? "bg-bento-item text-foreground font-medium" 
+                          : "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item"
                       )}
                     >
                       <FileText size={14} className={cn(
                         "shrink-0",
-                        selectedPath === file.path ? "text-white" : "text-[#a1a1aa]/50"
+                        selectedPath === file.path ? "text-foreground" : "text-[#a1a1aa]/50"
                       )} />
                       <span className="text-[12px] truncate">{file.name.replace('.pdf', '')}</span>
                     </button>
@@ -1889,7 +1888,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
     {/* Main Editor Panel */}
     {showGraphView ? (
-      <div className="flex-1 bg-[#151517] rounded-[12px] border border-[#242426] overflow-hidden panel-transition">
+      <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden panel-transition">
         <ObsidianGraphView onNodeClick={(path) => {
           selectFile(path);
           setShowGraphView(false);
@@ -1898,7 +1897,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     ) : (
       <main 
         data-purpose="main-editor"
-        className="flex-1 bg-[#151517] rounded-[12px] border border-[#242426] overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
+        className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
       >
         {!selectedPath ? (
           <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-[#a1a1aa]/20 gap-4 mt-32">
@@ -1914,26 +1913,26 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             {/* Note details */}
             {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? (
               <div className="editor-content px-2 mx-auto max-w-[95%] w-full">
-                <h1 className="text-[32px] font-bold mb-4 text-white tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
+                <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
                   {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
                 </h1>
 
                 {/* Metadata Pills */}
                 <div className="flex items-center gap-2 mb-10 border-b border-[#242426] pb-6">
                   {noteMetadata?.semester && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-white hover:bg-[#232326] transition-colors text-xs font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-foreground hover:bg-[#232326] transition-colors text-xs font-medium">
                       <Calendar className="w-3.5 h-3.5" />
                       {cleanTitle(noteMetadata.semester)}
                     </button>
                   )}
                   {noteMetadata?.course && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-white hover:bg-[#232326] transition-colors text-xs font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-foreground hover:bg-[#232326] transition-colors text-xs font-medium">
                       <GraduationCap className="w-3.5 h-3.5" />
                       {cleanTitle(noteMetadata.course)}
                     </button>
                   )}
                   {noteMetadata?.unit && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-white hover:bg-[#232326] transition-colors text-xs font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-foreground hover:bg-[#232326] transition-colors text-xs font-medium">
                       <Hash className="w-3.5 h-3.5" />
                       Unit {cleanTitle(noteMetadata.unit)}
                     </button>
@@ -1961,7 +1960,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                           handleSaveNote()
                         }
                       }}
-                      className="w-full h-[600px] p-8 bg-[#151517] border border-[#242426] rounded-[4px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20 text-white"
+                      className="w-full h-[600px] p-8 bg-[#151517] border border-[#242426] rounded-[4px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20 text-foreground"
                       placeholder="Start writing..."
                       autoFocus
                     />
@@ -2035,14 +2034,14 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       <aside 
         data-purpose="map-checklist"
         onMouseEnter={() => window.focus()}
-        className="relative border border-[#242426] flex flex-col bg-[#151517] shrink-0 group/connections overflow-hidden rounded-[12px] panel-transition"
+        className="relative border border-border/40 flex flex-col bg-bento-panel shadow-sm shrink-0 group/connections overflow-hidden rounded-[12px] panel-transition"
         style={{width: `${connectionsWidth}px`}}
       >
         {/* Resize Handle */}
         <div 
           className={cn(
-            "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-white/20",
-            isResizingConnections ? "bg-white w-1" : "bg-transparent"
+            "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-foreground/20",
+            isResizingConnections ? "bg-foreground w-1" : "bg-transparent"
           )}
           onMouseDown={startResizingConnections}
         />
@@ -2070,7 +2069,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
                   className="w-full flex items-center justify-between bg-[#232326] border border-[#242426] rounded-[12px] p-3 text-sm cursor-pointer hover:bg-opacity-80 transition-colors text-left"
                 >
-                  <span className="truncate text-white font-medium">{clean?.replace(/_/g, ' ')}</span>
+                  <span className="truncate text-foreground font-medium">{clean?.replace(/_/g, ' ')}</span>
                   <ChevronDown size={16} className="text-[#a1a1aa] shrink-0" />
                 </button>
               </div>

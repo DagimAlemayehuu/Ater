@@ -56,23 +56,23 @@ export function ObsidianGraphView({
     const colors = useMemo(() => {
         if (isDark) {
             return {
-                background: '#0a0a0a', // Matches --background: 0 0% 4%
+                background: '#111113', // Matches --background: 240 5% 7%
                 link: '#262626',       // Matches --border or muted
-                nodeRoot: '#ffffff',
+                nodeRoot: '#ebebeb',
                 nodeUnresolved: '#404040',
                 nodeDefault: '#a3a3a3',
-                text: '#f5f5f5',
-                textOpacity: 'rgba(245, 245, 245, '
+                text: '#ebebeb',
+                textOpacity: 'rgba(235, 235, 235, '
             }
         }
         return {
-            background: '#ffffff',
+            background: '#fafafa', // Matches --background: 0 0% 98%
             link: '#e5e5e5',
-            nodeRoot: '#111827',
+            nodeRoot: '#262626',   // Matches --foreground: 0 0% 15%
             nodeUnresolved: '#d1d5db',
             nodeDefault: '#4b5563',
-            text: '#111827',
-            textOpacity: 'rgba(17, 24, 39, '
+            text: '#262626',
+            textOpacity: 'rgba(38, 38, 38, '
         }
     }, [isDark])
 
@@ -248,7 +248,7 @@ export function ObsidianGraphView({
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                             className="absolute top-6 right-6 p-2.5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm hover:bg-[#232326] text-muted-foreground z-20 transition-colors"
                         >
-                            <Settings size={18} className={cn(isSettingsOpen && "text-white")} />
+                            <Settings size={18} className={cn(isSettingsOpen && "text-foreground")} />
                         </button>
                     </>
                 )}
@@ -258,12 +258,12 @@ export function ObsidianGraphView({
             {isSettingsOpen && (
                 <div className="absolute top-4 right-4 w-72 bg-[#1a1a1c] border border-[#242426] rounded-[12px] shadow-2xl flex flex-col z-30 transition-none max-h-[calc(100%-2rem)]">
                     <div className="px-5 py-4 border-b border-[#242426] flex items-center justify-between">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-white/80">Graph settings</span>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-foreground/80">Graph settings</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-white hover:bg-[#232326] transition-colors" title="Reset settings">
+                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-[#232326] transition-colors" title="Reset settings">
                                 <RefreshCw size={14} />
                             </button>
-                            <button onClick={() => setIsSettingsOpen(false)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-white hover:bg-[#232326] transition-colors">
+                            <button onClick={() => setIsSettingsOpen(false)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-[#232326] transition-colors">
                                 <X size={14} />
                             </button>
                         </div>
@@ -276,7 +276,7 @@ export function ObsidianGraphView({
                         <SettingsSection title="Display" isOpen={false} />
                         
                         <div className="flex flex-col mt-2">
-                            <button className="flex items-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white transition-colors w-full text-left group">
+                            <button className="flex items-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-foreground transition-colors w-full text-left group">
                                 <ChevronDown size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground" />
                                 Forces
                             </button>
@@ -328,8 +328,8 @@ function ForceSlider({ label, value, min, max, step, onChange }: { label: string
     return (
         <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{label}</label>
-                <span className="text-[10px] font-black tabular-nums text-white/60">{value}</span>
+                <label className="text-[10px] font-black uppercase tracking-widest text-foreground/40">{label}</label>
+                <span className="text-[10px] font-black tabular-nums text-foreground/60">{value}</span>
             </div>
             <div className="relative flex items-center group">
                 <input 
@@ -337,7 +337,7 @@ function ForceSlider({ label, value, min, max, step, onChange }: { label: string
                     min={min} max={max} step={step}
                     value={value} 
                     onChange={e => onChange(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-[#232326] rounded-full appearance-none cursor-pointer accent-white hover:accent-white transition-all"
+                    className="w-full h-1 bg-[#232326] rounded-full appearance-none cursor-pointer accent-foreground hover:accent-foreground transition-all"
                 />
             </div>
         </div>
