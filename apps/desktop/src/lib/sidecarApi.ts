@@ -693,6 +693,88 @@ export const sidecarApi = {
         }
     },
 
+    oracleChat: async (payload: {
+        history: { role: string; content: string }[],
+        rag_context?: string,
+        user_context?: {
+            active_hub?: string;
+            recent_notes?: string[];
+        }
+    }) => {
+        try {
+            return await invoke<any>('ater_oracle_chat', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] oracleChat failed:', err)
+            throw err
+        }
+    },
+
+    oracleChatStream: async (payload: {
+        history: { role: string; content: string }[],
+        rag_context?: string,
+        user_context?: {
+            active_hub?: string;
+            recent_notes?: string[];
+        }
+    }): Promise<Response> => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} });
+            
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            
+            const aiApiKey = await store.get<string>('aiApiKey');
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            
+            const aiModel = await store.get<string>('aiModel');
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+            
+            const aiMaxTpm = await store.get<number>('aiMaxTpm');
+            if (aiMaxTpm) headers['X-AI-Max-TPM'] = String(aiMaxTpm);
+            
+            const aiMaxRpm = await store.get<number>('aiMaxRpm');
+            if (aiMaxRpm) headers['X-AI-Max-RPM'] = String(aiMaxRpm);
+            
+            const aiMaxTpd = await store.get<number>('aiMaxTpd');
+            if (aiMaxTpd) headers['X-AI-Max-TPD'] = String(aiMaxTpd);
+            
+            const aiMaxRpd = await store.get<number>('aiMaxRpd');
+            if (aiMaxRpd) headers['X-AI-Max-RPD'] = String(aiMaxRpd);
+            
+            const aiMaxConcurrency = await store.get<number>('aiMaxConcurrency');
+            if (aiMaxConcurrency) headers['X-AI-Max-Concurrency'] = String(aiMaxConcurrency);
+            
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const inboxPath = await store.get<string>('inboxPath');
+            if (inboxPath) headers['X-Inbox-Path'] = inboxPath;
+            
+            const academicFolderPath = await store.get<string>('academicFolderPath');
+            if (academicFolderPath) headers['X-Academic-Path'] = academicFolderPath;
+            
+            const autoDeploy = await store.get<boolean>('autoDeploy');
+            if (autoDeploy !== undefined && autoDeploy !== null) headers['X-Auto-Deploy'] = String(autoDeploy);
+
+            return await fetch(`http://127.0.0.1:${port}/api/ater/assistant/chat`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            console.error('[Tauri Native RAG] oracleChatStream failed:', err);
+            throw err;
+        }
+    },
+
     aterInteractiveQuiz: async (payload: { selection: string }) => {
         try {
             return await invoke<any>('ater_interactive_quiz', { payload })

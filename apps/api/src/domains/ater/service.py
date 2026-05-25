@@ -449,12 +449,35 @@ class AterService:
         ) if secrets.ai_key else None
 
         # 6. Update Agents
-        if self.architect_agent: self.architect_agent.llm = self.llm
-        if self.critic_agent: self.critic_agent.llm = self.llm_creative
-        if self.hub_agent: self.hub_agent.llm = self.llm
-        if self.epistemic_classifier_agent: self.epistemic_classifier_agent.llm = self.llm
-        if self.verifier_agent: self.verifier_agent.llm = self.llm
-        if self.meta_scanner_agent: self.meta_scanner_agent.llm = self.llm
+        if not self.architect_agent and self.llm:
+            self.architect_agent = ArchitectAgent(llm=self.llm)
+        elif self.architect_agent:
+            self.architect_agent.llm = self.llm
+
+        if not self.critic_agent and self.llm_creative:
+            self.critic_agent = CriticAgent(llm=self.llm_creative)
+        elif self.critic_agent:
+            self.critic_agent.llm = self.llm_creative
+
+        if not self.hub_agent and self.llm:
+            self.hub_agent = HubAgent(llm=self.llm)
+        elif self.hub_agent:
+            self.hub_agent.llm = self.llm
+
+        if not self.epistemic_classifier_agent and self.llm:
+            self.epistemic_classifier_agent = EpistemicClassifierAgent(llm=self.llm)
+        elif self.epistemic_classifier_agent:
+            self.epistemic_classifier_agent.llm = self.llm
+
+        if not self.verifier_agent and self.llm:
+            self.verifier_agent = VerifierAgent(llm=self.llm)
+        elif self.verifier_agent:
+            self.verifier_agent.llm = self.llm
+
+        if not self.meta_scanner_agent and self.llm:
+            self.meta_scanner_agent = MetaScannerAgent(llm=self.llm)
+        elif self.meta_scanner_agent:
+            self.meta_scanner_agent.llm = self.llm
         
         # Update structured output if needed
         if self.architect_agent and self.llm:

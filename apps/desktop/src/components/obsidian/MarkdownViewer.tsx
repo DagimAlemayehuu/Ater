@@ -8,8 +8,9 @@ import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from '
 import { sidecarApi } from '@/lib/sidecarApi'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
-import { Check, RefreshCw, Copy } from 'lucide-react'
+import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder } from 'lucide-react'
 import MiniPracticeUI from '../MiniPracticeUI'
+import { useNavigate } from 'react-router-dom'
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light'
 // @ts-ignore
 import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus.js'
@@ -193,6 +194,393 @@ const CodeBlock = memo(({ language, value }: { language: string | null, value: s
     );
 });
 
+const getMetaVal = (item: any, key: string, fallback: string = '') => {
+    if (!item) return fallback;
+    const lowerKey = key.toLowerCase();
+    const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+    
+    if (item[key] !== undefined && item[key] !== null) return String(item[key]);
+    if (item[lowerKey] !== undefined && item[lowerKey] !== null) return String(item[lowerKey]);
+    if (item[capitalizedKey] !== undefined && item[capitalizedKey] !== null) return String(item[capitalizedKey]);
+    
+    if (item.metadata && typeof item.metadata === 'object') {
+        if (item.metadata[key] !== undefined && item.metadata[key] !== null) return String(item.metadata[key]);
+        if (item.metadata[lowerKey] !== undefined && item.metadata[lowerKey] !== null) return String(item.metadata[lowerKey]);
+        if (item.metadata[capitalizedKey] !== undefined && item.metadata[capitalizedKey] !== null) return String(item.metadata[capitalizedKey]);
+    }
+    
+    return fallback;
+};
+
+const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: string }) => {
+    const navigate = useNavigate();
+    const { ui_type, data, caption } = payload;
+
+    const handleNavigate = (route: string) => {
+        navigate(route);
+    };
+
+    if (!data) return null;
+
+    const getItems = (): any[] => {
+        if (Array.isArray(data)) return data;
+        if (typeof data !== 'object') return [data];
+        
+        // Handle common object wrappers
+        if (data.records && Array.isArray(data.records)) return data.records;
+        if (data.results && Array.isArray(data.results)) return data.results;
+        if (data.hubs && Array.isArray(data.hubs)) return data.hubs;
+        if (data.cards && Array.isArray(data.cards)) return data.cards;
+        if (data.sessions && Array.isArray(data.sessions)) return data.sessions;
+        
+        return [data];
+    };
+
+    const renderContent = () => {
+        const list = getItems();
+
+        switch (ui_type) {
+            case 'course_cards': {
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                        {list.map((item: any, i: number) => {
+                            const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Course';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const professor = getMetaVal(item, 'Professor') || getMetaVal(item, 'professor') || 'Unknown Professor';
+                            const semester = getMetaVal(item, 'Semester') || getMetaVal(item, 'semester') || 'Active';
+                            const credits = getMetaVal(item, 'Credits') || getMetaVal(item, 'credits') || '';
+                            const grade = getMetaVal(item, 'Grade') || getMetaVal(item, 'grade') || '';
+                            const id = item.id || item._title || cleanTitle.replace(/\s+/g, '_');
+                            return (
+                                <div 
+                                    key={i} 
+                                    onClick={() => handleNavigate(`/academic?tab=COURSES&id=${id}`)}
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-32 select-none"
+                                >
+                                    <div>
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors">
+                                                {cleanTitle}
+                                            </h4>
+                                            {grade && (
+                                                <span className="px-1.5 py-0.5 text-[8px] font-black uppercase border border-border bg-muted/20">
+                                                    {grade}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+                                            {professor}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between items-center border-t border-border/10 pt-2 text-[9px] font-black uppercase tracking-widest text-foreground/50">
+                                        <span>{semester}</span>
+                                        <span>{credits ? `${credits} CR` : ''}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+            case 'note_cards': {
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                        {list.map((item: any, i: number) => {
+                            const path = item.path || '';
+                            const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Note';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const folder = path.split('/').slice(0, -1).join('/') || 'Root';
+                            return (
+                                <div 
+                                    key={i} 
+                                    onClick={() => handleNavigate(`/obsidian?path=${encodeURIComponent(path)}`)}
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-28 select-none"
+                                >
+                                    <div className="flex items-start gap-2.5">
+                                        <FileText size={14} className="text-muted-foreground/60 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-[12px] font-black uppercase text-foreground leading-snug truncate max-w-[180px]">
+                                                {cleanTitle}
+                                            </h4>
+                                            <span className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest mt-1 block">
+                                                {folder}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {item.tags && item.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {item.tags.slice(0, 3).map((tag: string, tid: number) => (
+                                                <span key={tid} className="px-1 py-0.5 text-[8px] text-muted-foreground border border-border/50 bg-muted/10 font-mono">
+                                                    #{tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+            case 'hub_cards': {
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                        {list.map((item: any, i: number) => {
+                            const path = item.path || '';
+                            const title = item.title || item._title || item.name || getMetaVal(item, 'title') || 'Untitled Hub';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const course = item.course || getMetaVal(item, 'Course') || getMetaVal(item, 'course') || '';
+                            const isCompleted = item.status === 'Completed' || item.status === 'done';
+                            const noteCount = item.note_count || item.noteCount || '';
+                            return (
+                                <div 
+                                    key={i} 
+                                    onClick={() => handleNavigate(`/obsidian?path=${encodeURIComponent(path)}`)}
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-30 select-none"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-start gap-2.5">
+                                            <Layers size={14} className="text-muted-foreground/60 mt-0.5" />
+                                            <div>
+                                                <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors max-w-[160px] truncate">
+                                                    {cleanTitle}
+                                                </h4>
+                                                {course && (
+                                                    <span className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest mt-1 block">
+                                                        {course.replace(/_/g, ' ')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span className={cn(
+                                            "px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
+                                            isCompleted ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                        )}>
+                                            {item.status || 'Active'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-3 pt-2 border-t border-border/5">
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock size={10} />
+                                            <span>Study Hub</span>
+                                        </div>
+                                        {noteCount !== '' && (
+                                            <span>{noteCount} Notes</span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+            case 'exam_list': {
+                return (
+                    <div className="border border-border divide-y divide-border bg-background my-4">
+                        {list.map((item: any, i: number) => {
+                            const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Exam';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const course = getMetaVal(item, 'Course') || getMetaVal(item, 'course') || '';
+                            const date = getMetaVal(item, 'Date') || getMetaVal(item, 'date') || 'No Date';
+                            const type = getMetaVal(item, 'Type') || getMetaVal(item, 'type') || '';
+                            const id = item.id || item._title || cleanTitle.replace(/\s+/g, '_');
+                            return (
+                                <div 
+                                    key={i}
+                                    onClick={() => handleNavigate(item.path ? `/obsidian?path=${encodeURIComponent(item.path)}` : `/academic?tab=EXAMS&id=${id}`)}
+                                    className="p-3.5 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Award size={14} className="text-muted-foreground/50" />
+                                        <div>
+                                            <h5 className="text-[11px] font-black uppercase text-foreground leading-normal">
+                                                {cleanTitle}
+                                            </h5>
+                                            <p className="text-[9px] text-muted-foreground uppercase font-semibold">
+                                                {course ? course.replace(/_/g, ' ') : 'General'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end">
+                                        <span className="text-[10px] font-bold text-foreground/80 font-mono">
+                                            {date}
+                                        </span>
+                                        {type && (
+                                            <span className="text-[8px] text-muted-foreground uppercase tracking-wider font-semibold">
+                                                {type}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+            case 'assignment_list': {
+                return (
+                    <div className="border border-border divide-y divide-border bg-background my-4">
+                        {list.map((item: any, i: number) => {
+                            const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Assignment';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const course = getMetaVal(item, 'Course') || getMetaVal(item, 'course') || '';
+                            const dueDate = getMetaVal(item, 'Due Date') || getMetaVal(item, 'due_date') || '';
+                            const isCompleted = item.done === true || item.done === 'true' || getMetaVal(item, 'Done') === 'true' || getMetaVal(item, 'done') === 'true';
+                            return (
+                                <div 
+                                    key={i}
+                                    onClick={() => handleNavigate(item.path ? `/obsidian?path=${encodeURIComponent(item.path)}` : '/academic?tab=ASSIGNMENTS')}
+                                    className="p-3.5 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <CheckSquare size={14} className={cn(
+                                            isCompleted ? "text-emerald-500" : "text-muted-foreground/40"
+                                        )} />
+                                        <div>
+                                            <h5 className={cn(
+                                                "text-[11px] font-black uppercase leading-normal",
+                                                isCompleted ? "text-muted-foreground line-through decoration-muted-foreground/40" : "text-foreground"
+                                            )}>
+                                                {cleanTitle}
+                                            </h5>
+                                            <p className="text-[9px] text-muted-foreground uppercase font-semibold">
+                                                {course ? course.replace(/_/g, ' ') : 'General'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {dueDate && (
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground font-mono">
+                                            Due {dueDate}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+            case 'srs_deck': {
+                return (
+                    <div className="space-y-3 my-4">
+                        <div className="border border-border divide-y divide-border bg-background">
+                            {list.map((item: any, i: number) => {
+                                const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Card';
+                                const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                                const path = item.path || '';
+                                return (
+                                    <div 
+                                        key={i}
+                                        onClick={() => handleNavigate(`/obsidian?path=${encodeURIComponent(path)}`)}
+                                        className="p-3.5 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Sparkles size={14} className="text-amber-500/80 animate-pulse" />
+                                            <div>
+                                                <h5 className="text-[11px] font-black uppercase text-foreground leading-normal">
+                                                    {cleanTitle}
+                                                </h5>
+                                                {item.difficulty && (
+                                                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest block mt-0.5">
+                                                        Diff: {parseFloat(item.difficulty).toFixed(1)} | Stab: {parseFloat(item.stability || 0).toFixed(1)}d
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="text-[9px] font-black uppercase text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 tracking-wider">
+                                            Due Now
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <button 
+                            onClick={() => handleNavigate('/practice')}
+                            className="w-full h-9 border border-foreground/80 bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all select-none rounded-none"
+                        >
+                            Start Spaced Repetition Practice
+                        </button>
+                    </div>
+                );
+            }
+            case 'stats': {
+                // Ensure we get the raw stats object (handling wrappers)
+                const statsObj = (data.records || data.results || data);
+                const list = Object.entries(statsObj).map(([key, val]) => ({
+                    label: key.replace(/_/g, ' ').toUpperCase(),
+                    value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+                })).filter(x => x.label !== 'HUB NAMES' && x.label !== 'TYPE');
+
+                return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 my-4">
+                        {list.map((item, i) => (
+                            <div key={i} className="p-4 border border-border bg-background select-none flex flex-col justify-between h-20 rounded-none">
+                                <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
+                                    {item.label}
+                                </span>
+                                <span className="text-xl font-black text-foreground tracking-tight">
+                                    {item.value}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
+            case 'semester_list': {
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                        {list.map((item: any, i: number) => {
+                            const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Semester';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const path = item.path || '';
+                            const status = getMetaVal(item, 'Status') || getMetaVal(item, 'status') || 'Active';
+                            const isActive = status.toLowerCase() === 'active';
+                            return (
+                                <div 
+                                    key={i} 
+                                    onClick={() => handleNavigate(path ? `/obsidian?path=${encodeURIComponent(path)}` : '/academic?tab=PROGRAM')}
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-24 select-none"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <h4 className="text-[12px] font-black uppercase text-foreground leading-snug">
+                                            {cleanTitle}
+                                        </h4>
+                                        <span className={cn(
+                                            "px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
+                                            isActive ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground"
+                                        )}>
+                                            {status}
+                                        </span>
+                                    </div>
+                                    <span className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest mt-2 block">
+                                        Semester
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
+            default:
+                return (
+                    <pre className="text-xs p-3 bg-muted/10 border border-border overflow-x-auto font-mono">
+                        {JSON.stringify(data, null, 2)}
+                    </pre>
+                );
+        }
+    };
+
+    return (
+        <div className="my-6">
+            {renderContent()}
+            {caption && (
+                <p className="text-[10px] text-muted-foreground text-center mt-2 font-mono uppercase tracking-wider">
+                    — {caption} —
+                </p>
+            )}
+        </div>
+    );
+});
+
 const CodeRenderer = memo((props: any) => {
     const { className, children, node, notePath } = props;
     const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
@@ -207,12 +595,28 @@ const CodeRenderer = memo((props: any) => {
         }
     }, [children, language]);
 
+    const aterUIData = useMemo(() => {
+        if (language !== 'ater-ui') return null;
+        try {
+            return JSON.parse(String(children).trim());
+        } catch (e) {
+            return null;
+        }
+    }, [children, language]);
+
     if (language === 'interactive-quiz') {
         if (!quizData) {
             return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-none my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
         }
 
         return <MiniPracticeUI question={quizData} notePath={notePath} />;
+    }
+
+    if (language === 'ater-ui') {
+        if (!aterUIData) {
+            return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-none my-4 text-xs font-mono">Failed to load Ater UI JSON.</div>;
+        }
+        return <AterUIBlock payload={aterUIData} notePath={notePath} />;
     }
 
     if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />

@@ -801,6 +801,36 @@ async def ater_list_hub_notes(
     service = AterService(secrets)
     return {"notes": service.list_atomic_notes(hub_id)}
 
+
+@app.post("/api/ater/assistant/chat")
+async def assistant_chat(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Ater Chat endpoint.
+    Streams tool-calling agent execution status and content chunks via SSE.
+    """
+    messages_history = payload.get("history", [])
+    rag_context = payload.get("rag_context")
+    user_context = payload.get("user_context")
+    
+    if not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="AI API key is required. Please set it in Settings.")
+        
+    from fastapi.responses import StreamingResponse
+    from src.domains.ater.assistant import run_assistant_chat
+    
+    async def sse_generator():
+        try:
+            async for event in run_assistant_chat(secrets, messages_history, rag_context, user_context):
+                yield event
+        except Exception as e:
+            logger.error(f"[Assistant Stream] Generator error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
 @app.post("/api/practice/explain")
 async def explain_question(
     payload: Dict[str, Any],

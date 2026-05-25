@@ -15,6 +15,16 @@ export function AppSidebar() {
         {/* Navigation Links */}
         <div className="flex flex-col gap-6 flex-1 items-center">
             <NavLink 
+                to="/oracle"
+                className={({ isActive }) => cn(
+                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
+                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
+                )} 
+                title="Ater"
+            >
+              <Zap className="size-5" strokeWidth={2} />
+            </NavLink>
+            <NavLink 
                 to="/academic"
                 className={({ isActive }) => cn(
                   "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",

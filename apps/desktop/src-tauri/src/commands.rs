@@ -1639,6 +1639,17 @@ pub async fn ater_chat(
 }
 
 #[tauri::command]
+pub async fn ater_oracle_chat(
+    payload: serde_json::Value,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    proxy_post(sidecar_config.port, "/api/ater/assistant/chat", &payload, headers).await
+}
+
+#[tauri::command]
 pub async fn ater_interactive_quiz(
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,

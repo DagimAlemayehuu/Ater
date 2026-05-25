@@ -369,6 +369,7 @@ pub fn run() {
             commands::generate_quick_questions,
             commands::ater_explain,
             commands::ater_chat,
+            commands::ater_oracle_chat,
             commands::ater_interactive_quiz,
             commands::log_note_visit,
             commands::log_study_session,

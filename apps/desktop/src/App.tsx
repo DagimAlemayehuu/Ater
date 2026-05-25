@@ -12,6 +12,7 @@ const Practice = lazy(() => import('@/routes/practice'))
 const AcademicDashboard = lazy(() => import('@/routes/academic'))
 const Agents = lazy(() => import('@/routes/agents'))
 const Onboarding = lazy(() => import('@/routes/onboarding'))
+const Oracle = lazy(() => import('@/routes/oracle'))
 
 import { HeaderProvider } from '@/context/header-context'
 import { Toaster } from '@/components/ui/sonner'
@@ -56,7 +57,8 @@ function AppRoutes() {
                     ) : (
                       <AuthenticatedLayout>
                         <Routes>
-                          <Route path="/" element={<Navigate to="/academic" replace />} />
+                          <Route path="/" element={<Navigate to="/oracle" replace />} />
+                          <Route path="/oracle" element={<Oracle />} />
                           <Route path="/obsidian" element={<ObsidianVault />} />
                           <Route path="/academic" element={<AcademicDashboard />} />
                           <Route path="/agents" element={<Agents />} />

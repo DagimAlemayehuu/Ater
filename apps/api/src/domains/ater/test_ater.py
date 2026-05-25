@@ -535,3 +535,36 @@ def test_dynamic_skeleton_fallback_compilation():
     res_other = build_skeleton_note(note_schema_other, source_snippet, {"persona": "Economics"}, all_titles=[])
     assert "```java" not in res_other, "Non-CS-SOFTWARE modes must not use Java code block fallbacks"
     assert "| Source Detail | Meaning |" in res_other, "Non-CS-SOFTWARE modes must use Markdown table fallbacks"
+
+def test_read_pdf_integration(tmp_path):
+    """Verify that read_note helper correctly routes to PDF loading when given a PDF path."""
+    from src.domains.ater.assistant import AterAssistant
+    from types import SimpleNamespace
+    
+    # Create a mock file
+    pdf_file = tmp_path / "textbook.pdf"
+    pdf_file.write_text("Dummy Content", encoding="utf-8")
+    
+    secrets = SimpleNamespace(
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path),
+        academic_path="Notes",
+        ai_provider="groq",
+        ai_model="llama3-8b-8192",
+        ai_key="mock",
+        ai_base_url=None,
+        ai_max_tpm=None,
+        ai_max_rpm=None,
+        ai_max_tpd=None,
+        ai_max_rpd=None,
+        ai_max_concurrency=None
+    )
+    
+    assistant = AterAssistant(secrets)
+    
+    # Try reading the mock file
+    res = assistant.read_note("textbook.pdf")
+    # It routes to pypdf.PdfReader and should raise an exception since it's not a valid PDF header,
+    # which proves it reached the PDF parsing branch!
+    assert "Error reading" in res or "pypdf" in res.lower()
+
