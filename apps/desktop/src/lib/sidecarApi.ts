@@ -697,6 +697,8 @@ export const sidecarApi = {
         history: { role: string; content: string }[],
         rag_context?: string,
         user_context?: {
+            display_name?: string;
+            program_configured?: boolean;
             active_hub?: string;
             recent_notes?: string[];
         }
@@ -713,6 +715,8 @@ export const sidecarApi = {
         history: { role: string; content: string }[],
         rag_context?: string,
         user_context?: {
+            display_name?: string;
+            program_configured?: boolean;
             active_hub?: string;
             recent_notes?: string[];
         }

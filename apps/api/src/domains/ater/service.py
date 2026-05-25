@@ -998,7 +998,7 @@ class AterService:
         else:
             hub = self._find_hub(config.hubId)
             if not hub:
-                available = [h["id"] for h in hubs]
+                available = [h["id"] for h in self.list_planner_hubs()]
                 raise ValueError(f"Hub not found: '{config.hubId}'. Available hubs: {available}")
             
             hub_path = self.vm.vault_path / hub["path"]

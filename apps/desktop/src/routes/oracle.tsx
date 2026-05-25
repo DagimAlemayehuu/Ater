@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { useHeader } from '@/context/header-context'
+import { useConfig } from '@/lib/ConfigContext'
 import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { 
@@ -23,6 +24,7 @@ export default function Oracle() {
   const navigate = useNavigate();
   const { setCenterContent, setRightContent } = useHeader();
   const { currentHub, history } = usePomodoroStore();
+  const { config, saveConfig } = useConfig();
   
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
@@ -144,6 +146,8 @@ export default function Oracle() {
         
       const pomodoroState = usePomodoroStore.getState();
       const userContext = {
+        display_name: config?.displayName,
+        program_configured: config?.isProgramConfigured,
         active_hub: currentHub,
         recent_notes: recentNotes,
         pomodoro: {
@@ -152,7 +156,19 @@ export default function Oracle() {
           mode: pomodoroState.mode,
           session_count: pomodoroState.sessionCount,
           current_hub: pomodoroState.currentHub
-        }
+        },
+        pomodoro_work_duration: config?.pomodoroWorkDuration,
+        pomodoro_short_break_duration: config?.pomodoroShortBreakDuration,
+        pomodoro_long_break_duration: config?.pomodoroLongBreakDuration,
+        pomodoro_sessions_before_long_break: config?.pomodoroSessionsBeforeLongBreak,
+        show_properties: config?.showProperties,
+        obsidian_vault_path: config?.obsidianVaultPath,
+        inbox_path: config?.inboxPath,
+        academic_folder_path: config?.academicFolderPath,
+        auto_deploy: config?.autoDeploy,
+        ai_provider: config?.aiProvider,
+        ai_model: config?.aiModel,
+        ai_base_url: config?.aiBaseUrl,
       };
       
       // 3. Call Assistant Stream API
@@ -245,6 +261,69 @@ export default function Oracle() {
                   const store = usePomodoroStore.getState();
                   store.setCurrentHub(parsed.hub_id);
                   toast.info(`Pomodoro hub set to ${parsed.hub_id}.`);
+                } else if (parsed.action === 'toggle_auto_deploy' && parsed.state !== undefined) {
+                  saveConfig({ autoDeploy: parsed.state }).catch(console.error);
+                  sidecarApi.aterWatcherToggle().catch(console.error);
+                  if (parsed.state) {
+                     toast.success("Background ingestion pipeline enabled.");
+                  } else {
+                     toast.info("Background ingestion pipeline disabled.");
+                  }
+                } else if (parsed.action === 'update_config' && parsed.key_values) {
+                  saveConfig(parsed.key_values).catch(console.error);
+                  if (parsed.key_values.obsidianVaultPath !== undefined || parsed.key_values.inboxPath !== undefined || parsed.key_values.autoDeploy !== undefined) {
+                     sidecarApi.aterWatcherToggle().catch(console.error);
+                  }
+                  toast.success("System configuration updated.");
+                } else if (parsed.action === 'factory_reset') {
+                  toast.info('Factory reset triggered by Oracle...');
+                  sidecarApi.factoryReset().then(res => {
+                    if (res?.success) {
+                      saveConfig({
+                        aiApiKey: '',
+                        aiProvider: 'google',
+                        aiModel: 'gemini-2.0-flash',
+                        savedApiKeys: [],
+                        obsidianVaultPath: '',
+                        inboxPath: '',
+                        isActivated: false,
+                        displayName: '',
+                        isProgramConfigured: false
+                      });
+                      toast.success('System reset successfully.');
+                      setTimeout(() => window.location.reload(), 1500);
+                    }
+                  }).catch(err => toast.error('Reset failed: ' + err.message));
+                } else if (parsed.action === 'clear_study_history') {
+                  toast.info('Clearing study history triggered by Oracle...');
+                  sidecarApi.clearStudyHistory().then(res => {
+                    if (res?.success) {
+                      const pomodoroStore = usePomodoroStore.getState();
+                      if (pomodoroStore.clearHistory) pomodoroStore.clearHistory();
+                      toast.success('Study history cleared successfully.');
+                    }
+                  }).catch(err => toast.error('Clear failed: ' + err.message));
+                } else if (parsed.action === 'feynman_validated') {
+                  if (parsed.is_valid) {
+                    toast.success(`Feynman validation passed with score ${parsed.score}!`);
+                  } else {
+                    toast.warning('Feynman validation feedback received.');
+                  }
+                  // Inject feedback content directly into assistant messages so user sees it in chat
+                  setMessages(prev => {
+                    const next = [...prev];
+                    const lastIndex = next.length - 1;
+                    if (lastIndex >= 0 && next[lastIndex].role === 'assistant') {
+                      next[lastIndex] = {
+                        ...next[lastIndex],
+                        content: next[lastIndex].content + `\n\n### Feynman Feedback\n**Score: ${parsed.score}/100**\n${parsed.feedback}`
+                      };
+                    }
+                    return next;
+                  });
+                } else if (parsed.action === 'custom_practice_start' && parsed.quiz_path) {
+                  toast.success(`Custom quiz generated for hub! Redirecting...`);
+                  navigate(`/practice?view=session&hubId=${encodeURIComponent(parsed.hub_id)}&path=${encodeURIComponent(parsed.quiz_path)}`);
                 }
               } else if (parsed.type === 'error') {
                 toast.error(parsed.message);
@@ -361,6 +440,7 @@ export default function Oracle() {
                         <AterMarkdown 
                           content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} 
                           onNavigate={handleWikiLinkClick}
+                          onSendMessage={handleSendMessage}
                         />
                       </div>
                     </div>

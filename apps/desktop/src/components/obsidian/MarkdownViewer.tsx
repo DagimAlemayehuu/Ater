@@ -8,7 +8,8 @@ import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from '
 import { sidecarApi } from '@/lib/sidecarApi'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
-import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder } from 'lucide-react'
+import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import MiniPracticeUI from '../MiniPracticeUI'
 import { useNavigate } from 'react-router-dom'
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light'
@@ -32,6 +33,18 @@ SyntaxHighlighter.registerLanguage('typescript', ts)
 SyntaxHighlighter.registerLanguage('python', py)
 SyntaxHighlighter.registerLanguage('bash', bash)
 import { ExplainSidebar } from './ExplainSidebar'
+import { 
+    FocusHUD, 
+    GenerationStepper, 
+    ActivityVitals, 
+    SearchNavigator, 
+    CalendarBar, 
+    InboxGallery, 
+    SRSFlashcard,
+    AppConfigBlock,
+    QueueStatusBlock,
+    StudyHistoryBlock
+} from '../intelligence/OracleUIBlocks'
 
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]
 const MARKDOWN_REHYPE_PLUGINS = [[rehypeKatex, {strict: false, throwOnError: false}]]
@@ -212,7 +225,7 @@ const getMetaVal = (item: any, key: string, fallback: string = '') => {
     return fallback;
 };
 
-const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: string }) => {
+const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; notePath?: string; onSendMessage?: (text: string) => void }) => {
     const navigate = useNavigate();
     const { ui_type, data, caption } = payload;
 
@@ -246,35 +259,46 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
                         {list.map((item: any, i: number) => {
                             const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Course';
                             const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
-                            const professor = getMetaVal(item, 'Professor') || getMetaVal(item, 'professor') || 'Unknown Professor';
-                            const semester = getMetaVal(item, 'Semester') || getMetaVal(item, 'semester') || 'Active';
+                            const professor = getMetaVal(item, 'Professor') || getMetaVal(item, 'professor') || '';
+                            const semester = getMetaVal(item, 'Semester') || getMetaVal(item, 'semester') || '';
                             const credits = getMetaVal(item, 'Credits') || getMetaVal(item, 'credits') || '';
                             const grade = getMetaVal(item, 'Grade') || getMetaVal(item, 'grade') || '';
                             const id = item.id || item._title || cleanTitle.replace(/\s+/g, '_');
+                            const path = item.path || '';
+                            
                             return (
                                 <div 
                                     key={i} 
-                                    onClick={() => handleNavigate(`/academic?tab=COURSES&id=${id}`)}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-32 select-none"
+                                    onClick={() => handleNavigate(path ? `/obsidian?path=${encodeURIComponent(path)}` : `/academic?tab=COURSES&id=${id}`)}
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
                                 >
                                     <div>
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <h4 className="text-[12px] font-black uppercase text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2">
                                                 {cleanTitle}
                                             </h4>
                                             {grade && (
-                                                <span className="px-1.5 py-0.5 text-[8px] font-black uppercase border border-border bg-muted/20">
+                                                <Badge variant="outline" className="rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase border-foreground/20 text-foreground shrink-0">
                                                     {grade}
-                                                </span>
+                                                </Badge>
                                             )}
                                         </div>
-                                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
-                                            {professor}
-                                        </p>
+                                        {professor && (
+                                            <p className="text-[9px] font-bold text-muted-foreground/60 mt-1.5 uppercase tracking-widest truncate">
+                                                {professor}
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="flex justify-between items-center border-t border-border/10 pt-2 text-[9px] font-black uppercase tracking-widest text-foreground/50">
-                                        <span>{semester}</span>
-                                        <span>{credits ? `${credits} CR` : ''}</span>
+                                    <div className="flex justify-between items-center border-t border-border/5 pt-2 text-[9px] font-black uppercase tracking-[0.2em] text-foreground/30">
+                                        <div className="flex items-center gap-2">
+                                            {semester && (
+                                                <Badge variant="outline" className="h-4 rounded-none text-[7px] border-border/50 text-muted-foreground font-black px-1">
+                                                    {semester}
+                                                </Badge>
+                                            )}
+                                            {credits && <span>{credits} CR</span>}
+                                        </div>
+                                        <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                 </div>
                             );
@@ -332,40 +356,43 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
                             const course = item.course || getMetaVal(item, 'Course') || getMetaVal(item, 'course') || '';
                             const isCompleted = item.status === 'Completed' || item.status === 'done';
                             const noteCount = item.note_count || item.noteCount || '';
+                            
                             return (
                                 <div 
                                     key={i} 
                                     onClick={() => handleNavigate(`/obsidian?path=${encodeURIComponent(path)}`)}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-30 select-none"
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-start gap-2.5">
-                                            <Layers size={14} className="text-muted-foreground/60 mt-0.5" />
+                                            <Layers size={14} className="text-muted-foreground/60 mt-1" />
                                             <div>
-                                                <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors max-w-[160px] truncate">
+                                                <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
                                                     {cleanTitle}
                                                 </h4>
-                                                {course && (
-                                                    <span className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest mt-1 block">
-                                                        {course.replace(/_/g, ' ')}
+                                                {course && course !== '[]' && (
+                                                    <span className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest mt-1 block">
+                                                        {String(course).replace(/[\[\]]/g, '').replace(/_/g, ' ')}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                        <span className={cn(
-                                            "px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
-                                            isCompleted ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                        <Badge variant="outline" className={cn(
+                                            "rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase shrink-0 border",
+                                            isCompleted 
+                                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600" 
+                                                : "border-amber-500/20 bg-amber-500/10 text-amber-600"
                                         )}>
                                             {item.status || 'Active'}
-                                        </span>
+                                        </Badge>
                                     </div>
-                                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-3 pt-2 border-t border-border/5">
+                                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-foreground/40 mt-3 pt-2 border-t border-border/5">
                                         <div className="flex items-center gap-1.5">
                                             <Clock size={10} />
-                                            <span>Study Hub</span>
+                                            <span>Planner Hub</span>
                                         </div>
                                         {noteCount !== '' && (
-                                            <span>{noteCount} Notes</span>
+                                            <span className="text-foreground/60">{noteCount} Notes</span>
                                         )}
                                     </div>
                                 </div>
@@ -376,7 +403,7 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
             }
             case 'exam_list': {
                 return (
-                    <div className="border border-border divide-y divide-border bg-background my-4">
+                    <div className="border border-border bg-background my-4 divide-y divide-border/50">
                         {list.map((item: any, i: number) => {
                             const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Exam';
                             const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
@@ -384,31 +411,34 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
                             const date = getMetaVal(item, 'Date') || getMetaVal(item, 'date') || 'No Date';
                             const type = getMetaVal(item, 'Type') || getMetaVal(item, 'type') || '';
                             const id = item.id || item._title || cleanTitle.replace(/\s+/g, '_');
+                            
                             return (
                                 <div 
                                     key={i}
                                     onClick={() => handleNavigate(item.path ? `/obsidian?path=${encodeURIComponent(item.path)}` : `/academic?tab=EXAMS&id=${id}`)}
-                                    className="p-3.5 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
+                                    className="p-4 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <Award size={14} className="text-muted-foreground/50" />
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-8 border border-border flex items-center justify-center bg-muted/5 group-hover:border-foreground/30 transition-all">
+                                            <Award size={14} className="text-muted-foreground/50 group-hover:text-foreground" />
+                                        </div>
                                         <div>
-                                            <h5 className="text-[11px] font-black uppercase text-foreground leading-normal">
+                                            <h5 className="text-[11px] font-black uppercase text-foreground leading-tight group-hover:text-primary transition-colors">
                                                 {cleanTitle}
                                             </h5>
-                                            <p className="text-[9px] text-muted-foreground uppercase font-semibold">
-                                                {course ? course.replace(/_/g, ' ') : 'General'}
+                                            <p className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-widest mt-1">
+                                                {course && course !== '[]' ? String(course).replace(/[\[\]]/g, '').replace(/_/g, ' ') : 'General Unit'}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end">
-                                        <span className="text-[10px] font-bold text-foreground/80 font-mono">
+                                    <div className="text-right">
+                                        <div className="text-[10px] font-black text-foreground/80 font-mono tracking-tighter">
                                             {date}
-                                        </span>
-                                        {type && (
-                                            <span className="text-[8px] text-muted-foreground uppercase tracking-wider font-semibold">
-                                                {type}
-                                            </span>
+                                        </div>
+                                        {type && type !== '[]' && (
+                                            <div className="text-[8px] text-muted-foreground/40 uppercase tracking-[0.15em] font-black mt-0.5">
+                                                {String(type).replace(/[\[\]]/g, '')}
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -419,39 +449,45 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
             }
             case 'assignment_list': {
                 return (
-                    <div className="border border-border divide-y divide-border bg-background my-4">
+                    <div className="border border-border bg-background my-4 divide-y divide-border/50">
                         {list.map((item: any, i: number) => {
                             const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Assignment';
                             const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
                             const course = getMetaVal(item, 'Course') || getMetaVal(item, 'course') || '';
                             const dueDate = getMetaVal(item, 'Due Date') || getMetaVal(item, 'due_date') || '';
                             const isCompleted = item.done === true || item.done === 'true' || getMetaVal(item, 'Done') === 'true' || getMetaVal(item, 'done') === 'true';
+                            
                             return (
                                 <div 
                                     key={i}
                                     onClick={() => handleNavigate(item.path ? `/obsidian?path=${encodeURIComponent(item.path)}` : '/academic?tab=ASSIGNMENTS')}
-                                    className="p-3.5 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
+                                    className="p-4 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <CheckSquare size={14} className={cn(
-                                            isCompleted ? "text-emerald-500" : "text-muted-foreground/40"
-                                        )} />
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            "size-8 border flex items-center justify-center transition-all",
+                                            isCompleted ? "border-emerald-500/20 bg-emerald-500/5" : "border-border bg-muted/5 group-hover:border-foreground/30"
+                                        )}>
+                                            <CheckSquare size={14} className={cn(
+                                                isCompleted ? "text-emerald-500" : "text-muted-foreground/40 group-hover:text-foreground"
+                                            )} />
+                                        </div>
                                         <div>
                                             <h5 className={cn(
-                                                "text-[11px] font-black uppercase leading-normal",
-                                                isCompleted ? "text-muted-foreground line-through decoration-muted-foreground/40" : "text-foreground"
+                                                "text-[11px] font-black uppercase leading-tight transition-colors",
+                                                isCompleted ? "text-muted-foreground line-through decoration-muted-foreground/40" : "text-foreground group-hover:text-primary"
                                             )}>
                                                 {cleanTitle}
                                             </h5>
-                                            <p className="text-[9px] text-muted-foreground uppercase font-semibold">
-                                                {course ? course.replace(/_/g, ' ') : 'General'}
+                                            <p className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-widest mt-1">
+                                                {course && course !== '[]' ? String(course).replace(/[\[\]]/g, '').replace(/_/g, ' ') : 'General Task'}
                                             </p>
                                         </div>
                                     </div>
                                     {dueDate && (
-                                        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground font-mono">
-                                            Due {dueDate}
-                                        </div>
+                                        <Badge variant="outline" className="rounded-none text-[9px] font-black uppercase border-border/50 text-muted-foreground/60 font-mono">
+                                            {dueDate}
+                                        </Badge>
                                     )}
                                 </div>
                             );
@@ -534,32 +570,62 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
                             const path = item.path || '';
                             const status = getMetaVal(item, 'Status') || getMetaVal(item, 'status') || 'Active';
                             const isActive = status.toLowerCase() === 'active';
+                            
                             return (
                                 <div 
                                     key={i} 
                                     onClick={() => handleNavigate(path ? `/obsidian?path=${encodeURIComponent(path)}` : '/academic?tab=PROGRAM')}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-24 select-none"
+                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-28 select-none shadow-sm"
                                 >
                                     <div className="flex items-start justify-between gap-2">
-                                        <h4 className="text-[12px] font-black uppercase text-foreground leading-snug">
-                                            {cleanTitle}
-                                        </h4>
-                                        <span className={cn(
-                                            "px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
+                                        <div className="flex items-start gap-2.5">
+                                            <Folder size={14} className="text-muted-foreground/60 mt-1" />
+                                            <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors">
+                                                {cleanTitle}
+                                            </h4>
+                                        </div>
+                                        <Badge variant="outline" className={cn(
+                                            "rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
                                             isActive ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground"
                                         )}>
                                             {status}
-                                        </span>
+                                        </Badge>
                                     </div>
-                                    <span className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest mt-2 block">
-                                        Semester
-                                    </span>
+                                    <div className="flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em] mt-2 pt-2 border-t border-border/5">
+                                        <span>Academic Term</span>
+                                        <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
                 );
             }
+            // --- New Dynamic Oracle UI Types ---
+            case 'focus_hud':
+                return <FocusHUD payload={data} />;
+            case 'generation_stepper':
+                return <GenerationStepper payload={data} />;
+            case 'activity_vitals':
+                return <ActivityVitals payload={data} />;
+            case 'search_navigator':
+                return <SearchNavigator payload={data} />;
+            case 'calendar_bar':
+                return <CalendarBar payload={data} />;
+            case 'inbox_gallery':
+                return <InboxGallery payload={data} onProcess={(path) => {
+                    if (onSendMessage) {
+                        onSendMessage(`Process the file at path: ${path}`);
+                    }
+                }} />;
+            case 'srs_flashcard':
+                return <SRSFlashcard payload={data} />;
+            case 'app_config':
+                return <AppConfigBlock payload={data} onSendMessage={onSendMessage} />;
+            case 'queue_status':
+                return <QueueStatusBlock payload={data} onSendMessage={onSendMessage} />;
+            case 'study_history':
+                return <StudyHistoryBlock payload={data} />;
             default:
                 return (
                     <pre className="text-xs p-3 bg-muted/10 border border-border overflow-x-auto font-mono">
@@ -582,7 +648,7 @@ const AterUIBlock = memo(({ payload, notePath }: { payload: any; notePath?: stri
 });
 
 const CodeRenderer = memo((props: any) => {
-    const { className, children, node, notePath } = props;
+    const { className, children, node, notePath, onSendMessage } = props;
     const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
     const language = match ? match[1] : null
     
@@ -616,7 +682,7 @@ const CodeRenderer = memo((props: any) => {
         if (!aterUIData) {
             return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-none my-4 text-xs font-mono">Failed to load Ater UI JSON.</div>;
         }
-        return <AterUIBlock payload={aterUIData} notePath={notePath} />;
+        return <AterUIBlock payload={aterUIData} notePath={notePath} onSendMessage={onSendMessage} />;
     }
 
     if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
@@ -671,16 +737,23 @@ interface AterMarkdownProps {
     content: string
     path?: string
     onNavigate?: (page: string) => void
+    onSendMessage?: (text: string) => void
     className?: string
     components?: any
 }
 
-export const AterMarkdown = memo(({ content, path, onNavigate, className, components }: AterMarkdownProps) => {
+export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, className, components }: AterMarkdownProps) => {
     const handleNavigate = useCallback((pageName: string) => {
         if (onNavigate) {
             onNavigate(pageName);
         }
     }, [onNavigate]);
+
+    const handleSendMessage = useCallback((text: string) => {
+        if (onSendMessage) {
+            onSendMessage(text);
+        }
+    }, [onSendMessage]);
 
     const markdownComponents = useMemo(() => ({
         ...(components || {}),
@@ -753,7 +826,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, className, compon
             );
         },
         pre: ({ children }: any) => <div className="not-prose">{children}</div>,
-        code: (props: any) => <CodeRenderer {...props} notePath={path} />,
+        code: (props: any) => <CodeRenderer {...props} notePath={path} onSendMessage={handleSendMessage} />,
         input: ({ node, type, checked, ...props }: any) => {
             if (type === 'checkbox') {
                 return (
