@@ -230,14 +230,14 @@ export function ObsidianGraphView({
                         
                         {/* Overlay Navigation Controls */}
                         <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-10">
-                            <button onClick={handleCenter} className="p-2 bg-background border border-border rounded-none shadow-sm hover:bg-accent text-muted-foreground " title="Center Graph">
+                            <button onClick={handleCenter} className="p-2.5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm hover:bg-[#232326] text-muted-foreground transition-colors" title="Center Graph">
                                 <Maximize size={16} />
                             </button>
-                            <div className="flex flex-col bg-background border border-border rounded-none shadow-sm overflow-hidden">
-                                <button onClick={handleZoomIn} className="p-2 hover:bg-accent text-muted-foreground border-b border-border " title="Zoom In">
+                            <div className="flex flex-col bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm overflow-hidden">
+                                <button onClick={handleZoomIn} className="p-2.5 hover:bg-[#232326] text-muted-foreground border-b border-[#242426] transition-colors" title="Zoom In">
                                     <ZoomIn size={16} />
                                 </button>
-                                <button onClick={handleZoomOut} className="p-2 hover:bg-accent text-muted-foreground " title="Zoom Out">
+                                <button onClick={handleZoomOut} className="p-2.5 hover:bg-[#232326] text-muted-foreground transition-colors" title="Zoom Out">
                                     <ZoomOut size={16} />
                                 </button>
                             </div>
@@ -246,9 +246,9 @@ export function ObsidianGraphView({
                         {/* Settings Toggle */}
                         <button 
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className="absolute top-6 right-6 p-2 bg-background border border-border rounded-none shadow-sm hover:bg-accent text-muted-foreground  z-20"
+                            className="absolute top-6 right-6 p-2.5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm hover:bg-[#232326] text-muted-foreground z-20 transition-colors"
                         >
-                            <Settings size={18} className={cn(isSettingsOpen && "text-foreground")} />
+                            <Settings size={18} className={cn(isSettingsOpen && "text-white")} />
                         </button>
                     </>
                 )}
@@ -256,32 +256,32 @@ export function ObsidianGraphView({
 
             {/* Settings Side Panel */}
             {isSettingsOpen && (
-                <div className="absolute top-4 right-4 w-72 bg-background border border-border rounded-none shadow-2xl flex flex-col z-30 transition-none">
-                    <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-foreground/80">Graph settings</span>
+                <div className="absolute top-4 right-4 w-72 bg-[#1a1a1c] border border-[#242426] rounded-[12px] shadow-2xl flex flex-col z-30 transition-none max-h-[calc(100%-2rem)]">
+                    <div className="px-5 py-4 border-b border-[#242426] flex items-center justify-between">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-white/80">Graph settings</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="text-muted-foreground hover:text-foreground transition-none" title="Reset settings">
+                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-white hover:bg-[#232326] transition-colors" title="Reset settings">
                                 <RefreshCw size={14} />
                             </button>
-                            <button onClick={() => setIsSettingsOpen(false)} className="text-muted-foreground hover:text-foreground transition-none">
+                            <button onClick={() => setIsSettingsOpen(false)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-white hover:bg-[#232326] transition-colors">
                                 <X size={14} />
                             </button>
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-auto p-4 custom-scrollbar flex flex-col gap-1">
+                    <div className="flex-1 overflow-auto p-5 custom-scrollbar flex flex-col gap-2">
                         {/* Accordion Style Sections */}
                         <SettingsSection title="Filters" isOpen={false} />
                         <SettingsSection title="Groups" isOpen={false} />
                         <SettingsSection title="Display" isOpen={false} />
                         
-                        <div className="flex flex-col">
-                            <button className="flex items-center gap-2 py-2 text-[11px] font-bold text-foreground/70 hover:text-foreground transition-none w-full text-left group">
+                        <div className="flex flex-col mt-2">
+                            <button className="flex items-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white transition-colors w-full text-left group">
                                 <ChevronDown size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground" />
                                 Forces
                             </button>
                             
-                            <div className="pl-6 flex flex-col gap-6 py-4 border-l border-border/10 ml-1.5">
+                            <div className="pl-6 flex flex-col gap-6 py-4 border-l border-[#242426] ml-1.5">
                                 <ForceSlider 
                                     label="Center force" 
                                     value={settings.centerForce} 
@@ -326,9 +326,10 @@ function SettingsSection({ title, isOpen }: { title: string, isOpen: boolean }) 
 
 function ForceSlider({ label, value, min, max, step, onChange }: { label: string, value: number, min: number, max: number, step: number, onChange: (v: number) => void }) {
     return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center">
-                <label className="text-[11px] font-medium text-foreground/60">{label}</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">{label}</label>
+                <span className="text-[10px] font-black tabular-nums text-white/60">{value}</span>
             </div>
             <div className="relative flex items-center group">
                 <input 
@@ -336,7 +337,7 @@ function ForceSlider({ label, value, min, max, step, onChange }: { label: string
                     min={min} max={max} step={step}
                     value={value} 
                     onChange={e => onChange(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-muted-foreground/10 rounded-none appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-none"
+                    className="w-full h-1 bg-[#232326] rounded-full appearance-none cursor-pointer accent-white hover:accent-white transition-all"
                 />
             </div>
         </div>

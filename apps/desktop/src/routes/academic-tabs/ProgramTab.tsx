@@ -173,7 +173,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="grid grid-cols-3 gap-4">
             {semCourses.map((c, idx) => (
               <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                className="p-5 border border-[#242426] bg-[#0e0e0f] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
+                className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[9px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Course</span>
                   <span className="text-[9px] font-black text-white">{getVal(c, 'Credits', 'credits')} CR</span>
@@ -290,7 +290,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
               })
               return (
                 <div key={idx} onClick={() => setSelectedSemId(s.id)}
-                  className="flex items-center justify-between p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
+                  className="flex items-center justify-between p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={cn('w-5 h-5 border rounded-[4px] flex items-center justify-center text-[8px] font-black shrink-0',
                       isDone ? 'border-white bg-white text-[#151517]' :
@@ -384,7 +384,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 <div className="grid grid-cols-3 gap-4">
                   {activeCourses.map((c, idx) => (
                     <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                      className="p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px] flex items-center justify-between cursor-pointer hover:bg-[#232326]/30 transition-colors">
+                      className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex items-center justify-between cursor-pointer hover:bg-[#232326]/30 transition-colors">
                       <div>
                         <span className="text-[13px] font-black uppercase text-white">{cleanTitle(c.title)}</span>
                         <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-1">
@@ -410,7 +410,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   return (
                     <div key={idx} onClick={() => setSelectedYearId(y.id)}
                       className={cn('p-5 border cursor-pointer rounded-[8px] transition-colors',
-                        isActive ? 'border-[#a1a1aa] bg-[#232326]' : 'border-[#242426] bg-[#0e0e0f] hover:bg-[#232326]/30')}
+                        isActive ? 'border-[#a1a1aa] bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}
                         style={{ contentVisibility: 'auto' }}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Year</span>

@@ -112,7 +112,7 @@ export const NoteProperties = React.memo(({
           type="checkbox"
           checked={!!value}
           onChange={(e) => onUpdateProperty(key, e.target.checked)}
-          className="h-3.5 w-3.5 rounded-none border-border/50 bg-transparent text-primary focus:ring-0 cursor-pointer"
+          className="h-3.5 w-3.5 shrink-0 appearance-none border border-[#242426] bg-[#1a1a1c] rounded-[4px] checked:bg-white/10 checked:border-white/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white/60 after:rotate-45 cursor-pointer transition-all hover:border-white/20"
         />
       )
     }
@@ -191,7 +191,7 @@ export const NoteProperties = React.memo(({
     if (key.toLowerCase() === 'status') {
       return (
         <span className={cn(
-          "px-1.5 py-0.5 rounded-none text-[9px] uppercase font-bold tracking-widest",
+          "px-1.5 py-0.5 rounded-[6px] text-[9px] uppercase font-bold tracking-widest",
           String(value).toLowerCase().includes('complete') ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-muted border border-border text-muted-foreground'
         )}>{valStr}</span>
       )
@@ -204,7 +204,7 @@ export const NoteProperties = React.memo(({
     <div className="flex flex-col gap-4 mb-12 ">
       <div className="grid grid-cols-1 gap-y-1.5 py-6" data-purpose="note-metadata">
         {displayMetadata.map(([key, value]) => (
-          <div key={key} className="flex items-center gap-3 group/prop hover:bg-muted/10 px-2 py-1 -mx-2 rounded-none ">
+          <div key={key} className="flex items-center gap-3 group/prop hover:bg-muted/10 px-2 py-1 -mx-2 rounded-[6px] ">
             <div className="w-4 flex justify-center text-muted-foreground/30 group-hover/prop:text-primary ">
               {getPropertyIcon(key, value)}
             </div>
@@ -278,7 +278,7 @@ export const NoteProperties = React.memo(({
                   onClick={() => setSelectedType(opt.id)}
                   title={opt.label}
                   className={cn(
-                    "p-1.5 rounded-none transition-none",
+                    "p-1.5 rounded-[6px] transition-none",
                     selectedType === opt.id ? "bg-foreground/10 text-foreground" : "text-muted-foreground/20 hover:text-foreground"
                   )}
                 >
@@ -291,7 +291,7 @@ export const NoteProperties = React.memo(({
               <button onClick={() => setIsAdding(false)} className="text-[9px] font-bold text-muted-foreground/30 hover:text-foreground uppercase">Cancel</button>
               <button 
                 onClick={() => {if(newName) {onAddProperty(newName, selectedType); setNewName(''); setIsAdding(false);}}}
-                className="px-3 py-1 bg-primary text-primary-foreground rounded-none text-[9px] font-bold uppercase tracking-widest"
+                className="px-3 py-1 bg-primary text-primary-foreground rounded-[6px] text-[9px] font-bold uppercase tracking-widest"
               >
                 Add
               </button>

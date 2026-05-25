@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { FileText, Users, Settings, GraduationCap, Zap } from 'lucide-react'
+import { FileText, Users, Settings, GraduationCap, Zap, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/theme-switch'
 
@@ -8,10 +8,10 @@ export function AppSidebar() {
   const isOnboarding = location.pathname === '/onboarding'
 
   const linkClass = (isActive: boolean) => cn(
-    "relative p-2.5 transition-all rounded-[4px] flex items-center justify-center size-10",
+    "relative p-2.5 transition-all rounded-[8px] flex items-center justify-center size-10",
     isActive 
-      ? "text-white bg-[#232326]" 
-      : "text-[#a1a1aa] hover:text-white hover:bg-[#232326]"
+      ? "text-foreground bg-bento-item shadow-sm" 
+      : "text-muted-foreground hover:text-foreground hover:bg-bento-item"
   );
 
   return (
@@ -21,10 +21,10 @@ export function AppSidebar() {
     >
         {/* Navigation Links */}
         <div className="flex flex-col gap-4 items-center w-full">
-            <NavLink to="/oracle" className={({ isActive }) => linkClass(isActive)} title="Ater">
+            <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="Ater">
               {({ isActive }) => (
                 <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
                   <Zap className="size-5" strokeWidth={1.5} />
                 </>
               )}
@@ -32,7 +32,7 @@ export function AppSidebar() {
             <NavLink to="/academic" className={({ isActive }) => linkClass(isActive)} title="Academic Dashboard">
               {({ isActive }) => (
                 <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
                   <GraduationCap className="size-5" strokeWidth={1.5} />
                 </>
               )}
@@ -40,30 +40,21 @@ export function AppSidebar() {
             <NavLink to="/obsidian" className={({ isActive }) => linkClass(isActive)} title="Knowledge Base">
               {({ isActive }) => (
                 <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
                   <FileText className="size-5" strokeWidth={1.5} />
-                </>
-              )}
-            </NavLink>
-            <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="AI Agents">
-              {({ isActive }) => (
-                <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
-                  <Users className="size-5" strokeWidth={1.5} />
                 </>
               )}
             </NavLink>
         </div>
 
-        {/* Bottom Actions */}
         <div className="flex flex-col gap-4 items-center w-full">
-            <div className="p-2.5 text-[#a1a1aa] hover:text-white transition-all rounded-[4px] hover:bg-[#232326] cursor-pointer">
+            <div className="p-2.5 text-muted-foreground hover:text-foreground transition-all rounded-[8px] hover:bg-bento-item cursor-pointer">
               <ThemeSwitch />
             </div>
             <NavLink to="/settings" className={({ isActive }) => linkClass(isActive)} title="Settings">
               {({ isActive }) => (
                 <>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-foreground rounded-r-full" />}
                   <Settings className="size-5" strokeWidth={1.5} />
                 </>
               )}

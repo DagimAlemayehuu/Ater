@@ -87,7 +87,7 @@ export default function PomodoroStats() {
   }, [filteredHistory, timeFilter, referenceNow]);
 
   return (
-    <div className="bg-[#151517] border border-[#242426] shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground">
+    <div className="bg-bento-panel border border-border shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground">
       {/* Header */}
       <div className="h-16 border-b border-[#242426] flex items-center justify-between px-8 bg-[#151517] shrink-0">
         <div className="flex items-center gap-6">
@@ -160,7 +160,7 @@ export default function PomodoroStats() {
                 </div>
               </div>
 
-              <div className="flex-1 bg-[#151517] border border-[#242426] rounded-[12px] p-10 relative overflow-hidden">
+              <div className="flex-1 bg-bento-panel border border-border rounded-[12px] p-10 relative overflow-hidden">
                 <div className="absolute top-8 left-10 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20">Temporal Intensity</div>
                 <div className="h-full w-full pt-6">
                   <ResponsiveContainer width="100%" height="100%">
@@ -206,7 +206,7 @@ export default function PomodoroStats() {
             </div>
 
             <div className="flex-1 grid grid-cols-2 gap-10 overflow-hidden">
-               <div className="bg-[#151517] border border-[#242426] rounded-[12px] p-10 flex flex-col">
+               <div className="bg-bento-panel border border-border rounded-[12px] p-10 flex flex-col">
                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 mb-8">Focus Time per Note (Min)</div>
                  <div className="flex-1">
                    <ResponsiveContainer width="100%" height="100%">
@@ -245,7 +245,7 @@ export default function PomodoroStats() {
             </div>
 
             <div className="flex-1 grid grid-cols-2 gap-10 overflow-hidden">
-               <div className="bg-[#151517] border border-[#242426] rounded-[12px] p-10 flex flex-col">
+               <div className="bg-bento-panel border border-border rounded-[12px] p-10 flex flex-col">
                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 mb-8">Performance Trend</div>
                  <div className="flex-1">
                     <ResponsiveContainer width="100%" height="100%">

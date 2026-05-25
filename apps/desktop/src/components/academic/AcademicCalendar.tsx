@@ -83,7 +83,7 @@ function MiniCalendar({ currentDate, setCurrentDate, view, setView }: { currentD
                 if (view === 'year' || view === 'month') setView('day');
               }}
               className={cn(
-                "h-6 w-full flex items-center justify-center text-[10px] font-medium rounded-none transition-none",
+                "h-6 w-full flex items-center justify-center text-[10px] font-medium rounded-[8px] transition-none",
                 !isCurrentMonth && "text-muted-foreground/20",
                 isCurrentMonth && !isSelected && !isTodayDate && "text-muted-foreground hover:bg-muted",
                 isSelected && !isTodayDate && "bg-muted text-foreground font-bold",
@@ -123,7 +123,7 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
             <button 
               onClick={() => { setCurrentDate(day); setView('day'); }}
               className={cn(
-                "mt-1.5 w-9 h-9 flex items-center justify-center rounded-none text-sm font-black transition-none",
+                "mt-1.5 w-9 h-9 flex items-center justify-center rounded-[8px] text-sm font-black transition-none",
                 isToday(day) ? "bg-foreground text-background" : "hover:bg-muted text-foreground"
               )}
             >
@@ -157,7 +157,7 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                 className="absolute left-0 right-0 h-px bg-foreground/10 z-10 pointer-events-none"
                 style={{ top: `${(now.getHours() * 64) + (now.getMinutes() / 60 * 64)}px` }}
               >
-                <div className="absolute -left-1 -top-1 w-2 h-2 rounded-none bg-foreground/40" />
+                <div className="absolute -left-1 -top-1 w-2 h-2 rounded-[8px] bg-foreground/40" />
               </div>
             )}
 
@@ -198,7 +198,7 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                           if (ev._type === 'Note Visit' && ev.id) onSelectEvent(ev.id);
                         }}
                         className={cn(
-                          "absolute rounded-none px-1.5 py-1 overflow-hidden border flex flex-col justify-start gap-1 transition-none",
+                          "absolute rounded-[8px] px-1.5 py-1 overflow-hidden border flex flex-col justify-start gap-1 transition-none",
                           style.bg, style.border,
                           isClickable ? "cursor-pointer hover:brightness-125 [0.98]" : "cursor-default"
                         )}
@@ -210,7 +210,7 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                         }}
                       >
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <div className={cn("w-1 h-2 rounded-none shrink-0", style.dot)} />
+                          <div className={cn("w-1 h-2 rounded-[8px] shrink-0", style.dot)} />
                           <div className={cn("font-black truncate tracking-tight leading-none", height < 30 ? "text-[8px]" : "text-[10px]", style.text)}>
                             {cleanTitle(ev.title)}
                           </div>
@@ -270,7 +270,7 @@ function MonthView({ currentDate, setCurrentDate, events, setView, onOpenDayOver
             >
               <div className="flex justify-end mb-1">
                 <span className={cn(
-                  "text-[11px] font-black w-7 h-7 flex items-center justify-center rounded-none transition-none",
+                  "text-[11px] font-black w-7 h-7 flex items-center justify-center rounded-[8px] transition-none",
                   isToday(day) ? "bg-foreground text-background" : !isCurrMonth ? "text-muted-foreground/20" : "text-foreground group-hover:text-foreground"
                 )}>
                   {format(day, 'd')}
@@ -280,8 +280,8 @@ function MonthView({ currentDate, setCurrentDate, events, setView, onOpenDayOver
                 {dayEvents.slice(0, 4).map((ev, idx) => {
                   const style = getEventColor(ev._type);
                   return (
-                    <div key={idx} className={cn("text-[8px] font-black truncate px-1.5 py-1 rounded-none border flex items-center gap-1.5", style.bg, style.border, style.text)}>
-                      <div className={cn("w-1 h-2 rounded-none", style.dot)} />
+                    <div key={idx} className={cn("text-[8px] font-black truncate px-1.5 py-1 rounded-[8px] border flex items-center gap-1.5", style.bg, style.border, style.text)}>
+                      <div className={cn("w-1 h-2 rounded-[8px]", style.dot)} />
                       {cleanTitle(ev.title)}
                     </div>
                   )
@@ -331,14 +331,14 @@ function YearView({ currentDate, setCurrentDate, events, setView }: { currentDat
                       key={i}
                       onClick={() => { setCurrentDate(day); setView('day'); }}
                       className={cn(
-                        "w-full aspect-square flex items-center justify-center text-[10px] font-medium rounded-none relative transition-none",
+                        "w-full aspect-square flex items-center justify-center text-[10px] font-medium rounded-[8px] relative transition-none",
                         !isCurr ? "text-transparent pointer-events-none" : "text-muted-foreground/60 hover:bg-muted hover:text-foreground",
                         isToday(day) && "bg-foreground text-background font-black"
                       )}
                     >
                       {format(day, 'd')}
                       {hasEvents && isCurr && !isToday(day) && (
-                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-none bg-foreground/20" />
+                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-[8px] bg-foreground/20" />
                       )}
                     </button>
                   )
@@ -400,7 +400,7 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
   const handleToday = () => setCurrentDate(new Date());
 
   return (
-    <div className="flex h-full w-full bg-background border border-border/40 rounded-none overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+    <div className="flex h-full w-full bg-background border border-border/40 rounded-[8px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
       {/* Left Sidebar */}
       <div className="w-64 border-r border-border/20 flex flex-col bg-muted/30">
         <div className="p-6 border-b border-border/20">
@@ -432,12 +432,12 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
                   className="flex items-center justify-between group py-1"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn("w-2.5 h-2.5 rounded-none transition-none", active ? "bg-foreground" : "bg-transparent border border-foreground/10")} />
+                    <div className={cn("w-2.5 h-2.5 rounded-[8px] transition-none", active ? "bg-foreground" : "bg-transparent border border-foreground/10")} />
                     <span className={cn("text-[10px] font-black transition-none uppercase tracking-widest", active ? "text-foreground" : "text-foreground/30 group-hover:text-foreground/50")}>
                       {name}
                     </span>
                   </div>
-                  {active && <div className={cn("w-1 h-1 rounded-none bg-foreground")} />}
+                  {active && <div className={cn("w-1 h-1 rounded-[8px] bg-foreground")} />}
                 </button>
               )
             })}
@@ -458,13 +458,13 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
           </div>
 
           <div className="flex items-center gap-8">
-            <div className="flex bg-muted/20 p-1 rounded-none border border-border">
+            <div className="flex bg-muted/20 p-1 rounded-[8px] border border-border">
               {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
                   className={cn(
-                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-none transition-none",
+                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-none",
                     view === v ? "bg-background text-foreground ring-1 ring-border/20" : "text-muted-foreground/40 hover:text-muted-foreground/60"
                   )}
                 >
@@ -474,12 +474,12 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex items-center p-1 bg-muted/20 rounded-none border border-border">
-                <button onClick={handlePrevious} className="w-8 h-8 flex items-center justify-center rounded-none hover:bg-muted text-muted-foreground hover:text-foreground transition-none "><ChevronLeft size={16}/></button>
+              <div className="flex items-center p-1 bg-muted/20 rounded-[8px] border border-border">
+                <button onClick={handlePrevious} className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-muted text-muted-foreground hover:text-foreground transition-none "><ChevronLeft size={16}/></button>
                 <div className="w-px h-4 bg-border mx-1" />
-                <button onClick={handleToday} className="px-4 h-8 text-[10px] font-black uppercase tracking-widest rounded-none hover:bg-muted text-muted-foreground hover:text-foreground transition-none">Today</button>
+                <button onClick={handleToday} className="px-4 h-8 text-[10px] font-black uppercase tracking-widest rounded-[8px] hover:bg-muted text-muted-foreground hover:text-foreground transition-none">Today</button>
                 <div className="w-px h-4 bg-border mx-1" />
-                <button onClick={handleNext} className="w-8 h-8 flex items-center justify-center rounded-none hover:bg-muted text-muted-foreground hover:text-foreground transition-none "><ChevronRight size={16}/></button>
+                <button onClick={handleNext} className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-muted text-muted-foreground hover:text-foreground transition-none "><ChevronRight size={16}/></button>
               </div>
             </div>
           </div>

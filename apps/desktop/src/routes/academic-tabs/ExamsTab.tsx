@@ -94,7 +94,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           </div>
           <div className="flex items-center gap-2">
             {!isPast && daysLeft !== null && (
-              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft <= 3 ? 'border-white bg-[#232326]' : 'border-[#242426] bg-[#0e0e0f]')}>
+              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft <= 3 ? 'border-white bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c]')}>
                 <div className="text-2xl font-black text-white">{daysLeft}</div>
                 <div className="text-[7px] font-black uppercase text-[#a1a1aa]">days</div>
               </div>
@@ -106,7 +106,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
 
         {/* Score entry if past */}
         {isPast && !grade && (
-          <div className="p-5 bg-[#0e0e0f] border border-[#242426] rounded-[8px] space-y-3">
+          <div className="p-5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
             <p className="text-[9px] font-black uppercase tracking-widest text-[#a1a1aa]">Enter Your Result</p>
             <div className="grid grid-cols-4 gap-3">
               {GRADES.map(g => (
@@ -139,11 +139,11 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
               <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-white">View Hubs →</button>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px]">
+              <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px]">
                 <span className="text-[8px] font-black uppercase text-[#a1a1aa]">Study Hubs Done</span>
                 <p className="text-xl font-black mt-1 text-white">{studyHubDone} / {examHubs.length}</p>
               </div>
-              <div className="p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px]">
+              <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px]">
                 <span className="text-[8px] font-black uppercase text-[#a1a1aa]">Total Study Time</span>
                 <p className="text-xl font-black mt-1 text-white">{totalStudyTime > 0 ? `${Math.round(totalStudyTime / 60)}h` : '--'}</p>
               </div>
@@ -157,7 +157,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                   return (
                     <div key={i} onClick={() => onOpenNote(h.path || `database/study planner/${h.id}.md`)}
                       className={cn('flex items-center gap-3 p-2.5 border rounded-[6px] cursor-pointer hover:border-foreground/45 transition-colors',
-                        done ? 'border-[#242426] opacity-50 bg-[#0e0e0f]/50' : 'border-[#242426] bg-[#0e0e0f]')}>
+                        done ? 'border-[#242426] opacity-50 bg-[#1a1a1c]/50' : 'border-[#242426] bg-[#1a1a1c]')}>
                       <div className={cn('w-3.5 h-3.5 border rounded-[3px] flex items-center justify-center shrink-0', done ? 'bg-white border-white' : 'border-[#242426]')}>
                         {done && <Check size={8} strokeWidth={4} className="text-[#151517]" />}
                       </div>
@@ -192,7 +192,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
     <div className="h-full flex flex-col overflow-hidden">
       {/* Next Exam banner */}
       {next && (
-        <div className="mx-6 mt-4 p-4 bg-[#0e0e0f] border border-[#242426] rounded-[8px] flex items-center justify-between shrink-0">
+        <div className="mx-6 mt-4 p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <Target size={12} className="text-[#a1a1aa]" />
             <div>
@@ -209,7 +209,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
 
       {/* Filter bar */}
       <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap bg-transparent">
-        <div className="flex items-center gap-1 bg-[#0e0e0f] border border-[#242426] p-1 rounded-[6px]">
+        <div className="flex items-center gap-1 bg-[#1a1a1c] border border-[#242426] p-1 rounded-[6px]">
           {(['Upcoming', 'All', 'Past'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
@@ -219,10 +219,10 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           ))}
         </div>
         <select value={course} onChange={e => setCourse(e.target.value)}
-          className="bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
+          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
           {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
-        <div className="flex items-center gap-2 flex-1 bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2">
+        <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
           <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exams..."
             className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
@@ -259,7 +259,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
             return (
               <div key={idx} onClick={() => setSelectedId(exam.id)}
                 className={cn('p-5 border rounded-[8px] cursor-pointer flex flex-col gap-3 hover:border-foreground/40 transition-colors',
-                  isUrgent ? 'border-[#242426] bg-[#0e0e0f] ring-1 ring-white/10' : 'border-[#242426] bg-[#0e0e0f] hover:bg-[#232326]/30')}>
+                  isUrgent ? 'border-[#242426] bg-[#1a1a1c] ring-1 ring-white/10' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     {examType && <span className={cn('inline-block px-2 py-0.5 text-[7px] font-black uppercase border rounded-[3px] mb-2', typeColorClass(examType))}>{examType}</span>}

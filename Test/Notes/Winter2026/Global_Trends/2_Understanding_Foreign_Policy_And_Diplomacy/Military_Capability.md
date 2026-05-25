@@ -1,24 +1,22 @@
 ---
-
-title: Military_Capability
-course: Global Trends
-unit: '2'
-semester: Winter2026
-mode: ECON-MACRO
-type: Atomic Note
-hub: "[[2_Understanding_Foreign_Policy_And_Diplomacy_Hub]]"
-source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter2-ocr.pdf]]"
-date: '2026-05-22'
-prerequisites:
-- "[[Foreign_Policy]]"
-source_pages:
-- 11
-- 34
-- 39
+course: "Global Trends"
+date: "2026-05-22"
 generated: true
+hub: "[[2_Understanding_Foreign_Policy_And_Diplomacy_Hub]]"
+mode: "ECON-MACRO"
+prerequisites:
+ - "[[Foreign_Policy]]"
+read: true
+semester: "Winter2026"
 skeleton_fallback: true
-read: false
-
+source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter2-ocr.pdf]]"
+source_pages:
+ - "11"
+ - "34"
+ - "39"
+title: "Military_Capability"
+type: "Atomic Note"
+unit: 2
 ---
 
 ## Mental Model

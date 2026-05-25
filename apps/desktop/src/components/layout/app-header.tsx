@@ -68,7 +68,7 @@ export function AppHeader() {
   return (
     <header 
       onMouseEnter={() => window.focus()}
-      className="relative h-14 bg-[#0e0e0f] flex items-center px-4 justify-between shrink-0 z-40 sticky top-0 select-none border-b border-[#242426]/40"
+      className="relative h-14 bg-bento-bg flex items-center px-4 justify-between shrink-0 z-40 sticky top-0 select-none border-b border-border/40"
     >
       {/* Left: Navigation */}
       <div className="flex items-center gap-3 shrink-0 z-10">
@@ -78,9 +78,9 @@ export function AppHeader() {
             disabled={!canGoBack}
             title="Back (Cmd+[)"
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-[4px] transition-colors",
+              "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoBack 
-                ? "text-[#a1a1aa] hover:text-white hover:bg-[#232326]" 
+                ? "text-[#a1a1aa] hover:text-white hover:bg-bento-item" 
                 : "text-[#a1a1aa]/20 cursor-not-allowed"
             )}
           >
@@ -92,9 +92,9 @@ export function AppHeader() {
             disabled={!canGoForward}
             title="Forward (Cmd+])"
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-[4px] transition-colors",
+              "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoForward 
-                ? "text-[#a1a1aa] hover:text-white hover:bg-[#232326]" 
+                ? "text-[#a1a1aa] hover:text-white hover:bg-bento-item" 
                 : "text-[#a1a1aa]/20 cursor-not-allowed"
             )}
           >
@@ -106,7 +106,7 @@ export function AppHeader() {
         <button 
           onClick={() => setShowOverlay(true)}
           className={cn(
-            "flex items-center gap-1.5 rounded-[4px] border border-[#242426] px-3 py-1 text-xs font-medium text-white bg-[#151517] transition-all duration-150 hover:bg-[#232326] shadow-sm h-8",
+            "flex items-center gap-1.5 rounded-[8px] border border-[#242426] px-3 py-1 text-xs font-medium text-white bg-bento-item shadow-sm h-8",
             pomodoroActive && "border-white/20"
           )}
         >

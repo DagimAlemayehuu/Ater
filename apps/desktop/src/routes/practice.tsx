@@ -795,86 +795,90 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 }
 
  return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-10 space-y-8">
- <div className="flex flex-row items-center justify-between gap-4">
- <div className="flex bg-muted/5 p-1 rounded-none border border-border w-auto">
- <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", view === 'dashboard' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>Dashboard</button>
- <button onClick={() => setView('history' as any)} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", (view as string) === 'history' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}>History</button>
- <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none flex items-center gap-1", (view as string) === 'vault' ? "bg-muted/20 text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/5")}><BookOpen size={10}/>Reference Vault</button>
- </div>
- <div className="flex gap-2 w-auto">
- <Button onClick={handleReviewDueCards} className="h-9 flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-none font-black uppercase tracking-widest text-[9px]"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
- <Button onClick={() => setView('configuring')} className="h-9 flex-none px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-none font-black uppercase tracking-widest text-[9px] ">Custom</Button>
- </div>
- </div>
+ <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
+   <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
+     <div className="flex flex-row items-center justify-between gap-4">
+     <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
+     <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", view === 'dashboard' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}>Dashboard</button>
+     <button onClick={() => setView('history' as any)} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", (view as string) === 'history' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}>History</button>
+     <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1", (view as string) === 'vault' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}><BookOpen size={10}/>Reference Vault</button>
+     </div>
+     <div className="flex gap-2 w-auto">
+     <Button onClick={handleReviewDueCards} className="h-9 flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
+     <Button onClick={() => setView('configuring')} className="h-9 flex-none px-6 bg-[#1a1a1c] border border-[#242426] hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">Custom</Button>
+     </div>
+     </div>
 
- <div className="grid grid-cols-3 gap-4">
- <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col gap-1">
- <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
- <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
- </div>
- <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col gap-1">
- <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
- <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
- </div>
- <div className="p-6 bg-muted/5 border border-border rounded-none flex flex-col gap-1">
- <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
- <span className="text-2xl font-black tracking-tight uppercase text-foreground">{stability}</span>
- </div>
- </div>
+     <div className="grid grid-cols-3 gap-4">
+     <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
+     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
+     <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
+     </div>
+     <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
+     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
+     <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
+     </div>
+     <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
+     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
+     <span className="text-2xl font-black tracking-tight uppercase text-foreground">{stability}</span>
+     </div>
+     </div>
 
- <div className="flex flex-col gap-8">
- <div className="grid grid-cols-2 gap-8">
- <div className="p-8 bg-muted/5 border border-border rounded-none space-y-6">
- <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
- <div className="w-full h-64">
- <ResponsiveContainer width="100%" height="100%">
- <LineChart data={validPractices.slice(-10).map((p, i) => ({name: i + 1, score: parseInt(p.score) || 0}))}>
- <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.1)" />
- <XAxis dataKey="name" hide />
- <YAxis domain={[0, 100]} hide />
- <Tooltip contentStyle={{backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '4px', fontSize: '10px'}} />
- <Line type="monotone" dataKey="score" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{r: 2, fill: 'hsl(var(--background))'}} />
- </LineChart>
- </ResponsiveContainer>
- </div>
- </div>
+     <div className="flex flex-col gap-8">
+     <div className="grid grid-cols-2 gap-8">
+     <div className="p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-6">
+     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
+     <div className="w-full h-64">
+     <ResponsiveContainer width="100%" height="100%">
+     <LineChart data={validPractices.slice(-10).map((p, i) => ({name: i + 1, score: parseInt(p.score) || 0}))}>
+     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.1)" />
+     <XAxis dataKey="name" hide />
+     <YAxis domain={[0, 100]} hide />
+     <Tooltip contentStyle={{backgroundColor: '#1a1a1c', border: '1px solid #242426', borderRadius: '8px', fontSize: '10px'}} />
+     <Line type="monotone" dataKey="score" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{r: 2, fill: '#151517'}} />
+     </LineChart>
+     </ResponsiveContainer>
+     </div>
+     </div>
 
- <div className="p-8 bg-muted/5 border border-border rounded-none space-y-8">
- <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2">
- <span>Cognitive Modalities</span>
- {!hasLogs && (
- <span className="text-[8px] font-medium tracking-normal text-muted-foreground/30 normal-case">
- (No practice logs yet. Start practicing to generate telemetry)
- </span>
- )}
- </h3>
- <div className="grid grid-cols-3 gap-x-12 gap-y-8">
- {[
- {type: 'Choice (MCQ/TF)', p: getModalityScore(['mcq', 'true_false'])},
- {type: 'Synthesis & Analysis', p: getModalityScore(['synthesis', 'scenario'])},
- {type: 'Logic & State Trace', p: getModalityScore(['trace'])},
- {type: 'Sequence & Order', p: getModalityScore(['order'])},
- {type: 'Debug & Extraction', p: getModalityScore(['debug'])},
- {type: 'Relational Matching', p: getModalityScore(['matching'])},
- {type: 'Technical Fill-in', p: getModalityScore(['fill_in'])},
- {type: 'Edge Case Mastery', p: getModalityScore(['calculation', 'data_analysis'])},
- {type: 'Industrial Application', p: getModalityScore(['code'])}
- ].map((stat, i) => (
- <div key={i} className="space-y-3">
- <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em]">
- <span className="text-muted-foreground/40">{stat.type}</span>
- <span className="text-foreground/90">{stat.p}%</span>
- </div>
- <div className="h-1.5 bg-muted/20 rounded-none overflow-hidden">
- <div className="h-full bg-primary/60" style={{width: `${stat.p}%`}}></div>
- </div>
- </div>
- ))}
- </div>
- </div>
- </div>
- </div>
+     <div className="p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-8">
+     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2">
+     <span>Cognitive Modalities</span>
+     {!hasLogs && (
+     <span className="text-[8px] font-medium tracking-normal text-muted-foreground/30 normal-case">
+     (No practice logs yet. Start practicing to generate telemetry)
+     </span>
+     )}
+     </h3>
+     <div className="grid grid-cols-3 gap-x-12 gap-y-8">
+     {[
+     {type: 'Choice (MCQ/TF)', p: getModalityScore(['mcq', 'true_false'])},
+     {type: 'Synthesis & Analysis', p: getModalityScore(['synthesis', 'scenario'])},
+     {type: 'Logic & State Trace', p: getModalityScore(['trace'])},
+     {type: 'Sequence & Order', p: getModalityScore(['order'])},
+     {type: 'Debug & Extraction', p: getModalityScore(['debug'])},
+     {type: 'Relational Matching', p: getModalityScore(['matching'])},
+     {type: 'Technical Fill-in', p: getModalityScore(['fill_in'])},
+     {type: 'Edge Case Mastery', p: getModalityScore(['calculation', 'data_analysis'])},
+     {type: 'Industrial Application', p: getModalityScore(['code'])}
+     ].map((stat, i) => (
+     <div key={i} className="space-y-3">
+     <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em]">
+     <span className="text-muted-foreground/40">{stat.type}</span>
+     <span className="text-foreground/90">{stat.p}%</span>
+     </div>
+     <div className="h-1.5 bg-[#232326] rounded-full overflow-hidden">
+     <div className="h-full bg-primary/60" style={{width: `${stat.p}%`}}></div>
+     </div>
+     </div>
+     ))}
+     </div>
+     </div>
+     </div>
+     </div>
+   </div>
+  </div>
  </div>
  );
 }
@@ -884,32 +888,36 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'history') {
  return (
- <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-10 space-y-8">
- <div className="flex flex-row items-center justify-between gap-4">
- <div className="flex bg-muted/10 p-1 rounded-none border border-border/10 w-auto">
- <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", false ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>Dashboard</button>
- <button onClick={() => setView('history')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none ", true ? "bg-background text-foreground shadow-sm" : "text-muted-foreground/60 hover:text-foreground")}>History</button>
- </div>
- <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-primary text-primary-foreground rounded-none font-black uppercase tracking-widest text-[9px]">Start</Button>
- </div>
+ <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
+   <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
+     <div className="flex flex-row items-center justify-between gap-4">
+     <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
+     <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", false ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/60 hover:text-foreground hover:bg-[#232326]/50")}>Dashboard</button>
+     <button onClick={() => setView('history')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", true ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/60 hover:text-foreground hover:bg-[#232326]/50")}>History</button>
+     </div>
+     <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-[#1a1a1c] border border-[#242426] rounded-[8px] font-black uppercase tracking-widest text-[9px] hover:border-foreground/50 transition-none">Start</Button>
+     </div>
 
- <div className="space-y-4">
- <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-border/10 pb-2">Past Sessions</h3>
- <div className="grid grid-cols-1 gap-2">
- {(Array.isArray(pastPractices) ? pastPractices : []).slice().reverse().map((p, i) => (
- <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-muted/5 border border-border rounded-none cursor-pointer  flex items-center justify-between">
- <div className="flex items-center gap-4">
- <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
- <div className="flex flex-col">
- <span className="text-xs font-black uppercase tracking-tight">{cleanTitle(p.hub_title || 'Untitled')}</span>
- <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{new Date(p.date).toLocaleDateString()}</span>
- </div>
- </div>
- <button onClick={(e) => {e.stopPropagation(); handleDeletePractice(p.path);}} className="p-1.5 text-muted-foreground/20 hover:text-destructive opacity-0 group-hover:opacity-100 "><Trash2 size={12}/></button>
- </div>
- ))}
- </div>
- </div>
+     <div className="space-y-4">
+     <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-[#242426] pb-2">Past Sessions</h3>
+     <div className="grid grid-cols-1 gap-2">
+     {(Array.isArray(pastPractices) ? pastPractices : []).slice().reverse().map((p, i) => (
+     <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] cursor-pointer hover:border-foreground/30 flex items-center justify-between transition-colors">
+     <div className="flex items-center gap-4">
+     <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
+     <div className="flex flex-col">
+     <span className="text-xs font-black uppercase tracking-tight text-foreground">{cleanTitle(p.hub_title || 'Untitled')}</span>
+     <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{new Date(p.date).toLocaleDateString()}</span>
+     </div>
+     </div>
+     <button onClick={(e) => {e.stopPropagation(); handleDeletePractice(p.path);}} className="p-1.5 text-muted-foreground/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
+     </div>
+     ))}
+     </div>
+     </div>
+   </div>
+  </div>
  </div>
  );
 }
@@ -926,38 +934,40 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    { id: 'exam_sim', label: 'Exam Simulation', icon: <Trophy size={11}/>, desc: 'Random sample mimicking real exam conditions' },
   ]
   return (
-   <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar p-10 space-y-8">
- <div className="flex flex-row items-center justify-between gap-4">
- <div className="flex bg-muted/5 p-1 rounded-none border border-border w-auto">
- <button onClick={() => setView('dashboard')} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">Dashboard</button>
- <button onClick={() => setView('history' as any)} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none text-muted-foreground/40 hover:text-foreground hover:bg-muted/5">History</button>
- <button className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-none bg-muted/20 text-foreground border border-border flex items-center gap-1"><BookOpen size={10}/>Reference Vault</button>
- </div>
- <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-muted/5 border border-border hover:border-foreground/50 text-foreground rounded-none font-black uppercase tracking-widest text-[9px]">New Session</Button>
- </div>
+ <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col">
+   <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
+     <div className="flex flex-row items-center justify-between gap-4">
+     <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
+     <button onClick={() => setView('dashboard')} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50 transition-colors">Dashboard</button>
+     <button onClick={() => setView('history' as any)} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50 transition-colors">History</button>
+     <button className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] bg-[#232326] text-foreground border border-[#242426] flex items-center gap-1 transition-colors"><BookOpen size={10}/>Reference Vault</button>
+     </div>
+     <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-[#1a1a1c] border border-[#242426] hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">New Session</Button>
+     </div>
     <div className="grid grid-cols-3 gap-6">
      <div className="col-span-1 space-y-4">
-      <div className="p-4 bg-muted/5 border border-border rounded-none space-y-3">
+      <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub</div>
        <Select value={selectedHub} onValueChange={(val: string) => { setSelectedHub(val); loadVaultFiles(val) }}>
-        <SelectTrigger className="w-full h-9 bg-muted/5 border-border rounded-none px-3 text-[10px] font-black uppercase tracking-tight"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
-        <SelectContent className="border-border bg-popover">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
+        <SelectTrigger className="w-full h-9 bg-[#232326] border-[#242426] rounded-[6px] px-3 text-[10px] font-black uppercase tracking-tight focus:ring-1 focus:ring-white/10 transition-colors"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
+        <SelectContent className="border-[#242426] bg-[#1a1a1c]">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight hover:bg-[#232326]">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
        </Select>
       </div>
-      <div className="p-4 bg-muted/5 border border-border rounded-none space-y-3">
+      <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source Text</div>
        <input value={vaultSourceName} onChange={e => setVaultSourceName(e.target.value)} placeholder="Source name (e.g. Midterm 2024)"
-        className="w-full px-3 py-2 bg-background border border-border/40 rounded-none text-[10px] font-medium focus:outline-none focus:border-foreground/30"/>
+        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-white/20 text-white placeholder:text-muted-foreground/30 transition-colors"/>
        <textarea value={vaultSourceText} onChange={e => setVaultSourceText(e.target.value)}
         placeholder="Paste exam questions, worksheet text here..." rows={5}
-        className="w-full px-3 py-2 bg-background border border-border/40 rounded-none text-[10px] font-medium focus:outline-none focus:border-foreground/30 resize-y"/>
-       <Button onClick={handleVaultUploadText} disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()} className="w-full h-9 font-black uppercase tracking-widest text-[9px]">
+        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-white/20 text-white placeholder:text-muted-foreground/30 resize-y transition-colors"/>
+       <Button onClick={handleVaultUploadText} disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()} className="w-full h-9 font-black uppercase tracking-widest text-[9px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[6px] transition-colors">
         {vaultLoading ? <>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
        </Button>
       </div>
      </div>
      <div className="col-span-2 space-y-4">
-      <div className="p-4 bg-muted/5 border border-border rounded-none space-y-3">
+      <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
        <div className="flex items-center justify-between">
         <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Question Banks</div>
         <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{vaultSelectedFiles.length} selected</span>
@@ -970,10 +980,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
           const isSel = vaultSelectedFiles.includes(vf.path)
           return (
            <button key={vf.path} onClick={() => setVaultSelectedFiles(prev => isSel ? prev.filter(p => p !== vf.path) : [...prev, vf.path])}
-            className={cn("w-full text-left p-3 border rounded-none flex items-center justify-between transition-none", isSel ? "border-foreground/40 bg-foreground/5" : "border-border/40 bg-muted/5 hover:border-foreground/20")}>
+            className={cn("w-full text-left p-3 border rounded-[8px] flex items-center justify-between transition-colors", isSel ? "border-white/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-white/20")}>
             <div className="flex items-center gap-3">
-             <div className={cn("w-4 h-4 rounded-none border flex items-center justify-center", isSel ? "bg-foreground border-foreground" : "border-border/40")}>{isSel && <Check size={10} className="text-background"/>}</div>
-             <div><div className="text-[10px] font-black uppercase tracking-tight">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
+             <div className={cn("w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors", isSel ? "bg-[#e4e4e7] border-white" : "border-[#242426]")}>{isSel && <Check size={10} className="text-[#151517]"/>}</div>
+             <div><div className="text-[10px] font-black uppercase tracking-tight text-white">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
             </div>
             <FileText size={12} className="text-muted-foreground/20"/>
            </button>
@@ -983,22 +993,22 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
        )}
       </div>
       {vaultFiles.length > 0 && (
-       <div className="p-4 bg-muted/5 border border-border rounded-none space-y-4">
+       <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-4">
         <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Practice Mode</div>
         <div className="grid grid-cols-2 gap-2">
          {MODES.map(m => (
           <button key={m.id} onClick={() => setVaultMode(m.id as any)}
-           className={cn("p-3 border rounded-none text-left transition-none", vaultMode === m.id ? "border-foreground/40 bg-foreground/5" : "border-border/40 hover:border-foreground/20 hover:bg-muted/5")}>
+           className={cn("p-3 border rounded-[8px] text-left transition-colors", vaultMode === m.id ? "border-white/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-white/20")}>
            <div className="flex items-center gap-2 mb-1">
             <span className="text-muted-foreground/60">{m.icon}</span>
-            <span className="text-[10px] font-black uppercase tracking-tight">{m.label}</span>
-            {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-none bg-foreground"/>}
+            <span className="text-[10px] font-black uppercase tracking-tight text-white">{m.label}</span>
+            {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#e4e4e7]"/>}
            </div>
            <p className="text-[8px] text-muted-foreground/40 leading-relaxed">{m.desc}</p>
           </button>
          ))}
         </div>
-        <Button onClick={handleVaultPracticeGenerate} disabled={vaultLoading || vaultSelectedFiles.length === 0} className="w-full h-10 font-black uppercase tracking-widest text-[9px]">
+        <Button onClick={handleVaultPracticeGenerate} disabled={vaultLoading || vaultSelectedFiles.length === 0} className="w-full h-10 font-black uppercase tracking-widest text-[9px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[6px] transition-colors">
          {vaultLoading ? <>Generating...</> : <>Practice from Vault <ArrowRight size={13} className="ml-2"/></>}
         </Button>
        </div>
@@ -1006,6 +1016,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      </div>
     </div>
    </div>
+  </div>
+ </div>
   )
  }
 
@@ -1015,136 +1027,144 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  if (view === 'configuring') {
  const totalQuestions = Object.values(advancedConfig.questionDistribution).reduce((a, b) => a + b, 0)
   return (
-  <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-hidden p-6">
- <div className="flex items-center justify-between mb-8">
- <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-none bg-muted/5 ">Cancel</button>
- <div className="text-xl font-black tracking-tight">{totalQuestions} Questions</div>
- </div>
-
- <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
-   <div className="col-span-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-    <div className="p-4 bg-muted/5 border border-border rounded-none space-y-5">
-     
-     <div className="space-y-2">
-      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
-      <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
-       <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 "><SelectValue placeholder="Select Topic..." /></SelectTrigger>
-       <SelectContent className="border-border bg-popover">
-          <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
-          {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
-       </SelectContent>
-      </Select>
-     </div>
-
-     <div className="space-y-2">
-      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
-      <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
-       {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
-        <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-none bg-muted/5 peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-muted/10">{level.label}</Label></div>
-       ))}
-      </RadioGroup>
-     </div>
-
-     <div className="space-y-2">
-      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
-      <Popover>
-       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full h-10 border-border bg-muted/5 text-[10px] font-black uppercase px-4 justify-between hover:bg-muted/10 ">
-         <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
-         <Layers size={12} className="opacity-40" />
-        </Button>
-       </PopoverTrigger>
-       <PopoverContent className="w-[300px] p-0 rounded-none border border-border bg-popover overflow-hidden" align="start">
-        <Command className="bg-transparent">
-         <div className="p-3 border-b border-border flex justify-between items-center bg-muted/10">
-          <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
-          <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.path)}))}}}>Toggle All</Button>
-         </div>
-         <CommandInput placeholder="Search..." className="h-10 text-[10px] font-black uppercase border-none" />
-         <CommandList className="max-h-60 p-1">
-          {availableNotes.map(note => {
-           const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
-           return (
-            <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-none text-[9px] font-black uppercase">
-             <div className={cn("w-3 h-3 border flex items-center justify-center rounded-none ", isSelected ? "bg-foreground border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
-             <span className="truncate">{note.title}</span>
-            </CommandItem>
-           ); 
-          })}
-         </CommandList>
-        </Command>
-       </PopoverContent>
-      </Popover>
-     </div>
-
-     <div className="space-y-2">
-      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
-      <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
-       <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
-       <SelectContent className="border-border bg-popover">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
-      </Select>
-     </div>
-
-     <div className="space-y-2">
-      <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
-      <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
-       <SelectTrigger className="w-full h-10 bg-muted/5 border-border rounded-none px-4 text-[10px] font-black uppercase hover:border-foreground/20 "><SelectValue placeholder="No Limit" /></SelectTrigger>
-       <SelectContent className="border-border bg-popover">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
-      </Select>
-     </div>
-
+  <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+   <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col p-10">
+    <div className="flex items-center justify-between mb-8">
+    <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] rounded-[8px] bg-[#1a1a1c] transition-colors">Cancel</button>
+    <div className="text-xl font-black tracking-tight text-white">{totalQuestions} Questions</div>
     </div>
-   </div>
 
-   <div className="col-span-3 p-6 bg-muted/5 border border-border rounded-none flex flex-col min-h-0">
-    <div className="flex items-center justify-between border-b border-border pb-4 mb-4 gap-4">
-     <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Question Types Distribution</h3>
-     <div className="flex items-center gap-4">
-      <div className="flex flex-wrap gap-1.5 justify-end">
-       {Object.entries(PRESETS).map(([k, p]) => (
-        <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-muted/10 hover:bg-muted/20 border border-border text-muted-foreground hover:text-foreground transition-none" title={p.label}>
-         {p.label}
-        </button>
-       ))}
-      </div>
-      <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-7 px-2.5 text-[8px] font-black uppercase border-border/40 hover:bg-foreground/5"><Zap size={10} className="mr-1"/>Random</Button>
-     </div>
-    </div>
-    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 gap-x-6 gap-y-4 content-start">
-     {[
-     {key: 'mcq', label: 'Multiple Choice'}, 
-     {key: 'true_false', label: 'True or False'}, 
-     {key: 'writing', label: 'Writing / Essay'}, 
-     {key: 'fill_in', label: 'Fill in the Blank'},
-     {key: 'debug', label: 'Debugging / Error Finding'},
-     {key: 'trace', label: 'Logic / Calculation Trace'},
-     {key: 'order', label: 'Ordering / Steps'},
-     {key: 'matching', label: 'Matching Pairs'},
-     {key: 'synthesis', label: 'Synthesis / Scenario'},
-     {key: 'calculation', label: 'Math / Calculation'},
-     {key: 'data_analysis', label: 'Data Analysis'},
-     {key: 'scenario', label: 'Scenario Analysis'},
-     {key: 'code', label: 'Code / Implementation'}
-     ].map(type => (
-      <div key={type.key} className="space-y-2 p-2.5 bg-muted/5 border border-border/30 hover:border-border/60 transition-colors">
-       <div className="flex justify-between items-center">
-        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
-        <span className="text-[9px] font-black tabular-nums">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
+    <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
+      <div className="col-span-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+       <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-5">
+        
+        <div className="space-y-2">
+         <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
+         <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
+          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-white/20 transition-colors"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+          <SelectContent className="border-[#242426] bg-[#1a1a1c]">
+             <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
+             {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
+          </SelectContent>
+         </Select>
+        </div>
+
+        <div className="space-y-2">
+         <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
+         <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
+          {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
+           <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-[#242426] rounded-[8px] bg-[#232326] peer-data-[state=checked]:bg-[#e4e4e7]/10 peer-data-[state=checked]:border-white/40 peer-data-[state=checked]:text-white items-center justify-center cursor-pointer text-[10px] font-black hover:bg-[#e4e4e7]/5 transition-all">{level.label}</Label></div>
+          ))}
+         </RadioGroup>
+        </div>
+
+        <div className="space-y-2">
+         <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
+         <Popover>
+          <PopoverTrigger asChild>
+           <Button variant="outline" className="w-full h-10 border-[#242426] bg-[#232326] text-[10px] font-black uppercase px-4 justify-between hover:bg-[#e4e4e7]/5 transition-colors">
+            <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
+            <Layers size={12} className="opacity-40" />
+           </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0 rounded-[12px] border border-[#242426] bg-[#1a1a1c] overflow-hidden" align="start">
+           <Command className="bg-transparent">
+            <div className="p-3 border-b border-[#242426] flex justify-between items-center bg-[#232326]/50">
+             <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
+             <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase hover:bg-[#e4e4e7]/5" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.path)}))}}}>Toggle All</Button>
+            </div>
+            <CommandInput placeholder="Search..." className="h-10 text-[10px] font-black uppercase border-none focus:ring-0" />
+            <CommandList className="max-h-60 p-1">
+             {availableNotes.map(note => {
+              const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
+              return (
+               <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-[6px] text-[9px] font-black uppercase hover:bg-[#e4e4e7]/5">
+                <div className={cn("w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors", isSelected ? "bg-[#e4e4e7] border-white text-[#151517]" : "border-[#242426]")}>{isSelected && <Check size={8} />}</div>
+                <span className="truncate text-white/80">{note.title}</span>
+               </CommandItem>
+              ); 
+             })}
+            </CommandList>
+           </Command>
+          </PopoverContent>
+         </Popover>
+        </div>
+
+        <div className="space-y-2">
+         <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
+         <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
+          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-white/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
+          <SelectContent className="border-[#242426] bg-[#1a1a1c]">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
+         </Select>
+        </div>
+
+        <div className="space-y-2">
+         <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
+         <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
+          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-white/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
+          <SelectContent className="border-[#242426] bg-[#1a1a1c]">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
+         </Select>
+        </div>
+
        </div>
-       <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals: number[]) => updateDistribution(type.key as any, vals[0])} className="py-1" />
       </div>
-     ))}
+
+      <div className="col-span-3 p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col min-h-0">
+       <div className="flex items-center justify-between border-b border-[#242426] pb-4 mb-6 gap-4">
+        <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Question Types Distribution</h3>
+        <div className="flex items-center gap-4">
+         <div className="flex flex-wrap gap-1.5 justify-end">
+          {Object.entries(PRESETS).map(([k, p]) => (
+           <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-[#232326] hover:bg-[#e4e4e7]/5 border border-[#242426] text-muted-foreground hover:text-white transition-all rounded-[4px]" title={p.label}>
+            {p.label}
+           </button>
+          ))}
+         </div>
+         <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-7 px-2.5 text-[8px] font-black uppercase border-[#242426] bg-[#232326] hover:bg-[#e4e4e7]/5 rounded-[4px]"><Zap size={10} className="mr-1"/>Random</Button>
+        </div>
+       </div>
+       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 gap-x-6 gap-y-4 content-start">
+        {[
+        {key: 'mcq', label: 'Multiple Choice'}, 
+        {key: 'true_false', label: 'True or False'}, 
+        {key: 'writing', label: 'Writing / Essay'}, 
+        {key: 'fill_in', label: 'Fill in the Blank'},
+        {key: 'debug', label: 'Debugging / Error Finding'},
+        {key: 'trace', label: 'Logic / Calculation Trace'},
+        {key: 'order', label: 'Ordering / Steps'},
+        {key: 'matching', label: 'Matching Pairs'},
+        {key: 'synthesis', label: 'Synthesis / Scenario'},
+        {key: 'calculation', label: 'Math / Calculation'},
+        {key: 'data_analysis', label: 'Data Analysis'},
+        {key: 'scenario', label: 'Scenario Analysis'},
+        {key: 'code', label: 'Code / Implementation'}
+        ].map(type => (
+         <div key={type.key} className="space-y-2 p-3 bg-[#232326]/50 border border-[#242426] hover:border-white/20 transition-colors rounded-[8px]">
+          <div className="flex justify-between items-center">
+           <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
+           <span className="text-[9px] font-black tabular-nums text-white/80">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
+          </div>
+          <Slider value={[advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]]} max={15} step={1} onValueChange={(vals: number[]) => updateDistribution(type.key as any, vals[0])} className="py-1" />
+         </div>
+        ))}
+       </div>
+       <Button onClick={handleStartSession} disabled={isLoading} className="h-11 w-full bg-[#e4e4e7] text-[#151517] border border-white hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors">Start Session</Button>
+      </div>
     </div>
-    <Button onClick={handleStartSession} disabled={isLoading} className="h-10 w-full bg-foreground/5 border border-foreground/20 hover:border-foreground/50 hover:bg-muted/10 text-foreground text-[10px] font-black uppercase tracking-widest rounded-none mt-6 ">Start Session</Button>
    </div>
   </div>
- </div>
  );
 }
  // LOADING RENDERER
  // ──────────────────────────────────────────────────────────────────────────
  if (view === 'loading') {
- return <BlockingLoader label={genStatus} />
+ return (
+  <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+    <div className="flex-1 overflow-hidden bg-[#151517] rounded-[12px] border border-[#242426] flex items-center justify-center">
+      <BlockingLoader label={genStatus} />
+    </div>
+  </div>
+ );
 }
 
  // ──────────────────────────────────────────────────────────────────────────
@@ -1182,7 +1202,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden relative">
     {/* ── Feynman Gate Locked Overlay ── */}
     {isFeynmanLocked && (
-      <div className="absolute inset-0 z-40 bg-[#0e0e0f]/90 backdrop-blur-md flex items-center justify-center p-6">
+      <div className="absolute inset-0 z-40 bg-bento-bg/90 backdrop-blur-md flex items-center justify-center p-6">
         <div className="max-w-xl w-full border border-[#242426] bg-[#151517] p-8 rounded-[12px] space-y-6 shadow-2xl relative">
           <div className="flex items-center gap-3 border-b border-[#242426] pb-4">
             <BrainCircuit className="text-primary shrink-0" size={24} />
@@ -1592,9 +1612,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         {currentQuestion.required_keywords.map((kw: string, i: number) => {
           const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
           return (
-            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-[#242426] hover:bg-[#232326]")}>
-              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded-[4px] border-[#242426] text-primary focus:ring-primary" />
-              <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
+            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer transition-colors shadow-sm", isFound ? "border-primary/50 bg-primary/5" : "border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]")}>
+              <input 
+                type="checkbox" 
+                checked={keywordChecks[kw] || false} 
+                onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} 
+                className="w-5 h-5 shrink-0 appearance-none border border-[#242426] bg-[#232326] rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-white/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-white/60 after:rotate-45 cursor-pointer transition-all hover:border-white/20"
+              />
+              <span className={cn("text-sm font-bold transition-colors", isFound ? "text-white" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3 font-black">(Found in your answer)</span>}</span>
             </label>
           );
         })}
@@ -1674,85 +1699,91 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   const bookmarkedQuestions = questions.filter((_,i) => bookmarked.has(i));
 
   return (
-   <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar">
-    <div className="max-w-3xl mx-auto w-full p-10 space-y-8">
-     {/* Score hero */}
-     <div className="flex items-end justify-between border-b border-[#242426] pb-6">
-      <div>
-       <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
-       <h1 className="text-9xl font-black tracking-tighter leading-none">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
+   <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+    <div className="flex-1 overflow-hidden bg-bento-panel rounded-[12px] border border-border flex flex-col p-10">
+     <div className="max-w-3xl mx-auto w-full space-y-8 overflow-y-auto pr-2 custom-scrollbar">
+      {/* Score hero */}
+      <div className="flex items-end justify-between border-b border-[#242426] pb-6">
+       <div>
+        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
+        <h1 className="text-9xl font-black tracking-tighter leading-none text-white">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
+       </div>
+       <div className="flex flex-col items-end gap-2 pb-2">
+        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{correct} / {total} correct</div>
+        {avgTime > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{avgTime}s avg per question</div>}
+        {bookmarkedQuestions.length > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-primary/60">{bookmarkedQuestions.length} bookmarked</div>}
+       </div>
       </div>
-      <div className="flex flex-col items-end gap-2 pb-2">
-       <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{correct} / {total} correct</div>
-       {avgTime > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{avgTime}s avg per question</div>}
-       {bookmarkedQuestions.length > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-primary/60">{bookmarkedQuestions.length} bookmarked</div>}
+
+      {/* Progress bar */}
+      <div className="h-2.5 w-full bg-[#1a1a1c] rounded-full overflow-hidden border border-[#242426]">
+       <div className="h-full bg-[#e4e4e7] rounded-none transition-all duration-700" style={{width:`${score}%`}}/>
       </div>
-     </div>
 
-     {/* Progress bar */}
-     <div className="h-2.5 w-full bg-[#232326] rounded-full overflow-hidden">
-      <div className="h-full bg-foreground/80 rounded-none transition-none duration-700" style={{width:`${score}%`}}/>
-     </div>
+      {/* Type breakdown */}
+      {Object.entries(typeMap).length > 0 && (
+       <div className="space-y-3">
+        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Breakdown by Type</div>
+        <div className="grid grid-cols-2 gap-2">
+         {Object.entries(typeMap).map(([t, s]) => {
+           const pct = Math.round((s.correct/s.total)*100);
+           return (
+            <div key={t} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-2">
+             <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
+              <span className="text-[10px] font-black tabular-nums text-white/80">{pct}%</span>
+             </div>
+             <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'white' : pct >= 50 ? 'rgba(255,255,255,0.4)' : 'rgba(239, 68, 68, 0.6)'}}/>
+             </div>
+             <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
+            </div>
+           )
+         })}
+        </div>
+       </div>
+      )}
 
-     {/* Type breakdown */}
-     {Object.entries(typeMap).length > 0 && (
-      <div className="space-y-3">
-       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Breakdown by Type</div>
-       <div className="grid grid-cols-2 gap-2">
-        {Object.entries(typeMap).map(([t, s]) => {
-          const pct = Math.round((s.correct/s.total)*100);
-          return (
-           <div key={t} className="p-4 bg-[#151517] border border-[#242426] rounded-[12px] space-y-2">
-            <div className="flex items-center justify-between">
-             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
-             <span className="text-[10px] font-black tabular-nums">{pct}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
-             <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'hsl(var(--foreground)/0.8)' : pct >= 50 ? 'hsl(var(--foreground)/0.4)' : 'hsl(var(--destructive)/0.6)'}}/>
-            </div>
-            <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
+      {/* Bookmarked questions review */}
+      {bookmarkedQuestions.length > 0 && (
+       <div className="space-y-3">
+        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
+        <div className="space-y-2">
+         {bookmarkedQuestions.map((q,i) => (
+          <div key={i} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-2">
+           <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[8px] border-[#242426] rounded-[4px] px-1.5 bg-[#232326]">{q.difficulty||'?'}</Badge>
+            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
+            {gradedAnswers[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
+            {gradedAnswers[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
            </div>
-          )
-        })}
-       </div>
-      </div>
-     )}
-
-     {/* Bookmarked questions review */}
-     {bookmarkedQuestions.length > 0 && (
-      <div className="space-y-3">
-       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
-       <div className="space-y-2">
-        {bookmarkedQuestions.map((q,i) => (
-         <div key={i} className="p-4 bg-muted/5 border border-border/40 rounded-none space-y-2">
-          <div className="flex items-center gap-2">
-           <Badge variant="outline" className="text-[8px] border-border/40 rounded-none px-1.5">{q.difficulty||'?'}</Badge>
-           <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
-           {gradedAnswers[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
-           {gradedAnswers[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
+           <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
+            {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-[#242426]/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
           </div>
-          <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
-           {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-[#242426]/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
-         </div>
-        ))}
+         ))}
+        </div>
        </div>
-      </div>
-     )}
+      )}
 
-     {/* Actions */}
-     <div className="flex flex-row gap-3 pt-2 border-t border-border/10">
-      <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-foreground text-background text-[10px] font-black uppercase tracking-widest rounded-none">Practice Again</Button>
-      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-border/40 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-none">Retry Wrong Only</Button>
-      <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-border/20 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-none">Done</Button>
+      {/* Actions */}
+      <div className="flex flex-row gap-3 pt-6 border-t border-[#242426]">
+       <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-[#151517] border border-white hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
+       <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
+       <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Done</Button>
+      </div>
      </div>
     </div>
    </div>
   );
-}
-
+  }
  return (
- <div className="h-full w-full flex items-center justify-center bg-background text-muted-foreground">
- <Button onClick={() => setView('dashboard')} variant="outline">Reset</Button>
+ <div className="h-full flex flex-col bg-bento-bg p-3 font-sans overflow-hidden">
+  <div className="flex-1 overflow-hidden bg-[#151517] rounded-[12px] border border-[#242426] flex items-center justify-center">
+    <div className="text-center space-y-4">
+      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Session state invalidated</p>
+      <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] text-white rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
+    </div>
+  </div>
  </div>
  );
 }

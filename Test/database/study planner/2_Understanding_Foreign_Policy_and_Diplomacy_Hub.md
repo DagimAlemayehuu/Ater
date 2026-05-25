@@ -1,18 +1,16 @@
 ---
-
-title: 2_Understanding_Foreign_Policy_and_Diplomacy_Hub
-type: Hub
-course: Global Trends
-semester: Winter2026
-unit: '2'
+confidence: "null"
+course: "Global Trends"
+generated: true
+semester: "Winter2026"
 source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter2-ocr.pdf]]"
 source_pages:
-- 1
-status: Not Started
-confidence: null
-study_date: null
-generated: true
-
+ - "1"
+status: "Not Started"
+study_date: "null"
+title: "2_Understanding_Foreign_Policy_and_Diplomacy_Hub"
+type: "Hub"
+unit: 2
 ---
 
 ## Overview
@@ -45,7 +43,7 @@ The intersection of foreign policy and diplomacy involves the actions states tak
         - [ ] [[Self_Preservation]]
     - [ ] [[Foreign_Policy_Foreign_Policy_Behavior_Synthesis]]
     - [ ] [[Military_Aid]]
-    - [ ] [[Military_Capability]]
+    - [x] [[Military_Capability]]
     - [ ] [[National_Interest]]
         - [ ] [[Economic_Diplomacy]]
         - [ ] [[Inside_Out_Approach]]

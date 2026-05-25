@@ -32,6 +32,11 @@
     --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 0 0% 85%;
     --sidebar-ring: 0 0% 25%;
+
+    --bento-bg: 0 0% 98%;
+    --bento-panel: 0 0% 95%;
+    --bento-card: 0 0% 92%;
+    --bento-item: 0 0% 88%;
   }
 
   .dark {
@@ -62,6 +67,11 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 240 4% 15%;
     --sidebar-ring: 0 0% 80%;
+
+    --bento-bg: 240 5% 5%;    /* #0e0e0f */
+    --bento-panel: 240 4% 9%; /* #151517 */
+    --bento-card: 240 4% 11%; /* #1a1a1c */
+    --bento-item: 240 4% 15%; /* #232326 */
   }
 }
 
@@ -161,3 +171,9 @@
 .prose table { @apply w-full border-collapse my-4; }
 .prose th { @apply border-b border-border/40 px-3 py-2 text-left text-[9px] font-black uppercase text-muted-foreground/40; }
 .prose td { @apply border-b border-border/10 px-3 py-2 text-[11px] text-foreground/80; }
+
+/* Bento Tailwinds */
+.bg-bento-bg { background-color: hsl(var(--bento-bg)); }
+.bg-bento-panel { background-color: hsl(var(--bento-panel)); }
+.bg-bento-card { background-color: hsl(var(--bento-card)); }
+.bg-bento-item { background-color: hsl(var(--bento-item)); }

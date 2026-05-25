@@ -50,14 +50,14 @@ export function BacklinksView({ pageName, onNavigate }: BacklinksViewProps) {
             <div className="grid grid-cols-1 grid-cols-2 gap-3">
                 {loading ? (
                     Array(2).fill(0).map((_, i) => (
-                        <div key={i} className="h-20 bg-muted/30 rounded-none " />
+                        <div key={i} className="h-20 bg-muted/30 rounded-[8px] " />
                     ))
                 ) : (
                     backlinks.map((link) => (
                         <button
                             key={link.path}
                             onClick={() => onNavigate(link.path)}
-                            className="group text-left p-4 rounded-none border border-border bg-card hover:border-primary hover:shadow-lg  space-y-2 relative overflow-hidden"
+                            className="group text-left p-4 rounded-[8px] border border-border bg-card hover:border-primary hover:shadow-lg  space-y-2 relative overflow-hidden"
                         >
                             <div className="flex items-center gap-2">
                                 {link.type === 'database' ? <Inbox size={12} className="text-muted-foreground" /> : <FileText size={12} className="text-muted-foreground" />}

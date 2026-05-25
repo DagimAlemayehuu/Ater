@@ -144,13 +144,13 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                <div className="flex items-center gap-1.5">
                  <button 
                    onClick={handleSaveNote}
-                   className="h-8 px-3 bg-primary text-primary-foreground rounded-none text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm hover:opacity-90"
+                   className="h-8 px-3 bg-primary text-primary-foreground rounded-[8px] text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm hover:opacity-90"
                  >
                    <Save size={12} /> SAVE
                  </button>
                  <button 
                    onClick={() => setIsEditing(false)}
-                   className="h-8 px-3 bg-muted text-muted-foreground rounded-none text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-accent"
+                   className="h-8 px-3 bg-muted text-muted-foreground rounded-[8px] text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-accent"
                  >
                    <X size={12} /> CANCEL
                  </button>
@@ -159,7 +159,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                <div className="flex items-center gap-1">
                  <button 
                    onClick={() => setIsEditing(true)}
-                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-none hover:text-foreground hover:border-primary  shadow-sm"
+                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
                    title="Edit Note"
                  >
                     <Edit3 size={14} />
@@ -214,7 +214,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                         setCurrentWaypointIndex(0)
                         await selectFile(resolvedPath, firstPage, false, [], true)
                       }}
-                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-none hover:text-foreground hover:border-primary  shadow-sm"
+                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
                      title="Jump to Source PDF"
                    >
                      <FileText size={14} />
@@ -223,7 +223,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    <button 
                       onClick={() => config && saveConfig({ showProperties: !config.showProperties })}
                       className={cn(
-                        "w-8 h-8 flex items-center justify-center rounded-none border  shadow-sm",
+                        "w-8 h-8 flex items-center justify-center rounded-[8px] border  shadow-sm",
                          config?.showProperties 
                          ? "bg-foreground/10 border-foreground/50 text-foreground" 
                          : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
@@ -241,7 +241,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
             <div className="flex items-center gap-1.5">
               {/* Waypoint Navigation (if multiple) */}
               {waypoints.length > 1 && (
-                <div className="flex items-center gap-1.5 bg-primary/5 px-2 py-0.5 rounded-none border border-primary/20 h-8">
+                <div className="flex items-center gap-1.5 bg-primary/5 px-2 py-0.5 rounded-[8px] border border-primary/20 h-8">
                   <MapPin size={10} className="text-primary opacity-50 mr-0.5" />
                   <div className="flex items-center gap-1">
                     {waypoints.map((page, idx) => (
@@ -252,7 +252,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                           pdfRef.current?.handleJump(page);
                         }}
                         className={cn(
-                          "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded-none border transition-none",
+                          "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded-[8px] border transition-none",
                           currentWaypointIndex === idx 
                             ? "bg-foreground/10 border-foreground/50 text-foreground shadow-sm" 
                             : "bg-background/50 border-border/40 text-muted-foreground/60 hover:border-foreground/40 hover:text-foreground"
@@ -266,10 +266,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                 </div>
               )}
 
-              <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded-none border border-border/50 h-8">
+              <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded-[8px] border border-border/50 h-8">
              <button 
                onClick={() => pdfRef.current?.handlePrev()}
-               className="p-1 hover:bg-background rounded-none  text-muted-foreground hover:text-foreground"
+               className="p-1 hover:bg-background rounded-[8px]  text-muted-foreground hover:text-foreground"
              >
                <ChevronLeft size={12} />
              </button>
@@ -280,7 +280,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              </div>
              <button 
                onClick={() => pdfRef.current?.handleNext()}
-               className="p-1 hover:bg-background rounded-none  text-muted-foreground hover:text-foreground"
+               className="p-1 hover:bg-background rounded-[8px]  text-muted-foreground hover:text-foreground"
              >
                <ChevronRight size={12} />
              </button>
@@ -292,7 +292,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
            <button 
              onClick={() => setIsFullscreen(!isFullscreen)}
              className={cn(
-               "w-8 h-8 flex items-center justify-center rounded-none border  shadow-sm",
+               "w-8 h-8 flex items-center justify-center rounded-[8px] border  shadow-sm",
                 isFullscreen 
                 ? "bg-foreground/10 border-foreground/50 text-foreground" 
                 : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
@@ -1557,7 +1557,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  {isRenaming ? (
  <input
  autoFocus
- className="flex-1 bg-background border border-primary rounded-none px-1 py-0 text-[12px] outline-none h-5"
+ className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0 text-[12px] outline-none h-5"
  value={newItemName}
  onChange={(e) => setNewItemName(e.target.value)}
  onKeyDown={(e) => {
@@ -1583,7 +1583,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  setNewItemName('')
  if (!isExpanded) toggleFolder(node.path)
 }}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded-none "
+ className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
  title="New file"
  >
  <Plus size={10} />
@@ -1595,14 +1595,14 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  setRenamingPath(node.path)
  setNewItemName(node.name)
 }}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded-none "
+ className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
  title="Rename"
  >
  <Edit3 size={10} />
  </button>
  <button
  onClick={(e) => handleDeleteItem(node.path, node.isFolder)}
- className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-none "
+ className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-[8px] "
  title="Delete"
  >
  <Trash2 size={10} strokeWidth={2.5} />
@@ -1617,7 +1617,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  {creatingType === 'folder' ? <Folder size={12} className="text-muted-foreground/60" /> : <FileText size={12} className="text-muted-foreground/40" />}
  <input
  autoFocus
- className="flex-1 bg-background border border-primary rounded-none px-1 py-0 text-[12px] outline-none h-5"
+ className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0 text-[12px] outline-none h-5"
  placeholder={`New ${creatingType}...`}
  value={newItemName}
  onChange={(e) => setNewItemName(e.target.value)}
@@ -1643,7 +1643,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  {creatingType === 'folder' ? <Folder size={14} className="text-muted-foreground" /> : <FileText size={14} className="text-muted-foreground" />}
  <input
  autoFocus
- className="flex-1 bg-background border border-primary rounded-none px-1 py-0.5 text-[13px] outline-none"
+ className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0.5 text-[13px] outline-none"
  placeholder={`New ${creatingType}...`}
  value={newItemName}
  onChange={(e) => setNewItemName(e.target.value)}
@@ -1961,7 +1961,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                           handleSaveNote()
                         }
                       }}
-                      className="w-full h-[600px] p-8 bg-[#0e0e0f] border border-[#242426] rounded-[4px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20 text-white"
+                      className="w-full h-[600px] p-8 bg-[#151517] border border-[#242426] rounded-[4px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20 text-white"
                       placeholder="Start writing..."
                       autoFocus
                     />

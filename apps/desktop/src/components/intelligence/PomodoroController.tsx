@@ -149,7 +149,7 @@ export default function PomodoroController() {
       {/* Centered Timer Modal Overlay */}
       {showOverlay && (
         <div
-          className="fixed inset-0 z-[150] bg-[#0e0e0f]/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[150] bg-bento-bg/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowOverlay(false);
           }}
@@ -165,7 +165,7 @@ export default function PomodoroController() {
       {/* Statistics Modal Overlay */}
       {showStats && (
         <div
-          className="fixed inset-0 z-[160] bg-[#0e0e0f]/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[160] bg-bento-bg/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) usePomodoroStore.getState().setShowStats(false);
           }}

@@ -105,7 +105,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
         </div>
 
         {linkedExam && examItem && (
-          <div className="p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px] flex items-center justify-between">
+          <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex items-center justify-between">
             <div>
               <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Linked Exam</span>
               <p className="text-[13px] font-black uppercase mt-0.5 text-white">{cleanTitle(examItem.title)}</p>
@@ -145,7 +145,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter & controls */}
       <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap">
-        <div className="flex items-center gap-1 bg-[#0e0e0f] border border-[#242426] p-1 rounded-[6px]">
+        <div className="flex items-center gap-1 bg-[#1a1a1c] border border-[#242426] p-1 rounded-[6px]">
           {(['Active', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
@@ -156,7 +156,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
         </div>
 
         {/* Group mode */}
-        <div className="flex items-center gap-1 bg-[#0e0e0f] border border-[#242426] p-1 rounded-[6px]">
+        <div className="flex items-center gap-1 bg-[#1a1a1c] border border-[#242426] p-1 rounded-[6px]">
           {(['course', 'status', 'none'] as GroupMode[]).map(g => (
             <button key={g} onClick={() => setGroupMode(g)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
@@ -166,7 +166,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
           ))}
         </div>
 
-        <div className="flex items-center gap-2 flex-1 bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2">
+        <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
           <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
             className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
@@ -214,7 +214,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
                 return (
                   <div key={idx} onClick={() => setSelectedId(hub.id)}
                     className={cn('p-5 border cursor-pointer rounded-[8px] flex flex-col gap-3 hover:border-foreground/40 transition-colors',
-                      isDone ? 'border-[#242426] bg-[#0e0e0f]/50 opacity-60' : 'border-[#242426] bg-[#0e0e0f] hover:bg-[#232326]/30')}>
+                      isDone ? 'border-[#242426] bg-[#1a1a1c]/50 opacity-60' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
                     <div className="flex items-start gap-2">
                       <div className={cn('w-3.5 h-3.5 border rounded-[3px] shrink-0 mt-0.5 flex items-center justify-center',
                         isDone ? 'bg-white border-white' : 'border-[#242426]')}

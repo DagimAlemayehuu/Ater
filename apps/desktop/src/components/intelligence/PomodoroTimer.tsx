@@ -27,7 +27,7 @@ export default function PomodoroTimer() {
   const currentSettingsTime = mode === 'focus' ? settings.focus : (mode === 'short_break' ? settings.shortBreak : settings.longBreak);
 
   return (
-    <div className="flex flex-col items-center justify-between p-8 bg-[#151517] border border-[#242426] shadow-2xl w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-[12px]">
+    <div className="flex flex-col items-center justify-between p-8 bg-bento-panel border border-border shadow-2xl w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-[12px]">
       {/* Header */}
       <div className="w-full flex items-center justify-between z-10">
         <button onClick={() => setShowOverlay(false)} className="p-2 hover:bg-[#232326] rounded-[8px] transition-none border border-transparent hover:border-[#242426]">

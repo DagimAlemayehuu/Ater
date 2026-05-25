@@ -1,23 +1,22 @@
 ---
-
-title: Diplomacy_And_Foreign_Policy
-course: Global Trends
-unit: '2'
-semester: Winter2026
-mode: ECON-MACRO
-type: Atomic Note
-hub: "[[2_Understanding_Foreign_Policy_And_Diplomacy_Hub]]"
-source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter2-ocr.pdf]]"
-date: '2026-05-22'
-prerequisites: []
-source_pages:
-- 1
-- 9
-- 18
+course: "Global Trends"
+date: "2026-05-22"
 generated: true
-skeleton_fallback: true
-read: false
+hub: "[[2_Understanding_Foreign_Policy_And_Diplomacy_Hub]]"
+mode: "ECON-MACRO"
+prerequisites:
 
+read: false
+semester: "Winter2026"
+skeleton_fallback: true
+source: "[[Inbox/Generated/Winter2026/Global_Trends/Chapter2-ocr.pdf]]"
+source_pages:
+ - "1"
+ - "9"
+ - "18"
+title: "Diplomacy_And_Foreign_Policy"
+type: "Atomic Note"
+unit: 2
 ---
 
 ## Mental Model

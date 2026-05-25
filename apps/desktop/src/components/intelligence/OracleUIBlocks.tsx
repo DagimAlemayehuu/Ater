@@ -41,11 +41,11 @@ export const FocusHUD = ({ payload }: { payload: any }) => {
         : ((5 * 60 - timeLeft) / (5 * 60)) * 100;
 
     return (
-        <div className="p-6 border border-border bg-background my-4 rounded-none select-none shadow-sm group">
+        <div className="p-6 border border-border bg-background my-4 rounded-[12px] select-none shadow-sm group">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className={cn(
-                        "size-10 rounded-none border flex items-center justify-center transition-colors",
+                        "size-10 rounded-[12px] border flex items-center justify-center transition-colors",
                         isActive ? "border-primary/40 bg-primary/5 animate-pulse" : "border-border bg-muted/20"
                     )}>
                         <Clock size={18} className={isActive ? "text-primary" : "text-muted-foreground"} />
@@ -59,7 +59,7 @@ export const FocusHUD = ({ payload }: { payload: any }) => {
                         </span>
                     </div>
                 </div>
-                <Badge variant="outline" className="rounded-none font-black text-[9px] uppercase tracking-widest px-2 py-1">
+                <Badge variant="outline" className="rounded-[12px] font-black text-[9px] uppercase tracking-widest px-2 py-1">
                     {currentHub?.replace(/_/g, ' ') || 'No Hub Selected'}
                 </Badge>
             </div>
@@ -70,7 +70,7 @@ export const FocusHUD = ({ payload }: { payload: any }) => {
                 </div>
                 
                 <div className="space-y-2">
-                    <Progress value={progress} className="h-1.5 rounded-none bg-muted/20" />
+                    <Progress value={progress} className="h-1.5 rounded-[12px] bg-muted/20" />
                     <div className="flex justify-between text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
                         <span>Started</span>
                         <span>{mode === 'focus' ? '25:00' : '05:00'}</span>
@@ -80,7 +80,7 @@ export const FocusHUD = ({ payload }: { payload: any }) => {
                 <div className="grid grid-cols-3 gap-2 pt-2">
                     <Button 
                         variant="outline" 
-                        className="rounded-none border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
+                        className="rounded-[12px] border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
                         onClick={() => setIsActive(!isActive)}
                     >
                         {isActive ? <Pause size={12} className="mr-2" /> : <Play size={12} className="mr-2" />}
@@ -88,7 +88,7 @@ export const FocusHUD = ({ payload }: { payload: any }) => {
                     </Button>
                     <Button 
                         variant="outline" 
-                        className="rounded-none border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
+                        className="rounded-[12px] border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
                         onClick={() => {
                             setIsActive(false);
                             setTimeLeft(25 * 60);
@@ -98,7 +98,7 @@ export const FocusHUD = ({ payload }: { payload: any }) => {
                     </Button>
                     <Button 
                         variant="outline" 
-                        className="rounded-none border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
+                        className="rounded-[12px] border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
                     >
                         <Settings size={12} className="mr-2" /> Config
                     </Button>
@@ -131,7 +131,7 @@ export const GenerationStepper = ({ payload }: { payload: any }) => {
     const fileName = file_path.split('/').pop() || 'File';
 
     return (
-        <div className="p-6 border border-border bg-background my-4 rounded-none shadow-sm">
+        <div className="p-6 border border-border bg-background my-4 rounded-[12px] shadow-sm">
             <div className="flex items-center gap-3 mb-8 pb-4 border-b border-border/50">
                 <div className="size-10 border border-foreground bg-foreground text-background flex items-center justify-center">
                     <Zap size={20} />
@@ -187,7 +187,7 @@ export const GenerationStepper = ({ payload }: { payload: any }) => {
                         </div>
                         <Button 
                             variant="outline" 
-                            className="w-full rounded-none border-foreground/20 hover:border-foreground/40 text-[10px] font-black uppercase tracking-widest mt-4"
+                            className="w-full rounded-[12px] border-foreground/20 hover:border-foreground/40 text-[10px] font-black uppercase tracking-widest mt-4"
                             onClick={() => setStep(2)}
                         >
                             Confirm Curriculum <ArrowRight size={12} className="ml-2" />
@@ -199,7 +199,7 @@ export const GenerationStepper = ({ payload }: { payload: any }) => {
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Proposed Atomic Notes</span>
-                            <Badge variant="outline" className="rounded-none text-[9px] font-black uppercase">{plan?.notes?.length || 0} Total</Badge>
+                            <Badge variant="outline" className="rounded-[12px] text-[9px] font-black uppercase">{plan?.notes?.length || 0} Total</Badge>
                         </div>
                         <div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-2 custom-scrollbar">
                             {plan?.notes?.map((note: string, i: number) => (
@@ -210,7 +210,7 @@ export const GenerationStepper = ({ payload }: { payload: any }) => {
                             ))}
                         </div>
                         <Button 
-                            className="w-full rounded-none bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-widest h-10 shadow-lg shadow-foreground/5 mt-4"
+                            className="w-full rounded-[12px] bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-widest h-10 shadow-lg shadow-foreground/5 mt-4"
                             onClick={handleConfirm}
                             disabled={isDeploying}
                         >
@@ -291,7 +291,7 @@ export const SearchNavigator = ({ payload }: { payload: any }) => {
                         Results for "{query}"
                     </span>
                 </div>
-                <Badge variant="outline" className="rounded-none text-[9px] font-black uppercase">
+                <Badge variant="outline" className="rounded-[12px] text-[9px] font-black uppercase">
                     {results?.length || 0} Found
                 </Badge>
             </div>
@@ -316,7 +316,7 @@ export const SearchNavigator = ({ payload }: { payload: any }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                           <Button variant="ghost" size="icon" className="size-8 rounded-none border border-border/50 hover:border-foreground/20">
+                           <Button variant="ghost" size="icon" className="size-8 rounded-[12px] border border-border/50 hover:border-foreground/20">
                                 <ArrowRight size={12} />
                            </Button>
                         </div>
@@ -346,7 +346,7 @@ export const CalendarBar = ({ payload }: { payload: any }) => {
                         <div className="flex items-center justify-between">
                             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{ev.type}</span>
                             <Badge variant="outline" className={cn(
-                                "rounded-none text-[8px] font-black",
+                                "rounded-[12px] text-[8px] font-black",
                                 ev.priority === 'High' ? "border-rose-500/20 text-rose-500" : "border-border"
                             )}>
                                 {ev.priority || 'Normal'}
@@ -393,12 +393,12 @@ export const InboxGallery = ({ payload, onProcess }: { payload: any, onProcess?:
                     </div>
                     <div className="absolute inset-0 bg-background/90 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity p-4 border border-foreground/30">
                         <Button 
-                            className="w-full h-8 rounded-none text-[9px] font-black uppercase tracking-widest"
+                            className="w-full h-8 rounded-[12px] text-[9px] font-black uppercase tracking-widest"
                             onClick={() => onProcess?.(file.path)}
                         >
                             Process with Ater
                         </Button>
-                        <Button variant="outline" className="w-full h-8 rounded-none text-[9px] font-black uppercase tracking-widest">
+                        <Button variant="outline" className="w-full h-8 rounded-[12px] text-[9px] font-black uppercase tracking-widest">
                             Preview
                         </Button>
                     </div>
@@ -452,7 +452,7 @@ export const SRSFlashcard = ({ payload }: { payload: any }) => {
                             <Button 
                                 key={g}
                                 variant="outline" 
-                                className="rounded-none text-[9px] font-black uppercase h-9 border-border hover:border-foreground/40"
+                                className="rounded-[12px] text-[9px] font-black uppercase h-9 border-border hover:border-foreground/40"
                                 onClick={() => handleGrade(g)}
                             >
                                 {g === 1 ? 'Again' : g === 2 ? 'Hard' : g === 3 ? 'Good' : 'Easy'}
@@ -483,7 +483,7 @@ export const AppConfigBlock = ({ payload, onSendMessage }: { payload: any; onSen
     };
 
     return (
-        <div className="p-5 border-[0.5px] border-border bg-background/50 backdrop-blur-sm my-4 rounded-none select-none shadow-sm space-y-5">
+        <div className="p-5 border-[0.5px] border-border bg-background/50 backdrop-blur-sm my-4 rounded-[12px] select-none shadow-sm space-y-5">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
@@ -492,7 +492,7 @@ export const AppConfigBlock = ({ payload, onSendMessage }: { payload: any; onSen
                         App Preferences
                     </span>
                 </div>
-                <Badge variant="outline" className="rounded-none font-bold text-[8px] uppercase tracking-wider border-border bg-muted/20 text-muted-foreground">
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-border bg-muted/20 text-muted-foreground">
                     System
                 </Badge>
             </div>
@@ -507,13 +507,13 @@ export const AppConfigBlock = ({ payload, onSendMessage }: { payload: any; onSen
                                 type="text"
                                 value={nameVal}
                                 onChange={(e) => setNameVal(e.target.value)}
-                                className="h-6 px-2 bg-background border border-border text-[11px] font-bold outline-none rounded-none focus:border-foreground/40 w-32"
+                                className="h-6 px-2 bg-background border border-border text-[11px] font-bold outline-none rounded-[12px] focus:border-foreground/40 w-32"
                                 onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
                                 autoFocus
                             />
                             <Button 
                                 variant="outline" 
-                                className="h-6 px-2 rounded-none text-[9px] font-black uppercase border-foreground bg-foreground text-background hover:bg-foreground/90"
+                                className="h-6 px-2 rounded-[12px] text-[9px] font-black uppercase border-foreground bg-foreground text-background hover:bg-foreground/90"
                                 onClick={handleSaveName}
                             >
                                 Save
@@ -639,7 +639,7 @@ export const QueueStatusBlock = ({ payload, onSendMessage }: { payload: any; onS
     };
 
     return (
-        <div className="p-5 border-[0.5px] border-border bg-background/50 backdrop-blur-sm my-4 rounded-none select-none shadow-sm space-y-5">
+        <div className="p-5 border-[0.5px] border-border bg-background/50 backdrop-blur-sm my-4 rounded-[12px] select-none shadow-sm space-y-5">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
@@ -711,7 +711,7 @@ export const QueueStatusBlock = ({ payload, onSendMessage }: { payload: any; onS
             <div className="grid grid-cols-2 gap-2 pt-1">
                 <Button 
                     variant="outline" 
-                    className="rounded-none border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
+                    className="rounded-[12px] border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9"
                     onClick={handleToggleAutoIngest}
                 >
                     {auto_process ? 'Disable Auto Ingest' : 'Enable Auto Ingest'}
@@ -719,7 +719,7 @@ export const QueueStatusBlock = ({ payload, onSendMessage }: { payload: any; onS
                 <Button 
                     variant="outline" 
                     className={cn(
-                        "rounded-none border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9",
+                        "rounded-[12px] border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9",
                         queue_size > 0 && !isProcessing && "bg-foreground text-background hover:bg-foreground/90 border-foreground"
                     )}
                     onClick={handleProcessQueue}
@@ -771,7 +771,7 @@ export const StudyHistoryBlock = ({ payload }: { payload: any }) => {
     };
 
     return (
-        <div className="p-5 border-[0.5px] border-border bg-background/50 backdrop-blur-sm my-4 rounded-none select-none shadow-sm space-y-4">
+        <div className="p-5 border-[0.5px] border-border bg-background/50 backdrop-blur-sm my-4 rounded-[12px] select-none shadow-sm space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border/50 pb-3">
                 <div className="flex items-center gap-2">
@@ -830,7 +830,7 @@ export const StudyHistoryBlock = ({ payload }: { payload: any }) => {
                                             </span>
                                         </div>
                                     </div>
-                                    <Badge variant="outline" className="rounded-none border-border/70 text-[9px] font-mono px-1.5 py-0.5">
+                                    <Badge variant="outline" className="rounded-[12px] border-border/70 text-[9px] font-mono px-1.5 py-0.5">
                                         {formatDuration(session.duration_seconds)}
                                     </Badge>
                                 </div>
@@ -866,7 +866,7 @@ export const StudyHistoryBlock = ({ payload }: { payload: any }) => {
                                             </div>
                                         </div>
                                         {item.time_taken_seconds && (
-                                            <Badge variant="outline" className="rounded-none border-border/70 text-[9px] font-mono px-1.5 py-0.5 shrink-0">
+                                            <Badge variant="outline" className="rounded-[12px] border-border/70 text-[9px] font-mono px-1.5 py-0.5 shrink-0">
                                                 {formatDuration(item.time_taken_seconds)}
                                             </Badge>
                                         )}
