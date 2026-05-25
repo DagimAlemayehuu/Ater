@@ -255,6 +255,84 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
   useEffect(() => {loadHubs(); loadPastPractices(); loadAnalytics();}, [])
 
+  useEffect(() => {
+    const startPending = searchParams.get('startPending');
+    const hubId = searchParams.get('hubId');
+    if (startPending === 'true' && hubId) {
+      const pendingStr = localStorage.getItem('ater-pending-practice-config');
+      if (pendingStr) {
+        try {
+          const config = JSON.parse(pendingStr);
+          setSearchParams(prev => {
+            prev.delete('startPending');
+            return prev;
+          });
+          localStorage.removeItem('ater-pending-practice-config');
+          
+          setIsLoading(true);
+          setView('loading');
+          
+          (async () => {
+            try {
+              const cacheRes = await sidecarApi.srsCards();
+              const cacheMap: Record<string, any> = {};
+              if (cacheRes && Array.isArray(cacheRes.cards)) {
+                cacheRes.cards.forEach((c: any) => {
+                  cacheMap[c.note_path] = c;
+                });
+              }
+              setSrsCardsCache(cacheMap);
+              setUnlockedNotes(new Set());
+              setFeynmanExplanation('');
+              setFeynmanError(null);
+
+              setAdvancedConfig(config);
+              setSelectedHub(hubId);
+
+              const cleanDistribution = Object.fromEntries(
+                Object.entries(config.questionDistribution).filter(([k]) => 
+                  ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
+                )
+              );
+
+              const res = await sidecarApi.generatePractice(hubId, {
+                ...config,
+                hubId: hubId,
+                questionDistribution: cleanDistribution
+              });
+
+              if (!res.questions || res.questions.length === 0) {
+                toast.error('No content found.');
+                setView('configuring');
+                return;
+              }
+
+              setQuestions(res.questions); 
+              setCurrentPracticePath(res.quiz_path); 
+              setCurrentQuestionIdx(0); 
+              setUserAnswers({}); 
+              setIsRevealed(false); 
+              setGradedAnswers({}); 
+              setStreak(0); 
+              setBookmarked(new Set());
+              setView('session');
+              (window as any).__practiceStartTime = Date.now();
+              if (config.globalTimeLimitMinutes) setGlobalTimeLeft(config.globalTimeLimitMinutes * 60);
+              if (config.perQuestionTimeLimitSeconds) setQuestionTimeLeft(config.perQuestionTimeLimitSeconds);
+            } catch (err: any) {
+              toast.error(getCleanErrorMessage(err));
+              setView('configuring');
+            } finally {
+              setIsLoading(false);
+            }
+          })();
+        } catch (e) {
+          console.error("Failed to parse pending practice config", e);
+        }
+      }
+    }
+  }, [searchParams, hubs]);
+
 
  useEffect(() => {
  const searchParams = new URLSearchParams(window.location.search);

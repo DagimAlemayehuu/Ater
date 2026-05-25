@@ -855,10 +855,31 @@ async def explain_question(
     try:
         llm = ModelFactory.get_model(provider=provider, model_name=model, api_key=ai_key, temperature=0.7, max_tokens=2000)
 
-        sys_prompt = """You are a world-class Socratic tutor and an elite educator. A student just answered a quiz question and requested a comprehensive explanation of the underlying concept.
+        q_type_lower = str(q_type).lower()
+        if q_type_lower in ("calculation", "math", "calculation_mode"):
+            dynamic_style_instruction = (
+                "MATHEMATICAL/CALCULATION MODE: Because this is a calculative concept, you MUST provide a complete step-by-step "
+                "algebraic or numerical derivation using LaTeX block formulas. Define every single variable, state the formulas used, "
+                "and show intermediate steps clearly."
+            )
+        elif q_type_lower in ("code", "debug", "trace"):
+            dynamic_style_instruction = (
+                "CODE/ALGORITHM TRACE MODE: Because this is a programming or logic concept, you MUST provide an execution trace. "
+                "Use Markdown code blocks to show input/output values, step through the loops/conditionals, explain state changes, "
+                "and diagnose off-by-one errors or resource leaks specifically."
+            )
+        else:
+            dynamic_style_instruction = (
+                "SOCRATIC CONCEPTUAL BREAKDOWN: Focus on the underlying mechanisms and first principles. Begin with a Socratic hook question, "
+                "explain the conceptual connections, and provide a real-world analogy to anchor the idea."
+            )
+
+        sys_prompt = f"""You are a world-class Socratic tutor and an elite educator. A student just answered a quiz question and requested a comprehensive explanation of the underlying concept.
+
+{dynamic_style_instruction}
 
 Your lesson MUST follow this strict structure:
-1. SOCRATIC HOOK: Start with a brief, thought-provoking question to challenge their assumptions.
+1. SOCRATIC HOOK: Start with a brief, thought-provoking question to challenge their assumptions (conceptual mode only; mathematical or code mode can jump to mathematical context).
 2. EXPLAIN: Break down the core concept tested as if speaking to a brilliant 12-year-old, but with high academic fidelity. Be thorough, clear, and comprehensive.
 3. VISUALIZE: Provide a vivid, real-world analogy. Avoid common clichés like coffee shops or basic cars; use a mechanical, architectural, natural science, or industry-specific scenario.
 4. DIAGNOSE: Highlight exactly where most students go wrong (key misconceptions).
@@ -1659,9 +1680,21 @@ async def ater_explain_concept(
         context_content = ""
         source_locator = ""
         if is_pdf and full_path.exists():
-            from langchain_community.document_loaders import PyPDFLoader
-            loader = PyPDFLoader(str(full_path))
-            pages = loader.load_and_split()
+            def _load_pdf_pages(p):
+                try:
+                    from langchain_community.document_loaders import PyPDFLoader as _L
+                    loader = _L(str(p))
+                    return loader.load_and_split()
+                except Exception:
+                    try:
+                        import pypdf
+                        from types import SimpleNamespace
+                        reader = pypdf.PdfReader(str(p))
+                        return [SimpleNamespace(page_content=page.extract_text() or "", metadata={"page": i})
+                                for i, page in enumerate(reader.pages)]
+                    except Exception:
+                        return []
+            pages = _load_pdf_pages(full_path)
             try:
                 page_idx = min(max(int(page_num) - 1, 0), len(pages) - 1) if pages else 0
             except Exception:
@@ -1698,6 +1731,21 @@ async def ater_explain_concept(
                 "   `### Check Yourself` (1 Socratic question)"
             )
 
+        # Determine the dynamic pedagogical style for teaching
+        note_mode_upper = str(note_mode).upper()
+        if any(math_pkg in note_mode_upper for math_pkg in ("MATH", "PHYSICS", "CHEM-PHYSICAL", "ENG-ELEC", "ENG-AERO")) or note_mode_upper in ("ECON-MICRO", "ECON-METRICS"):
+            dynamic_pedagogy = (
+                "8. MATHEMATICAL/CALCULATION MODE: Because this is a calculative or formal mathematical domain, you MUST use LaTeX notation (e.g., $$ block formula or $ inline formula) for any derivations, proofs, or equations. Define every single variable, state the core laws/formulas, and walk through the step-by-step algebraic or numerical steps clearly."
+            )
+        elif any(cs_pkg in note_mode_upper for cs_pkg in ("CS-", "SOFTWARE", "WEB-DEV", "NETWORKING", "SYSTEMS", "DB", "CYBERSECURITY")):
+            dynamic_pedagogy = (
+                "8. CODE/ALGORITHM TRACE MODE: Because this is a programming or logic-heavy domain, you MUST provide clear execution traces or code dry-runs. Use markdown code blocks (e.g., python, javascript, sql, c, cpp, rust, html, css) to show input/output values, step through the loops/conditionals, and explain state changes/diagnose logic errors explicitly."
+            )
+        else:
+            dynamic_pedagogy = (
+                "8. SOCRATIC CONCEPTUAL BREAKDOWN: Focus on underlying mechanisms and first principles. Use Socratic reasoning to prompt deeper understanding, explain the conceptual connections, and provide a vivid, concrete, non-cliché real-world analogy to anchor the idea."
+            )
+
         si_content = f"""You are a master {persona} and an elite pedagogue. Your task is to explain {scope_label} for a student in {note_course or 'their course'}.
 
 CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):
@@ -1707,7 +1755,8 @@ CRITICAL PEDAGOGICAL CONSTRAINTS (MANDATORY):
 {structure_rules}
 5. THE PERSONA LAW: You must write in the authoritative, specific voice of a {persona}.
 6. NO SLOP: No greetings, no generic conclusions, no filler. Start immediately with the first header.
-7. LENGTH: 350 to 650 words. Be dense with information."""
+7. LENGTH: 350 to 650 words. Be dense with information.
+{dynamic_pedagogy}"""
 
         user_prompt = f"""SOURCE CONTENT:
 {focused_context}
@@ -1823,9 +1872,21 @@ async def ater_chat(
         # ── Load source content ──────────────────────────────────────────────────
         context_content = ""
         if is_pdf and full_path.exists():
-            from langchain_community.document_loaders import PyPDFLoader
-            loader = PyPDFLoader(str(full_path))
-            pages = loader.load_and_split()
+            def _load_pdf_pages_2(p):
+                try:
+                    from langchain_community.document_loaders import PyPDFLoader as _L
+                    loader = _L(str(p))
+                    return loader.load_and_split()
+                except Exception:
+                    try:
+                        import pypdf
+                        from types import SimpleNamespace
+                        reader = pypdf.PdfReader(str(p))
+                        return [SimpleNamespace(page_content=page.extract_text() or "", metadata={"page": i})
+                                for i, page in enumerate(reader.pages)]
+                    except Exception:
+                        return []
+            pages = _load_pdf_pages_2(full_path)
             page_idx = min(page_num - 1, len(pages) - 1) if pages else 0
             context_content = pages[page_idx].page_content if pages else ""
         elif full_path.exists():

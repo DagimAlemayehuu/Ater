@@ -275,6 +275,20 @@ class GenerateCustomPracticeInput(BaseModel):
 class GetGeneratedFilesInput(BaseModel):
     pass
 
+class GenerateSummaryInput(BaseModel):
+    target_id: str = Field(description="Name/ID of the study hub or relative vault path to the atomic note to summarize.")
+    is_hub: bool = Field(default=False, description="True if the target is a study hub, False if it is a single atomic note.")
+
+class ShowPracticeConfigInput(BaseModel):
+    hub_id: str = Field(description="Name/ID of the study hub to configure practice for.")
+    question_distribution: Dict[str, int] = Field(description="Number of questions for each type, e.g., {'mcq': 2, 'true_false': 3}.")
+    difficulty: str = Field(default="Mixed", description="Difficulty: 'Mixed', 'Easy', 'Medium', 'Hard'.")
+    grading_strictness: str = Field(default="Lenient", description="Grading strictness: 'Lenient', 'Strict'.")
+    distractor_plausibility: str = Field(default="High", description="Distractor plausibility: 'High', 'Medium'.")
+    inject_trick_answers: bool = Field(default=False, description="True to enable trick answers.")
+    prioritize_weaknesses: bool = Field(default=False, description="True to focus on weak topics.")
+    global_time_limit_minutes: Optional[int] = Field(default=None, description="Global time limit in minutes.")
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -970,6 +984,125 @@ class AterAssistant:
         """Set the study hub for the Pomodoro session."""
         return f"ACTION:{json.dumps({'action': 'pomodoro_set_hub', 'hub_id': hub_id})}"
 
+    async def generate_summary(self, target_id: str, is_hub: bool = False) -> str:
+        """Generate a structured dynamic summary card for a study hub or atomic note."""
+        if not self.vault_path:
+            return "Error: Vault path not configured."
+        service = AterService(self.secrets)
+        
+        # 1. Fetch content
+        if is_hub:
+            notes = service.list_atomic_notes(target_id)
+            if not notes:
+                return f"No atomic notes found in hub '{target_id}'."
+            note_details = []
+            for n in notes[:10]:
+                path = n.get("path")
+                title = n.get("title", path)
+                try:
+                    full_p = Path(self.vault_path) / path
+                    content = full_p.read_text(encoding="utf-8")[:1000]
+                except Exception:
+                    content = ""
+                note_details.append(f"Note: {title}\nPath: {path}\nSnippet: {content}\n")
+            combined_context = "\n".join(note_details)
+            summary_title = target_id.replace("_", " ")
+        else:
+            try:
+                full_p = Path(self.vault_path) / target_id
+                if not full_p.exists():
+                    root = Path(self.vault_path)
+                    stem_target = target_id.replace(" ", "_").lower()
+                    if not target_id.endswith(".md"):
+                        stem_target = stem_target + ".md"
+                    for file in root.rglob("*.md"):
+                        if file.name.lower() == stem_target or file.stem.lower() == stem_target.replace(".md", ""):
+                            full_p = file
+                            target_id = file.relative_to(root).as_posix()
+                            break
+                combined_context = full_p.read_text(encoding="utf-8")[:8000]
+                summary_title = full_p.stem.replace("_", " ")
+            except Exception as e:
+                return f"Error reading note '{target_id}': {e}"
+
+        if is_hub:
+            scope_prompt = (
+                "This is a STUDY HUB summary. The material contains excerpts/details from all atomic notes under this hub. "
+                "Your goal is to synthesize the main ideas, core concepts, and essential takeaways across ALL atomic notes contained in the hub. "
+                "Compile everything the student MUST know for their exams, showing how these topics connect, rather than getting bogged down in narrow implementation specifics. "
+                "Make sure key_takeaways covers a concise, clear compilation of the main ideas of each atomic note."
+            )
+        else:
+            scope_prompt = (
+                "This is an ATOMIC NOTE summary. Your goal is to go into MORE DETAIL about the specific concepts, mechanisms, "
+                "equations, or rules covered in this note. Be precise, technical, and concrete. Do not just summarize at a high level; "
+                "extract the exact mechanics, key terminology, and subtle edge cases of the specific note's topic."
+            )
+
+        sys_prompt = f"""You are an elite educational curator. Generate a highly structured summary of the provided study material.
+{scope_prompt}
+
+Your summary must extract the fundamental ideas, key terminology, and target areas for review.
+
+Output ONLY a clean JSON object with the following fields:
+{{
+  "title": "Clean readable title of the hub/note",
+  "is_hub": {str(is_hub).lower()},
+  "overview": "A concise 2-3 sentence overview paragraph describing the core subject matter.",
+  "key_takeaways": [
+    "Core main idea 1...",
+    "Core main idea 2...",
+    "Core main idea 3..."
+  ],
+  "key_terms": [
+    {{"term": "Term Name", "definition": "Clear concise explanation of this term in context"}}
+  ],
+  "weak_spots": [
+    "Specific tricky detail or concept to watch out for/review"
+  ]
+}}
+
+Set "is_hub" to {str(is_hub).lower()}.
+DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string directly."""
+
+        try:
+            from langchain_core.messages import SystemMessage, HumanMessage
+            res = await self.llm.ainvoke([
+                SystemMessage(content=sys_prompt),
+                HumanMessage(content=f"Generate the summary JSON for:\n\n{combined_context}")
+            ])
+            import json as _json
+            data = _json.loads(res.content.strip().strip("`json").strip("`").strip())
+            data["is_hub"] = is_hub
+            return self.render_ui("summary_card", data)
+        except Exception as e:
+            return f"Error generating summary: {e}"
+
+    def show_practice_config(
+        self,
+        hub_id: str,
+        question_distribution: Dict[str, int],
+        difficulty: str = "Mixed",
+        grading_strictness: str = "Lenient",
+        distractor_plausibility: str = "High",
+        inject_trick_answers: bool = False,
+        prioritize_weaknesses: bool = False,
+        global_time_limit_minutes: Optional[int] = None
+    ) -> str:
+        """Show the practice session configuration card in chat for user to confirm and launch."""
+        data = {
+            "hubId": hub_id,
+            "difficulty": difficulty,
+            "gradingStrictness": grading_strictness,
+            "distractorPlausibility": distractor_plausibility,
+            "injectTrickAnswers": inject_trick_answers,
+            "prioritizeWeaknesses": prioritize_weaknesses,
+            "globalTimeLimitMinutes": global_time_limit_minutes,
+            "questionDistribution": question_distribution
+        }
+        return self.render_ui("practice_config_card", data)
+
+
     # ── Navigation tools ───────────────────────────────────────────────────
 
     def navigate_to_route(self, route: str) -> str:
@@ -1301,6 +1434,12 @@ class AterAssistant:
             StructuredTool.from_function(name="get_generated_files", func=self.get_generated_files,
                 description="List all processed notes in the Generated folder.",
                 args_schema=GetGeneratedFilesInput),
+            StructuredTool.from_function(name="generate_summary", coroutine=self.generate_summary,
+                description="Generate a dynamically formatted summary card of a study hub or atomic note.",
+                args_schema=GenerateSummaryInput),
+            StructuredTool.from_function(name="show_practice_config", func=self.show_practice_config,
+                description="Show the practice session configuration card in the chat UI for the user to confirm/start.",
+                args_schema=ShowPracticeConfigInput),
             # Dynamic UI
             StructuredTool.from_function(name="render_ui", func=self.render_ui,
                 description=(
@@ -1354,6 +1493,8 @@ class AterAssistant:
                 "generate_custom_practice": lambda: self.generate_custom_practice(**args),
                 "validate_feynman_explanation": lambda: self.validate_feynman_explanation(**args),
                 "get_generated_files": lambda: self.get_generated_files(),
+                "generate_summary": lambda: self.generate_summary(**args),
+                "show_practice_config": lambda: self.show_practice_config(**args),
             }
             fn = dispatch.get(name)
             if fn is None:
@@ -1412,6 +1553,8 @@ def get_tool_status_message(name: str, args: dict) -> str:
         "generate_custom_practice": lambda: f"Generating custom quiz preset for '{args.get('hub_id', '')}'...",
         "validate_feynman_explanation": lambda: f"Analyzing Feynman explanation for '{Path(args.get('note_path', '')).stem.replace('_', ' ')}'...",
         "get_generated_files": lambda: "Listing generated notes...",
+        "generate_summary": lambda: f"Generating summary for '{args.get('target_id', '')}'...",
+        "show_practice_config": lambda: f"Preparing practice config for '{args.get('hub_id', '')}'...",
     }
     fn = msgs.get(name)
     return fn() if fn else f"Running {name}..."
@@ -1501,7 +1644,12 @@ async def run_assistant_chat(
         "6. NAVIGATION: When navigating ('/obsidian', '/academic?tab=EXAMS'), confirm in one sentence.\n"
         "7. POMODORO: For timer commands, call the Pomodoro tools immediately. Do not explain.\n"
         "8. PDF READING: When reading PDFs with read_note, cite pages as '[PDF Page X]'.\n"
-        "9. IDENTITY: If the user asks for their name and you only know them as 'User', tell them to set their display name in Settings.\n\n"
+        "9. IDENTITY: If the user asks for their name and you only know them as 'User', tell them to set their display name in Settings.\n"
+        "10. CREATION/EDIT FORMS: When a user wants to create or edit an academic record (course, exam, assignment), do NOT execute it blindly. Instead, extract any information (e.g. course name, professor, due date, status, etc.) provided in their prompt, pre-fill those fields as the 'properties' and 'title' keys in the data payload, and call render_ui(ui_type='form_card', data={'record_type': '<courses|exams|assignments>', 'id': '<record_id_if_editing>', 'title': '<initial_title>', 'properties': {<prefilled_properties_keys_and_values>}}) to display an interactive form directly in their chat. When they submit the form, it will send a message back in the chat: `Create/Update academic record: ...`. Call the appropriate database write tool when you see this message.\n"
+        "12. MULTI-STEP EXECUTION: For complex, conditional, or multi-step requests, design the plan and execute all necessary tool calls sequentially in the agentic loop. Use the results of intermediate tool calls to parameterize subsequent tool calls. Complete the entire sequence automatically to achieve the user's final goal without prompting for permission between steps.\n"
+        "13. CLARIFICATION & SOCRATIC GATE: If a user request is vague, ambiguous, or lacks critical context (such as not specifying which course, assignment, note, or timer duration/hub to act on, or if you do not understand the user's intent or what they mean), do NOT guess, assume, or call tools blindly. Instead, ask the user direct, Socratic clarifying questions in a friendly manner to resolve the ambiguity before proceeding.\n"
+        "14. SUMMARIZATION: When asked to summarize a hub or an atomic note, ALWAYS call `generate_summary`. NEVER write the summary out in conversational text.\n"
+        "15. PRACTICE CONFIGURATION: When a user wants to start a practice or quiz session, do NOT launch it immediately. Instead, parse their requests for question types (like mcq, true_false, matching, calculation, etc.), counts, and difficulty, and call `show_practice_config` to present an interactive config card so they can confirm or tweak it first.\n\n"
 
         "=== APP PAGES ===\n"
         "  /oracle — This AI chat (you are here)\n"
@@ -1521,6 +1669,7 @@ async def run_assistant_chat(
         "  delete_note(path) — Delete a note permanently.\n"
         "  get_vault_stats() — Get vault statistics (total notes, hub count). Returns stats UI.\n"
         "  get_hubs() — List all top-level study folders with note counts. Returns hub_cards UI.\n"
+        "  generate_summary(target_id, is_hub) — Generate a structured dynamic summary card for a hub or atomic note.\n"
         "ACADEMIC DATABASE TOOLS:\n"
         "  query_academic_database(record_type) — List records. record_type must be one of: 'courses', 'semesters', 'exams', 'assignments', 'study planner', 'years'. Returns rich card UI automatically.\n"
         "  create_academic_record(record_type, title, properties) — Create a course, semester, exam, or assignment.\n"
@@ -1536,6 +1685,7 @@ async def run_assistant_chat(
         "  start_generation(file_path) — Kick off the full Ater note generation pipeline for an inbox file. Shows a live progress stepper in chat.\n"
         "PRACTICE / SRS TOOLS:\n"
         "  generate_quiz(hub_id, count, difficulty) — Generate an interactive quiz. hub_id MUST be the exact ID from the STUDY PLANNER HUB CATALOG below. difficulty is 'L1', 'L2', or 'L3'.\n"
+        "  show_practice_config(hub_id, question_distribution, difficulty?, grading_strictness?, distractor_plausibility?, inject_trick_answers?, prioritize_weaknesses?, global_time_limit_minutes?) — Show interactive configuration card to confirm and launch a practice session.\n"
         "  get_srs_cards(hub_id?) — Get FSRS flashcards due for review. hub_id is optional; if omitted, returns all due cards.\n"
         "  override_srs_stability(note_path, manual_stability) — Override the FSRS memory stability for a note (0.0-1.0 range).\n"
         "  get_study_history(limit?) — View recent study sessions and practice log. Returns study_history UI.\n"

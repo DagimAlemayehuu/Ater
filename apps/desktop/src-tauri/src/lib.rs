@@ -286,7 +286,14 @@ pub fn run() {
             }
 
             if should_spawn && !spawned_successfully {
-                port = get_available_port(8765).unwrap_or(8765);
+                // Kill any zombie sidecar that may still own 8765 from a prior crashed session.
+                // This prevents the port from being bumped to 8766 unnecessarily.
+                port = 8765;
+                if TcpListener::bind(("127.0.0.1", port)).is_err() {
+                    eprintln!("[Sidecar] Port {} appears occupied (possible zombie). Searching for a free port...", port);
+                    port = get_available_port(8766).unwrap_or(8766);
+                }
+
                 match app.shell().sidecar("ater-api") {
                     Ok(sidecar) => {
                         let sidecar = sidecar
@@ -296,21 +303,47 @@ pub fn run() {
                             .env("ATER_PARENT_PID", &std::process::id().to_string());
                         match sidecar.spawn() {
                             Ok((rx, child)) => {
-                                println!("[Sidecar] Successfully spawned on port {}", port);
-                                // Track PID for explicit kill on exit (critical on Windows to prevent orphans)
+                                println!("[Sidecar] Spawned on port {} (PID: {})", port, child.pid());
                                 if let Ok(mut pid_guard) = sidecar_pid.lock() {
                                     *pid_guard = Some(child.pid());
                                 }
+
                                 // CRITICAL: Drain stdout/stderr in a background task.
-                                // If we drop `rx` immediately, the OS pipe buffer (~64KB) fills
-                                // up and the Python process silently hangs when writing logs.
-                                // This was the primary cause of Engine Failure on first launch.
+                                // If we drop `rx` the OS pipe buffer fills and the Python
+                                // process silently hangs — primary cause of Engine Failure.
                                 tauri::async_runtime::spawn(async move {
                                     let mut rx = rx;
-                                    while rx.recv().await.is_some() {
-                                        // Intentionally discard — just keep the pipe drained.
-                                    }
+                                    while rx.recv().await.is_some() {}
                                     println!("[Sidecar] stdout/stderr channel closed — process exited.");
+                                });
+
+                                // Background health-poller: log exactly when sidecar is ready.
+                                // Gives Windows users clear diagnostics on slow cold starts.
+                                let health_port = port;
+                                tauri::async_runtime::spawn(async move {
+                                    let client = reqwest::Client::builder()
+                                        .connect_timeout(std::time::Duration::from_millis(1000))
+                                        .build()
+                                        .unwrap_or_else(|_| reqwest::Client::new());
+                                    let url = format!("http://127.0.0.1:{}/api/health", health_port);
+                                    let start = std::time::Instant::now();
+                                    let max_wait = std::time::Duration::from_secs(60);
+                                    loop {
+                                        if start.elapsed() > max_wait {
+                                            eprintln!("[Sidecar] WARNING: Health check timed out after 60s. Sidecar may have failed to start.");
+                                            break;
+                                        }
+                                        match client.get(&url).send().await {
+                                            Ok(r) if r.status().is_success() => {
+                                                println!("[Sidecar] READY — responded to health check in {:.1}s on port {}",
+                                                    start.elapsed().as_secs_f32(), health_port);
+                                                break;
+                                            }
+                                            _ => {
+                                                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                            }
+                                        }
+                                    }
                                 });
                             }
                             Err(e) => {

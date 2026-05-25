@@ -10,7 +10,55 @@ from pydantic import BaseModel, Field
 from pathlib import Path
 from datetime import datetime
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
-from langchain_community.document_loaders import PyPDFLoader
+# Robust PDF loading — multiple fallback strategies for frozen binary compatibility on Windows.
+# Strategy 1: langchain_community PyPDFLoader (preferred, metadata-rich)
+# Strategy 2: pypdf directly (lightweight, always available in spec)
+# Strategy 3: Raw text read (last resort for non-PDF text)
+_PyPDFLoader = None
+try:
+    from langchain_community.document_loaders import PyPDFLoader as _PyPDFLoader
+except ImportError:
+    pass
+
+def _load_pdf_robust(path_str: str):
+    """Load a PDF using the best available method. Returns list of (text, page_num) tuples."""
+    import asyncio
+    path = Path(path_str)
+
+    # Strategy 1: langchain_community PyPDFLoader
+    if _PyPDFLoader is not None:
+        try:
+            loader = _PyPDFLoader(path_str)
+            pages = loader.load_and_split()
+            if pages:
+                return pages
+        except Exception as e:
+            import logging
+            logging.getLogger("Ater").warning(f"[PDF] PyPDFLoader failed ({e}), trying pypdf fallback...")
+
+    # Strategy 2: pypdf directly
+    try:
+        import pypdf
+        from types import SimpleNamespace
+        reader = pypdf.PdfReader(str(path))
+        docs = []
+        for i, page in enumerate(reader.pages):
+            try:
+                text = page.extract_text() or ""
+            except Exception:
+                text = ""
+            doc = SimpleNamespace(
+                page_content=text,
+                metadata={"page": i, "source": path_str}
+            )
+            docs.append(doc)
+        if docs:
+            return docs
+    except Exception as e:
+        import logging
+        logging.getLogger("Ater").warning(f"[PDF] pypdf fallback failed ({e}), using empty result")
+
+    return []
 
 from .vault_manager import VaultManager
 from .deployer import AterDeployer
@@ -515,6 +563,16 @@ class AterService:
                 max_tokens=4096,
             )
             self.llm_creative = self.llm
+            self.planner_llm = self._build_model(
+                provider=self.secrets.planner_provider or self.secrets.ai_provider,
+                model_name=self.secrets.planner_model or self.secrets.ai_model,
+                api_key=clean_key,
+                temperature=0.0,
+                timeout=ATER_TIMEOUT,
+                request_timeout=ATER_TIMEOUT,
+                max_retries=0,
+                max_tokens=4096,
+            )
             if self.critic_agent:
                 self.critic_agent.llm = self.llm
             if self.hub_agent:
@@ -1310,6 +1368,13 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 for attempt in range(max_retries):
                     try:
                         return await task_fn()
+                    except DailyLimitExceededException as e:
+                        if str(e) == "ROTATION_TRIGGERED":
+                            print(f"[Ater Service] 🔄 Governor triggered rotation during practice generation. Swapping LLM key to: {self.governor._current_key_hash}")
+                            self.swap_api_key(self.governor._active_key)
+                            continue
+                        logger.error(f"[Ater Service] Daily limit exceeded in practice generation: {e}")
+                        return {"error": str(e)}
                     except Exception as e:
                         err_msg = str(e)
                         is_rate = "429" in err_msg or "rate limit" in err_msg.lower()
@@ -2061,9 +2126,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             content_text = ""
             
             if path.suffix.lower() == ".pdf":
-                loader = PyPDFLoader(str(path))
-                # Load first 10 pages for better context coverage
-                pages = await asyncio.to_thread(loader.load_and_split)
+                pages = await asyncio.to_thread(_load_pdf_robust, str(path))
                 content_text = "\n".join([p.page_content for p in pages[:10]])
             else:
                 def _read_text():
@@ -2341,8 +2404,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         # Read full content for planning
         full_text = ""
         if path.suffix.lower() == ".pdf":
-            loader = PyPDFLoader(str(path))
-            pages = await asyncio.to_thread(loader.load_and_split)
+            pages = await asyncio.to_thread(_load_pdf_robust, str(path))
             full_text = "\n".join([f"[PAGE {p.metadata.get('page', 0) + 1}]\n{p.page_content}" for p in pages])
         else:
             def _read_full():

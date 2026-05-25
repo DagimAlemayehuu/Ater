@@ -43,7 +43,11 @@ import {
     SRSFlashcard,
     AppConfigBlock,
     QueueStatusBlock,
-    StudyHistoryBlock
+    StudyHistoryBlock,
+    FormCard,
+    ConfirmActionBlock,
+    SummaryCard,
+    PracticeConfigCard
 } from '../intelligence/OracleUIBlocks'
 
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]
@@ -212,17 +216,18 @@ const getMetaVal = (item: any, key: string, fallback: string = '') => {
     const lowerKey = key.toLowerCase();
     const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
     
-    if (item[key] !== undefined && item[key] !== null) return String(item[key]);
-    if (item[lowerKey] !== undefined && item[lowerKey] !== null) return String(item[lowerKey]);
-    if (item[capitalizedKey] !== undefined && item[capitalizedKey] !== null) return String(item[capitalizedKey]);
-    
-    if (item.metadata && typeof item.metadata === 'object') {
-        if (item.metadata[key] !== undefined && item.metadata[key] !== null) return String(item.metadata[key]);
-        if (item.metadata[lowerKey] !== undefined && item.metadata[lowerKey] !== null) return String(item.metadata[lowerKey]);
-        if (item.metadata[capitalizedKey] !== undefined && item.metadata[capitalizedKey] !== null) return String(item.metadata[capitalizedKey]);
+    let rawVal: any = undefined;
+    if (item[key] !== undefined && item[key] !== null) rawVal = item[key];
+    else if (item[lowerKey] !== undefined && item[lowerKey] !== null) rawVal = item[lowerKey];
+    else if (item[capitalizedKey] !== undefined && item[capitalizedKey] !== null) rawVal = item[capitalizedKey];
+    else if (item.metadata && typeof item.metadata === 'object') {
+        if (item.metadata[key] !== undefined && item.metadata[key] !== null) rawVal = item.metadata[key];
+        else if (item.metadata[lowerKey] !== undefined && item.metadata[lowerKey] !== null) rawVal = item.metadata[lowerKey];
+        else if (item.metadata[capitalizedKey] !== undefined && item.metadata[capitalizedKey] !== null) rawVal = item.metadata[capitalizedKey];
     }
     
-    return fallback;
+    if (rawVal === undefined || rawVal === null) return fallback;
+    return String(rawVal).replace(/[\[\]]/g, '').replace(/_/g, ' ');
 };
 
 const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; notePath?: string; onSendMessage?: (text: string) => void }) => {
@@ -624,8 +629,16 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                 return <AppConfigBlock payload={data} onSendMessage={onSendMessage} />;
             case 'queue_status':
                 return <QueueStatusBlock payload={data} onSendMessage={onSendMessage} />;
+            case 'form_card':
+                return <FormCard payload={data} onSendMessage={onSendMessage} />;
+            case 'confirm_action':
+                return <ConfirmActionBlock payload={data} onSendMessage={onSendMessage} />;
             case 'study_history':
                 return <StudyHistoryBlock payload={data} />;
+            case 'summary_card':
+                return <SummaryCard payload={data} />;
+            case 'practice_config_card':
+                return <PracticeConfigCard payload={data} />;
             default:
                 return (
                     <pre className="text-xs p-3 bg-[#232326] border border-[#242426] overflow-x-auto rounded-[8px] font-mono">
@@ -672,7 +685,15 @@ const CodeRenderer = memo((props: any) => {
 
     if (language === 'interactive-quiz') {
         if (!quizData) {
-            return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-[8px] my-4 text-xs font-mono">Failed to load interactive quiz JSON.</div>;
+            return (
+                <div className="p-6 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] animate-pulse space-y-4">
+                    <div className="h-4 bg-muted-foreground/10 rounded w-1/3"></div>
+                    <div className="space-y-2">
+                        <div className="h-3 bg-muted-foreground/10 rounded w-full"></div>
+                        <div className="h-3 bg-muted-foreground/10 rounded w-5/6"></div>
+                    </div>
+                </div>
+            );
         }
 
         return <MiniPracticeUI question={quizData} notePath={notePath} />;
@@ -680,7 +701,18 @@ const CodeRenderer = memo((props: any) => {
 
     if (language === 'ater-ui') {
         if (!aterUIData) {
-            return <div className="text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded-[8px] my-4 text-xs font-mono">Failed to load Ater UI JSON.</div>;
+            return (
+                <div className="p-6 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] animate-pulse space-y-4">
+                    <div className="flex justify-between items-center">
+                        <div className="h-4 bg-muted-foreground/10 rounded w-1/4"></div>
+                        <div className="h-4 bg-muted-foreground/10 rounded w-12"></div>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="h-3 bg-muted-foreground/10 rounded w-full"></div>
+                        <div className="h-3 bg-muted-foreground/10 rounded w-4/5"></div>
+                    </div>
+                </div>
+            );
         }
         return <AterUIBlock payload={aterUIData} notePath={notePath} onSendMessage={onSendMessage} />;
     }

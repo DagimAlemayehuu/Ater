@@ -92,7 +92,9 @@
   }
 
   *, ::before, ::after {
-    transition-duration: 0ms;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
 }
 
@@ -114,25 +116,72 @@
 }
 
 .ater-mini-loader {
-  width: 18px;
-  height: 18px;
-  border: 1px solid currentColor;
+  width: 24px;
+  height: 24px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
   position: relative;
   color: currentColor;
+  animation: ater-loader-spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .ater-mini-loader::after {
   content: "";
   position: absolute;
-  inset: 4px;
-  background: currentColor;
-  animation: ater-loader-pulse 700ms steps(2, end) infinite;
+  inset: 3px;
+  border: 2px solid currentColor;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: ater-loader-spin-reverse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes ater-loader-pulse {
-  0%, 100% { opacity: 0.2; transform: scale(0.65); }
-  50% { opacity: 1; transform: scale(1); }
+@keyframes ater-loader-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
+
+@keyframes ater-loader-spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Global Responsive & Overflow Prevention Rules */
+html,
+body,
+#root {
+  max-width: 100vw;
+  overflow-x: hidden !important;
+}
+
+/* Safety wrappers for preventing horizontal leakages */
+.flex,
+.grid,
+main,
+section,
+div {
+  min-width: 0;
+}
+
+/* Text Wrapping & Wrap Prevention */
+.break-words,
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+td,
+th {
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word;
+}
+
 
 .content-visibility-auto {
   content-visibility: auto;
@@ -177,3 +226,59 @@
 .bg-bento-panel { background-color: hsl(var(--bento-panel)); }
 .bg-bento-card { background-color: hsl(var(--bento-card)); }
 .bg-bento-item { background-color: hsl(var(--bento-item)); }
+
+/* Custom Light Mode Overrides for Hardcoded Tailwind Dark Utilities */
+:root:not(.dark) .bg-\[\#1a1a1c\] { background-color: hsl(var(--card)) !important; }
+:root:not(.dark) .bg-\[\#1a1a1c\]\/50 { background-color: hsla(var(--card) / 0.5) !important; }
+:root:not(.dark) .bg-\[\#151517\] { background-color: hsl(var(--background)) !important; }
+:root:not(.dark) .bg-\[\#232326\] { background-color: hsl(var(--muted)) !important; }
+:root:not(.dark) .bg-\[\#232326\]\/50 { background-color: hsla(var(--muted) / 0.5) !important; }
+:root:not(.dark) .bg-\[\#131314\] { background-color: hsl(var(--muted)) !important; }
+:root:not(.dark) .bg-\[\#0e0e0f\] { background-color: hsl(var(--background)) !important; }
+
+:root:not(.dark) .border-\[\#242426\] { border-color: hsl(var(--border)) !important; }
+:root:not(.dark) .border-\[\#242426\]\/60 { border-color: hsla(var(--border) / 0.6) !important; }
+
+:root:not(.dark) .divide-\[\#242426\]\/60 > :not([hidden]) ~ :not([hidden]) { border-color: hsla(var(--border) / 0.6) !important; }
+:root:not(.dark) .divide-\[\#242426\] > :not([hidden]) ~ :not([hidden]) { border-color: hsl(var(--border)) !important; }
+
+:root:not(.dark) .text-\[\#a1a1aa\] { color: hsl(var(--muted-foreground)) !important; }
+:root:not(.dark) .text-\[\#a1a1aa\]\/20 { color: hsla(var(--muted-foreground) / 0.3) !important; }
+:root:not(.dark) .text-\[\#a1a1aa\]\/50 { color: hsla(var(--muted-foreground) / 0.6) !important; }
+:root:not(.dark) .border-\[\#a1a1aa\] { border-color: hsl(var(--muted-foreground)) !important; }
+:root:not(.dark) .border-\[\#a1a1aa\]\/50 { border-color: hsla(var(--muted-foreground) / 0.6) !important; }
+
+/* Hover and active states */
+:root:not(.dark) .hover\:bg-\[\#232326\]\/30:hover { background-color: hsla(var(--accent) / 0.3) !important; }
+:root:not(.dark) .hover\:bg-\[\#232326\]\/50:hover { background-color: hsla(var(--accent) / 0.5) !important; }
+:root:not(.dark) .hover\:bg-\[\#232326\]:hover { background-color: hsl(var(--accent)) !important; }
+:root:not(.dark) .hover\:bg-\[\#232326\]\/60:hover { background-color: hsla(var(--accent) / 0.6) !important; }
+:root:not(.dark) .hover\:bg-\[\#232326\]\/80:hover { background-color: hsla(var(--accent) / 0.8) !important; }
+:root:not(.dark) .hover\:bg-\[\#1a1a1c\]:hover { background-color: hsl(var(--card)) !important; }
+:root:not(.dark) .hover\:bg-\[\#1a1a1c\]\/50:hover { background-color: hsla(var(--card) / 0.5) !important; }
+:root:not(.dark) .hover\:border-foreground\/20:hover { border-color: hsla(var(--foreground) / 0.2) !important; }
+:root:not(.dark) .hover\:border-foreground\/40:hover { border-color: hsla(var(--foreground) / 0.4) !important; }
+
+/* Specific overrides for #e4e4e7 (which was pure light grey in dark mode, but creates contrast issues in light mode) */
+:root:not(.dark) .bg-\[\#e4e4e7\] { background-color: hsl(var(--foreground)) !important; }
+:root:not(.dark) .text-background { color: hsl(var(--background)) !important; }
+:root:not(.dark) .bg-\[\#e4e4e7\]\/5 { background-color: hsla(var(--foreground) / 0.08) !important; }
+:root:not(.dark) .bg-\[\#e4e4e7\]\/10 { background-color: hsla(var(--foreground) / 0.15) !important; }
+:root:not(.dark) .checked\:bg-\[\#e4e4e7\]\/10:checked { background-color: hsla(var(--foreground) / 0.15) !important; }
+:root:not(.dark) .peer-data-\[state\=checked\]\:bg-\[\#e4e4e7\]\/10[data-state=checked] { background-color: hsla(var(--foreground) / 0.15) !important; }
+:root:not(.dark) .hover\:bg-\[\#e4e4e7\]\/5:hover { background-color: hsla(var(--foreground) / 0.08) !important; }
+:root:not(.dark) .hover\:bg-\[\#e4e4e7\]\/90:hover { background-color: hsla(var(--foreground) / 0.9) !important; }
+
+/* Increased text opacity / contrast */
+:root:not(.dark) .text-muted-foreground\/30 { color: hsla(var(--foreground) / 0.45) !important; }
+:root:not(.dark) .text-muted-foreground\/40 { color: hsla(var(--foreground) / 0.65) !important; }
+:root:not(.dark) .text-muted-foreground\/50 { color: hsla(var(--foreground) / 0.7) !important; }
+:root:not(.dark) .text-muted-foreground\/60 { color: hsla(var(--foreground) / 0.75) !important; }
+:root:not(.dark) .text-foreground\/30 { color: hsla(var(--foreground) / 0.45) !important; }
+:root:not(.dark) .text-foreground\/40 { color: hsla(var(--foreground) / 0.65) !important; }
+:root:not(.dark) .text-foreground\/50 { color: hsla(var(--foreground) / 0.7) !important; }
+:root:not(.dark) .text-foreground\/80 { color: hsla(var(--foreground) / 0.9) !important; }
+:root:not(.dark) .text-muted-foreground { color: hsla(var(--foreground) / 0.8) !important; }
+
+
+

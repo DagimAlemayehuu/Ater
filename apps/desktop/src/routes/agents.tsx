@@ -198,8 +198,39 @@ function OracleView() {
                 return next;
               });
             } else if (parsed.type === 'action') {
-              if (parsed.action === 'navigate' && parsed.route) navigate(parsed.route);
-              else if (parsed.action === 'toast' && parsed.message) toast.info(parsed.message);
+              if (parsed.action === 'navigate' && parsed.route) {
+                navigate(parsed.route);
+              } else if (parsed.action === 'toast' && parsed.message) {
+                toast.info(parsed.message);
+              } else if (parsed.action === 'pomodoro_start') {
+                const store = usePomodoroStore.getState();
+                if (parsed.duration_minutes) {
+                  store.setTimeLeft(parsed.duration_minutes * 60);
+                }
+                if (parsed.hub_id) {
+                  store.setCurrentHub(parsed.hub_id);
+                }
+                store.setIsActive(true);
+                store.setShowOverlay(true);
+                toast.success(`Pomodoro focus session started!`);
+              } else if (parsed.action === 'pomodoro_pause') {
+                const store = usePomodoroStore.getState();
+                store.setIsActive(!store.isActive);
+                toast.info(store.isActive ? "Pomodoro resumed." : "Pomodoro paused.");
+              } else if (parsed.action === 'pomodoro_stop') {
+                const store = usePomodoroStore.getState();
+                store.setIsActive(false);
+                store.setTimeLeft(25 * 60);
+                toast.success("Pomodoro session stopped and reset.");
+              } else if (parsed.action === 'pomodoro_set_hub' && parsed.hub_id) {
+                const store = usePomodoroStore.getState();
+                store.setCurrentHub(parsed.hub_id);
+                toast.success(`Pomodoro hub set to ${parsed.hub_id.replace(/_/g, ' ')}.`);
+              } else if (parsed.action === 'pomodoro_show_hud') {
+                const store = usePomodoroStore.getState();
+                store.setShowOverlay(true);
+                toast.info("Opening Focus HUD");
+              }
             }
           } catch (e) {}
         }
@@ -234,13 +265,15 @@ function OracleView() {
                     <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">{msg.content}</div>
                   </div>
                 ) : (
-                  <div className="flex justify-start w-full">
-                    <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={handleSendMessage} />
+                  msg.content ? (
+                    <div className="flex justify-start w-full">
+                      <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={handleSendMessage} />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : null
                 )}
               </div>
             ))}

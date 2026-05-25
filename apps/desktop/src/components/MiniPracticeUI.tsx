@@ -402,16 +402,16 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                 </div>
               )}
 
-              {/* Writing / Scenario / Code / Debug / Synthesis */}
-              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis'].includes(currentQ.type)) && (
+              {/* Writing / Scenario / Code / Debug / Synthesis / Find Error */}
+              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type)) && (
               <div className="space-y-3">
-                   {(currentQ.content || currentQ.codeSnippet) && (
+                   {(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode) && (
                   <div className="p-2 bg-bento-item border border-border rounded-[8px] shadow-inner">
                       <MarkdownBlock 
                         content={
-                          (['debug', 'code', 'trace'].includes(currentQ.type) && !(currentQ.content || currentQ.codeSnippet || "").includes('```')) 
-                            ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet || ""}\n\`\`\``
-                            : (currentQ.content || currentQ.codeSnippet || "")
+                          ((['debug', 'code', 'trace', 'find_error'].includes(currentQ.type)) && !(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "").includes('```')) 
+                            ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || ""}\n\`\`\``
+                            : (currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "")
                         } 
                       />
                   </div>
@@ -544,7 +544,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                     <span>Explain</span>
                   </Button>
                 )}
-                      {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis'].includes(currentQ.type || 'writing') ? (
+                      {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type || 'writing') ? (
                           <>
                               <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-none">
                                   Wrong

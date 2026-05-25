@@ -886,3 +886,392 @@ export const StudyHistoryBlock = ({ payload }: { payload: any }) => {
         </div>
     );
 };
+
+// --- Form Card (Dynamic Fields) ---
+export const FormCard = ({ payload, onSendMessage }: { payload: any; onSendMessage?: (text: string) => void }) => {
+    const { record_type, id, title: initialTitle, properties = {} } = payload;
+    const isEdit = !!id;
+    
+    const cleanWikilinks = (val: any): string => {
+        if (!val) return '';
+        return String(val).replace(/\[\[/g, '').replace(/\]\]/g, '').replace(/_/g, ' ');
+    };
+
+    const [title, setTitle] = useState(() => cleanWikilinks(initialTitle || id || ''));
+    const [fields, setFields] = useState<Record<string, string>>(() => {
+        const initialFields: Record<string, string> = {};
+        Object.entries(properties).forEach(([key, val]) => {
+            initialFields[key] = typeof val === 'object' 
+                ? JSON.stringify(val) 
+                : cleanWikilinks(val);
+        });
+        return initialFields;
+    });
+
+    const handleInputChange = (key: string, value: string) => {
+        setFields(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!title.trim()) {
+            toast.error("Title is required.");
+            return;
+        }
+
+        const serializedProps = JSON.stringify(fields);
+        if (isEdit) {
+            onSendMessage?.(`Update academic record: record_type="${record_type}", id="${id}", properties=${serializedProps}`);
+        } else {
+            onSendMessage?.(`Create academic record: record_type="${record_type}", title="${title}", properties=${serializedProps}`);
+        }
+    };
+
+    // Helper to get default properties based on type merged with prefilled properties keys
+    const getKeys = () => {
+        let defaults: string[] = [];
+        if (record_type === 'courses') defaults = ['Professor', 'Credits', 'Semester', 'Status', 'Grade'];
+        else if (record_type === 'exams') defaults = ['course', 'date', 'weight', 'status', 'location'];
+        else if (record_type === 'assignments') defaults = ['course', 'due_date', 'status', 'priority', 'weight'];
+        
+        const uniqueKeys = new Set([...defaults, ...Object.keys(properties)]);
+        return Array.from(uniqueKeys);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#242426]/60">
+                <div className="flex items-center gap-2">
+                    <Database size={14} className="text-muted-foreground" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">
+                        {isEdit ? 'Edit' : 'Create'} {record_type.replace(/s$/, '')}
+                    </span>
+                </div>
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-[#242426] bg-[#131314] text-muted-foreground">
+                    Form
+                </Badge>
+            </div>
+
+            <div className="space-y-3">
+                <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Title</label>
+                    <input 
+                        type="text" 
+                        value={title} 
+                        onChange={e => setTitle(e.target.value)} 
+                        disabled={isEdit}
+                        className="w-full h-8 px-2 bg-[#131314] border border-[#242426] text-[11px] font-bold uppercase outline-none rounded-[8px] focus:border-foreground/40 disabled:opacity-50 text-foreground"
+                        placeholder="Enter title..."
+                    />
+                </div>
+
+                {getKeys().map((key) => (
+                    <div key={key} className="space-y-1">
+                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">{key.replace(/_/g, ' ')}</label>
+                        <input 
+                            type="text" 
+                            value={fields[key] || ''} 
+                            onChange={e => handleInputChange(key, e.target.value)} 
+                            className="w-full h-8 px-2 bg-[#131314] border border-[#242426] text-[11px] font-bold outline-none rounded-[8px] focus:border-foreground/40 text-foreground"
+                            placeholder={`Enter ${key}...`}
+                        />
+                    </div>
+                ))}
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2">
+                <Button 
+                    type="submit" 
+                    className="rounded-[12px] bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-widest h-9 px-4"
+                >
+                    Save Changes
+                </Button>
+            </div>
+        </form>
+    );
+};
+
+// --- Confirm Action Block ---
+export const ConfirmActionBlock = ({ payload, onSendMessage }: { payload: any; onSendMessage?: (text: string) => void }) => {
+    const { action_signature, message, record_type, id } = payload;
+
+    const handleConfirm = () => {
+        if (action_signature) {
+            onSendMessage?.(action_signature);
+        } else if (record_type && id) {
+            onSendMessage?.(`Delete academic record: record_type="${record_type}", id="${id}"`);
+        }
+    };
+
+    const handleCancel = () => {
+        onSendMessage?.("Cancel");
+    };
+
+    return (
+        <div className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] select-none shadow-sm space-y-4">
+            <div className="flex items-center gap-2 text-destructive">
+                <span className="text-[12px] font-black uppercase tracking-[0.2em]">Danger Zone</span>
+            </div>
+            <p className="text-[11px] font-bold text-foreground/80 leading-relaxed uppercase tracking-wider">
+                {message || 'Are you absolutely sure you want to perform this action?'}
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+                <Button 
+                    variant="outline" 
+                    className="rounded-[12px] border-[#242426] bg-[#131314] hover:bg-[#1a1a1c] text-foreground text-[9px] font-black uppercase tracking-widest h-9"
+                    onClick={handleCancel}
+                >
+                    Cancel
+                </Button>
+                <Button 
+                    className="rounded-[12px] bg-destructive text-destructive-foreground hover:bg-destructive/90 text-[9px] font-black uppercase tracking-widest h-9"
+                    onClick={handleConfirm}
+                >
+                    Confirm Action
+                </Button>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Summary Card (Hub / Atomic Note) ---
+export const SummaryCard = ({ payload }: { payload: any }) => {
+    const { title, is_hub, overview, key_takeaways = [], key_terms = [], weak_spots = [] } = payload;
+    
+    return (
+        <div className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] shadow-sm space-y-5 select-none text-foreground">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#242426]/60">
+                <div className="flex items-center gap-2">
+                    {is_hub ? <Layers size={14} className="text-primary" /> : <FileText size={14} className="text-primary" />}
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em]">
+                        {is_hub ? 'Hub Summary' : 'Atomic Note Summary'}
+                    </span>
+                </div>
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-[#242426] bg-[#131314] text-muted-foreground px-2 py-0.5">
+                    {is_hub ? 'HUB' : 'NOTE'}
+                </Badge>
+            </div>
+
+            {/* Title & Overview */}
+            <div className="space-y-2">
+                <h3 className="text-[13px] font-black uppercase tracking-wide leading-tight">{title}</h3>
+                <p className="text-[11px] font-medium leading-relaxed text-muted-foreground/80">{overview}</p>
+            </div>
+
+            {/* Key Takeaways */}
+            {key_takeaways.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Core Takeaways</h4>
+                    <ul className="space-y-1.5 pl-1">
+                        {key_takeaways.map((item: string, i: number) => (
+                            <li key={i} className="text-[11px] font-semibold text-foreground/90 flex items-start gap-2 leading-relaxed">
+                                <span className="text-primary mt-1 text-[8px]">▪</span>
+                                <span>{item}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {/* Key Terms Glossary */}
+            {key_terms.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Key Glossary</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                        {key_terms.map((item: any, i: number) => (
+                            <div key={i} className="p-2.5 border border-[#242426] bg-[#131314] rounded-[8px]">
+                                <span className="text-[10px] font-black uppercase tracking-wider block text-primary">{item.term}</span>
+                                <span className="text-[10px] font-medium text-muted-foreground/80 mt-1 block leading-relaxed">{item.definition}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Weak spots / Review Targets */}
+            {weak_spots.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-destructive/60">Review Targets (Watch Out)</h4>
+                    <div className="p-3 border border-destructive/20 bg-destructive/5 rounded-[8px] space-y-1.5">
+                        {weak_spots.map((item: string, i: number) => (
+                            <div key={i} className="text-[10px] font-bold text-destructive/80 leading-relaxed flex items-start gap-2">
+                                <span className="mt-0.5">⚠️</span>
+                                <span>{item}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+// --- Practice Configuration Card ---
+export const PracticeConfigCard = ({ payload }: { payload: any }) => {
+    const { hubId, difficulty: initialDiff = "Mixed", gradingStrictness: initialGrading = "Lenient", distractorPlausibility: initialPlaus = "High", injectTrickAnswers: initialTrick = false, prioritizeWeaknesses: initialWeak = false, globalTimeLimitMinutes: initialTime = null, questionDistribution = {} } = payload;
+    const navigate = useNavigate();
+
+    const [difficulty, setDifficulty] = useState(initialDiff);
+    const [gradingStrictness, setGradingStrictness] = useState(initialGrading);
+    const [distractorPlausibility, setDistractorPlausibility] = useState(initialPlaus);
+    const [injectTrickAnswers, setInjectTrickAnswers] = useState(initialTrick);
+    const [prioritizeWeaknesses, setPrioritizeWeaknesses] = useState(initialWeak);
+    const [globalTimeLimit, setGlobalTimeLimit] = useState<string>(initialTime ? String(initialTime) : '');
+    const [dist, setDist] = useState<Record<string, number>>(() => {
+        const initialDist: Record<string, number> = {
+            mcq: 0, true_false: 0, writing: 0, fill_in: 0, matching: 0, order: 0, debug: 0, synthesis: 0, trace: 0, calculation: 0, data_analysis: 0, scenario: 0, code: 0
+        };
+        Object.entries(questionDistribution).forEach(([k, v]) => {
+            if (k in initialDist) {
+                initialDist[k] = Number(v);
+            }
+        });
+        return initialDist;
+    });
+
+    const handleIncrement = (type: string) => {
+        setDist(prev => ({ ...prev, [type]: Math.min(15, (prev[type] || 0) + 1) }));
+    };
+
+    const handleDecrement = (type: string) => {
+        setDist(prev => ({ ...prev, [type]: Math.max(0, (prev[type] || 0) - 1) }));
+    };
+
+    const handleStart = () => {
+        const total = Object.values(dist).reduce((a, b) => a + b, 0);
+        if (total <= 0) {
+            toast.error("Please add at least one question type.");
+            return;
+        }
+
+        const config = {
+            hubId,
+            difficulty,
+            gradingStrictness,
+            distractorPlausibility,
+            injectTrickAnswers,
+            prioritizeWeaknesses,
+            globalTimeLimitMinutes: globalTimeLimit ? Number(globalTimeLimit) : null,
+            questionDistribution: dist
+        };
+
+        localStorage.setItem('ater-pending-practice-config', JSON.stringify(config));
+        navigate(`/practice?startPending=true&hubId=${encodeURIComponent(hubId)}`);
+        toast.info("Configuring practice session...");
+    };
+
+    const qTypes = [
+        { key: 'mcq', label: 'Multiple Choice' },
+        { key: 'true_false', label: 'True / False' },
+        { key: 'writing', label: 'Detailed Essay' },
+        { key: 'fill_in', label: 'Fill in Blanks' },
+        { key: 'matching', label: 'Matching Pairs' },
+        { key: 'order', label: 'Step Ordering' },
+        { key: 'calculation', label: 'Calculation' },
+        { key: 'code', label: 'Code Snippet' },
+        { key: 'debug', label: 'Find Bug' }
+    ];
+
+    return (
+        <div className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] shadow-sm space-y-4 select-none text-foreground">
+            <div className="flex items-center justify-between pb-3 border-b border-[#242426]/60">
+                <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-primary" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em]">Practice Setup</span>
+                </div>
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-[#242426] bg-[#131314] text-muted-foreground px-2">
+                    {hubId.replace(/_/g, ' ')}
+                </Badge>
+            </div>
+
+            {/* Question Type Distribution */}
+            <div className="space-y-2">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Question Types</h4>
+                <div className="grid grid-cols-2 gap-2">
+                    {qTypes.map(({ key, label }) => (
+                        <div key={key} className="flex items-center justify-between p-2 border border-[#242426] bg-[#131314] rounded-[8px]">
+                            <span className="text-[10px] font-black uppercase tracking-wider leading-none">{label}</span>
+                            <div className="flex items-center gap-1.5">
+                                <button 
+                                    onClick={() => handleDecrement(key)}
+                                    className="size-5 border border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] active:scale-95 flex items-center justify-center text-[10px] font-black rounded-[4px] text-muted-foreground"
+                                >
+                                    -
+                                </button>
+                                <span className="text-[10px] font-mono font-bold w-4 text-center">{dist[key] || 0}</span>
+                                <button 
+                                    onClick={() => handleIncrement(key)}
+                                    className="size-5 border border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] active:scale-95 flex items-center justify-center text-[10px] font-black rounded-[4px] text-muted-foreground"
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* General Configurations */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                    <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 block mb-1">Difficulty</label>
+                    <select 
+                        value={difficulty} 
+                        onChange={(e) => setDifficulty(e.target.value)}
+                        className="w-full text-[10px] font-bold uppercase tracking-wider bg-[#131314] border border-[#242426] p-2 rounded-[8px] text-foreground focus:outline-none"
+                    >
+                        <option value="Mixed">Mixed</option>
+                        <option value="Easy">Easy (L1)</option>
+                        <option value="Medium">Medium (L2)</option>
+                        <option value="Hard">Hard (L3)</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 block mb-1">Grading</label>
+                    <select 
+                        value={gradingStrictness} 
+                        onChange={(e) => setGradingStrictness(e.target.value)}
+                        className="w-full text-[10px] font-bold uppercase tracking-wider bg-[#131314] border border-[#242426] p-2 rounded-[8px] text-foreground focus:outline-none"
+                    >
+                        <option value="Lenient">Lenient</option>
+                        <option value="Strict">Strict</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center justify-between p-2 border border-[#242426] bg-[#131314] rounded-[8px]">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Trick Answers</span>
+                    <input 
+                        type="checkbox" 
+                        checked={injectTrickAnswers} 
+                        onChange={(e) => setInjectTrickAnswers(e.target.checked)}
+                        className="accent-primary size-3 rounded"
+                    />
+                </div>
+                <div className="flex items-center justify-between p-2 border border-[#242426] bg-[#131314] rounded-[8px]">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Prioritize Weak</span>
+                    <input 
+                        type="checkbox" 
+                        checked={prioritizeWeaknesses} 
+                        onChange={(e) => setPrioritizeWeaknesses(e.target.checked)}
+                        className="accent-primary size-3 rounded"
+                    />
+                </div>
+            </div>
+
+            <button 
+                onClick={handleStart}
+                className="w-full py-2.5 rounded-[12px] bg-foreground text-background hover:bg-foreground/90 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+            >
+                <Play size={12} fill="currentColor" />
+                <span>Start Practice Session</span>
+            </button>
+        </div>
+    );
+};
+
+

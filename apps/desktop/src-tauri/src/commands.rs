@@ -449,12 +449,15 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
     let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_millis(3000))
+        .connect_timeout(std::time::Duration::from_millis(5000))
+        .timeout(std::time::Duration::from_secs(120))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
-    let max_attempts = 20; // Increased from 5 to 20 to handle cold starts (up to 10 seconds)
+    // 40 attempts: cold PyInstaller starts on Windows can take 20-25s to extract + bind.
+    // Backoff: 200ms (x10), 500ms (x10), 1000ms (x20) = ~2s + 5s + 20s = ~27s max wait.
+    let max_attempts = 40;
     let mut last_err = None;
 
     while attempt < max_attempts {
@@ -478,8 +481,7 @@ async fn proxy_post<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                 last_err = Some(e);
                 attempt += 1;
                 if attempt < max_attempts {
-                    // Backoff: start fast, then slow down
-                    let delay = if attempt < 5 { 200 } else { 500 };
+                    let delay = if attempt <= 10 { 200 } else if attempt <= 20 { 500 } else { 1000 };
                     tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                 }
             }
@@ -495,13 +497,14 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
     headers: reqwest::header::HeaderMap,
 ) -> Result<R, String> {
     let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_millis(3000))
+        .connect_timeout(std::time::Duration::from_millis(5000))
+        .timeout(std::time::Duration::from_secs(120))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
     let mut attempt = 0;
-    // Match proxy_post: 20 attempts (up to ~10 seconds) to handle cold sidecar starts.
-    let max_attempts = 20;
+    // 40 attempts with adaptive backoff — same as proxy_post.
+    let max_attempts = 40;
     let mut last_err = None;
 
     while attempt < max_attempts {
@@ -524,8 +527,7 @@ async fn proxy_get<R: serde::de::DeserializeOwned>(
                 last_err = Some(e);
                 attempt += 1;
                 if attempt < max_attempts {
-                    // Adaptive backoff: fast retries first, then slower
-                    let delay = if attempt < 5 { 200 } else { 500 };
+                    let delay = if attempt <= 10 { 200 } else if attempt <= 20 { 500 } else { 1000 };
                     tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                 }
             }

@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from langchain_core.language_models.chat_models import BaseChatModel
 from .schemas import PartialPlan, TheoryResponse, PractitionerResponse, QuizResponse, Question, ContextBriefing
-from .governor import governor
+from .governor import governor, DailyLimitExceededException
 
 # ── DOMAIN MATRIX v26.1 (UPGRADED) ───────────────────────────────────────────
 DOMAIN_MATRIX = {
@@ -1848,11 +1848,14 @@ Domain axioms: {axioms[:300]}"""
                 return sanitized_qs
 
             except Exception as e:
+                if isinstance(e, DailyLimitExceededException) or "daily limit exceeded" in str(e).lower() or "limit reached" in str(e).lower():
+                    raise e
                 err_msg = str(e).lower()
                 is_429 = "429" in err_msg or "rate limit" in err_msg or "rate_limit" in err_msg
                 if is_429:
                     wait_sec = _extract_wait_time(err_msg, default=5.0)
                     governor.report_error(wait_seconds=wait_sec)
+                    await asyncio.sleep(wait_sec)
                 
                 print(f"[QuestionAgent] Attempt {attempt+1} failed: {e}")
                 if attempt == 3:

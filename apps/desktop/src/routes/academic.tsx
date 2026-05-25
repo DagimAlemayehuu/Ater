@@ -28,19 +28,20 @@ export default function AcademicDashboard() {
   const [loading, setLoading] = useState(true)
  const [databases, setDatabases] = useState<VaultDatabase[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = (searchParams.get('tab') || 'PROGRAM') as AcademicTab
+  const activeTab = (String(searchParams.get('tab') || 'PROGRAM').toUpperCase()) as AcademicTab
   const setActiveTab = (tab: AcademicTab | ((prev: AcademicTab) => AcademicTab)) => {
     if (typeof tab === 'function') {
-      const current = (searchParams.get('tab') || 'PROGRAM') as AcademicTab
-      setSearchParams({ tab: tab(current) })
+      const current = (String(searchParams.get('tab') || 'PROGRAM').toUpperCase()) as AcademicTab
+      setSearchParams({ tab: tab(current).toUpperCase() })
     } else {
-      setSearchParams({ tab })
+      setSearchParams({ tab: tab.toUpperCase() })
     }
   }
   const selectedItemId = searchParams.get('id')
   const setSelectedItemId = (id: string | null) => setSearchParams(prev => {
     if (id) prev.set('id', id)
     else prev.delete('id')
+    prev.set('tab', String(prev.get('tab') || 'PROGRAM').toUpperCase())
     return prev
   })
   const {setRightContent} = useHeader()
@@ -294,7 +295,7 @@ export default function AcademicDashboard() {
   onOpenNote: (path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`),
   navigateTo: (tab, id) => {
     setSearchParams(prev => {
-      prev.set('tab', tab)
+      prev.set('tab', tab.toUpperCase())
       if (id) prev.set('id', id)
       else prev.delete('id')
       return prev
