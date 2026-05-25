@@ -68,23 +68,23 @@ export function AppHeader() {
   return (
     <header 
       onMouseEnter={() => window.focus()}
-      className="relative h-12 w-full bg-background border-b border-border/40 flex items-center shrink-0 z-40 sticky top-0 px-4 select-none"
+      className="relative h-14 bg-[#0e0e0f] flex items-center px-4 justify-between shrink-0 z-40 sticky top-0 select-none border-b border-[#242426]/40"
     >
       {/* Left: Navigation */}
-      <div className="flex items-center gap-2 shrink-0 z-10">
-        <div className="flex items-center gap-1 bg-muted/20 p-0.5 rounded-none border border-border/40 shadow-inner">
+      <div className="flex items-center gap-3 shrink-0 z-10">
+        <div className="flex items-center">
           <button 
             onClick={goBack}
             disabled={!canGoBack}
             title="Back (Cmd+[)"
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-none transition-none",
+              "w-8 h-8 flex items-center justify-center rounded-[4px] transition-colors",
               canGoBack 
-                ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border shadow-sm" 
-                : "text-muted-foreground/10 bg-transparent border-transparent cursor-default"
+                ? "text-[#a1a1aa] hover:text-white hover:bg-[#232326]" 
+                : "text-[#a1a1aa]/20 cursor-not-allowed"
             )}
           >
-            <ChevronLeft size={16} strokeWidth={2.5} />
+            <ChevronLeft size={18} strokeWidth={1.5} />
           </button>
 
           <button 
@@ -92,13 +92,13 @@ export function AppHeader() {
             disabled={!canGoForward}
             title="Forward (Cmd+])"
             className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-none transition-none",
+              "w-8 h-8 flex items-center justify-center rounded-[4px] transition-colors",
               canGoForward 
-                ? "text-foreground bg-background hover:bg-foreground/5 hover:border-foreground/40 border-border shadow-sm" 
-                : "text-muted-foreground/10 bg-transparent border-transparent cursor-default"
+                ? "text-[#a1a1aa] hover:text-white hover:bg-[#232326]" 
+                : "text-[#a1a1aa]/20 cursor-not-allowed"
             )}
           >
-            <ChevronRight size={16} strokeWidth={2.5} />
+            <ChevronRight size={18} strokeWidth={1.5} />
           </button>
         </div>
         
@@ -106,12 +106,12 @@ export function AppHeader() {
         <button 
           onClick={() => setShowOverlay(true)}
           className={cn(
-            "ml-3 px-3 h-8 flex items-center justify-center rounded-none border border-border/60 transition-none text-[10px] font-black tabular-nums shadow-sm bg-background/50",
-            pomodoroActive ? "bg-primary/10 text-primary border-primary/20 ring-1 ring-primary/10" : "hover:border-foreground/40"
+            "flex items-center gap-1.5 rounded-[4px] border border-[#242426] px-3 py-1 text-xs font-medium text-white bg-[#151517] transition-all duration-150 hover:bg-[#232326] shadow-sm h-8",
+            pomodoroActive && "border-white/20"
           )}
         >
-          <Timer size={12} className={cn("mr-1.5 opacity-50", pomodoroActive && "text-primary opacity-100")} />
-          {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+          <Timer size={14} className={cn("text-[#a1a1aa] shrink-0", pomodoroActive && "text-white")} />
+          <span>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
         </button>
       </div>
 
@@ -127,7 +127,7 @@ export function AppHeader() {
       <div className="flex-1" />
 
       {/* Right: Actions */}
-      <div className="flex items-center justify-end gap-3 shrink-0 z-10">
+      <div className="flex items-center justify-end gap-2 shrink-0 z-10">
         {rightContent}
       </div>
     </header>

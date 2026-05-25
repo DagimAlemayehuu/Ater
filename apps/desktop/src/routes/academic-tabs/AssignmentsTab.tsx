@@ -113,13 +113,13 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
           </div>
           <div className="flex items-center gap-2">
             {daysLeft !== null && (
-              <div className={cn('px-4 py-2 border text-center', daysLeft < 0 ? 'border-foreground bg-muted/10' : daysLeft <= 3 ? 'border-foreground/40' : 'border-border')}>
-                <div className="text-2xl font-black">{daysLeft < 0 ? Math.abs(daysLeft) : daysLeft}</div>
-                <div className="text-[7px] font-black uppercase">{daysLeft < 0 ? 'days late' : 'days left'}</div>
+              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft < 0 ? 'border-white bg-[#232326]' : daysLeft <= 3 ? 'border-white/40 bg-[#0e0e0f]' : 'border-[#242426] bg-[#0e0e0f]')}>
+                <div className="text-2xl font-black text-white">{daysLeft < 0 ? Math.abs(daysLeft) : daysLeft}</div>
+                <div className="text-[7px] font-black uppercase text-[#a1a1aa]">{daysLeft < 0 ? 'days late' : 'days left'}</div>
               </div>
             )}
-            <button onClick={() => onOpenNote(assignment.path || `database/assignments/${assignment.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10"><BookOpen size={14} /></button>
-            <button onClick={() => { onDelete('assignments', selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 size={14} /></button>
+            <button onClick={() => onOpenNote(assignment.path || `database/assignments/${assignment.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-white hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
+            <button onClick={() => { onDelete('assignments', selectedId); setSelectedId(null) }} className="p-2 text-[#a1a1aa] hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
 
@@ -147,8 +147,8 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
         {/* Mark complete */}
         <button onClick={e => handleToggleDone(assignment, e)}
-          className={cn('px-6 py-3 border text-[10px] font-black uppercase tracking-widest w-full',
-            isDone ? 'border-border text-muted-foreground hover:bg-muted/5' : 'border-foreground text-foreground hover:bg-foreground/5')}>
+          className={cn('px-6 py-3 border rounded-[6px] text-[10px] font-black uppercase tracking-widest w-full transition-colors',
+            isDone ? 'border-[#242426] bg-[#232326]/30 text-[#a1a1aa] hover:bg-[#232326]' : 'border-white bg-white text-[#151517] hover:bg-white/90')}>
           {isDone ? '↩ Mark Incomplete' : '✓ Mark Complete'}
         </button>
       </div>
@@ -174,12 +174,12 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
       )}
 
       {/* Filter bar */}
-      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap bg-background">
-        <div className="flex items-center gap-1 bg-muted/5 border border-border p-1">
+      <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap bg-transparent">
+        <div className="flex items-center gap-1 bg-[#0e0e0f] border border-[#242426] p-1 rounded-[6px]">
           {(['Pending', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest',
-                filter === f ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground hover:bg-muted/5')}>
+              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
+                filter === f ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
               {f}
             </button>
           ))}
@@ -187,25 +187,25 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
         {/* Course filter */}
         <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
-          className="bg-background border border-border px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none">
+          className="bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
           {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
         {/* Sort */}
         <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-          className="bg-background border border-border px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none">
+          className="bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white focus:outline-none cursor-pointer">
           <option value="due">By Due Date</option>
           <option value="priority">By Priority</option>
           <option value="course">By Course</option>
         </select>
 
-        <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border px-3 py-2">
-          <Search size={11} className="text-muted-foreground" />
+        <div className="flex items-center gap-2 flex-1 bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2">
+          <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none" />
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
+          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-white border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -223,7 +223,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
       )}
 
       {/* Stats row */}
-      <div className="px-6 py-2 border-b border-border flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-muted-foreground shrink-0">
+      <div className="px-6 py-2 border-b border-[#242426] flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa] shrink-0">
         <span>{pending.length} pending</span>
         <span>{overdue.length > 0 ? `${overdue.length} overdue` : '0 overdue'}</span>
         <span>{dueSoon.length} due soon</span>
@@ -242,21 +242,21 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
           return (
             <div key={idx} onClick={() => setSelectedId(a.id)}
-              className={cn('flex items-center gap-4 p-3 border cursor-pointer group hover:border-foreground/40',
-                isDone ? 'opacity-40 border-border/20 bg-muted/3' : isLate ? 'border-foreground/30 bg-muted/5' : 'border-border bg-background hover:bg-muted/3')}>
+              className={cn('flex items-center gap-4 p-3 border rounded-[8px] cursor-pointer group hover:border-foreground/40 transition-colors',
+                isDone ? 'opacity-40 border-[#242426] bg-[#0e0e0f]/50' : isLate ? 'border-[#242426] bg-[#0e0e0f] ring-1 ring-destructive/20' : 'border-[#242426] bg-[#0e0e0f] hover:bg-[#232326]/30')}>
               <button onClick={e => handleToggleDone(a, e)}
-                className={cn('w-4 h-4 border shrink-0 flex items-center justify-center',
-                  isDone ? 'bg-foreground border-foreground' : 'border-border hover:border-foreground')}>
-                {isDone && <Check size={9} strokeWidth={4} className="text-background" />}
+                className={cn('w-4 h-4 border rounded-[4px] shrink-0 flex items-center justify-center transition-colors',
+                  isDone ? 'bg-white border-white' : 'border-[#242426] hover:border-white')}>
+                {isDone && <Check size={9} strokeWidth={4} className="text-[#151517]" />}
               </button>
               <div className="flex-1 min-w-0">
-                <span className={cn('text-[11px] font-black uppercase truncate block', isDone && 'line-through text-muted-foreground')}>
+                <span className={cn('text-[11px] font-black uppercase truncate block text-white', isDone && 'line-through text-muted-foreground')}>
                   {cleanTitle(a.title)}
                 </span>
-                {course && <span className="text-[8px] font-black uppercase tracking-widest text-foreground/40">{course}</span>}
+                {course && <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">{course}</span>}
               </div>
               {priority && (
-                <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase border shrink-0', priorityColorClass(priority))}>{priority}</span>
+                <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase border rounded-[3px] shrink-0', priorityColorClass(priority))}>{priority}</span>
               )}
               {daysLeft !== null && !isDone && <CountdownBadge days={daysLeft} />}
               {a.due_date && isDone && (

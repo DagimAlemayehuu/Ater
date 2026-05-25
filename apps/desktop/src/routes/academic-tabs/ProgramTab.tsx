@@ -173,13 +173,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="grid grid-cols-3 gap-4">
             {semCourses.map((c, idx) => (
               <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                className="p-5 border border-border bg-muted/5 cursor-pointer hover:bg-muted/10 hover:border-foreground/40">
+                className="p-5 border border-[#242426] bg-[#0e0e0f] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-foreground/50">Course</span>
-                  <span className="text-[9px] font-black text-foreground/50">{getVal(c, 'Credits', 'credits')} CR</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Course</span>
+                  <span className="text-[9px] font-black text-white">{getVal(c, 'Credits', 'credits')} CR</span>
                 </div>
-                <h3 className="text-base font-black uppercase tracking-tight text-foreground">{cleanTitle(c.title)}</h3>
-                <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-1">{getVal(c, 'Status', 'status')}</p>
+                <h3 className="text-base font-black uppercase tracking-tight text-white">{cleanTitle(c.title)}</h3>
+                <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/50 mt-1">{getVal(c, 'Status', 'status')}</p>
               </div>
             ))}
           </div>
@@ -222,22 +222,22 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="flex items-center gap-2">
             {!isCurrentYear && (
               <button onClick={() => handleSetCurrentYear(selectedYearId)}
-                className="px-3 py-1.5 border border-border text-[8px] font-black uppercase hover:border-foreground/50">
+                className="px-3 py-1.5 border border-[#242426] bg-[#232326]/50 rounded-[4px] text-[8px] font-black uppercase text-white hover:bg-[#232326] transition-colors">
                 Set Active
               </button>
             )}
             {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
               <button onClick={() => onUpdate('years', selectedYearId, { Status: '[[Completed]]' })}
-                className="px-3 py-1.5 bg-muted border border-border text-[8px] font-black uppercase hover:bg-muted/80">
+                className="px-3 py-1.5 bg-[#232326]/50 border border-[#242426] rounded-[4px] text-[8px] font-black uppercase text-white hover:bg-[#232326] transition-colors">
                 Mark Complete
               </button>
             )}
             <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10">
+              className="p-2 text-[#a1a1aa] hover:text-white hover:bg-[#232326]/50 rounded-[4px] transition-colors">
               <BookOpen size={13} />
             </button>
             <button onClick={() => { onDelete('years', selectedYearId); setSelectedYearId(null) }}
-              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors">
               <Trash2 size={13} />
             </button>
           </div>
@@ -290,21 +290,21 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
               })
               return (
                 <div key={idx} onClick={() => setSelectedSemId(s.id)}
-                  className="flex items-center justify-between p-4 border border-border bg-muted/5 cursor-pointer hover:bg-muted/10 hover:border-foreground/40">
+                  className="flex items-center justify-between p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className={cn('w-5 h-5 border flex items-center justify-center text-[8px] font-black shrink-0',
-                      isDone ? 'border-foreground bg-foreground text-background' :
-                      isActive ? 'border-foreground text-foreground' : 'border-border text-muted-foreground')}>
+                    <div className={cn('w-5 h-5 border rounded-[4px] flex items-center justify-center text-[8px] font-black shrink-0',
+                      isDone ? 'border-white bg-white text-[#151517]' :
+                      isActive ? 'border-[#a1a1aa] text-white bg-[#232326]' : 'border-[#242426] text-muted-foreground')}>
                       {isDone ? <Check size={9} strokeWidth={4} /> : idx + 1}
                     </div>
                     <div>
-                      <span className="text-[12px] font-black uppercase">{cleanTitle(s.title)}</span>
-                      <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-foreground/50">{sStatus}</span>
+                      <span className="text-[12px] font-black uppercase text-white">{cleanTitle(s.title)}</span>
+                      <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">{sStatus}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-[8px] font-black uppercase text-muted-foreground">{semCourses.length} courses</span>
-                    <ChevronRight size={11} className="text-muted-foreground" />
+                    <ChevronRight size={11} className="text-[#a1a1aa]" />
                   </div>
                 </div>
               )
@@ -329,13 +329,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   return (
     <div className="h-full flex overflow-hidden">
       {/* Left Roadmap Panel */}
-      <aside className="w-56 shrink-0 border-r border-border flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <span className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/60 flex items-center gap-1.5">
+      <aside className="w-56 shrink-0 border-r border-[#242426] flex flex-col overflow-hidden bg-transparent">
+        <div className="flex items-center justify-between p-4 border-b border-[#242426]">
+          <span className="text-[8px] font-black uppercase tracking-[0.4em] text-[#a1a1aa] flex items-center gap-1.5">
             <GraduationCap size={10} /> Roadmap
           </span>
           <button onClick={() => setShowSetup(!showSetup)}
-            className="px-2 py-1 bg-foreground/5 text-[7px] font-black uppercase tracking-widest hover:bg-foreground/10 border border-border/10">
+            className="px-2 py-1 bg-[#232326]/50 text-[7px] font-black uppercase tracking-widest hover:bg-[#232326] border border-[#242426] rounded-[4px] text-white transition-colors">
             {showSetup ? 'Back' : programYears.length > 0 ? 'Edit' : 'Setup'}
           </button>
         </div>
@@ -384,14 +384,14 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 <div className="grid grid-cols-3 gap-4">
                   {activeCourses.map((c, idx) => (
                     <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                      className="p-4 border border-border bg-muted/5 flex items-center justify-between cursor-pointer hover:bg-muted/10 hover:border-foreground/40">
+                      className="p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px] flex items-center justify-between cursor-pointer hover:bg-[#232326]/30 transition-colors">
                       <div>
-                        <span className="text-[13px] font-black uppercase text-foreground">{cleanTitle(c.title)}</span>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40">
+                        <span className="text-[13px] font-black uppercase text-white">{cleanTitle(c.title)}</span>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-1">
                           {getVal(c, 'Credits', 'credits')} Credits
                         </p>
                       </div>
-                      <ChevronRight size={14} className="text-muted-foreground" />
+                      <ChevronRight size={14} className="text-[#a1a1aa]" />
                     </div>
                   ))}
                 </div>
@@ -409,15 +409,16 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   const ySems = semesters.filter(s => getVal(s, 'Year', 'year').toLowerCase() === String(y.title || '').toLowerCase())
                   return (
                     <div key={idx} onClick={() => setSelectedYearId(y.id)}
-                      className={cn('p-5 border cursor-pointer hover:border-foreground/40',
-                        isActive ? 'border-foreground bg-foreground/5' : 'border-border bg-muted/5 hover:bg-muted/10')}>
+                      className={cn('p-5 border cursor-pointer rounded-[8px] transition-colors',
+                        isActive ? 'border-[#a1a1aa] bg-[#232326]' : 'border-[#242426] bg-[#0e0e0f] hover:bg-[#232326]/30')}
+                        style={{ contentVisibility: 'auto' }}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">Year</span>
-                        {isActive && <div className="w-1.5 h-1.5 bg-foreground" />}
-                        {isDone && <Check size={11} className="text-muted-foreground/40" />}
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Year</span>
+                        {isActive && <div className="w-1.5 h-1.5 bg-white" />}
+                        {isDone && <Check size={11} className="text-white" />}
                       </div>
-                      <h3 className="text-xl font-black uppercase tracking-tight">{cleanTitle(y.title)}</h3>
-                      <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-1">
+                      <h3 className="text-xl font-black uppercase tracking-tight text-white">{cleanTitle(y.title)}</h3>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/50 mt-1">
                         {status} · {ySems.length} semesters
                       </p>
                     </div>

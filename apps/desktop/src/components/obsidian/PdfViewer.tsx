@@ -251,8 +251,8 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
 
     return (
         <>
-            <div ref={containerRef} className="flex flex-row h-full bg-background relative overflow-hidden">
-                <div className="flex-1 flex flex-col min-w-0 relative bg-background">
+            <div ref={containerRef} className="flex flex-row h-full bg-card relative overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 relative bg-card">
                     {/* Explain page button overlay */}
                     <div className="absolute top-3 right-3 z-20">
                         <button
@@ -294,7 +294,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             ref={iframeRef} 
                             src={pdfUrl} 
                             onLoad={handleIframeLoad}
-                            className="w-full h-full border-none overflow-hidden bg-background" 
+                            className="w-full h-full border-none overflow-hidden bg-card" 
                             title={title} 
                             allowFullScreen 
                         />

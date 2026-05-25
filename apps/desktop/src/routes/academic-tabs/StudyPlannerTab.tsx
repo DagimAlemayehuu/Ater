@@ -105,13 +105,13 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
         </div>
 
         {linkedExam && examItem && (
-          <div className="p-4 border border-border bg-muted/5 flex items-center justify-between">
+          <div className="p-4 border border-[#242426] bg-[#0e0e0f] rounded-[8px] flex items-center justify-between">
             <div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Linked Exam</span>
-              <p className="text-[13px] font-black uppercase mt-0.5">{cleanTitle(examItem.title)}</p>
+              <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Linked Exam</span>
+              <p className="text-[13px] font-black uppercase mt-0.5 text-white">{cleanTitle(examItem.title)}</p>
             </div>
             <button onClick={() => navigateTo('EXAMS', examItem.id)}
-              className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View →</button>
+              className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-white">View →</button>
           </div>
         )}
 
@@ -126,11 +126,11 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
 
         <div className="flex gap-3">
           <button onClick={() => navigateTo('PRACTICE', hub.id)}
-            className="flex-1 px-4 py-3 border border-border text-[10px] font-black uppercase tracking-widest text-foreground hover:border-foreground/50 hover:bg-muted/5">
+            className="flex-1 px-4 py-3 border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#232326] transition-colors">
             Practice This Hub →
           </button>
           <button onClick={() => navigateTo('CALENDAR')}
-            className="flex-1 px-4 py-3 border border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30">
+            className="flex-1 px-4 py-3 border border-[#242426] bg-[#232326]/30 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-[#a1a1aa] hover:text-white transition-colors">
             View in Calendar
           </button>
         </div>
@@ -144,35 +144,35 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter & controls */}
-      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap">
-        <div className="flex items-center gap-1 bg-muted/5 border border-border p-1">
+      <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-1 bg-[#0e0e0f] border border-[#242426] p-1 rounded-[6px]">
           {(['Active', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest',
-                filter === f ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground hover:bg-muted/5')}>
+              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
+                filter === f ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
               {f}
             </button>
           ))}
         </div>
 
         {/* Group mode */}
-        <div className="flex items-center gap-1 bg-muted/5 border border-border p-1">
+        <div className="flex items-center gap-1 bg-[#0e0e0f] border border-[#242426] p-1 rounded-[6px]">
           {(['course', 'status', 'none'] as GroupMode[]).map(g => (
             <button key={g} onClick={() => setGroupMode(g)}
-              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest',
-                groupMode === g ? 'bg-muted/20 text-foreground border border-border' : 'text-muted-foreground hover:bg-muted/5')}>
+              className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
+                groupMode === g ? 'bg-[#232326] text-white' : 'text-[#a1a1aa] hover:text-white')}>
               {g === 'none' ? 'Flat' : `By ${g}`}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 flex-1 bg-muted/5 border border-border px-3 py-2">
-          <Search size={11} className="text-muted-foreground" />
+        <div className="flex items-center gap-2 flex-1 bg-[#0e0e0f] border border-[#242426] rounded-[6px] px-3 py-2">
+          <Search size={11} className="text-[#a1a1aa]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search hubs..."
-            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none" />
+            className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-white placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
+          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-white border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -189,7 +189,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
       )}
 
       {/* Stats */}
-      <div className="px-6 py-2 border-b border-border flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-muted-foreground shrink-0">
+      <div className="px-6 py-2 border-b border-[#242426] flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa] shrink-0">
         <span>{allHubs.length} hubs</span>
         <span>{totalDone} done</span>
         <span className="flex items-center gap-1"><Clock size={9} />{totalStudyMs > 0 ? `${Math.round(totalStudyMs / 3600)}h total` : '--'}</span>
@@ -213,22 +213,23 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
 
                 return (
                   <div key={idx} onClick={() => setSelectedId(hub.id)}
-                    className={cn('p-5 border cursor-pointer flex flex-col gap-3 hover:border-foreground/40',
-                      isDone ? 'border-border/20 bg-muted/3 opacity-60' : 'border-border bg-background hover:bg-muted/5')}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className={cn('w-3 h-3 border shrink-0 mt-0.5 flex items-center justify-center',
-                        isDone ? 'bg-foreground border-foreground' : 'border-border')}>
-                        {isDone && <Check size={8} strokeWidth={4} className="text-background" />}
+                    className={cn('p-5 border cursor-pointer rounded-[8px] flex flex-col gap-3 hover:border-foreground/40 transition-colors',
+                      isDone ? 'border-[#242426] bg-[#0e0e0f]/50 opacity-60' : 'border-[#242426] bg-[#0e0e0f] hover:bg-[#232326]/30')}>
+                    <div className="flex items-start gap-2">
+                      <div className={cn('w-3.5 h-3.5 border rounded-[3px] shrink-0 mt-0.5 flex items-center justify-center',
+                        isDone ? 'bg-white border-white' : 'border-[#242426]')}
+                        onClick={e => { e.stopPropagation(); onUpdate(DB_ID, hub.id, { status: wrapWL(isDone ? 'Active' : 'Completed') }) }}>
+                        {isDone && <Check size={8} strokeWidth={4} className="text-[#151517]" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className={cn('text-[12px] font-black uppercase truncate leading-tight',
-                          isDone ? 'line-through text-muted-foreground' : 'text-foreground')}>
+                          isDone ? 'line-through text-muted-foreground' : 'text-white')}>
                           {cleanTitle(hub.title || hub.id)}
                         </h3>
-                        {course && <p className="text-[8px] font-black uppercase tracking-widest text-foreground/40 mt-0.5">{course}</p>}
+                        {course && <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-0.5">{course}</p>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-border/40 pt-2">
+                    <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-[#242426] pt-2">
                       {time > 0 && <span className="text-muted-foreground flex items-center gap-1"><Clock size={8} />{Math.round(time / 60)}m</span>}
                       {accuracy !== null && <span className="text-muted-foreground">{accuracy}%</span>}
                       {!isDone && (

@@ -72,12 +72,12 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 border-2 border-destructive/20 bg-destructive/5 rounded-none text-center my-12">
+        <div className="p-8 border border-destructive/20 bg-destructive/5 rounded-[12px] text-center my-12">
           <p className="text-sm font-black text-destructive/60 uppercase tracking-[0.2em]">Document Parsing Error</p>
           <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-2">The content structure is malformed or contains illegal sequences.</p>
           <button 
             onClick={() => window.location.reload()}
-            className="mt-6 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-black uppercase tracking-widest rounded-none border border-destructive/20 transition-none"
+            className="mt-6 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-black uppercase tracking-widest rounded-[8px] border border-destructive/20 transition-none"
           >
             Reload Interface
           </button>
@@ -124,10 +124,10 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
     });
   }, [chart]);
 
-  if (error) return <div className="text-destructive font-mono text-[11px] p-4 bg-destructive/10 rounded-none">Error rendering Mermaid diagram</div>;
-  if (!svg) return <div className="text-muted-foreground font-mono text-[11px] p-4 text-center">Rendering diagram...</div>;
+  if (error) return <div className="text-destructive font-mono text-[11px] p-4 bg-destructive/10 rounded-[8px]">Error rendering Mermaid diagram</div>;
+  if (!svg) return <div className="text-muted-foreground font-mono text-[11px] p-4 text-center bg-[#151517] rounded-[8px] border border-[#242426]">Rendering diagram...</div>;
 
-  return <div className="my-6 flex justify-center bg-muted/30 p-6 rounded-none border border-border" dangerouslySetInnerHTML={{ __html: svg }} />;
+  return <div className="my-6 flex justify-center bg-[#151517] p-6 rounded-[8px] border border-[#242426]" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 interface MarkdownViewerProps {
@@ -154,10 +154,10 @@ const CodeBlock = memo(({ language, value }: { language: string | null, value: s
     };
 
     return (
-        <div className="relative group my-8 rounded-none border border-border/20 overflow-hidden bg-transparent  hover:border-border/40">
+        <div className="relative group my-8 rounded-[8px] border border-[#242426] overflow-hidden bg-[#151517] hover:border-border/40">
             {/* Header / Top Bar - Minimalist and blended */}
             <div className={cn(
-                "flex items-center justify-between px-5 py-1.5 border-b border-border/5 bg-muted/5 ",
+                "flex items-center justify-between px-5 py-1.5 border-b border-[#242426]/60 bg-[#232326]/50 ",
                 !language && "opacity-0 group-hover:opacity-100"
             )}>
                 <div className="flex items-center">
@@ -167,7 +167,7 @@ const CodeBlock = memo(({ language, value }: { language: string | null, value: s
                 </div>
                 <button 
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-muted/20 rounded-none  text-muted-foreground/50 hover:text-foreground group/copy"
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-[#232326]/60 rounded-[6px] text-muted-foreground/50 hover:text-foreground group/copy"
                     title="Copy Code"
                 >
                     <span className="text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover/copy:opacity-100 ">
@@ -270,7 +270,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                 <div 
                                     key={i} 
                                     onClick={() => handleNavigate(path ? `/obsidian?path=${encodeURIComponent(path)}` : `/academic?tab=COURSES&id=${id}`)}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
+                                    className="p-4 border border-[#242426] bg-[#151517] hover:bg-[#232326]/50 hover:border-foreground/40 cursor-pointer rounded-[12px] transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
                                 >
                                     <div>
                                         <div className="flex justify-between items-start gap-2">
@@ -278,7 +278,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                                 {cleanTitle}
                                             </h4>
                                             {grade && (
-                                                <Badge variant="outline" className="rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase border-foreground/20 text-foreground shrink-0">
+                                                <Badge variant="outline" className="rounded-[6px] px-1.5 py-0.5 text-[8px] font-black uppercase border-[#242426] bg-[#232326] text-foreground shrink-0">
                                                     {grade}
                                                 </Badge>
                                             )}
@@ -289,10 +289,10 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                             </p>
                                         )}
                                     </div>
-                                    <div className="flex justify-between items-center border-t border-border/5 pt-2 text-[9px] font-black uppercase tracking-[0.2em] text-foreground/30">
+                                    <div className="flex justify-between items-center border-t border-[#242426]/60 pt-2 text-[9px] font-black uppercase tracking-[0.2em] text-foreground/30">
                                         <div className="flex items-center gap-2">
                                             {semester && (
-                                                <Badge variant="outline" className="h-4 rounded-none text-[7px] border-border/50 text-muted-foreground font-black px-1">
+                                                <Badge variant="outline" className="h-4 rounded-[6px] text-[7px] border-[#242426] bg-[#232326] text-muted-foreground font-black px-1">
                                                     {semester}
                                                 </Badge>
                                             )}
@@ -318,7 +318,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                 <div 
                                     key={i} 
                                     onClick={() => handleNavigate(`/obsidian?path=${encodeURIComponent(path)}`)}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-28 select-none"
+                                    className="p-4 border border-[#242426] bg-[#151517] hover:bg-[#232326]/50 hover:border-foreground/40 cursor-pointer rounded-[12px] transition-all duration-150 group flex flex-col justify-between h-28 select-none"
                                 >
                                     <div className="flex items-start gap-2.5">
                                         <FileText size={14} className="text-muted-foreground/60 mt-0.5" />
@@ -334,7 +334,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                     {item.tags && item.tags.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-2">
                                             {item.tags.slice(0, 3).map((tag: string, tid: number) => (
-                                                <span key={tid} className="px-1 py-0.5 text-[8px] text-muted-foreground border border-border/50 bg-muted/10 font-mono">
+                                                <span key={tid} className="px-1.5 py-0.5 text-[8px] text-muted-foreground border border-[#242426] bg-[#232326] rounded-[6px] font-mono">
                                                     #{tag}
                                                 </span>
                                             ))}
@@ -361,7 +361,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                 <div 
                                     key={i} 
                                     onClick={() => handleNavigate(`/obsidian?path=${encodeURIComponent(path)}`)}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
+                                    className="p-4 border border-[#242426] bg-[#151517] hover:bg-[#232326]/50 hover:border-foreground/40 cursor-pointer rounded-[12px] transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-start gap-2.5">
@@ -380,13 +380,13 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                         <Badge variant="outline" className={cn(
                                             "rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase shrink-0 border",
                                             isCompleted 
-                                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600" 
-                                                : "border-amber-500/20 bg-amber-500/10 text-amber-600"
+                                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 rounded-[6px]" 
+                                                : "border-amber-500/20 bg-amber-500/10 text-amber-600 rounded-[6px]"
                                         )}>
                                             {item.status || 'Active'}
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-foreground/40 mt-3 pt-2 border-t border-border/5">
+                                    <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[0.2em] text-foreground/40 mt-3 pt-2 border-t border-[#242426]/60">
                                         <div className="flex items-center gap-1.5">
                                             <Clock size={10} />
                                             <span>Planner Hub</span>
@@ -403,7 +403,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
             }
             case 'exam_list': {
                 return (
-                    <div className="border border-border bg-background my-4 divide-y divide-border/50">
+                    <div className="border border-[#242426] bg-[#151517] my-4 rounded-[12px] overflow-hidden divide-y divide-[#242426]/60">
                         {list.map((item: any, i: number) => {
                             const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Exam';
                             const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
@@ -419,7 +419,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                     className="p-4 flex items-center justify-between hover:bg-muted/5 cursor-pointer transition-colors group select-none"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="size-8 border border-border flex items-center justify-center bg-muted/5 group-hover:border-foreground/30 transition-all">
+                                        <div className="size-8 border border-[#242426] flex items-center justify-center bg-[#232326] rounded-[6px] group-hover:border-foreground/30 transition-all">
                                             <Award size={14} className="text-muted-foreground/50 group-hover:text-foreground" />
                                         </div>
                                         <div>
@@ -449,7 +449,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
             }
             case 'assignment_list': {
                 return (
-                    <div className="border border-border bg-background my-4 divide-y divide-border/50">
+                    <div className="border border-[#242426] bg-[#151517] my-4 rounded-[12px] overflow-hidden divide-y divide-[#242426]/60">
                         {list.map((item: any, i: number) => {
                             const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Assignment';
                             const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
@@ -466,7 +466,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "size-8 border flex items-center justify-center transition-all",
-                                            isCompleted ? "border-emerald-500/20 bg-emerald-500/5" : "border-border bg-muted/5 group-hover:border-foreground/30"
+                                            isCompleted ? "border-emerald-500/20 bg-emerald-500/5 rounded-[6px]" : "border-[#242426] bg-[#232326] rounded-[6px] group-hover:border-foreground/30"
                                         )}>
                                             <CheckSquare size={14} className={cn(
                                                 isCompleted ? "text-emerald-500" : "text-muted-foreground/40 group-hover:text-foreground"
@@ -485,7 +485,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                         </div>
                                     </div>
                                     {dueDate && (
-                                        <Badge variant="outline" className="rounded-none text-[9px] font-black uppercase border-border/50 text-muted-foreground/60 font-mono">
+                                        <Badge variant="outline" className="rounded-[6px] text-[9px] font-black uppercase border-[#242426] bg-[#232326] text-muted-foreground/60 font-mono">
                                             {dueDate}
                                         </Badge>
                                     )}
@@ -498,7 +498,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
             case 'srs_deck': {
                 return (
                     <div className="space-y-3 my-4">
-                        <div className="border border-border divide-y divide-border bg-background">
+                        <div className="border border-[#242426] rounded-[12px] overflow-hidden divide-y divide-[#242426] bg-[#151517]">
                             {list.map((item: any, i: number) => {
                                 const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Card';
                                 const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
@@ -531,7 +531,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                         </div>
                         <button 
                             onClick={() => handleNavigate('/practice')}
-                            className="w-full h-9 border border-foreground/80 bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all select-none rounded-none"
+                            className="w-full h-9 border border-[#242426] bg-[#232326] hover:bg-[#232326]/80 text-foreground text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all select-none rounded-[8px]"
                         >
                             Start Spaced Repetition Practice
                         </button>
@@ -549,7 +549,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                 return (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 my-4">
                         {list.map((item, i) => (
-                            <div key={i} className="p-4 border border-border bg-background select-none flex flex-col justify-between h-20 rounded-none">
+                            <div key={i} className="p-4 border border-[#242426] bg-[#151517] select-none flex flex-col justify-between h-20 rounded-[12px]">
                                 <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
                                     {item.label}
                                 </span>
@@ -575,7 +575,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                 <div 
                                     key={i} 
                                     onClick={() => handleNavigate(path ? `/obsidian?path=${encodeURIComponent(path)}` : '/academic?tab=PROGRAM')}
-                                    className="p-4 border border-border bg-background hover:bg-muted/5 hover:border-foreground/40 cursor-pointer rounded-none transition-all duration-150 group flex flex-col justify-between h-28 select-none shadow-sm"
+                                    className="p-4 border border-[#242426] bg-[#151517] hover:bg-[#232326]/50 hover:border-foreground/40 cursor-pointer rounded-[12px] transition-all duration-150 group flex flex-col justify-between h-28 select-none shadow-sm"
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-start gap-2.5">
@@ -585,13 +585,13 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                             </h4>
                                         </div>
                                         <Badge variant="outline" className={cn(
-                                            "rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
-                                            isActive ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground"
+                                            "rounded-[6px] px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
+                                            isActive ? "border-[#242426] bg-[#232326] text-foreground" : "border-[#242426] text-muted-foreground"
                                         )}>
                                             {status}
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em] mt-2 pt-2 border-t border-border/5">
+                                    <div className="flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em] mt-2 pt-2 border-t border-[#242426]/60">
                                         <span>Academic Term</span>
                                         <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
@@ -628,7 +628,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                 return <StudyHistoryBlock payload={data} />;
             default:
                 return (
-                    <pre className="text-xs p-3 bg-muted/10 border border-border overflow-x-auto font-mono">
+                    <pre className="text-xs p-3 bg-[#232326] border border-[#242426] overflow-x-auto rounded-[8px] font-mono">
                         {JSON.stringify(data, null, 2)}
                     </pre>
                 );
@@ -690,7 +690,7 @@ const CodeRenderer = memo((props: any) => {
     // Render ```markdown blocks as actual Markdown documents to support rendered artifact tables
     if (language === 'markdown') {
         return (
-            <div className="my-6 p-6 bg-muted/5 border border-border/20 rounded-none prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
+            <div className="my-6 p-6 bg-[#151517] border border-[#242426]/60 rounded-[12px] prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
                 <ReactMarkdown remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}>
                     {String(children).replace(/\n$/, '')}
                 </ReactMarkdown>
@@ -713,7 +713,7 @@ const CodeRenderer = memo((props: any) => {
             .replace(/\\\]/g, () => '\n$$\n')
             .trim();
         return (
-            <div className="my-6 p-6 bg-muted/10 border border-border/30 rounded-none">
+            <div className="my-6 p-6 bg-[#151517] border border-[#242426]/60 rounded-[12px]">
                 <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-2">
                     <ReactMarkdown remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}>
                         {mathContent}

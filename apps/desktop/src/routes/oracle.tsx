@@ -56,7 +56,7 @@ export default function Oracle() {
       messages.length > 0 ? (
         <button 
           onClick={handleClearHistory}
-          className="h-8 px-3 border border-border bg-background hover:bg-accent text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-none"
+          className="h-8 px-3 border border-[#242426] bg-[#0e0e0f] hover:bg-[#151517] text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[6px]"
           title="Clear Conversation"
         >
           <Trash2 size={12} /> CLEAR
@@ -378,9 +378,9 @@ export default function Oracle() {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3rem)] bg-[#0e0e0f] text-foreground overflow-hidden">
       {/* Messages View */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0 bg-[#0e0e0f]">
         {messages.length === 0 ? (
           <div className="max-w-2xl mx-auto mt-16 space-y-10">
             {/* Title and description */}
@@ -405,9 +405,9 @@ export default function Oracle() {
                     <button
                       key={i}
                       onClick={() => handleSendMessage(action.prompt)}
-                      className="flex flex-col items-start text-left p-4 border border-border/80 hover:border-foreground/40 bg-background hover:bg-muted/5 transition-all duration-150 rounded-none group shadow-sm"
+                      className="flex flex-col items-start text-left p-5 border border-[#242426] hover:border-[#3a3a3d] bg-[#151517] hover:bg-[#232326] transition-all duration-200 rounded-[12px] group shadow-sm"
                     >
-                      <div className="size-7 bg-muted/10 border border-border group-hover:border-foreground/20 flex items-center justify-center mb-3 rounded-none transition-all">
+                      <div className="size-8 bg-[#0e0e0f] border border-[#242426] group-hover:border-[#3a3a3d] flex items-center justify-center mb-3 rounded-[6px] transition-all">
                         <Icon size={12} className="text-muted-foreground group-hover:text-foreground" />
                       </div>
                       <span className="text-[11px] font-bold uppercase tracking-wider text-foreground mb-1 block">
@@ -428,15 +428,15 @@ export default function Oracle() {
               <div key={index} className="space-y-2">
                 {msg.role === 'user' ? (
                   <div className="flex justify-end w-full">
-                    <div className="max-w-[80%] bg-muted/15 border border-border px-4 py-3 text-[13px] rounded-none text-foreground font-sans leading-relaxed shadow-sm">
+                    <div className="max-w-[80%] bg-[#151517] border border-[#242426] px-4 py-3 text-[13px] rounded-[12px] text-foreground font-sans leading-relaxed shadow-sm">
                       {msg.content}
                     </div>
                   </div>
                 ) : (
                   <div className="flex justify-start w-full">
-                    <div className="max-w-full w-full border border-border bg-background px-6 py-5 text-[13px] rounded-none text-foreground font-sans overflow-x-auto shadow-sm">
+                    <div className="max-w-full w-full border border-[#242426] bg-[#151517] px-6 py-5 text-[13px] rounded-[12px] text-foreground font-sans overflow-x-auto shadow-sm">
                       {/* Body Markdown */}
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/5 prose-pre:border prose-pre:border-border/30">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#0e0e0f] prose-pre:border prose-pre:border-[#242426]">
                         <AterMarkdown 
                           content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} 
                           onNavigate={handleWikiLinkClick}
@@ -452,7 +452,7 @@ export default function Oracle() {
             {/* Thinking indicator */}
             {isLoading && (
               <div className="flex justify-start w-full animate-pulse">
-                <div className="border border-border bg-background px-5 py-4 rounded-none shadow-sm flex items-center gap-3">
+                <div className="border border-[#242426] bg-[#151517] px-5 py-4 rounded-[12px] shadow-sm flex items-center gap-3">
                   <div className="flex gap-1.5">
                     <span className="w-1.5 h-1.5 bg-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="w-1.5 h-1.5 bg-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -471,15 +471,15 @@ export default function Oracle() {
       </div>
 
       {/* Input Action Bar */}
-      <div className="p-6 border-t border-border bg-background shrink-0">
-        <div className="max-w-3xl mx-auto flex items-end gap-3 bg-background relative">
+      <div className="p-6 border-t border-[#242426] bg-[#0e0e0f] shrink-0">
+        <div className="max-w-3xl mx-auto flex items-end gap-3 bg-transparent relative">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask the Oracle or search your vault..."
-            className="flex-1 min-h-[44px] max-h-[120px] bg-background border border-border p-3 text-sm focus:outline-none focus:border-foreground/40 resize-none placeholder:text-muted-foreground/40 rounded-none transition-all font-mono leading-relaxed"
+            className="flex-1 min-h-[44px] max-h-[120px] bg-[#151517] border border-[#242426] p-3 text-sm focus:outline-none focus:border-[#3a3a3d] focus:bg-[#232326] resize-none placeholder:text-muted-foreground/40 rounded-[12px] transition-all font-mono leading-relaxed text-foreground"
             rows={1}
             disabled={isLoading}
           />
@@ -487,10 +487,10 @@ export default function Oracle() {
             onClick={() => handleSendMessage()}
             disabled={isLoading || !input.trim()}
             className={cn(
-              "h-11 px-5 flex items-center justify-center rounded-none border transition-all duration-150 shadow-sm",
+              "h-11 px-5 flex items-center justify-center rounded-[12px] border transition-all duration-150 shadow-sm",
               input.trim() && !isLoading
                 ? "bg-foreground text-background border-foreground hover:bg-foreground/90"
-                : "bg-muted/10 border-border text-muted-foreground/30 cursor-not-allowed"
+                : "bg-[#151517] border-[#242426] text-muted-foreground/30 cursor-not-allowed"
             )}
             title="Send Message"
           >

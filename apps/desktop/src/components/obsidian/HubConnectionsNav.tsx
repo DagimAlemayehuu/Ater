@@ -125,8 +125,8 @@ export const HubConnectionsNav = React.memo(({
       <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
         <div 
           className={cn(
-            "group flex items-center gap-1.5 py-1 px-3 rounded-none cursor-pointer  relative",
-            active ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-accent/50 text-muted-foreground/80"
+            "group flex items-center gap-1.5 py-1 px-3 rounded-[4px] cursor-pointer relative mx-1",
+            active ? "bg-[#232326] text-white font-semibold shadow-sm" : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-white"
           )}
         >
           {node.depth > 0 && (

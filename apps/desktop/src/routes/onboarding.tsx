@@ -156,11 +156,11 @@ export default function Onboarding() {
   const selectedProvider = PROVIDERS.find((p) => p.id === provider)!
 
   return (
-    <div className="h-screen w-full flex flex-col justify-center bg-background text-foreground selection:bg-foreground selection:text-background px-12 relative">
+    <div className="h-screen w-full flex flex-col justify-center bg-[#0e0e0f] text-foreground selection:bg-foreground selection:text-background px-12 relative">
       <div className="absolute top-12 right-12 z-10">
         <ThemeSwitch />
       </div>
-      <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-md mx-auto bg-[#151517] border border-[#242426] rounded-[12px] p-8 shadow-2xl">
 
         {/* Step indicator */}
         {finalStatus === 'idle' || finalStatus === 'error' ? (
@@ -169,18 +169,18 @@ export default function Onboarding() {
               <div key={s} className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "size-1.5",
+                    "size-1.5 rounded-full",
                     step === s
                       ? "bg-foreground"
                       : step > s
-                      ? "bg-muted-foreground"
-                      : "bg-border"
+                      ? "bg-muted-foreground/60"
+                      : "bg-[#242426]"
                   )}
                 />
-                {s < 5 && <div className="w-8 h-px bg-border" />}
+                {s < 5 && <div className="w-8 h-px bg-[#242426]" />}
               </div>
             ))}
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-2">
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">
               Step {step} of 5
             </span>
           </div>
@@ -192,8 +192,8 @@ export default function Onboarding() {
             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">
               Initializing
             </div>
-            <div className="h-px w-full bg-border mb-3 overflow-hidden">
-              <div className="h-full bg-foreground w-full origin-left animate-none" />
+            <div className="h-1.5 w-full bg-[#232326] rounded-[4px] mb-3 overflow-hidden">
+              <div className="h-full bg-foreground w-1/2 rounded-[4px] animate-pulse" />
             </div>
             <p className="text-[11px] font-mono text-muted-foreground uppercase">
               Scaffolding academic roadmap...
@@ -215,7 +215,7 @@ export default function Onboarding() {
             </p>
             <button
               onClick={() => navigate('/obsidian')}
-              className="py-3 px-12 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-[0.3em] border border-primary hover:opacity-90 shadow-2xl"
+              className="py-3 px-12 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-[0.3em] border border-primary hover:opacity-90 shadow-2xl rounded-[8px] transition-all duration-150"
             >
               Enter Ater
             </button>
@@ -245,7 +245,7 @@ export default function Onboarding() {
                 placeholder="Enter your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground placeholder:text-muted-foreground/30 uppercase tracking-widest"
+                className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground placeholder:text-muted-foreground/30 uppercase tracking-widest rounded-[8px] transition-colors"
               />
             </div>
 
@@ -253,10 +253,10 @@ export default function Onboarding() {
               onClick={handleNext}
               disabled={!name}
               className={cn(
-                "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                 name
                   ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                  : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                  : "bg-[#232326] text-muted-foreground cursor-not-allowed border-[#242426]"
               )}
             >
               Continue
@@ -279,7 +279,7 @@ export default function Onboarding() {
 
             <button
               onClick={selectVault}
-              className="w-full bg-card border border-border hover:border-foreground py-4 px-4 mb-8 text-left"
+              className="w-full bg-[#232326]/30 border border-[#242426] hover:border-foreground py-4 px-4 mb-8 text-left rounded-[8px] transition-colors"
             >
               <span className="text-[11px] font-black uppercase tracking-widest text-foreground block">
                 {vaultPath ? 'Vault Selected' : 'Choose Folder'}
@@ -298,7 +298,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
               >
                 Back
               </button>
@@ -306,10 +306,10 @@ export default function Onboarding() {
                 onClick={handleNext}
                 disabled={!vaultPath}
                 className={cn(
-                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   vaultPath
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                    : "bg-[#232326] text-muted-foreground cursor-not-allowed border-[#242426]"
                 )}
               >
                 Continue
@@ -342,10 +342,10 @@ export default function Onboarding() {
                       key={p.id}
                       onClick={() => { setProvider(p.id); setTestStatus('idle'); setTestMessage(''); }}
                       className={cn(
-                        "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border",
+                        "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border rounded-[8px] transition-colors",
                         provider === p.id
                           ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card text-muted-foreground border-border hover:border-foreground hover:text-foreground"
+                          : "bg-[#232326]/30 text-muted-foreground border-[#242426] hover:border-foreground hover:text-foreground"
                       )}
                     >
                       {p.label}
@@ -374,14 +374,14 @@ export default function Onboarding() {
                   placeholder="Paste your secret key"
                   value={apiKey}
                   onChange={(e) => { setApiKey(e.target.value); setTestStatus('idle'); setTestMessage(''); }}
-                  className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-mono outline-none text-foreground placeholder:text-muted-foreground"
+                  className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[12px] font-mono outline-none text-foreground placeholder:text-muted-foreground/30 rounded-[8px] transition-colors"
                 />
 
                 <div className="flex items-center gap-4 mt-3">
                   <button
                     onClick={testConnection}
                     disabled={testStatus === 'testing' || !apiKey}
-                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-transparent hover:border-border px-2 py-1 disabled:opacity-40"
+                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-transparent hover:border-[#242426] px-2.5 py-1 rounded-[6px] transition-colors disabled:opacity-40"
                   >
                     {testStatus === 'testing' ? 'Testing...' : 'Test Connection'}
                   </button>
@@ -401,17 +401,17 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
               >
                 Back
               </button>
               <button
                 onClick={handleNext}
                 className={cn(
-                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   apiKey
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-background text-foreground border-border hover:border-foreground"
+                    : "bg-[#232326] text-foreground border-[#242426] hover:bg-[#232326]/80"
                 )}
               >
                 {apiKey ? 'Continue' : 'Skip'}
@@ -443,7 +443,7 @@ export default function Onboarding() {
                   placeholder="e.g. Computer Science"
                   value={programName}
                   onChange={(e) => setProgramName(e.target.value)}
-                  className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground uppercase tracking-widest"
+                  className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground uppercase tracking-widest rounded-[8px] transition-colors"
                 />
               </div>
 
@@ -455,10 +455,10 @@ export default function Onboarding() {
                   <select 
                     value={programLevel}
                     onChange={(e) => setProgramLevel(e.target.value)}
-                    className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer"
+                    className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors"
                   >
                     {['Undergraduate', 'Graduate', 'Doctorate', 'Professional'].map(lvl => (
-                      <option key={lvl} value={lvl}>{lvl}</option>
+                      <option key={lvl} value={lvl} className="bg-[#151517]">{lvl}</option>
                     ))}
                   </select>
                 </div>
@@ -469,10 +469,10 @@ export default function Onboarding() {
                   <select 
                     value={programDuration}
                     onChange={(e) => setProgramDuration(Number(e.target.value))}
-                    className="w-full bg-card border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer"
+                    className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors"
                   >
                     {[1,2,3,4,5,6,7,8].map(y => (
-                      <option key={y} value={y}>{y} Year{y > 1 ? 's' : ''}</option>
+                      <option key={y} value={y} className="bg-[#151517]">{y} Year{y > 1 ? 's' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -488,10 +488,10 @@ export default function Onboarding() {
                       key={i}
                       onClick={() => setProgramCurrentYear(i + 1)}
                       className={cn(
-                        "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border transition-none",
+                        "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border transition-colors rounded-[8px]",
                         programCurrentYear === i + 1
                           ? "bg-foreground text-background border-foreground"
-                          : "bg-card text-muted-foreground border-border hover:border-foreground hover:text-foreground"
+                          : "bg-[#232326]/30 text-muted-foreground border-[#242426] hover:border-foreground hover:text-foreground"
                       )}
                     >
                       Year {i + 1}
@@ -504,7 +504,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
               >
                 Back
               </button>
@@ -512,10 +512,10 @@ export default function Onboarding() {
                 onClick={handleNext}
                 disabled={!programName}
                 className={cn(
-                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border",
+                  "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   programName
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-muted text-muted-foreground cursor-not-allowed border-border"
+                    : "bg-[#232326] text-muted-foreground cursor-not-allowed border-[#242426]"
                 )}
               >
                 Continue
@@ -537,24 +537,24 @@ export default function Onboarding() {
               Review your configuration before generating your vault roadmap.
             </p>
 
-            <div className="w-full space-y-3 mb-8 p-5 bg-card border border-border">
+            <div className="w-full space-y-3 mb-8 p-5 bg-[#232326]/30 border border-[#242426] rounded-[8px]">
               <div className="flex justify-between items-start">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Vault</span>
                 <span className="text-[10px] font-mono text-foreground max-w-[220px] text-right break-all">
                   {vaultPath}
                 </span>
               </div>
-              <div className="h-px bg-border" />
+              <div className="h-px bg-[#242426]" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">AI Intelligence</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{apiKey ? `${provider} (Active)` : 'Disabled'}</span>
               </div>
-              <div className="h-px bg-border" />
+              <div className="h-px bg-[#242426]" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Program</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground truncate max-w-[150px]">{programName}</span>
               </div>
-              <div className="h-px bg-border" />
+              <div className="h-px bg-[#242426]" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Current Level</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Year {programCurrentYear} / {programDuration}</span>
@@ -562,7 +562,7 @@ export default function Onboarding() {
             </div>
 
             {finalError && (
-              <div className="w-full px-4 py-3 border border-destructive/30 bg-destructive/10 mb-6">
+              <div className="w-full px-4 py-3 border border-destructive/30 bg-destructive/10 mb-6 rounded-[8px]">
                 <p className="text-[11px] font-bold text-destructive">{finalError}</p>
               </div>
             )}
@@ -570,13 +570,13 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
               >
                 Back
               </button>
               <button
                 onClick={finalizeSetup}
-                className="py-2.5 px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] border border-primary hover:opacity-90"
+                className="py-2.5 px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] border border-primary hover:opacity-90 rounded-[8px] transition-colors"
               >
                 Finalize
               </button>

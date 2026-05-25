@@ -1182,33 +1182,33 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden relative">
     {/* ── Feynman Gate Locked Overlay ── */}
     {isFeynmanLocked && (
-      <div className="absolute inset-0 z-40 bg-background/90 backdrop-blur-md flex items-center justify-center p-6">
-        <div className="max-w-xl w-full border border-border bg-background p-8 rounded-none space-y-6 shadow-2xl relative">
-          <div className="flex items-center gap-3 border-b border-border pb-4">
+      <div className="absolute inset-0 z-40 bg-[#0e0e0f]/90 backdrop-blur-md flex items-center justify-center p-6">
+        <div className="max-w-xl w-full border border-[#242426] bg-[#151517] p-8 rounded-[12px] space-y-6 shadow-2xl relative">
+          <div className="flex items-center gap-3 border-b border-[#242426] pb-4">
             <BrainCircuit className="text-primary shrink-0" size={24} />
             <div>
               <h3 className="text-sm font-black uppercase tracking-widest text-primary">Cognitive Lock Engaged</h3>
               <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">FSRS Telemetry: Memory Decay Detected</p>
             </div>
-            <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1">
+            <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-[6px]">
               Locked
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            <div className="p-3 bg-muted/5 border border-border/40 rounded-none flex flex-col gap-0.5">
+            <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
               <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
               <span className={cn("text-xs font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
                 {(retrievability * 100).toFixed(1)}%
               </span>
             </div>
-            <div className="p-3 bg-muted/5 border border-border/40 rounded-none flex flex-col gap-0.5">
+            <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
               <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
               <span className="text-xs font-black tracking-tight text-foreground">
                 {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
               </span>
             </div>
-            <div className="p-3 bg-muted/5 border border-border/40 rounded-none flex flex-col gap-0.5">
+            <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
               <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
               <span className={cn("text-xs font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
                 {lapses}
@@ -1230,11 +1230,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               disabled={isFeynmanValidating}
               rows={5}
               placeholder="Explain the core concepts, mechanisms, and rules of this topic..."
-              className="w-full p-4 bg-muted/5 border border-border rounded-none text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+              className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
             />
 
             {feynmanError && (
-              <div className="p-4 bg-destructive/5 border border-destructive/20 text-destructive text-[10px] font-bold rounded-none space-y-2">
+              <div className="p-4 bg-destructive/5 border border-destructive/20 text-destructive text-[10px] font-bold rounded-[8px] space-y-2">
                 <span className="uppercase tracking-widest text-[8px] font-black text-destructive/40 block">Unlocking Failed</span>
                 <p>{feynmanError}</p>
               </div>
@@ -1246,7 +1246,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               variant="ghost"
               onClick={resetSession}
               disabled={isFeynmanValidating}
-              className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-none"
+              className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] bg-[#232326] rounded-[8px]"
             >
               Exit Session
             </Button>
@@ -1294,7 +1294,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                 }
               }}
               disabled={isFeynmanValidating || !feynmanExplanation.trim()}
-              className="h-10 flex-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-none"
+              className="h-10 flex-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-[8px]"
             >
               {isFeynmanValidating ? "Analyzing Telemetry..." : "Validate & Unlock"}
             </Button>
@@ -1368,7 +1368,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  <div className="max-w-3xl w-full space-y-8">
  <div className="space-y-4">
  <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
- <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-none px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
+ <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-[6px] px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
  <div className="w-1 h-1 rounded-none bg-primary/20" />
  <span>{(
       {
@@ -1407,19 +1407,19 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     disabled={isRevealed} 
     onClick={() => handleSelectAnswer(key)} 
     className={cn(
-      "p-4 border rounded-none text-left text-sm font-bold flex items-start w-full transition-all duration-150",
+      "p-4 border rounded-[8px] text-left text-sm font-bold flex items-start w-full transition-all duration-150",
       isCorrect 
         ? "bg-primary/10 border-primary text-primary" 
         : isWrongSelected 
           ? "bg-destructive/10 border-destructive text-destructive" 
           : isRevealed 
-            ? "border-border opacity-30 grayscale" 
+            ? "border-[#242426] opacity-30 grayscale" 
             : isSelected 
-              ? "bg-muted/30 border-foreground text-foreground" 
-              : "border-border hover:bg-muted/10 text-foreground"
+              ? "bg-[#232326] border-foreground text-foreground" 
+              : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground"
     )}
   >
-  <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-border text-muted-foreground/50")}>{key}</span>
+  <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold rounded-[6px]", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-[#242426] bg-[#232326] text-muted-foreground/50")}>{key}</span>
   <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
   </button>
   );
@@ -1429,11 +1429,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
  {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
   <div className="space-y-6">
-  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-border rounded-none bg-muted/5"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
-  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-border/10 rounded-none bg-muted/5 text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
-  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-muted/5 border-2 border-border rounded-none text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-[#242426] rounded-[8px] bg-[#151517]"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
+  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-[#242426]/40 rounded-[8px] bg-[#151517] text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
+  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
   {isRevealed && (
-    <div className="p-4 border-2 border-primary/20 bg-primary/5 rounded-none space-y-2">
+    <div className="p-4 border border-primary/20 bg-primary/5 rounded-[8px] space-y-2">
       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
       <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer || '')} /></div>
     </div>
@@ -1453,16 +1453,16 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     disabled={isRevealed} 
     onClick={() => handleSelectAnswer(v)} 
     className={cn(
-      "h-24 border rounded-none text-xs font-bold uppercase tracking-widest transition-all duration-150", 
+      "h-24 border rounded-[8px] text-xs font-bold uppercase tracking-widest transition-all duration-150", 
       isCorrect 
         ? "bg-primary/10 border-primary text-primary font-extrabold ring-1 ring-inset ring-primary" 
         : isWrongSelected 
           ? "bg-destructive/10 border-destructive text-destructive ring-1 ring-inset ring-destructive" 
           : isRevealed 
-            ? "border-border opacity-30 grayscale text-muted-foreground/40" 
+            ? "border-[#242426] opacity-30 grayscale text-muted-foreground/40" 
             : isSelected 
-              ? "bg-muted/30 border-foreground text-foreground ring-1 ring-inset ring-foreground" 
-              : "border-border hover:bg-muted/10 text-foreground/80"
+              ? "bg-[#232326] border-foreground text-foreground ring-1 ring-inset ring-foreground" 
+              : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground/80"
     )}
   >
     {v}
@@ -1483,8 +1483,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
      return (
          <div key={i} className={cn(
-             "flex items-center gap-4 p-3 border rounded-none ",
-             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
+             "flex items-center gap-4 p-3 border rounded-[8px] ",
+             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
          )}>
              <div className="flex flex-col gap-1.5 border-r border-border/10 pr-4">
                  <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▲</button>
@@ -1506,12 +1506,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      const isWrong = isRevealed && selected !== pair.right;
      return (
          <div key={i} className={cn(
-             "flex items-center gap-4 p-3 border rounded-none ",
-             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-muted/5 hover:border-foreground/20"
+             "flex items-center gap-4 p-3 border rounded-[8px] ",
+             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
          )}>
              <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
              <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-muted/5 hover:bg-muted/10 border-2 border-foreground/30 focus:border-primary rounded-none outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
+                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-[#232326] hover:bg-[#232326]/80 border border-[#242426] focus:border-primary rounded-[8px] outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
                      <option value="">Select match...</option>
                      {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                  </select>
@@ -1529,7 +1529,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   )}
 
  {currentQuestion.type === 'fill_in' && (
-  <div className="p-5 bg-muted/5 border border-border/10 rounded-none text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
+  <div className="p-5 bg-[#151517] border border-[#242426] rounded-[8px] text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
  {(() => {
  const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
  return parts.map((part: string, i: number) => (
@@ -1547,12 +1547,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         handleSelectAnswer(newAns);
       }} 
       className={cn(
-        "mx-2 border-b-2 bg-foreground/5 hover:bg-foreground/10 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150", 
+        "mx-2 border-b-2 bg-[#232326] hover:bg-[#232326]/80 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150 rounded-[6px]", 
         isRevealed 
           ? (String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() === String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() 
             ? "border-primary bg-primary/10 text-primary" 
             : "border-destructive bg-destructive/10 text-destructive") 
-          : "border-foreground/50 focus:border-primary text-foreground"
+          : "border-[#242426] focus:border-primary text-foreground"
       )} 
     />
    {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() !== String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() && (
@@ -1574,7 +1574,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    )}
 
   {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && (
-    <div className="p-8 border border-border/10 rounded-none bg-muted/5 space-y-4   ">
+    <div className="p-8 border border-[#242426] rounded-[8px] bg-[#151517] space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
         <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
@@ -1583,7 +1583,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       </div>
       
       {currentQuestion.required_keywords.filter((kw: string) => !String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-none text-sm font-bold text-destructive/90 mb-4">
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-[8px] text-sm font-bold text-destructive/90 mb-4">
           Warning: Your answer is missing core concepts. Are you sure you mastered this?
         </div>
       )}
@@ -1592,8 +1592,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         {currentQuestion.required_keywords.map((kw: string, i: number) => {
           const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
           return (
-            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-none cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border/40 hover:bg-muted/10")}>
-              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded-none border-border text-primary focus:ring-primary" />
+            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-[#242426] hover:bg-[#232326]")}>
+              <input type="checkbox" checked={keywordChecks[kw] || false} onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} className="w-5 h-5 rounded-[4px] border-[#242426] text-primary focus:ring-primary" />
               <span className={cn("text-sm font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3">(Found in your answer)</span>}</span>
             </label>
           );
@@ -1612,7 +1612,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   <Button
     variant="ghost"
     onClick={handleExplainMore}
-    className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-foreground/30 hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-none flex items-center gap-2 transition-colors duration-150"
+    className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-[#242426] bg-[#232326] hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-[8px] flex items-center gap-2 transition-colors duration-150"
     title="Get a detailed lesson on this question's concept"
   >
     <BookOpen size={12} />
@@ -1677,7 +1677,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    <div className="h-full flex-1 flex flex-col w-full bg-background text-foreground overflow-y-auto custom-scrollbar">
     <div className="max-w-3xl mx-auto w-full p-10 space-y-8">
      {/* Score hero */}
-     <div className="flex items-end justify-between border-b border-border/10 pb-6">
+     <div className="flex items-end justify-between border-b border-[#242426] pb-6">
       <div>
        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
        <h1 className="text-9xl font-black tracking-tighter leading-none">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
@@ -1690,7 +1690,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      </div>
 
      {/* Progress bar */}
-     <div className="h-1.5 w-full bg-muted/20 rounded-none overflow-hidden">
+     <div className="h-2.5 w-full bg-[#232326] rounded-full overflow-hidden">
       <div className="h-full bg-foreground/80 rounded-none transition-none duration-700" style={{width:`${score}%`}}/>
      </div>
 
@@ -1702,13 +1702,13 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         {Object.entries(typeMap).map(([t, s]) => {
           const pct = Math.round((s.correct/s.total)*100);
           return (
-           <div key={t} className="p-3 bg-muted/5 border border-border/40 rounded-none space-y-2">
+           <div key={t} className="p-4 bg-[#151517] border border-[#242426] rounded-[12px] space-y-2">
             <div className="flex items-center justify-between">
              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
              <span className="text-[10px] font-black tabular-nums">{pct}%</span>
             </div>
-            <div className="h-0.5 w-full bg-muted/20 rounded-none overflow-hidden">
-             <div className="h-full rounded-none" style={{width:`${pct}%`, background: pct >= 80 ? 'hsl(var(--foreground)/0.8)' : pct >= 50 ? 'hsl(var(--foreground)/0.4)' : 'hsl(var(--destructive)/0.6)'}}/>
+            <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
+             <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'hsl(var(--foreground)/0.8)' : pct >= 50 ? 'hsl(var(--foreground)/0.4)' : 'hsl(var(--destructive)/0.6)'}}/>
             </div>
             <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
            </div>
@@ -1732,7 +1732,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
            {gradedAnswers[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
           </div>
           <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
-           {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-border/20 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
+           {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-[#242426]/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
          </div>
         ))}
        </div>

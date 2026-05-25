@@ -149,7 +149,7 @@ export default function PomodoroController() {
       {/* Centered Timer Modal Overlay */}
       {showOverlay && (
         <div
-          className="fixed inset-0 z-[150] bg-background/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[150] bg-[#0e0e0f]/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowOverlay(false);
           }}
@@ -165,7 +165,7 @@ export default function PomodoroController() {
       {/* Statistics Modal Overlay */}
       {showStats && (
         <div
-          className="fixed inset-0 z-[160] bg-background/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[160] bg-[#0e0e0f]/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) usePomodoroStore.getState().setShowStats(false);
           }}
@@ -181,7 +181,7 @@ export default function PomodoroController() {
       {/* Full Screen Break Overlay (Theme Compatible) */}
       {isBreak && (
         <div
-          className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center select-none"
+          className="fixed inset-0 z-[200] bg-[#0e0e0f] flex flex-col items-center justify-center select-none"
         >
           <div 
             className="flex flex-col items-center text-center space-y-12"

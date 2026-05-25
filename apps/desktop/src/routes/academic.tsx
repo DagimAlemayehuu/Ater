@@ -338,25 +338,25 @@ export default function AcademicDashboard() {
   ]
 
  return (
-  <div className="h-full flex flex-col bg-background font-sans overflow-hidden">
+  <div className="h-full flex flex-col bg-[#0e0e0f] p-3 font-sans overflow-hidden">
    <div className="flex flex-1 overflow-hidden">
     {/* ── Main Content ── */}
-    <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+    <main className="flex-1 flex flex-col overflow-hidden min-w-0 gap-3">
      {/* Top bar */}
-     <div className={cn("shrink-0 px-10 pt-3 pb-0 border-b border-border bg-background sticky top-0 z-30 ", activeTab === 'CALENDAR' && "hidden")}>
-      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide mb-2">
-       {tabs.map(t => (
-        <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} icon={t.icon} label={t.label} />
-       ))}
+     <div className={cn("shrink-0 px-6 py-2.5 border border-[#242426] bg-[#151517] rounded-[12px] sticky top-0 z-30", activeTab === 'CALENDAR' && "hidden")}>
+      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide">
+        {tabs.map(t => (
+         <TabButton key={t.id} active={activeTab === t.id} onClick={() => setSearchParams({ tab: t.id })} icon={t.icon} label={t.label} />
+        ))}
       </div>
      </div>
 
      {/* Tab content */}
-     <div className="flex-1 overflow-hidden">
+     <div className="flex-1 overflow-hidden bg-[#151517] rounded-[12px] border border-[#242426]">
       {data && (
        <>
         {activeTab === 'CALENDAR' && (
-         <div className="h-full flex flex-col p-4 bg-background">
+         <div className="h-full flex flex-col p-4 bg-transparent">
           <AcademicCalendar 
            events={calendarEvents} 
            onSelectEvent={(path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`)} 

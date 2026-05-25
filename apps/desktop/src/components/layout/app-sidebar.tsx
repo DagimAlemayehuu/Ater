@@ -7,67 +7,66 @@ export function AppSidebar() {
   const location = useLocation()
   const isOnboarding = location.pathname === '/onboarding'
 
+  const linkClass = (isActive: boolean) => cn(
+    "relative p-2.5 transition-all rounded-[4px] flex items-center justify-center size-10",
+    isActive 
+      ? "text-white bg-[#232326]" 
+      : "text-[#a1a1aa] hover:text-white hover:bg-[#232326]"
+  );
+
   return (
     <aside 
       onMouseEnter={() => window.focus()}
-      className="w-12 bg-background border-r border-border flex flex-col items-center py-6 shrink-0 z-50 h-full"
+      className="w-16 bg-transparent flex flex-col items-center py-6 justify-between shrink-0 z-50 h-full"
     >
         {/* Navigation Links */}
-        <div className="flex flex-col gap-6 flex-1 items-center">
-            <NavLink 
-                to="/oracle"
-                className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
-                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
-                )} 
-                title="Ater"
-            >
-              <Zap className="size-5" strokeWidth={2} />
+        <div className="flex flex-col gap-4 items-center w-full">
+            <NavLink to="/oracle" className={({ isActive }) => linkClass(isActive)} title="Ater">
+              {({ isActive }) => (
+                <>
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  <Zap className="size-5" strokeWidth={1.5} />
+                </>
+              )}
             </NavLink>
-            <NavLink 
-                to="/academic"
-                className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
-                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
-                )} 
-                title="Academic Dashboard"
-            >
-              <GraduationCap className="size-5" strokeWidth={2} />
+            <NavLink to="/academic" className={({ isActive }) => linkClass(isActive)} title="Academic Dashboard">
+              {({ isActive }) => (
+                <>
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  <GraduationCap className="size-5" strokeWidth={1.5} />
+                </>
+              )}
             </NavLink>
-            <NavLink 
-                to="/obsidian"
-                className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
-                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
-                )} 
-                title="Knowledge Base"
-            >
-              <FileText className="size-5" strokeWidth={2} />
+            <NavLink to="/obsidian" className={({ isActive }) => linkClass(isActive)} title="Knowledge Base">
+              {({ isActive }) => (
+                <>
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  <FileText className="size-5" strokeWidth={1.5} />
+                </>
+              )}
             </NavLink>
-            <NavLink 
-                to="/agents"
-                className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
-                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
-                )} 
-                title="AI Agents"
-            >
-              <Users className="size-5" strokeWidth={2} />
+            <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="AI Agents">
+              {({ isActive }) => (
+                <>
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  <Users className="size-5" strokeWidth={1.5} />
+                </>
+              )}
             </NavLink>
         </div>
 
         {/* Bottom Actions */}
-        <div className="flex flex-col gap-6 mt-auto items-center mb-6 w-full">
-            <ThemeSwitch />
-            <NavLink 
-                to="/settings"
-                className={({ isActive }) => cn(
-                  "relative flex items-center justify-center w-8 h-8 rounded-none transition-none",
-                  isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
-                )} 
-                title="Settings"
-            >
-              <Settings className="size-5" strokeWidth={2} />
+        <div className="flex flex-col gap-4 items-center w-full">
+            <div className="p-2.5 text-[#a1a1aa] hover:text-white transition-all rounded-[4px] hover:bg-[#232326] cursor-pointer">
+              <ThemeSwitch />
+            </div>
+            <NavLink to="/settings" className={({ isActive }) => linkClass(isActive)} title="Settings">
+              {({ isActive }) => (
+                <>
+                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />}
+                  <Settings className="size-5" strokeWidth={1.5} />
+                </>
+              )}
             </NavLink>
         </div>
     </aside>

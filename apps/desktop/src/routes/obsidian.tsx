@@ -41,10 +41,10 @@ interface FileNode {
  children?: FileNode[]
 }
 
-// Component definitions moved to standalone files in @/components/obsidian/
-
-
-
+const cleanTitle = (val: any): string => {
+  if (val === undefined || val === null) return ''
+  return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
+}
 
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
@@ -1532,13 +1532,13 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 }}
  onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
  className={cn(
-   "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-none mx-1",
-   isSelected 
-    ? "bg-foreground/10 text-foreground font-bold border-l-2 border-foreground/50 shadow-sm" 
-    : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
-   dragOverPath === node.path && "bg-foreground/10 ring-2 ring-foreground/20 ring-inset",
-   draggedPath === node.path && "opacity-40 grayscale"
-  )}
+    "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
+    isSelected 
+     ? "bg-[#232326] text-white font-semibold shadow-sm" 
+     : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-white",
+    dragOverPath === node.path && "bg-[#232326]/50 ring-1 ring-[#242426] ring-inset",
+    draggedPath === node.path && "opacity-40 grayscale"
+   )}
  >
  <div className="w-4 h-4 shrink-0 flex items-center justify-center">
  {node.isFolder ? (
@@ -1660,400 +1660,449 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  return result
 }
 
- return (
- <div className="flex flex-col h-full w-full select-none bg-background text-foreground overflow-hidden font-sans">
- <div className="flex flex-1 overflow-hidden h-full">
- {/* MainContentArea */}
- <main className="flex-1 flex flex-col min-w-0">
- <div className="flex flex-1 overflow-hidden">
- {/* ExplorerSidebar */}
- {!isFullscreen && (
- <aside 
- onMouseEnter={() => window.focus()}
- className="relative border-r border-border flex flex-col bg-background shrink-0 group/sidebar z-40  "
- style={{width: `${sidebarWidth}px`}}
- >
- {/* Resize Handle */}
- <div 
- className={cn(
- "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50  hover:bg-primary/50",
- isResizing ? "bg-primary w-1" : "bg-transparent"
- )}
- onMouseDown={startResizing}
- />
-  {/* Global Toolbar */}
-  <div className="p-3 flex items-center justify-between gap-1 border-b border-border/50">
-    <div className="flex items-center gap-1 w-full">
-      <div 
-        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded-none hover:bg-accent shrink-0 " 
-        title="New Note"
-        onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
+  return (
+  <div className="flex flex-row h-full w-full select-none bg-[#0e0e0f] p-3 gap-3 overflow-hidden font-sans">
+    <style dangerouslySetInnerHTML={{__html: `
+      .editor-content p {
+        margin-bottom: 1.5rem;
+        line-height: 1.7;
+        color: #a1a1aa; 
+      }
+      .editor-content strong {
+        color: #ffffff;
+        font-weight: 600;
+      }
+      .underlined-term {
+        border-bottom: 1px solid #a1a1aa;
+        padding-bottom: 2px;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #242426;
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #a1a1aa;
+      }
+      .panel-transition {
+        transition: width 0.3s ease-in-out, margin 0.3s ease-in-out, opacity 0.3s ease-in-out, padding 0.3s ease-in-out;
+      }
+    `}} />
+
+    {/* ExplorerSidebar */}
+    {!isFullscreen && (
+      <aside 
+        onMouseEnter={() => window.focus()}
+        className="relative border border-[#242426] flex flex-col bg-[#151517] shrink-0 group/sidebar z-40 rounded-[12px] overflow-hidden panel-transition"
+        style={{width: `${sidebarWidth}px`}}
       >
-        <Plus className="w-4 h-4" />
-      </div>
-      <div 
-        className="text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center p-1.5 rounded-none hover:bg-accent shrink-0 " 
-        title="New Folder"
-        onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
-      >
-        <FolderPlus className="w-4 h-4" />
-      </div>
-      <div className="flex-1 ml-1">
-        <div className="relative flex items-center">
-          <Search className="absolute left-2 w-3 h-3 text-muted-foreground/50" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={inputValue}
-            onChange={(e) => {
-              const val = e.target.value;
-              setInputValue(val);
-              startTransition(() => {
-                setSearchQuery(val);
-              });
-            }}
+        {/* Resize Handle */}
+        <div 
+          className={cn(
+            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-white/20",
+            isResizing ? "bg-white w-1" : "bg-transparent"
+          )}
+          onMouseDown={startResizing}
+        />
+        
+        {/* Global Toolbar */}
+        <div className="p-4 flex items-center justify-between gap-2">
+          <button 
+            className="p-1.5 text-[#a1a1aa] hover:text-white rounded-[4px] hover:bg-[#232326] shrink-0" 
+            title="New Note"
+            onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
+          >
+            <Plus className="w-[18px] h-[18px]" />
+          </button>
+          <button 
+            className="p-1.5 text-[#a1a1aa] hover:text-white rounded-[4px] hover:bg-[#232326] shrink-0" 
+            title="New Folder"
+            onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
+          >
+            <FolderPlus className="w-[18px] h-[18px]" />
+          </button>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a1a1aa]" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={inputValue}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInputValue(val);
+                startTransition(() => {
+                  setSearchQuery(val);
+                });
+              }}
+              className={cn(
+                "w-full bg-[#0e0e0f] border border-[#242426] rounded-[4px] py-1.5 pl-9 pr-3 text-xs text-white placeholder:text-[#a1a1aa]/50 focus:outline-none focus:border-[#a1a1aa] transition-colors",
+                isPending && "opacity-75"
+              )}
+            />
+          </div>
+          <button 
             className={cn(
-              "w-full bg-muted/50 border border-border text-[11px] px-2 py-1.5 pl-7 rounded-none focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50 transition-all",
-              isPending && "opacity-75"
-            )}
-          />
+              "p-1.5 rounded-[4px] shrink-0 transition-colors", 
+              showGraphView 
+                ? "text-white bg-[#232326]" 
+                : "text-[#a1a1aa] hover:text-white hover:bg-[#232326]"
+            )} 
+            onClick={() => setShowGraphView(!showGraphView)} 
+            title="Toggle Graph View"
+          >
+            <Network className="w-[18px] h-[18px]" />
+          </button>
         </div>
-      </div>
-      <div 
-        className={cn("cursor-pointer flex items-center justify-center p-1.5 rounded-none hover:bg-accent shrink-0 ", showGraphView ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground")} 
-        onClick={() => setShowGraphView(!showGraphView)} 
-        title="Toggle Graph View"
-      >
-        <Network className="w-4 h-4" />
-      </div>
-    </div>
-  </div>
 
-  {/* Sidebar Tabs - Minimal style matching academics */}
-  <div className="flex border-b border-border bg-background sticky top-0 z-20">
-    <button 
-      onClick={() => setSidebarTab('explorer')}
-      className={cn(
-        "flex-1 flex items-center justify-center py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-none border-b-2 outline-none",
-        sidebarTab === 'explorer' 
-          ? "text-foreground border-foreground bg-foreground/[0.02]" 
-          : "text-muted-foreground border-transparent hover:text-foreground/60"
-      )}
-    >
-      Explorer
-    </button>
-    <button 
-      onClick={() => setSidebarTab('hubs')}
-      className={cn(
-        "flex-1 flex items-center justify-center py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-none border-b-2 outline-none",
-        sidebarTab === 'hubs' 
-          ? "text-foreground border-foreground bg-foreground/[0.02]" 
-          : "text-muted-foreground border-transparent hover:text-foreground/60"
-      )}
-    >
-      Hubs
-    </button>
-    <button 
-      onClick={() => setSidebarTab('pdfs')}
-      className={cn(
-        "flex-1 flex items-center justify-center py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-none border-b-2 outline-none",
-        sidebarTab === 'pdfs' 
-          ? "text-foreground border-foreground bg-foreground/[0.02]" 
-          : "text-muted-foreground border-transparent hover:text-foreground/60"
-      )}
-    >
-      PDFs
-    </button>
-  </div>
+        {/* Sidebar Tabs */}
+        <div className="flex border-b border-[#242426] px-4 text-xs font-semibold tracking-[0.02em] mb-2 shrink-0">
+          <button 
+            onClick={() => setSidebarTab('explorer')}
+            className={cn(
+              "px-3 py-3 border-b-2 outline-none transition-none",
+              sidebarTab === 'explorer' 
+                ? "text-white border-white font-semibold" 
+                : "text-[#a1a1aa] border-transparent hover:text-white"
+            )}
+          >
+            EXPLORER
+          </button>
+          <button 
+            onClick={() => setSidebarTab('hubs')}
+            className={cn(
+              "px-3 py-3 border-b-2 outline-none transition-none",
+              sidebarTab === 'hubs' 
+                ? "text-white border-white font-semibold" 
+                : "text-[#a1a1aa] border-transparent hover:text-white"
+            )}
+          >
+            HUBS
+          </button>
+          <button 
+            onClick={() => setSidebarTab('pdfs')}
+            className={cn(
+              "px-3 py-3 border-b-2 outline-none transition-none",
+              sidebarTab === 'pdfs' 
+                ? "text-white border-white font-semibold" 
+                : "text-[#a1a1aa] border-transparent hover:text-white"
+            )}
+          >
+            PDFS
+          </button>
+        </div>
 
-  <div className="flex-1 overflow-y-auto custom-scrollbar">
-    {sidebarTab === 'explorer' && (
-      <div 
-        className="py-2 min-h-full"
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
-        }}
-        onDrop={(e) => handleDrop(e, null)}
-      >
-        {files.length > 0 ? renderTree(filteredFiles) : (
-          <div className="py-10 text-center opacity-40">
-            <Folder className="w-8 h-8 mx-auto mb-2 opacity-20" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Vault Empty</p>
-          </div>
-        )}
-      </div>
-    )}
+        {/* Tab Contents */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 text-sm text-[#a1a1aa]">
+          {sidebarTab === 'explorer' && (
+            <div 
+              className="py-2 min-h-full"
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+              }}
+              onDrop={(e) => handleDrop(e, null)}
+            >
+              {files.length > 0 ? renderTree(filteredFiles) : (
+                <div className="py-10 text-center opacity-40">
+                  <Folder className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Vault Empty</p>
+                </div>
+              )}
+            </div>
+          )}
 
-    {sidebarTab === 'hubs' && (
-      <div className="flex flex-col p-2 gap-4">
-        {loadingHubs ? (
-          <div className="py-8 flex justify-center"><RefreshCw size={16} className="text-muted-foreground/30" /></div>
-        ) : Object.keys(groupedHubs).length > 0 ? (
-          Object.entries(groupedHubs).map(([course, courseHubs]) => (
-            <div key={course} className="flex flex-col gap-1">
-              <div className="px-2 py-1 flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{course}</span>
-                <div className="h-px flex-1 bg-border/40" />
-              </div>
-              {courseHubs.map(hub => (
-                <button 
-                  key={hub.id}
-                  onClick={() => selectFile(hub.path)}
-                  className={cn(
-                    "flex flex-col p-2 rounded-none hover:bg-accent text-left transition-none mx-1",
-                    selectedPath === hub.path ? "bg-accent border-l-2 border-primary" : ""
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-muted-foreground opacity-50 tabular-nums">U{hub.unit || '0'}</span>
-                    <span className="text-[12px] font-bold text-foreground truncate">{hub.title.replace(' Hub', '')}</span>
+          {sidebarTab === 'hubs' && (
+            <div className="flex flex-col p-2 gap-4">
+              {loadingHubs ? (
+                <div className="py-8 flex justify-center"><RefreshCw size={16} className="animate-spin text-[#a1a1aa]/30" /></div>
+              ) : Object.keys(groupedHubs).length > 0 ? (
+                Object.entries(groupedHubs).map(([course, courseHubs]) => (
+                  <div key={course} className="flex flex-col gap-1">
+                    <div className="px-2 py-1 flex items-center gap-2">
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/40">{course}</span>
+                      <div className="h-px flex-1 bg-[#242426]" />
+                    </div>
+                    {courseHubs.map(hub => (
+                      <button 
+                        key={hub.id}
+                        onClick={() => selectFile(hub.path)}
+                        className={cn(
+                          "flex flex-col p-2 rounded-[4px] hover:bg-[#232326] text-left transition-none mx-1",
+                          selectedPath === hub.path ? "bg-[#232326] text-white font-medium" : "text-[#a1a1aa] hover:text-white"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black opacity-50 tabular-nums">U{hub.unit || '0'}</span>
+                          <span className="text-[12px] truncate">{hub.title.replace(' Hub', '')}</span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                </button>
+                ))
+              ) : (
+                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/20">No hubs found</div>
+              )}
+            </div>
+          )}
+
+          {sidebarTab === 'pdfs' && (
+            <div className="flex flex-col p-2 gap-4">
+              {Object.entries(groupedPdfs).map(([folder, folderPdfs]) => (
+                <div key={folder} className="flex flex-col gap-1">
+                  <div className="px-2 py-1 flex items-center gap-2">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/40">{folder}</span>
+                    <div className="h-px flex-1 bg-[#242426]" />
+                  </div>
+                  {folderPdfs.map(file => (
+                    <button 
+                      key={file.path}
+                      onClick={() => selectFile(file.path)}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-[4px] text-left transition-all mx-1",
+                        selectedPath === file.path 
+                          ? "bg-[#232326] text-white font-medium" 
+                          : "text-[#a1a1aa] hover:text-white hover:bg-[#232326]"
+                      )}
+                    >
+                      <FileText size={14} className={cn(
+                        "shrink-0",
+                        selectedPath === file.path ? "text-white" : "text-[#a1a1aa]/50"
+                      )} />
+                      <span className="text-[12px] truncate">{file.name.replace('.pdf', '')}</span>
+                    </button>
+                  ))}
+                </div>
               ))}
+              {Object.keys(groupedPdfs).length === 0 && (
+                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/20">No PDFs found</div>
+              )}
             </div>
-          ))
-        ) : (
-          <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No hubs found</div>
-        )}
-      </div>
+          )}
+        </div>
+      </aside>
     )}
 
-    {sidebarTab === 'pdfs' && (
-      <div className="flex flex-col p-2 gap-4">
-        {Object.entries(groupedPdfs).map(([folder, folderPdfs]) => (
-          <div key={folder} className="flex flex-col gap-1">
-            <div className="px-2 py-1 flex items-center gap-2">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{folder}</span>
-              <div className="h-px flex-1 bg-border/40" />
-            </div>
-            {folderPdfs.map(file => (
-              <button 
-                key={file.path}
-                onClick={() => selectFile(file.path)}
-                className={cn(
-                  "flex items-center gap-2 p-2 rounded-none text-left transition-none mx-1 group/pdf",
-                  selectedPath === file.path 
-                    ? "bg-primary/10 border-l-2 border-primary shadow-[inset_4px_0_10px_-4px_rgba(var(--primary),0.1)]" 
-                    : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <FileText size={14} className={cn(
-                  "shrink-0 transition-none",
-                  selectedPath === file.path ? "text-primary" : "text-muted-foreground/30 group-hover/pdf:text-muted-foreground/60"
-                )} />
-                <span className={cn(
-                  "text-[12px] font-medium truncate transition-none",
-                  selectedPath === file.path ? "text-primary font-bold" : "text-foreground/80 group-hover/pdf:text-foreground"
-                )}>{file.name.replace('.pdf', '')}</span>
-              </button>
-            ))}
+    {/* Main Editor Panel */}
+    {showGraphView ? (
+      <div className="flex-1 bg-[#151517] rounded-[12px] border border-[#242426] overflow-hidden panel-transition">
+        <ObsidianGraphView onNodeClick={(path) => {
+          selectFile(path);
+          setShowGraphView(false);
+        }} />
+      </div>
+    ) : (
+      <main 
+        data-purpose="main-editor"
+        className="flex-1 bg-[#151517] rounded-[12px] border border-[#242426] overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
+      >
+        {!selectedPath ? (
+          <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-[#a1a1aa]/20 gap-4 mt-32">
+            <FileText size={64} strokeWidth={1} />
+            <p className="text-xs font-bold uppercase tracking-widest text-[#a1a1aa]/40">Select an asset to visualize</p>
           </div>
-        ))}
-        {Object.keys(groupedPdfs).length === 0 && (
-          <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No PDFs found</div>
+        ) : (
+          <div className={cn("mx-auto w-full max-w-full relative flex-1 flex flex-col", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "p-0 overflow-hidden" : "py-4 px-6 max-w-full")}>
+            {loadingNote && (
+              <PanelLoader label="Loading Document" />
+            )}
+            
+            {/* Note details */}
+            {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? (
+              <div className="editor-content px-2 mx-auto max-w-[95%] w-full">
+                <h1 className="text-[32px] font-bold mb-4 text-white tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
+                  {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
+                </h1>
+
+                {/* Metadata Pills */}
+                <div className="flex items-center gap-2 mb-10 border-b border-[#242426] pb-6">
+                  {noteMetadata?.semester && (
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-white hover:bg-[#232326] transition-colors text-xs font-medium">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {cleanTitle(noteMetadata.semester)}
+                    </button>
+                  )}
+                  {noteMetadata?.course && (
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-white hover:bg-[#232326] transition-colors text-xs font-medium">
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      {cleanTitle(noteMetadata.course)}
+                    </button>
+                  )}
+                  {noteMetadata?.unit && (
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-white hover:bg-[#232326] transition-colors text-xs font-medium">
+                      <Hash className="w-3.5 h-3.5" />
+                      Unit {cleanTitle(noteMetadata.unit)}
+                    </button>
+                  )}
+                </div>
+
+                {config?.showProperties && (
+                  <NoteProperties 
+                    metadata={noteMetadata} 
+                    onNavigate={handleWikiLinkClick} 
+                    onAddProperty={handleAddProperty}
+                    onUpdateProperty={handleUpdateProperty}
+                    onDeleteProperty={handleDeleteProperty}
+                  />
+                )}
+
+                <div className="mt-8">
+                  {isEditing ? (
+                    <textarea
+                      value={editedContent}
+                      onChange={(e) => setEditedContent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                          e.preventDefault()
+                          handleSaveNote()
+                        }
+                      }}
+                      className="w-full h-[600px] p-8 bg-[#0e0e0f] border border-[#242426] rounded-[4px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20 text-white"
+                      placeholder="Start writing..."
+                      autoFocus
+                    />
+                  ) : (
+                    <MarkdownViewer 
+                      key={selectedPath}
+                      content={noteContent} 
+                      onNavigate={handleWikiLinkClick} 
+                      path={selectedPath || undefined}
+                      noteMode={String(noteMetadata?.mode || '')}
+                      noteTitle={String(noteMetadata?.title || '')}
+                      noteCourse={String(noteMetadata?.course || '')}
+                    />
+                  )}
+                </div>
+
+                <KnowledgeFooter 
+                  tree={studyTree} 
+                  activePath={selectedPath}
+                  onNavigate={handleWikiLinkClick}
+                  onFinish={async () => {
+                    if (selectedPath) {
+                      const label = selectedPath.split('/').pop()?.replace('.md', '') ?? '';
+                      await handleToggleCheckbox(label, true, selectedPath);
+                    }
+                  }}
+                />
+
+                <div className="mt-8 mb-12 flex flex-col items-center gap-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/50">Space Repetition Review</div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
+                    <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-[#a1a1aa]/30 text-[#a1a1aa] hover:bg-[#232326] transition-none">Hard</button>
+                    <button onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
+                    <button onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+                <div className="flex-1 min-h-0">
+                  <PdfViewer 
+                    ref={pdfRef}
+                    path={selectedPath} 
+                    title={selectedPath.split('/').pop() || ''} 
+                    initialPage={selectedPage} 
+                    filterPages={selectedFilteredPages}
+                    onStateChange={handlePdfStateChange}
+                  />
+                </div>
+                
+                {/* Knowledge Navigation Footer for PDF (when in context) */}
+                {studyTree.length > 0 && (
+                  <div className="border-t border-[#242426] bg-[#151517]/50 px-16 py-8">
+                    <KnowledgeFooter 
+                      tree={studyTree} 
+                      activePath={selectedPath}
+                      onNavigate={handleWikiLinkClick}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
-      </div>
+      </main>
     )}
-  </div>
- </aside>
- )}
 
- {/* Editor Workspace */}
- <section className="flex-1 flex bg-background overflow-hidden">
- {showGraphView ? (
- <div className="flex-1">
- <ObsidianGraphView onNodeClick={(path) => {
- selectFile(path);
- setShowGraphView(false);
-}} />
- </div>
- ) : (
- <>
- {/* Sticky Connections Column (Left-Contextual) */}
-  {selectedPath && !(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && (
-  <aside 
-  onMouseEnter={() => window.focus()}
-  className="relative border-r border-border flex flex-col bg-background shrink-0 group/connections overflow-hidden  "
-  style={{width: `${connectionsWidth}px`}}
-  >
- {/* Resize Handle */}
- <div 
- className={cn(
- "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50  hover:bg-primary/50",
- isResizingConnections ? "bg-primary w-1" : "bg-transparent"
- )}
- onMouseDown={startResizingConnections}
- />
- <div className="flex flex-col h-full overflow-hidden">
- {/* Header */}
- <div className="px-4 py-3 flex items-center justify-between border-b border-border shrink-0 bg-muted/10">
- <div className="flex items-center gap-2">
- <Network size={12} className="text-muted-foreground/60" />
- <span className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">Map</span>
- </div>
- </div>
+    {/* Map Checklist Sidebar (Right-Contextual) */}
+    {selectedPath && !(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && !isFullscreen && (
+      <aside 
+        data-purpose="map-checklist"
+        onMouseEnter={() => window.focus()}
+        className="relative border border-[#242426] flex flex-col bg-[#151517] shrink-0 group/connections overflow-hidden rounded-[12px] panel-transition"
+        style={{width: `${connectionsWidth}px`}}
+      >
+        {/* Resize Handle */}
+        <div 
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-white/20",
+            isResizingConnections ? "bg-white w-1" : "bg-transparent"
+          )}
+          onMouseDown={startResizingConnections}
+        />
+        
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b border-[#242426] flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-[#a1a1aa] uppercase bg-transparent shrink-0">
+            <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg">
+              <rect height="18" rx="2" width="18" x="3" y="3"></rect>
+              <path d="M9 3v18"></path>
+              <path d="M15 3v18"></path>
+            </svg>
+            MAP
+          </div>
 
- {/* Hub Context Badge */}
- {(() => {
- const hubName = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.HUB || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course
- if (!hubName) return null
- const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split('/').pop() : ''
- return (
- <div className="px-3 pt-3 pb-1 shrink-0">
- <button
- onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
- className="w-full text-left p-2 rounded-none bg-muted/30 border border-border/50 hover:border-primary/30  group/hub-btn"
- >
- <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1 group-hover/hub-btn:text-primary/50 ">Topic</div>
- <div className="text-[11px] font-bold text-foreground/80 truncate group-hover/hub-btn:text-primary ">{clean?.replace(/_/g, ' ')}</div>
- </button>
- </div>
- )
-})()}
+          {/* Hub Context Badge */}
+          {(() => {
+            const hubName = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.HUB || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course
+            if (!hubName) return null
+            const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split('/').pop() : ''
+            return (
+              <div className="p-4 pb-1 shrink-0">
+                <div className="text-[11px] text-[#a1a1aa] uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>
+                <button
+                  onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
+                  className="w-full flex items-center justify-between bg-[#232326] border border-[#242426] rounded-[12px] p-3 text-sm cursor-pointer hover:bg-opacity-80 transition-colors text-left"
+                >
+                  <span className="truncate text-white font-medium">{clean?.replace(/_/g, ' ')}</span>
+                  <ChevronDown size={16} className="text-[#a1a1aa] shrink-0" />
+                </button>
+              </div>
+            )
+          })()}
 
- {/* Connection links */}
- <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
- <div className="max-w-5xl mx-auto">
- {hubConnections ? (
- <HubConnectionsNav
- content={hubConnections}
- activePath={selectedPath}
- onNavigate={handleWikiLinkClick}
- onToggleCheckbox={handleToggleCheckbox}
- searchQuery={searchQuery}
- />
- ) : (
- <div className="py-20 flex flex-col items-center gap-3 opacity-20">
- <Network size={24} strokeWidth={1} className="text-muted-foreground" />
- <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">No Map Found</span>
- </div>
- )}
- </div>
- </div>
- </div>
- </aside>
- )}
-
-  {/* Scrollable Content Column */}
-  <div className={cn("flex-1 min-h-0", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "h-full overflow-hidden flex flex-col" : "overflow-y-auto custom-scrollbar")}>
- {!selectedPath ? (
- <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground/30 gap-4 mt-32">
- <FileText size={64} strokeWidth={1} />
- <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
- </div>
- ) : (
-  <div className={cn("mx-auto w-full max-w-full relative", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "p-0 h-full overflow-hidden flex flex-col" : "py-12 px-16 max-w-5xl")}>
-  {loadingNote && (
-  <PanelLoader label="Loading Document" />
-  )}
-  {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && (
-  <div className="flex items-start justify-between mb-12 group">
-  <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-tight flex-1 break-words">
-  {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
-  </h1>
-  </div>
-  )}
-
-  {(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? (
-  <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-  <div className="flex-1 min-h-0">
-  <PdfViewer 
-  ref={pdfRef}
-  path={selectedPath} 
-  title={selectedPath.split('/').pop() || ''} 
-  initialPage={selectedPage} 
-  filterPages={selectedFilteredPages}
-  onStateChange={handlePdfStateChange}
-  />
-  </div>
-  
-  {/* Knowledge Navigation Footer for PDF (when in context) */}
-  {studyTree.length > 0 && (
-    <div className="border-t border-border bg-background/50 px-16 py-8">
-      <KnowledgeFooter 
-        tree={studyTree} 
-        activePath={selectedPath}
-        onNavigate={handleWikiLinkClick}
-      />
-    </div>
-  )}
-  </div>
-  ) : (
- <>
- {config?.showProperties && (
- <NoteProperties 
- metadata={noteMetadata} 
- onNavigate={handleWikiLinkClick} 
- onAddProperty={handleAddProperty}
- onUpdateProperty={handleUpdateProperty}
- onDeleteProperty={handleDeleteProperty}
- />
- )}
-
- <div className="mt-12">
- {isEditing ? (
- <textarea
- value={editedContent}
- onChange={(e) => setEditedContent(e.target.value)}
- onKeyDown={(e) => {
- if ((e.metaKey || e.ctrlKey) && e.key === 's') {
- e.preventDefault()
- handleSaveNote()
-}
-}}
- className="w-full h-[600px] p-8 bg-muted border border-border rounded-none font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring "
- placeholder="Start writing..."
- autoFocus
- />
- ) : (
- <MarkdownViewer 
- key={selectedPath}
- content={noteContent} 
- onNavigate={handleWikiLinkClick} 
- path={selectedPath || undefined}
- noteMode={String(noteMetadata?.mode || '')}
- noteTitle={String(noteMetadata?.title || '')}
- noteCourse={String(noteMetadata?.course || '')}
- />
- )}
- </div>
- 
- <KnowledgeFooter 
- tree={studyTree} 
- activePath={selectedPath}
- onNavigate={handleWikiLinkClick}
- onFinish={async () => {
- if (selectedPath) {
- const label = selectedPath.split('/').pop()?.replace('.md', '') ?? '';
- await handleToggleCheckbox(label, true, selectedPath);
-}
-}}
- />
-
- <div className="mt-8 mb-12 flex flex-col items-center gap-3">
-   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Space Repetition Review</div>
-   <div className="flex flex-wrap justify-center gap-2">
-     <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-none text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
-     <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-none text-xs font-bold border border-foreground/30 text-foreground hover:bg-muted transition-none">Hard</button>
-     <button onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-none text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
-     <button onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-none text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
-   </div>
- </div>
- </>
- )}
- </div>
- )}
- </div>
- </>
- )}
- </section>
-  </div>
-  </main>
-  </div>
-  {(isResizing || isResizingConnections) && (
-     <div className="fixed inset-0 z-[9999] cursor-col-resize select-none bg-transparent" />
-   )}
+          {/* Connection links */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6 text-sm text-[#a1a1aa]">
+            <div className="max-w-5xl mx-auto mt-2">
+              {hubConnections ? (
+                <HubConnectionsNav
+                  content={hubConnections}
+                  activePath={selectedPath}
+                  onNavigate={handleWikiLinkClick}
+                  onToggleCheckbox={handleToggleCheckbox}
+                  searchQuery={searchQuery}
+                />
+              ) : (
+                <div className="py-20 flex flex-col items-center gap-3 opacity-20">
+                  <Network size={24} strokeWidth={1} className="text-[#a1a1aa]" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa] text-center">No Map Found</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </aside>
+    )}
+    
+    {(isResizing || isResizingConnections) && (
+      <div className="fixed inset-0 z-[9999] cursor-col-resize select-none bg-transparent" />
+    )}
   </div>
   )
 }
