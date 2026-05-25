@@ -303,7 +303,7 @@ function OracleView() {
               onChange={(e) => setInput(e.target.value)} 
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
               placeholder="Ask Ater..." 
-              className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-mono leading-relaxed text-foreground" 
+              className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground" 
               rows={1} 
               disabled={isLoading} 
             />
@@ -1167,7 +1167,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           {b.results.length === 0 && (
           <div className="mb-4 mt-2 p-4 rounded-[8px] bg-destructive/5 border border-destructive/20">
           <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-3">No Ater Regions detected.</p>
-          <pre className="text-[9px] bg-bento-panel border border-border p-3 rounded-[6px] overflow-x-auto font-mono text-muted-foreground/60 whitespace-pre-wrap">{b.ai_output}</pre>
+          <pre className="text-[9px] bg-bento-panel border border-border p-3 rounded-[6px] overflow-x-auto font-sans text-muted-foreground/60 whitespace-pre-wrap">{b.ai_output}</pre>
           </div>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -1198,7 +1198,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           {aterError && (
           <div className="p-6 rounded-[8px] bg-destructive/5 border border-destructive/20 mt-8">
           <div className="flex items-center gap-2 mb-3 text-[10px] font-black uppercase tracking-widest text-destructive">Error</div>
-          <p className="text-[10px] font-mono text-destructive/80">{aterError}</p>
+          <p className="text-[10px] font-sans text-destructive/80">{aterError}</p>
           </div>
           )}
           </div>

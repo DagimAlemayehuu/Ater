@@ -16,11 +16,11 @@ export default function WaitlistLandingPage() {
           <div className="flex flex-col justify-center py-6 z-30 lg:pr-12">
             <div className="space-y-6 text-center lg:text-left flex flex-col items-center lg:items-start">
               <h1 className="text-display-hero !leading-[0.9]">
-                Learn faster.<br />
-                Score better.
+                Study Less.<br />
+                Learn Better.
               </h1>
               <p className="text-body max-w-[360px] opacity-60">
-                Ater turns your textbook PDFs and slides into simple, organized notes. Study less and get better grades in one clean place.
+                Ater turns your class slides and PDFs into simple notes. Use your Academic Dashboard, chat with Ater Oracle, study notes in your Knowledge Base, and test your memory in the Proving Grounds.
               </p>
             </div>
             

@@ -87,13 +87,13 @@ export default function Home() {
           <div className="flex flex-col gap-4 sm:p-6 md:p-8 w-full">
             <h2 className="text-display-hero max-w-5xl">FEATURES</h2>
             <div className="flex flex-col gap-0 border border-outline-variant w-full">
-              <Link href="/features/academic-dashboard" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
+              <Link href="/features" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
                 <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
                   <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">ACADEMIC DASHBOARD</h3>
                 </div>
                 <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
-                    Your school control center. Track your semesters, grades, teacher info, and upcoming tests in one simple, clear dashboard.
+                    Your school control center. Track your semesters, courses, units, roadmaps, and upcoming tests in one simple, clear dashboard.
                   </p>
                 </div>
                 <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
@@ -101,13 +101,13 @@ export default function Home() {
                 </div>
               </Link>
               
-              <Link href="/features/knowledge-base" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
+              <Link href="/features" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
                 <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
                   <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">KNOWLEDGE BASE</h3>
                 </div>
                 <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
-                    A safe place for your notes. Read your books and notes side-by-side, click on links to jump to other lessons, and see a visual map of how everything connects.
+                    A safe place for your notes. Read your books and notes side-by-side, navigate using automatic links, and see a visual map of how everything connects.
                   </p>
                 </div>
                 <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
@@ -115,13 +115,27 @@ export default function Home() {
                 </div>
               </Link>
               
-              <Link href="/features/agents" className="grid grid-cols-1 md:grid-cols-12 border-b-0 hover:bg-surface-container transition-colors group">
+              <Link href="/features" className="grid grid-cols-1 md:grid-cols-12 border-b border-outline-variant hover:bg-surface-container transition-colors group">
                 <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
-                  <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">REASONING AGENTS</h3>
+                  <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">ATER ORACLE & FLOW</h3>
                 </div>
                 <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
                   <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
-                    Helpful study assistants. Ater uses small, private computer helpers that automatically write your notes, fix formatting mistakes, and make quizzes for you.
+                    Your smart study partner. Ask the Oracle questions, control your Pomodoro focus sessions using chat, and watch files process in the background.
+                  </p>
+                </div>
+                <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
+                  <span className="text-[10px] tracking-widest uppercase group-hover:text-background transition-colors group-hover:translate-x-1 duration-300 transform">EXPLORE</span>
+                </div>
+              </Link>
+
+              <Link href="/features" className="grid grid-cols-1 md:grid-cols-12 border-b-0 hover:bg-surface-container transition-colors group">
+                <div className="md:col-span-3 p-4 sm:p-6 md:p-8 border-b md:border-b-0 md:border-r border-outline-variant flex items-center">
+                  <h3 className="text-sm font-bold tracking-tight uppercase group-hover:text-primary transition-colors">THE PROVING GROUNDS</h3>
+                </div>
+                <div className="md:col-span-7 p-4 sm:p-6 md:p-8 flex items-center">
+                  <p className="text-body text-[11px] text-on-surface-variant leading-relaxed">
+                    Interactive practice sessions. Take recall quizzes, scenario challenges, and tracing problems directly created from your notes to lock in your knowledge.
                   </p>
                 </div>
                 <div className="md:col-span-2 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-outline-variant flex items-center justify-center bg-surface-container-low group-hover:bg-primary transition-colors">
@@ -141,19 +155,19 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
-                  Your files stay strictly on your computer. Ater doesn't store your documents on the cloud, keeping your personal school notes 100% private.
+                  Your files stay strictly on your computer. Ater runs fully local markdown files that are completely compatible with Obsidian, keeping your notes portable and 100% private.
                 </p>
                 <div className="space-y-3 text-[11px] leading-relaxed text-on-surface-variant">
-                  <div><strong>Data Ownership</strong>: 100% local markdown file structure.</div>
-                  <div><strong>Provider Control</strong>: You choose which model endpoints, if any, receive context.</div>
+                  <div><strong>Data Ownership</strong>: 100% standard markdown file structure.</div>
+                  <div><strong>Provider Control</strong>: You configure and manage your own API logic credentials.</div>
                   <div><strong>Portability</strong>: Take your notes anywhere, completely tool-agnostic.</div>
                 </div>
               </div>
               
               <div className="w-full border border-outline-variant bg-surface p-6 flex flex-col gap-4 max-w-md mx-auto relative overflow-hidden shadow-xl text-[10px] text-left">
                 <div className="flex justify-between items-center border-b border-outline-variant/30 pb-2">
-                  <span className="text-primary font-black uppercase tracking-wider">SECURITY DAEMON</span>
-                  <span className="text-emerald-500 animate-pulse">SECURE</span>
+                  <span className="text-primary font-black uppercase tracking-wider">SECURITY CONFIG</span>
+                  <span className="text-emerald-500 animate-pulse">LOCAL VAULT</span>
                 </div>
                 <div className="space-y-2.5 opacity-80">
                   <div className="flex justify-between">
@@ -161,12 +175,12 @@ export default function Home() {
                     <span className="font-bold text-on-surface">~/.ater/vault config</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="opacity-40">FILE ENCRYPTION</span>
-                    <span className="font-bold text-on-surface">AES-256-GCM LOCAL STORE</span>
+                    <span className="opacity-40">FILE TYPE</span>
+                    <span className="font-bold text-on-surface">PLAIN TEXT MARKDOWN (.md)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="opacity-40">INTERNET STATE</span>
-                    <span className="font-bold text-red-500">OFFLINE FIRST (100% PRIVATE)</span>
+                    <span className="opacity-40">INTEGRATION STATE</span>
+                    <span className="font-bold text-on-surface">Tauri Secure local config store</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="opacity-40">SEARCH DATABASE</span>
@@ -174,7 +188,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="border-t border-outline-variant/30 pt-2 flex items-center justify-between text-[8px]">
-                  <span className="opacity-30 font-sans">ENCRYPTED USING USER HARDWARE KEY</span>
+                  <span className="opacity-30 font-sans">PORTABLE & OPEN STANDARD FILES</span>
                   <span className="font-bold border border-outline-variant px-1 bg-surface-container-low">LOCK: TRUE</span>
                 </div>
               </div>

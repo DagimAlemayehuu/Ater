@@ -82,7 +82,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  code, pre, kbd, samp, input, textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
   }
 
   html,
@@ -188,6 +192,24 @@ th {
   contain-intrinsic-size: 1px 640px;
 }
 
+/* 3D Flip Card Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -214,7 +236,7 @@ th {
 .prose h1, .prose h2, .prose h3, .prose h4 { @apply text-foreground font-black uppercase tracking-tight; }
 .prose p { @apply text-foreground/70 leading-relaxed; }
 .prose a { @apply text-foreground underline decoration-foreground/30 hover:decoration-foreground; }
-.prose code { @apply bg-muted/30 px-1.5 py-0.5 rounded-none text-[11px] font-mono border border-border/10; }
+.prose code { @apply bg-muted/30 px-1.5 py-0.5 rounded-none text-[11px] font-sans border border-border/10; }
 .prose ul, .prose ol { @apply text-foreground/70; }
 .prose blockquote { @apply border-l border-foreground/20 pl-4 italic text-muted-foreground/60 bg-muted/5 py-1; }
 .prose table { @apply w-full border-collapse my-4; }
