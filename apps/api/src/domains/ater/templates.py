@@ -90,8 +90,6 @@ def _render_dynamic_sections(data: Dict[str, Any]) -> str:
     
     # Render the source artifact details
     artifact_parts = []
-    if data.get("artifact_type"):
-        artifact_parts.append(f"> **{data.get('artifact_type')}**")
     if data.get("artifact_content"):
         artifact_parts.append(str(data.get("artifact_content")).strip())
     if data.get("dynamic3_content"):

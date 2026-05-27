@@ -1,14 +1,52 @@
-// Ater - Resilient Local/Offline Supabase Mock
-// Completely removes remote database dependency, preventing startup freezes and key requirements.
+// Ater - Hybrid Cloud/Local Resilient Supabase Client
+// Seamlessly routes requests to your cloud Supabase database when online, falling back to local mock when offline.
 
-console.info('[Supabase] Offline/Local mock auth client loaded successfully.');
+import { createClient } from '@supabase/supabase-js'
+import { load } from '@tauri-apps/plugin-store'
+
+const STORE_FILENAME = 'ater_config.json'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const realSupabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null
+
+console.info(`[Supabase] Hybrid client initialized. Real client connected: ${!!realSupabase}`);
+
+// Cache the real user ID in memory after fetching profile to allow the Realtime engine to filter by real cloud UUID
+let cachedUserId = 'local-session-user-id'
+
+async function getActivationEmail(): Promise<string | null> {
+  try {
+    const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+    const email = await store.get<string>('activationEmail')
+    return email ?? null
+  } catch {
+    return null
+  }
+}
+
+// Fallback mock profile payload
+const fallbackProfile = {
+  id: 'local-session-user-id',
+  full_name: 'Local User',
+  activation_code: 'ATER-PRO',
+  waitlist_status: 'approved',
+  is_approved: true,
+  is_configured: true,
+  machine_id: '',
+  credit_balance: 100,
+  locked_features: []
+}
 
 export const supabase: any = {
   auth: {
     getUser: async () => ({
       data: {
         user: {
-          id: 'local-session-user-id',
+          id: cachedUserId,
           email: 'user@local.ater',
         } as any
       },
@@ -17,7 +55,7 @@ export const supabase: any = {
     signInWithPassword: async ({ email }: { email: string }) => ({
       data: {
         user: {
-          id: 'local-session-user-id',
+          id: cachedUserId,
           email: email,
         }
       },
@@ -34,44 +72,114 @@ export const supabase: any = {
       }
     }
   },
-  from: (..._args: any[]) => {
+  // Expose original channels functions for realtime subscription
+  getChannels: () => {
+    return realSupabase ? realSupabase.getChannels() : []
+  },
+  channel: (name: string) => {
+    return realSupabase ? realSupabase.channel(name) : {
+      on: () => ({ subscribe: () => {} }),
+      subscribe: () => {}
+    }
+  },
+  removeChannel: (channel: any) => {
+    if (realSupabase) realSupabase.removeChannel(channel)
+  },
+  // Expose Edge functions invocation support
+  functions: {
+    invoke: async (name: string, options?: any) => {
+      if (realSupabase) {
+        try {
+          return await realSupabase.functions.invoke(name, options)
+        } catch (e) {
+          console.warn('[Supabase Hybrid] Edge Function invoke failed:', e)
+        }
+      }
+      return { data: null, error: new Error('Offline mock active') }
+    }
+  },
+  from: (table: string) => {
     return {
-      select: (..._args2: any[]) => {
+      select: (columns: string = '*') => {
         return {
-          eq: (..._args3: any[]) => {
+          eq: (field: string, value: any) => {
             return {
               single: async () => {
-                return {
-                  data: {
-                    id: 'local-session-user-id',
-                    full_name: 'Local User',
-                    activation_code: 'ATER-PRO',
-                    waitlist_status: 'approved',
-                    is_approved: true,
-                    is_configured: true,
-                    machine_id: ''
-                  },
-                  error: null
+                if (realSupabase && table === 'profiles') {
+                  const email = await getActivationEmail()
+                  if (email) {
+                    const { data, error } = await realSupabase
+                      .from('profiles')
+                      .select(columns)
+                      .eq('email', email)
+                      .maybeSingle()
+                    if (!error && data) {
+                      if ((data as any).id) cachedUserId = (data as any).id
+                      return { data, error: null }
+                    }
+                  }
+                  // When online with real client, return null if no profile exists
+                  return { data: null, error: null }
                 }
+                return { data: fallbackProfile, error: null }
               },
               maybeSingle: async () => {
-                return {
-                  data: {
-                    activation_code: 'ATER-PRO'
-                  },
-                  error: null
+                if (realSupabase && table === 'profiles') {
+                  const email = await getActivationEmail()
+                  if (email) {
+                    const { data, error } = await realSupabase
+                      .from('profiles')
+                      .select(columns)
+                      .eq('email', email)
+                      .maybeSingle()
+                    if (!error && data) {
+                      if ((data as any).id) cachedUserId = (data as any).id
+                      return { data, error: null }
+                    }
+                  }
+                  // When online with real client, return null if no profile exists
+                  return { data: null, error: null }
                 }
+                return { data: fallbackProfile, error: null }
               }
             }
           }
         }
       },
-      update: (..._args4: any[]) => {
+      update: (values: any) => {
         return {
-          eq: (..._args5: any[]) => {
+          eq: (field: string, value: any) => {
             return {
-              single: async () => ({ data: null, error: null }),
-              maybeSingle: async () => ({ data: null, error: null })
+              single: async () => {
+                if (realSupabase && table === 'profiles') {
+                  const email = await getActivationEmail()
+                  if (email) {
+                    const { data, error } = await realSupabase
+                      .from('profiles')
+                      .update(values)
+                      .eq('email', email)
+                      .select()
+                      .maybeSingle()
+                    return { data, error }
+                  }
+                }
+                return { data: null, error: null }
+              },
+              maybeSingle: async () => {
+                if (realSupabase && table === 'profiles') {
+                  const email = await getActivationEmail()
+                  if (email) {
+                    const { data, error } = await realSupabase
+                      .from('profiles')
+                      .update(values)
+                      .eq('email', email)
+                      .select()
+                      .maybeSingle()
+                    return { data, error }
+                  }
+                }
+                return { data: null, error: null }
+              }
             }
           }
         }

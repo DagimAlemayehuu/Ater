@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useRef} from 'react'
+import { AterExplainDialog, makePracticeExplainFetchers } from '@/components/obsidian/AterExplainDialog'
 import { useSearchParams } from 'react-router-dom'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {
@@ -157,22 +158,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   const [vaultMode, setVaultMode] = useState<'vault_only'|'hard_only'|'ai_variants'|'mixed'|'weak_spots'|'exam_sim'>('vault_only')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Session enhancement state ───────────────────────────────────────────────
+  // ── Session enhancement state ──────────────────────────────────────────────
   const [streak, setStreak] = useState(0)
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set())
   const [confidenceWager, setConfidenceWager] = useState<Record<number,number>>({})
 
-  // ── Explain More state ─────────────────────────────────────────────
+  // ── Explain More state ─────────────────────────────────────────
   const [explainOpen, setExplainOpen] = useState(false)
-  const [explainLesson, setExplainLesson] = useState('')
-  const [explainLoading, setExplainLoading] = useState(false)
-  const explainScrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (explainOpen && !explainLoading && explainScrollRef.current) {
-      explainScrollRef.current.scrollTop = 0
-    }
-  }, [explainOpen, explainLoading])
+  const [explainQuestion, setExplainQuestion] = useState<typeof currentQuestion | null>(null)
 
   // ── FSRS Spaced Repetition state ───────────────────────────────────────────
   const [srsCardsCache, setSrsCardsCache] = useState<Record<string, any>>({})
@@ -704,36 +697,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  const handleSelectAnswer = (val: any) => {if (!isRevealed) setUserAnswers(prev => ({...prev, [questions[currentQuestionIdx].id]: val}));}
  const handleDeletePractice = async (path: string) => {await sidecarApi.deletePractice(path); loadPastPractices();}
 
-  const handleExplainMore = async () => {
+  const handleExplainMore = () => {
     if (!currentQuestion) return
+    setExplainQuestion(currentQuestion)
     setExplainOpen(true)
-    setExplainLesson('')
-    setExplainLoading(true)
-    try {
-      let formattedUserAnswer = '';
-      const rawAns = userAnswers[currentQuestion.id];
-      if (Array.isArray(rawAns)) {
-        formattedUserAnswer = rawAns.join(', ');
-      } else if (typeof rawAns === 'object' && rawAns !== null) {
-        formattedUserAnswer = JSON.stringify(rawAns);
-      } else if (rawAns !== undefined && rawAns !== null) {
-        formattedUserAnswer = String(rawAns);
-      }
-
-      const res = await sidecarApi.explainQuestion({
-        question: currentQuestion.question,
-        type: currentQuestion.type,
-        answer: (currentQuestion as any).answer,
-        explanation: currentQuestion.explanation,
-        context: (currentQuestion as any).content || (currentQuestion as any).codeSnippet || '',
-        userAnswer: formattedUserAnswer
-      })
-      setExplainLesson(res.lesson)
-    } catch (e: any) {
-      setExplainLesson(`**Error:** ${e.message || 'Failed to generate lesson. Please check your API key in Settings.'}`)
-    } finally {
-      setExplainLoading(false)
-    }
   }
 
  const toggleAtomicNote = (noteId: string) => {
@@ -1400,34 +1367,32 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         </div>
       </div>
     )}
- {/* ── Explain More Modal ── */}
- {explainOpen && (
-   <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)'}}>
-     <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col bg-background border border-border/40 rounded-none shadow-2xl overflow-hidden">
-       <div className="flex items-start justify-between px-6 py-5 border-b border-border/20 gap-4">
-         <div className="min-w-0">
-           <div className="text-[8px] font-black uppercase tracking-[0.35em] text-primary/50 mb-1">Deep Lesson</div>
-           <div className="text-sm font-black tracking-tight text-foreground/85 leading-snug line-clamp-2">{currentQuestion.question}</div>
-         </div>
-         <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1.5 rounded-none hover:bg-muted/20 text-muted-foreground/30 hover:text-foreground transition-none mt-0.5"><X size={15}/></button>
-       </div>
-       <div ref={explainScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
-         {explainLoading ? (
-           <div className="flex flex-col items-center justify-center py-20 gap-4">
-             <MiniLoader label="Generating Lesson" />
-           </div>
-         ) : (
-           <div className="prose prose-sm max-w-none text-foreground/80 leading-relaxed">
-             <MarkdownBlock content={explainLesson} />
-           </div>
-         )}
-       </div>
-       <div className="px-6 py-4 border-t border-border/10">
-         <button onClick={() => setExplainOpen(false)} className="w-full h-10 bg-muted/5 border border-border/20 hover:border-foreground/20 text-foreground/50 hover:text-foreground text-[9px] font-black uppercase tracking-widest rounded-none transition-none">Close Lesson</button>
-       </div>
-     </div>
-   </div>
- )}
+ {/* ── Explain More Dialog ── */}
+ {explainOpen && explainQuestion && (() => {
+   const rawAns = userAnswers[explainQuestion.id]
+   const formattedUserAnswer = Array.isArray(rawAns)
+     ? rawAns.join(', ')
+     : typeof rawAns === 'object' && rawAns !== null
+       ? JSON.stringify(rawAns)
+       : rawAns !== undefined && rawAns !== null ? String(rawAns) : ''
+   const { initialFetcher, followUpFetcher } = makePracticeExplainFetchers({
+     question: explainQuestion.question,
+     type: explainQuestion.type,
+     answer: (explainQuestion as any).answer,
+     explanation: explainQuestion.explanation,
+     context: (explainQuestion as any).content || (explainQuestion as any).codeSnippet || '',
+     userAnswer: formattedUserAnswer,
+   })
+   return (
+     <AterExplainDialog
+       isOpen={explainOpen}
+       onClose={() => { setExplainOpen(false); setExplainQuestion(null) }}
+       contextLabel={explainQuestion.question}
+       initialFetcher={initialFetcher}
+       followUpFetcher={followUpFetcher}
+     />
+   )
+ })()}
  <div className="px-8 py-3 border-b border-border flex flex-row items-center justify-between gap-3">
  <div className="flex flex-row items-center gap-8 w-auto">
  <div className="flex flex-col gap-0.5">

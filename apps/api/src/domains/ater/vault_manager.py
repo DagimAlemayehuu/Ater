@@ -243,9 +243,7 @@ class VaultManager:
             pass
 
         def _str_representer(dumper, data):
-            # If the string perfectly wraps a wikilink, force double quotes.
-            # This allows Obsidian's Properties UI to parse it as an internal link natively.
-            if data.startswith('[[') and data.endswith(']]'):
+            if (data.startswith('[[') and data.endswith(']]')) or data.isdigit():
                 return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
             return dumper.represent_scalar('tag:yaml.org,2002:str', data)
 

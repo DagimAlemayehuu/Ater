@@ -13,24 +13,22 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-50">
-      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground truncate">Admin Portal</span>
-        <div className="flex items-center gap-2 px-3 py-1 border border-border bg-accent/20">
-          <div className="size-1.5 bg-primary rounded-none" />
-          <span className="text-[9px] font-black uppercase tracking-widest text-foreground">Live</span>
-        </div>
+    <header className="h-14 bg-bento-panel border border-border/40 rounded-[12px] flex items-center justify-between px-6 z-40 select-none shadow-sm">
+      <div className="flex items-center gap-4 min-w-0">
+        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground">
+          Control center
+        </span>
       </div>
       <div className="flex items-center gap-4">
         <button 
           onClick={toggleTheme}
-          className="p-2 hover:bg-accent border border-border rounded-none flex items-center justify-center transition-none"
+          className="p-1.5 hover:bg-bento-item border border-border/40 rounded-[8px] flex items-center justify-center transition-all cursor-pointer text-muted-foreground hover:text-foreground"
           title="Toggle Theme"
         >
           {mounted ? (
             theme === "light" ? <Moon className="size-4" /> : <Sun className="size-4" />
           ) : (
-            <div className="size-4" /> // Placeholder to maintain layout
+            <div className="size-4" />
           )}
         </button>
       </div>

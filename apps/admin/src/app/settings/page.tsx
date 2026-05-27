@@ -22,7 +22,7 @@ export default function SettingsPage() {
     if (data) {
       setConfig(JSON.stringify(data.config, null, 2));
     } else if (error && error.code === 'PGRST116') {
-      const initial = { token_price_per_1k: 0.002, registration_open: true, engine_version: "1.0.0" };
+      const initial = { token_price_per_1k: 0.002, registration_open: true, engine_version: "1.0.0", github_pat: "" };
       await supabase.from('app_settings').insert({ id: 'global_config', config: initial });
       setConfig(JSON.stringify(initial, null, 2));
     }
@@ -35,7 +35,7 @@ export default function SettingsPage() {
     setSuccess(false);
     try {
       const parsed = JSON.parse(config);
-      const allowedKeys = ["token_price_per_1k", "registration_open", "engine_version"];
+      const allowedKeys = ["token_price_per_1k", "registration_open", "engine_version", "github_pat"];
       const unexpectedKeys = Object.keys(parsed).filter((key) => !allowedKeys.includes(key));
       if (unexpectedKeys.length > 0) {
         throw new Error(`Unsupported setting: ${unexpectedKeys.join(", ")}`);
@@ -48,6 +48,9 @@ export default function SettingsPage() {
       }
       if (typeof parsed.engine_version !== "string") {
         throw new Error("engine_version must be a string");
+      }
+      if (parsed.github_pat !== undefined && typeof parsed.github_pat !== "string") {
+        throw new Error("github_pat must be a string");
       }
       const { error } = await supabase
         .from('app_settings')

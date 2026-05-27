@@ -7,6 +7,7 @@ import { AterMarkdown } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question } from '@/types/practice';
 import { sidecarApi } from '@/lib/sidecarApi';
+import { AterExplainDialog, makePracticeExplainFetchers } from '@/components/obsidian/AterExplainDialog';
 
 export const MarkdownBlock = ({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
   if (variant === 'inline') {
@@ -50,15 +51,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const startTimeRef = useRef(startTime);
   const [confidenceWager, setConfidenceWager] = useState<number | null>(null);
   const [explainOpen, setExplainOpen] = useState(false);
-  const [explainLesson, setExplainLesson] = useState('');
-  const [explainLoading, setExplainLoading] = useState(false);
-  const explainScrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (explainOpen && !explainLoading && explainScrollRef.current) {
-      explainScrollRef.current.scrollTop = 0;
-    }
-  }, [explainOpen, explainLoading]);
+  const [explainQuestion, setExplainQuestion] = useState<Question | null>(null);
 
   const currentQ = questions[currentIdx];
 
@@ -176,40 +169,10 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     startTimeRef.current = Date.now();
   };
 
-  const handleExplainMore = async () => {
+  const handleExplainMore = () => {
     if (!currentQ) return;
+    setExplainQuestion(currentQ);
     setExplainOpen(true);
-    setExplainLesson('');
-    setExplainLoading(true);
-    try {
-      let formattedUserAnswer = '';
-      const rawAns = userAnswers[currentQ.id];
-      if (Array.isArray(rawAns)) {
-        formattedUserAnswer = rawAns.join(', ');
-      } else if (typeof rawAns === 'object' && rawAns !== null) {
-        formattedUserAnswer = JSON.stringify(rawAns);
-      } else if (rawAns !== undefined && rawAns !== null) {
-        formattedUserAnswer = String(rawAns);
-      }
-
-      const res = await sidecarApi.explainQuestion({
-        question: currentQ.question,
-        type: currentQ.type,
-        answer: Array.isArray(currentQ.answer) 
-          ? currentQ.answer.join(', ') 
-          : typeof currentQ.answer === 'object' && currentQ.answer !== null
-            ? JSON.stringify(currentQ.answer)
-            : String(currentQ.answer),
-        explanation: currentQ.explanation || '',
-        context: currentQ.content || currentQ.codeSnippet || '',
-        userAnswer: formattedUserAnswer
-      });
-      setExplainLesson(res.lesson);
-    } catch (e: any) {
-      setExplainLesson(`**Error:** ${e.message || 'Failed to generate lesson. Please check your API key in Settings.'}`);
-    } finally {
-      setExplainLoading(false);
-    }
   };
 
   const renderFillInBlanks = () => {
@@ -582,34 +545,31 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
             </div>
           )}
 
-      {/* ── Explain More Modal ── */}
-      {explainOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg mx-4 max-h-[80vh] flex flex-col bg-bento-panel border border-border rounded-[12px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-start justify-between px-5 py-4 border-b border-border gap-4">
-              <div className="min-w-0">
-                <div className="text-[8px] font-black uppercase tracking-[0.35em] text-primary/50 mb-1">Deep Lesson</div>
-                <div className="text-xs font-black tracking-tight text-foreground/80 leading-snug line-clamp-2">{currentQ.question}</div>
-              </div>
-              <button onClick={() => setExplainOpen(false)} className="shrink-0 p-1 rounded-[8px] hover:bg-bento-item text-muted-foreground/30 hover:text-foreground transition-colors"><X size={14}/></button>
-            </div>
-            <div ref={explainScrollRef} className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
-              {explainLoading ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-3">
-                  <span className="text-xs font-medium text-muted-foreground animate-pulse">Generating Lesson...</span>
-                </div>
-              ) : (
-                <div className="prose prose-sm max-w-none text-foreground/80 leading-relaxed text-xs">
-                  <AterMarkdown content={explainLesson} />
-                </div>
-              )}
-            </div>
-            <div className="px-5 py-3 border-t border-border bg-bento-panel">
-              <button onClick={() => setExplainOpen(false)} className="w-full h-8 bg-bento-item border border-border hover:border-foreground/20 text-foreground/70 hover:text-foreground text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Close Lesson</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {explainOpen && explainQuestion && (() => {
+        const rawAns = userAnswers[explainQuestion.id];
+        const formattedUserAnswer = Array.isArray(rawAns)
+          ? rawAns.join(', ')
+          : typeof rawAns === 'object' && rawAns !== null
+            ? JSON.stringify(rawAns)
+            : rawAns !== undefined && rawAns !== null ? String(rawAns) : '';
+        const { initialFetcher, followUpFetcher } = makePracticeExplainFetchers({
+          question: explainQuestion.question,
+          type: explainQuestion.type,
+          answer: (explainQuestion as any).answer,
+          explanation: explainQuestion.explanation,
+          context: (explainQuestion as any).content || (explainQuestion as any).codeSnippet || '',
+          userAnswer: formattedUserAnswer,
+        });
+        return (
+          <AterExplainDialog
+            isOpen={explainOpen}
+            onClose={() => { setExplainOpen(false); setExplainQuestion(null); }}
+            contextLabel={explainQuestion.question}
+            initialFetcher={initialFetcher}
+            followUpFetcher={followUpFetcher}
+          />
+        );
+      })()}
     </div>
   );
 }

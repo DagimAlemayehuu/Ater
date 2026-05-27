@@ -138,3 +138,27 @@ def test_strict_question_distribution():
     assert len([q for q in final_questions if q["type"] == "true_false"]) == 1
     assert len([q for q in final_questions if q["type"] == "writing"]) == 1
 
+def test_dynamic_proving_grounds_selectors():
+    """Verify dynamic counting and smart question type selection heuristics."""
+    from src.domains.ater.service import determine_dynamic_question_count, select_dynamic_question_types
+    
+    # 1. Test count determination
+    c_short = determine_dynamic_question_count("Short Note", "Qualitative/Definitional", "Short text", 0)
+    assert c_short == 2
+    
+    c_long = determine_dynamic_question_count("Long Note", "Qualitative/Definitional", "A" * 2000, 0)
+    assert c_long == 4
+    
+    c_complex = determine_dynamic_question_count("Complex Note", "Quantitative", "Short text", 2)
+    assert c_complex == 3  # base 2 + 1 boost
+    
+    # 2. Test type selection logic
+    types_math = select_dynamic_question_types("Math Formula", "Quantitative", "Calculate value $x = y + 2$", 3)
+    assert len(types_math) == 3
+    assert "calculation" in types_math
+    
+    types_code = select_dynamic_question_types("Python Functions", "Procedural", "def hello(): print('hi')", 4)
+    assert len(types_code) == 4
+    assert "code" in types_code or "debug" in types_code
+
+

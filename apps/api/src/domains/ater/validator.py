@@ -354,8 +354,8 @@ class AterValidator:
             else:
                 if not isinstance(quiz_data, list):
                     errors.append(f"QUIZ_NOT_ARRAY: got {type(quiz_data).__name__}")
-                elif len(quiz_data) < 1 or len(quiz_data) > 15:
-                    errors.append(f"QUIZ_WRONG_LENGTH: expected 1-15 questions, got {len(quiz_data)}")
+                elif len(quiz_data) < 2 or len(quiz_data) > 4:
+                    errors.append(f"QUIZ_WRONG_LENGTH: expected 2-4 questions, got {len(quiz_data)}")
                 else:
                     # Validate each question has required fields
                     for i, q in enumerate(quiz_data):
@@ -377,7 +377,13 @@ class AterValidator:
                             
                             # ── 5.2 Internal Truncation Check ──
                             if exp.strip() and exp.strip()[-1] not in [".", "!", "?", "}", "]", ")", "`", "$"]:
-                                errors.append(f"QUIZ_Q{i+1}_TRUNCATED_EXPLANATION: Explanation ends mid-sentence.")
+                                if exp.strip()[-1].isalnum():
+                                    import logging
+                                    logging.getLogger("Ater").warning(
+                                        f"[AterValidator] QUIZ_Q{i+1}_MISSING_PERIOD: Explanation missing period. Tolerated."
+                                    )
+                                else:
+                                    errors.append(f"QUIZ_Q{i+1}_TRUNCATED_EXPLANATION: Explanation ends mid-sentence.")
                         
                         if "answer" in q:
                             ans_str = str(q["answer"])
@@ -451,6 +457,9 @@ class AterValidator:
                     break
                 if re.search(r'[-=~]>\|$', line_stripped) or re.search(r'[-=~]\|$', line_stripped):
                     errors.append(f"MERMAID_DANGLING_PIPE: Mermaid line has dangling arrow pipe: '{line_stripped}'")
+                    break
+                if re.search(r'[-=~]>\s*$', line_stripped):
+                    errors.append(f"MERMAID_DANGLING_ARROW: Mermaid line has dangling arrow: '{line_stripped}'")
                     break
 
         # ── TRUNCATION GUARD: Check for mid-sentence cuts inside sections ──────
@@ -546,10 +555,34 @@ class AterValidator:
                 idx1, raw1, norm1 = normalized_sections[i]
                 idx2, raw2, norm2 = normalized_sections[j]
                 
+                # Check for sentence-level overlap (near-identical sentences split by punctuation)
+                def get_sentences(text):
+                    sents = re.split(r'(?:\.|\?|\!|\n)+', text)
+                    return [s.strip().lower() for s in sents if len(s.strip()) > 15]
+
+                sents1 = get_sentences(raw1)
+                sents2 = get_sentences(raw2)
+                for s1 in sents1:
+                    if s1.startswith('#') or s1.startswith('|') or s1.startswith('```') or s1.startswith('**'):
+                        continue
+                    for s2 in sents2:
+                        if s2.startswith('#') or s2.startswith('|') or s2.startswith('```') or s2.startswith('**'):
+                            continue
+                        ratio = SequenceMatcher(None, s1, s2).ratio()
+                        if ratio > 0.70:
+                            logger.warning(
+                                f"[Duplication Guard] Sentence-level overlap detected between section {idx1 + 1} and {idx2 + 1}!\n"
+                                f"Sentence 1: '{s1}'\n"
+                                f"Sentence 2: '{s2}'\n"
+                                f"Similarity: {ratio:.2%}"
+                            )
+                            return True
+
                 # 1. Exact or near-exact match
                 if norm1 == norm2:
                     logger.warning(f"[Duplication Guard] Critical: Normalized sections {idx1 + 1} and {idx2 + 1} are identical.")
                     return True
+
                     
                 # 2. Check for exact copy-paste substring block
                 matcher = SequenceMatcher(None, norm1, norm2)

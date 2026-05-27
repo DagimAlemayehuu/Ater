@@ -166,6 +166,9 @@ def validate_quiz_stub_free(note_path: Path) -> List[str]:
     return found
 
 def canonicalize_unit(unit_dir: Path):
+    if "study planner" in str(unit_dir.absolute()).lower():
+        print(f"[CanonicalizeUnit] Blocked execution on study planner directory: {unit_dir}")
+        return
     all_stems = sorted([f.stem for f in unit_dir.glob("*.md") if "Hub" not in f.stem and "PQ" not in f.stem and not f.name.startswith(".")])
 
     for note in unit_dir.glob("*.md"):
@@ -666,6 +669,9 @@ def reconcile_broken_links(unit_dir: Path):
     an existing file in the same unit. Prevents 'Ghost Links' in Obsidian.
     Only applies to note bodies, keeping frontmatter intact.
     """
+    if "study planner" in str(unit_dir.absolute()).lower():
+        print(f"[LinkReconcile] Blocked execution on study planner directory: {unit_dir}")
+        return
     all_stems = {f.stem for f in unit_dir.glob("*.md")}
     
     for note_file in unit_dir.glob("*.md"):
@@ -737,9 +743,16 @@ def purge_pedagogical_artifacts(unit_dir: Path):
             text = normalized_walk
             changed = True
             
-            if changed:
-                note_file.write_text(text, encoding="utf-8")
-                print(f"[PedagogyPurge] Cleaned: {note_file.name}")
+        # 4. Strip callout / blockquote headers (e.g., > **Markdown Table**, > [!NOTE])
+        purged_text = re.sub(r'(?m)^\s*>\s*\*\*.*?\*\*\s*$', '', text)
+        purged_text = re.sub(r'(?m)^\s*>\s*\[!.*?\]\s*$', '', purged_text)
+        if purged_text != text:
+            text = purged_text
+            changed = True
+
+        if changed:
+            note_file.write_text(text, encoding="utf-8")
+            print(f"[PedagogyPurge] Cleaned: {note_file.name}")
 
 def auto_weave_wikilinks(unit_dir: Path):
     """
@@ -899,8 +912,8 @@ def merge_extra_sections_to_four(body: str) -> Tuple[str, bool]:
         heading = lines[0].strip()
         extra_body = lines[1].strip() if len(lines) > 1 else ""
         
-        # Append as a bold subheader/blockquote
-        merged_content.append(f"> **{heading}**\n\n{extra_body}".strip())
+        # Append as a bold subheader
+        merged_content.append(f"**{heading}**\n\n{extra_body}".strip())
         
     new_formal_model = "\n\n".join(merged_content)
     
@@ -940,17 +953,22 @@ def heal_quiz_scaffolding(quiz_block: str) -> str:
         q["id"] = f"q{idx + 1}"
         q["difficulty"] = f"L{idx + 1}"
         
-        # 2. Strict type mapping based on difficulty
+        # 2. Strict type mapping: preserve if valid, otherwise fallback to index default
         current_type = str(q.get("type", "")).lower()
-        if idx == 0:
-            if current_type not in ["mcq", "true_false"]:
+        valid_types = {
+            "mcq", "true_false", "writing", "fill_in", "matching", "order", 
+            "debug", "synthesis", "trace", "calculation", "data_analysis", 
+            "scenario", "code"
+        }
+        if current_type not in valid_types:
+            if idx == 0:
                 q["type"] = "mcq"
-        elif idx == 1:
-            if current_type not in ["scenario", "calculation"]:
+            elif idx == 1:
                 q["type"] = "scenario"
-        else:
-            if current_type not in ["writing", "trace", "debug"]:
+            else:
                 q["type"] = "writing"
+        else:
+            q["type"] = current_type
                 
         # 3. Clean OCR noise in keys
         for key in ["question", "answer", "explanation"]:
@@ -1065,4 +1083,114 @@ def reassemble_sections(sections: List[str]) -> str:
     if not assembled.startswith("##"):
         assembled = "## " + assembled
     return assembled + "\n"
+
+
+def self_heal_vault_links_and_casing(vault_path: Path):
+    """
+    Scans the entire vault, normalizes note file casing to strict Title_Case_With_Underscores
+    (matching VaultManager.get_canonical_title output), renames the files, and rewrites
+    all wikilinks inside the files to point to the correct casing to prevent broken links.
+    """
+    from .vault_manager import VaultManager
+    vm = VaultManager(vault_path)
+    
+    # 1. Collect all markdown files in Notes/ and database/
+    all_files = list(vault_path.rglob("*.md"))
+    
+    # Map original stem (lowercase) -> canonical title
+    canonical_map = {}
+    rename_queue = []
+    
+    for file_path in all_files:
+        if file_path.is_dir() or file_path.name.startswith("."):
+            continue
+            
+        stem = file_path.stem
+        # Exclude type template or configuration folders
+        if "type" in file_path.parts or "status" in file_path.parts or "confidence" in file_path.parts:
+            continue
+            
+        # Strip Hub or Possible Questions suffixes to get the core name
+        core_name = stem
+        is_hub = stem.endswith("_Hub")
+        is_pq = stem.endswith("_Possible_Questions")
+        
+        if is_hub:
+            core_name = stem[:-4]
+        elif is_pq:
+            core_name = stem[:-19]
+            
+        # Compute canonical name
+        clean_core = vm.super_clean(core_name)
+        canonical_core = vm.get_canonical_title(clean_core)
+        
+        # Keep unit number prefixes if present
+        m = re.match(r"^(\d+[\s\-_]*)+", stem)
+        prefix = m.group(0).replace(" ", "_") if m else ""
+        
+        if is_hub:
+            canonical_stem = f"{prefix}{canonical_core}_Hub"
+        elif is_pq:
+            canonical_stem = f"{prefix}{canonical_core}_Possible_Questions"
+        else:
+            canonical_stem = f"{prefix}{canonical_core}"
+            
+        canonical_map[stem.lower()] = canonical_stem
+        canonical_map[stem.replace("_", " ").lower()] = canonical_stem
+        
+        if stem != canonical_stem:
+            # We need to rename the file!
+            new_file_path = file_path.parent / f"{canonical_stem}.md"
+            rename_queue.append((file_path, new_file_path))
+            
+    # 2. Rename files on disk
+    for old_path, new_path in rename_queue:
+        print(f"[SelfHeal] Renaming case-mismatch note: {old_path.name} -> {new_path.name}")
+        if new_path.exists() and old_path.resolve() != new_path.resolve():
+            # If target exists, merge or resolve
+            old_content = old_path.read_text(encoding="utf-8")
+            old_path.unlink()
+            new_path.write_text(old_content, encoding="utf-8")
+        else:
+            old_path.rename(new_path)
+            
+    # 3. Reload list of files after renaming
+    all_files = list(vault_path.rglob("*.md"))
+    
+    # 4. Scan content of all markdown files and update links
+    for file_path in all_files:
+        if file_path.is_dir() or file_path.name.startswith("."):
+            continue
+            
+        content = file_path.read_text(encoding="utf-8")
+        changed = False
+        
+        # Replaces wikilinks case-sensitively
+        def link_casing_healer(match):
+            nonlocal changed
+            raw_content = match.group(1).strip()
+            if "|" in raw_content:
+                link, alias = raw_content.split("|", 1)
+                link = link.strip()
+                alias = alias.strip()
+            else:
+                link = raw_content
+                alias = None
+                
+            link_norm = link.replace(" ", "_").lower()
+            if link_norm in canonical_map:
+                healed_link = canonical_map[link_norm]
+                if link != healed_link:
+                    changed = True
+                    if alias:
+                        return f"[[{healed_link}|{alias}]]"
+                    return f"[[{healed_link}]]"
+            return match.group(0)
+            
+        healed_content = re.sub(r"\[\[(.*?)\]\]", link_casing_healer, content)
+        
+        if changed:
+            print(f"[SelfHeal] Healed case-mismatched links in: {file_path.name}")
+            file_path.write_text(healed_content, encoding="utf-8")
+
 

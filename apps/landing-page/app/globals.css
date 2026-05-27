@@ -5,7 +5,7 @@
   --spacing-section-lg: 8rem;
   --spacing-section-sm: 6rem;
 
-  --font-sans: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-inter: var(--font-sans);
   --font-mono: var(--font-sans);
 
@@ -159,7 +159,7 @@ html {
 
 @layer base {
   body {
-    @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary font-inter;
+    @apply bg-background text-on-surface antialiased selection:bg-primary selection:text-on-primary font-sans;
     height: auto;
     min-height: 100vh;
     overflow-x: clip;
@@ -170,8 +170,12 @@ html {
     transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
   }
 
-  code, pre, kbd, samp, input, textarea {
-    font-family: var(--font-inter) !important;
+  code, pre, kbd, samp {
+    font-family: var(--font-sans) !important;
+  }
+
+  input, textarea {
+    font-family: var(--font-sans) !important;
   }
 
   section, footer {

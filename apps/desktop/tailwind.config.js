@@ -67,8 +67,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+        sans: ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],
       },
     },
   },

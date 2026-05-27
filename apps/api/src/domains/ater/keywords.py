@@ -201,15 +201,22 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 existing_contexts.append(new_context)
             existing["source_context"] = "\n\n".join(existing_contexts)
             
-            # Union pages, sort in ascending order
-            existing_pages = set()
-            for p in existing["source_pages"]:
+            # Union pages while preserving priority order
+            seen_pages = set()
+            merged_pages = []
+            for p in existing.get("source_pages", []):
                 if str(p).isdigit():
-                    existing_pages.add(int(p))
+                    p_int = int(p)
+                    if p_int not in seen_pages:
+                        seen_pages.add(p_int)
+                        merged_pages.append(p_int)
             for p in (note.get("source_pages") or []):
                 if str(p).isdigit():
-                    existing_pages.add(int(p))
-            existing["source_pages"] = sorted(list(existing_pages))
+                    p_int = int(p)
+                    if p_int not in seen_pages:
+                        seen_pages.add(p_int)
+                        merged_pages.append(p_int)
+            existing["source_pages"] = merged_pages
             
             # Deduplicate prerequisites
             existing_prereqs = set(existing["prerequisites"])
@@ -232,8 +239,21 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     result = list(merged.values())
 
-    # ── BUDGET CAP (Hard Limit: 30 notes max for any PDF) ──────────────────────
-    MAX_NOTES = 30
+    # ── BUDGET CAP (Dynamic Sweet Spot) ──────────────────────
+    # Dynamically scale MAX_NOTES based on the total unique pages scanned in the document.
+    all_pages = set()
+    for note in result:
+        for p in note.get("source_pages", []):
+            if str(p).isdigit():
+                all_pages.add(int(p))
+    # Formula for sweet spot: smoother scaling curve across short/medium/long documents to find the absolute sweet spot.
+    total_pages = len(all_pages)
+    if total_pages > 0:
+        dynamic_cap = max(3, min(30, int(total_pages * 0.8) + 3))
+    else:
+        dynamic_cap = 10
+    
+    MAX_NOTES = dynamic_cap
     if len(result) > MAX_NOTES:
         # Build prerequisite centrality map: how many notes list each concept as a dependency
         prereq_counts: Dict[str, int] = {}

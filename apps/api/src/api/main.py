@@ -2463,6 +2463,264 @@ async def vault_generation_status():
     return {"status": _vault_status}
 
 
+# ── ACADEMIC CORE UPGRADES (v33.1) ──
+
+@app.post("/api/ater/notes/regenerate-quiz")
+async def regenerate_note_quiz(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    note_path = payload.get("note_path")
+    if not note_path:
+        raise HTTPException(status_code=400, detail="note_path is required")
+    try:
+        from src.domains.ater.service import AterService
+        service = AterService(secrets)
+        res = await service.generate_practice("all", {"selectedAtomicNotes": [note_path], "question_count": 3})
+        return {"success": True, "questions": res.get("questions", [])}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/practice/gaps")
+async def get_practice_gaps(
+    hub_id: str = Query(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+    try:
+        from src.domains.ater.gap_detector import KnowledgeGapDetector
+        detector = KnowledgeGapDetector(Path(secrets.vault_path), db_path)
+        gaps = detector.detect_gaps(hub_id)
+        return {"gaps": gaps}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/practice/schedule")
+async def get_practice_schedule(
+    budget: int = Query(30),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+    try:
+        from src.domains.ater.scheduler import StudyScheduler
+        scheduler = StudyScheduler(Path(secrets.vault_path), db_path)
+        plan = scheduler.generate_plan(budget)
+        return plan
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/practice/exam")
+async def create_practice_exam(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    hub_ids = payload.get("hub_ids") or []
+    config = payload.get("config") or {}
+    try:
+        from src.domains.ater.exam_engine import ExamEngine
+        engine = ExamEngine(Path(secrets.vault_path))
+        exam = await engine.create_exam(hub_ids, config, secrets)
+        return exam
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/practice/exam/{exam_id}/submit")
+async def submit_practice_exam(
+    exam_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    answers = payload.get("answers") or {}
+    try:
+        from src.domains.ater.exam_engine import ExamEngine
+        engine = ExamEngine(Path(secrets.vault_path))
+        report = engine.grade_exam(exam_id, answers)
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/practice/exam/{exam_id}/report")
+async def get_practice_exam_report(
+    exam_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    try:
+        from src.domains.ater.academic_db import AcademicDB
+        db = AcademicDB(Path(secrets.vault_path))
+        session = db.get_exam_session(exam_id)
+        if not session or not session.get("report"):
+            raise HTTPException(status_code=404, detail="Exam report not found")
+        return session["report"]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/oracle/tutor/{note_path:path}")
+async def oracle_tutor_session(
+    note_path: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    user_message = payload.get("message")
+    session_id = payload.get("session_id")
+    if not user_message:
+        raise HTTPException(status_code=400, detail="message is required")
+    try:
+        from src.domains.ater.tutor import SocraticTutor
+        tutor = SocraticTutor(Path(secrets.vault_path))
+        res = await tutor.chat(note_path, user_message, session_id, secrets)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/vault/semantic-search")
+async def get_vault_semantic_search(
+    query: str = Query(...),
+    limit: int = Query(5),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    try:
+        from src.domains.ater.vault_indexer import VaultIndexer
+        indexer = VaultIndexer(Path(secrets.vault_path))
+        indexer.index_vault()
+        results = indexer.semantic_search(query, limit)
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ater/notes/{note_path:path}/versions")
+async def get_note_versions(
+    note_path: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    try:
+        from src.domains.ater.academic_db import AcademicDB
+        db = AcademicDB(Path(secrets.vault_path))
+        versions = db.get_versions(note_path)
+        return {"versions": versions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ater/notes/{note_path:path}/restore")
+async def restore_note_version(
+    note_path: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    version_id = payload.get("version_id")
+    if version_id is None:
+        raise HTTPException(status_code=400, detail="version_id is required")
+    try:
+        from src.domains.ater.academic_db import AcademicDB
+        db = AcademicDB(Path(secrets.vault_path))
+        version = db.get_version_by_id(version_id)
+        if not version:
+            raise HTTPException(status_code=404, detail="Version not found")
+        full_path = Path(secrets.vault_path) / note_path
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(version["content"])
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ater/synthesis")
+async def post_ater_synthesis(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    note_paths = payload.get("note_paths") or []
+    if not note_paths:
+        raise HTTPException(status_code=400, detail="note_paths is required")
+    try:
+        from src.domains.ater.synthesizer import DocumentSynthesizer
+        synthesizer = DocumentSynthesizer(Path(secrets.vault_path))
+        synthesis = await synthesizer.generate_synthesis(note_paths, secrets)
+        return {"synthesis": synthesis}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ater/essay-feedback")
+async def post_essay_feedback(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    essay_text = payload.get("essay_text")
+    course_context = payload.get("course_context", "")
+    if not essay_text:
+        raise HTTPException(status_code=400, detail="essay_text is required")
+    try:
+        from src.domains.ater.essay_evaluator import EssayEvaluator
+        evaluator = EssayEvaluator(Path(secrets.vault_path))
+        result = await evaluator.evaluate_essay(essay_text, course_context, secrets)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ater/hub/{hub_id}/export")
+async def post_export_pack(
+    hub_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    output_filename = payload.get("filename", f"{hub_id}_pack.zip")
+    output_zip_path = Path(secrets.vault_path) / ".ater" / "exports" / output_filename
+    db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+    try:
+        from src.domains.ater.study_packs import StudyPackManager
+        pack_manager = StudyPackManager(Path(secrets.vault_path), db_path)
+        pack_manager.export_pack(hub_id, output_zip_path)
+        return {"success": True, "pack_path": output_zip_path.as_posix()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ater/hub/import")
+async def post_import_pack(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    pack_path = payload.get("pack_path")
+    conflict_strategy = payload.get("conflict_strategy", "overwrite")
+    if not pack_path:
+        raise HTTPException(status_code=400, detail="pack_path is required")
+    db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+    try:
+        from src.domains.ater.study_packs import StudyPackManager
+        pack_manager = StudyPackManager(Path(secrets.vault_path), db_path)
+        res = pack_manager.import_pack(Path(pack_path), conflict_strategy)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ater Sidecar API")
     parser.add_argument("--port", type=int, default=int(os.environ.get("API_PORT", "8765")), help="Port to run the API on")

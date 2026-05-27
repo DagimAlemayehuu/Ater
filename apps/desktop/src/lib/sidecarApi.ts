@@ -7,6 +7,7 @@
 
 import { load } from '@tauri-apps/plugin-store'
 import { invoke } from '@tauri-apps/api/core'
+import { useSecurityStore } from '@/context/securityStore'
 
 const STORE_FILENAME = 'ater_config.json'
 let isInitialized = false
@@ -722,6 +723,9 @@ export const sidecarApi = {
         }
     }): Promise<Response> => {
         try {
+            if (useSecurityStore.getState().isFeatureLocked('oracle-chat')) {
+                throw new Error("ACCESS_DENIED: Module [oracle-chat] restricted by controller.");
+            }
             const port = await invoke<number>('get_sidecar_port');
             const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} });
             

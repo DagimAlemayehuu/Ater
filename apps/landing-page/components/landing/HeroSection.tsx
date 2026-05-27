@@ -32,7 +32,7 @@ export function HeroSection() {
       <div className="industrial-container flex flex-col items-center justify-center gap-4 sm:gap-6 w-full py-6 md:py-8 flex-1">
         <div className="flex flex-col items-start justify-center gap-4 w-full">
           <motion.h1 
-            className="text-display-hero border-b border-outline-variant pb-2 text-left w-full uppercase flex font-black"
+            className="text-display-hero border-b border-outline-variant pb-2 text-left w-full uppercase flex flex-wrap font-black"
             initial="hidden"
             animate="visible"
             variants={{

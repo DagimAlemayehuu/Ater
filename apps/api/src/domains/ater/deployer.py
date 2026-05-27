@@ -108,9 +108,32 @@ class AterDeployer:
             yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
             full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
             
+            # Versioning and Embedding Indexing Hooks
+            try:
+                rel_path = target_path.relative_to(self.vm.vault_path).as_posix()
+            except Exception:
+                rel_path = str(target_path)
+
+            if target_path.exists():
+                try:
+                    from .academic_db import AcademicDB
+                    academic_db = AcademicDB(self.vm.vault_path)
+                    with open(target_path, "r", encoding="utf-8") as f:
+                        old_content = f.read()
+                    academic_db.save_version(rel_path, old_content)
+                except Exception as ve:
+                    print(f"[Ater Deployer] Versioning failed: {ve}")
+
             # Physical Write
             self.vm.write_note(target_path, full_content)
-            
+
+            try:
+                from .vault_indexer import VaultIndexer
+                indexer = VaultIndexer(self.vm.vault_path)
+                indexer.index_note(rel_path, full_content)
+            except Exception as ie:
+                print(f"[Ater Deployer] Indexing failed: {ie}")
+
             try:
                 display_path = target_path.relative_to(self.vm.vault_path).as_posix()
             except Exception:
@@ -149,10 +172,34 @@ class AterDeployer:
         # ── TITLE ENFORCEMENT ──
         meta["title"] = target_path.stem
 
-        # ── WRITE ──
+        # Versioning and Embedding Indexing Hooks
+        try:
+            rel_path = target_path.relative_to(self.vm.vault_path).as_posix()
+        except Exception:
+            rel_path = str(target_path)
+
+        if target_path.exists():
+            try:
+                from .academic_db import AcademicDB
+                academic_db = AcademicDB(self.vm.vault_path)
+                with open(target_path, "r", encoding="utf-8") as f:
+                    old_content = f.read()
+                academic_db.save_version(rel_path, old_content)
+            except Exception as ve:
+                print(f"[Ater Deployer] Hub versioning failed: {ve}")
+
+        # Re-assemble note with normalized YAML
         yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
         full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
+
         self.vm.write_note(target_path, full_content)
+
+        try:
+            from .vault_indexer import VaultIndexer
+            indexer = VaultIndexer(self.vm.vault_path)
+            indexer.index_note(rel_path, full_content)
+        except Exception as ie:
+            print(f"[Ater Deployer] Hub indexing failed: {ie}")
         
         try:
             display_path = target_path.relative_to(self.vm.vault_path).as_posix()
@@ -273,7 +320,14 @@ class AterDeployer:
             # ── SOURCE PAGES ──
             page_matches = re.findall(r"\[PAGE\s+(\d+)\]", content, re.IGNORECASE)
             if page_matches:
-                meta["source_pages"] = sorted(set(int(p) for p in page_matches))
+                seen_p = set()
+                ordered_pages = []
+                for p in page_matches:
+                    p_int = int(p)
+                    if p_int not in seen_p:
+                        seen_p.add(p_int)
+                        ordered_pages.append(p_int)
+                meta["source_pages"] = ordered_pages
             else:
                 # Robust flattening for nested list artifacts (e.g., [[8, 9]])
                 raw_pages = meta.get("source_pages") or meta.get("source_page")
@@ -293,7 +347,14 @@ class AterDeployer:
                         return []
                     
                     flattened = flatten_to_ints(raw_pages)
-                    meta["source_pages"] = sorted(set(flattened))
+                    seen_p = set()
+                    ordered_pages = []
+                    for p in flattened:
+                        p_int = int(p)
+                        if p_int not in seen_p:
+                            seen_p.add(p_int)
+                            ordered_pages.append(p_int)
+                    meta["source_pages"] = ordered_pages
                 else:
                     meta.setdefault("source_pages", [])
             
@@ -353,10 +414,30 @@ class AterDeployer:
             # ── TITLE ENFORCEMENT ──
             meta["title"] = target_path.stem
 
-            # ── WRITE ──
-            yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
-            full_content = f"---\n{yaml_content}\n---\n\n{content.strip()}\n"
+            # Versioning and Embedding Indexing Hooks
+            try:
+                rel_path = target_path.relative_to(self.vm.vault_path).as_posix()
+            except Exception:
+                rel_path = str(target_path)
+
+            if target_path.exists():
+                try:
+                    from .academic_db import AcademicDB
+                    academic_db = AcademicDB(self.vm.vault_path)
+                    with open(target_path, "r", encoding="utf-8") as f:
+                        old_content = f.read()
+                    academic_db.save_version(rel_path, old_content)
+                except Exception as ve:
+                    print(f"[Ater Deployer] Batch versioning failed: {ve}")
+
             self.vm.write_note(target_path, full_content)
+
+            try:
+                from .vault_indexer import VaultIndexer
+                indexer = VaultIndexer(self.vm.vault_path)
+                indexer.index_note(rel_path, full_content)
+            except Exception as ie:
+                print(f"[Ater Deployer] Batch indexing failed: {ie}")
 
             try:
                 display_path = target_path.relative_to(self.vm.vault_path).as_posix()

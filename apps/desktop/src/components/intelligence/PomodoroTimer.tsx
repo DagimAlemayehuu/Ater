@@ -27,7 +27,7 @@ export default function PomodoroTimer() {
   const currentSettingsTime = mode === 'focus' ? settings.focus : (mode === 'short_break' ? settings.shortBreak : settings.longBreak);
 
   return (
-    <div className="flex flex-col items-center justify-between p-8 bg-bento-panel border border-border/40 shadow-2xl w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-[12px]">
+    <div className="flex flex-col items-center justify-between p-8 bg-bento-panel border border-border/40 shadow-2xl w-[400px] h-[400px] relative overflow-hidden text-foreground rounded-[12px] font-sans">
       {/* Header */}
       <div className="w-full flex items-center justify-between z-10">
         <button onClick={() => setShowOverlay(false)} className="h-9 w-9 flex items-center justify-center bg-muted/20 hover:bg-bento-item rounded-[8px] transition-all border border-border/40 hover:border-foreground/30 text-muted-foreground/60 hover:text-foreground">
@@ -57,10 +57,10 @@ export default function PomodoroTimer() {
       {/* Main Content - Time occupies most space */}
       <div className="flex flex-col items-center flex-1 justify-center w-full relative">
         <div className="flex flex-col items-center w-full text-center">
-          <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.4em] mb-4 w-full">
+          <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.4em] mb-4 w-full font-sans">
             {currentHub || 'FOCUS SESSION'}
           </span>
-          <div className="text-[110px] font-black tabular-nums tracking-[-0.06em] leading-none mb-4 text-foreground font-mono">
+          <div className="text-[110px] font-black tabular-nums tracking-[-0.06em] leading-none mb-4 text-foreground font-sans">
             {formatTime(timeLeft)}
           </div>
 

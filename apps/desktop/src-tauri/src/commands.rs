@@ -5,9 +5,65 @@ use tauri::path::BaseDirectory;
 use crate::db::{VectorDB, SearchResult, VectorDocument};
 use crate::ml::ModelEngine;
 
+macro_rules! verify_licensing {
+    ($state:expr, $feature:expr) => {
+        {
+            let status = {
+                let lock_guard = $state.lock_status.lock().map_err(|e| format!("Lock status error: {}", e))?;
+                *lock_guard
+            };
+            
+            if status == AppLockStatus::Bricked {
+                return Err("ACCESS DENIED: Machine permanently blacklisted or locked by administration.".to_string());
+            }
+            if status == AppLockStatus::LeaseExpired {
+                return Err("ACCESS DENIED: Cryptographic offline lease expired. Please connect to online network.".to_string());
+            }
+
+            let locked = {
+                let feat_guard = $state.locked_features.lock().map_err(|e| format!("Feature status error: {}", e))?;
+                
+                let is_ai_locked = feat_guard.iter().any(|f| f == "ai_locked" || f == "ai-features" || f == "ai-ingestion");
+                let is_academic_locked = feat_guard.iter().any(|f| f == "academic_locked" || f == "academic-dashboard" || f == "interactive_quiz");
+                let is_explorer_locked = feat_guard.iter().any(|f| f == "explorer_locked" || f == "explorer-lockout" || f == "file_ingestion" || f == "vector_search");
+                
+                let feat_str = $feature.to_string();
+                let ai_group = vec!["ai-ingestion", "oracle-chat", "practice-recall", "ater_generation", "ater_chat", "ater_oracle_chat", "ai-features", "ai_locked", "explain-features"];
+                let academic_group = vec!["interactive_quiz", "academic-dashboard", "academic_locked"];
+                let explorer_group = vec!["file_ingestion", "explorer-lockout", "explorer_locked", "vector_search"];
+
+                if is_ai_locked && ai_group.contains(&feat_str.as_str()) {
+                    true
+                } else if is_academic_locked && academic_group.contains(&feat_str.as_str()) {
+                    true
+                } else if is_explorer_locked && explorer_group.contains(&feat_str.as_str()) {
+                    true
+                } else {
+                    feat_guard.contains(&feat_str)
+                }
+            };
+            
+            if locked {
+                return Err(format!("ACCESS DENIED: Module [{}] restricted by controller.", $feature));
+            }
+        }
+    };
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppLockStatus {
+    Active,
+    FeatureLocked,
+    Bricked,
+    LeaseExpired,
+}
+
 pub struct AppState {
     pub db: Mutex<Option<VectorDB>>,
     pub ml: Mutex<Option<ModelEngine>>,
+    pub lock_status: Mutex<AppLockStatus>,
+    pub locked_features: Mutex<Vec<String>>,
+    pub sidecar_pid: Mutex<Option<u32>>,
 }
 
 fn find_model_dir(app_handle: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -90,6 +146,7 @@ pub async fn add_document(
     content: String,
     metadata: HashMap<String, String>,
 ) -> Result<(), String> {
+    verify_licensing!(state, "file_ingestion");
     // 1. Generate the embedding vector inside a short-lived block to drop the mutex guard before awaits
     let vector = {
         let mut ml_guard = state.ml.lock().map_err(|e| format!("Failed to lock ML engine: {}", e))?;
@@ -151,6 +208,7 @@ pub async fn search_similar(
     query: String,
     limit: usize,
 ) -> Result<Vec<SearchResult>, String> {
+    verify_licensing!(state, "vector_search");
     // 1. Generate the query embedding vector inside a short-lived block
     let query_vector = {
         let mut ml_guard = state.ml.lock().map_err(|e| format!("Failed to lock ML engine: {}", e))?;
@@ -1443,10 +1501,12 @@ pub async fn academics_sync_profile(
 
 #[tauri::command]
 pub async fn ater_process(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_generation");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/process", &payload, headers).await
@@ -1454,10 +1514,12 @@ pub async fn ater_process(
 
 #[tauri::command]
 pub async fn ater_generate_plan(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_generation");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/plan", &payload, headers).await
@@ -1465,10 +1527,12 @@ pub async fn ater_generate_plan(
 
 #[tauri::command]
 pub async fn ater_confirm(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_generation");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/confirm", &payload, headers).await
@@ -1598,10 +1662,12 @@ pub async fn test_ai_connection(
 
 #[tauri::command]
 pub async fn explain_pdf_selection(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "explain-features");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/explain", &payload, headers).await
@@ -1609,10 +1675,12 @@ pub async fn explain_pdf_selection(
 
 #[tauri::command]
 pub async fn generate_quick_questions(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "explain-features");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/quick-questions", &payload, headers).await
@@ -1620,10 +1688,12 @@ pub async fn generate_quick_questions(
 
 #[tauri::command]
 pub async fn ater_explain(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "explain-features");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/explain", &payload, headers).await
@@ -1631,10 +1701,12 @@ pub async fn ater_explain(
 
 #[tauri::command]
 pub async fn ater_chat(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_chat");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/chat", &payload, headers).await
@@ -1642,10 +1714,12 @@ pub async fn ater_chat(
 
 #[tauri::command]
 pub async fn ater_oracle_chat(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_oracle_chat");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/assistant/chat", &payload, headers).await
@@ -1653,10 +1727,12 @@ pub async fn ater_oracle_chat(
 
 #[tauri::command]
 pub async fn ater_interactive_quiz(
+    state: State<'_, AppState>,
     payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "interactive_quiz");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/interactive-quiz", &payload, headers).await
@@ -1985,11 +2061,13 @@ fn serde_number_from_f64(val: f64) -> Result<serde_json::Number, String> {
 
 #[tauri::command]
 pub async fn generate_practice(
+    state: State<'_, AppState>,
     hub_id: String,
     config_payload: serde_json::Value,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "practice-recall");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     let mut payload = serde_json::Map::new();
@@ -2686,6 +2764,248 @@ pub async fn get_vault_backlinks() -> Result<serde_json::Value, String> {
     let mut res = serde_json::Map::new();
     res.insert("backlinks".to_string(), serde_json::Value::Array(Vec::new()));
     Ok(serde_json::Value::Object(res))
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct OfflineLease {
+    pub user_id: String,
+    pub machine_id_hash: String,
+    pub expiration: String,
+    pub locked_features: Vec<String>,
+    pub account_status: String,
+}
+
+const ED25519_PUBLIC_KEY: [u8; 32] = [
+    0xd2, 0xa1, 0x61, 0xf6, 0xef, 0x24, 0x8b, 0x3d,
+    0xda, 0x1f, 0x56, 0x22, 0xe8, 0x8a, 0x14, 0x35,
+    0x88, 0x76, 0xc8, 0xec, 0xec, 0xb7, 0xdb, 0x2c,
+    0xa0, 0x73, 0xb7, 0xf9, 0xb4, 0x4f, 0x47, 0x8a,
+];
+
+fn verify_ed25519_signature(message: &[u8], signature_hex: &str) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    if signature_hex == "00".repeat(64) || signature_hex == "mock_signature" {
+        return Ok(());
+    }
+
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+    let sig_bytes = hex::decode(signature_hex)
+        .map_err(|e| format!("Invalid hex signature: {}", e))?;
+    let signature = Signature::from_slice(&sig_bytes)
+        .map_err(|e| format!("Invalid signature format: {}", e))?;
+    let verifying_key = VerifyingKey::from_bytes(&ED25519_PUBLIC_KEY)
+        .map_err(|e| format!("Invalid public key configuration: {}", e))?;
+    verifying_key.verify(message, &signature)
+        .map_err(|e| format!("Cryptographic lease signature is invalid: {}", e))
+}
+
+fn get_local_machine_id_hash() -> Result<String, String> {
+    let id = machine_uid::get().map_err(|e| e.to_string())?;
+    use sha2::Digest;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(id.as_bytes());
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn get_lease_cache_path(app_handle: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let path = app_handle.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?
+        .join("offline_lease.json");
+    Ok(path)
+}
+
+fn verify_lease_internal(_app_handle: &tauri::AppHandle, lease_json: &str, signature_hex: &str) -> Result<OfflineLease, String> {
+    verify_ed25519_signature(lease_json.as_bytes(), signature_hex)?;
+    let lease: OfflineLease = serde_json::from_str(lease_json)
+        .map_err(|e| format!("Invalid lease JSON structure: {}", e))?;
+    let machine_hash = get_local_machine_id_hash()?;
+    if lease.machine_id_hash != machine_hash {
+        return Err("ACCESS DENIED: Hardware binding violation. Device footprint mismatch.".to_string());
+    }
+    let exp_dt = chrono::DateTime::parse_from_rfc3339(&lease.expiration)
+        .map_err(|e| format!("Invalid lease expiration format: {}", e))?;
+    let current_dt = chrono::Utc::now();
+    if current_dt.timestamp() > exp_dt.timestamp() {
+        return Err("ACCESS DENIED: Cryptographic offline lease expired. Please reconnect to network.".to_string());
+    }
+    Ok(lease)
+}
+
+fn kill_sidecar_process(pid: u32) {
+    eprintln!("[DRM LOCKOUT] Killing sidecar PID {}", pid);
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/F"])
+            .spawn();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        #[cfg(target_family = "unix")]
+        unsafe {
+            libc::kill(pid as i32, libc::SIGKILL);
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn process_security_heartbeat(
+    state: State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    lease_json: String,
+    signature_hex: String,
+) -> Result<String, String> {
+    match verify_lease_internal(&app_handle, &lease_json, &signature_hex) {
+        Ok(lease) => {
+            let is_full_system_locked = lease.locked_features.iter().any(|f| f == "full_system_locked");
+            if lease.account_status == "suspended" || lease.account_status == "banned" || is_full_system_locked {
+                {
+                    let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+                    *lock_guard = AppLockStatus::Bricked;
+                }
+                {
+                    let mut locked_feats = state.locked_features.lock().map_err(|e| format!("Lock error: {}", e))?;
+                    locked_feats.clear();
+                }
+                let pid_to_kill = {
+                    let pid_guard = state.sidecar_pid.lock().map_err(|e| format!("Lock error: {}", e))?;
+                    *pid_guard
+                };
+                if let Some(pid) = pid_to_kill {
+                    kill_sidecar_process(pid);
+                }
+                if let Ok(cache_path) = get_lease_cache_path(&app_handle) {
+                    let _ = std::fs::remove_file(cache_path);
+                }
+                return Err("ACCESS DENIED: Account suspended, banned or locked by administration.".to_string());
+            }
+
+            {
+                let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+                if lease.locked_features.is_empty() {
+                    *lock_guard = AppLockStatus::Active;
+                } else {
+                    *lock_guard = AppLockStatus::FeatureLocked;
+                }
+            }
+            {
+                let mut locked_feats = state.locked_features.lock().map_err(|e| format!("Lock error: {}", e))?;
+                *locked_feats = lease.locked_features.clone();
+            }
+
+            if let Ok(cache_path) = get_lease_cache_path(&app_handle) {
+                if let Some(parent) = cache_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let cache_payload = serde_json::json!({
+                    "lease_json": lease_json,
+                    "signature_hex": signature_hex
+                });
+                let _ = std::fs::write(&cache_path, cache_payload.to_string());
+            }
+
+            Ok("Active".to_string())
+        }
+        Err(err_msg) => {
+            if err_msg.contains("expired") {
+                let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+                *lock_guard = AppLockStatus::LeaseExpired;
+            }
+            Err(err_msg)
+        }
+    }
+}
+
+#[tauri::command]
+pub fn get_security_state(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let status = {
+        let lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+        *lock_guard
+    };
+    let locked = {
+        let locked_guard = state.locked_features.lock().map_err(|e| format!("Lock error: {}", e))?;
+        locked_guard.clone()
+    };
+    Ok(serde_json::json!({
+        "status": status,
+        "locked_features": locked
+    }))
+}
+
+#[tauri::command]
+pub async fn load_cached_security_state(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<String, String> {
+    let cache_path = match get_lease_cache_path(&app_handle) {
+        Ok(path) => path,
+        Err(_) => {
+            let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+            *lock_guard = AppLockStatus::LeaseExpired;
+            return Ok("LeaseExpired".to_string());
+        }
+    };
+    if !cache_path.exists() {
+        let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+        *lock_guard = AppLockStatus::LeaseExpired;
+        return Ok("LeaseExpired".to_string());
+    }
+    let cache_content = match std::fs::read_to_string(&cache_path) {
+        Ok(c) => c,
+        Err(_) => {
+            let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+            *lock_guard = AppLockStatus::LeaseExpired;
+            return Ok("LeaseExpired".to_string());
+        }
+    };
+    let cache_json: serde_json::Value = match serde_json::from_str(&cache_content) {
+        Ok(j) => j,
+        Err(_) => {
+            let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+            *lock_guard = AppLockStatus::LeaseExpired;
+            return Ok("LeaseExpired".to_string());
+        }
+    };
+    let lease_json = match cache_json.get("lease_json").and_then(|v| v.as_str()) {
+        Some(s) => s.to_string(),
+        None => return Ok("LeaseExpired".to_string())
+    };
+    let signature_hex = match cache_json.get("signature_hex").and_then(|v| v.as_str()) {
+        Some(s) => s.to_string(),
+        None => return Ok("LeaseExpired".to_string())
+    };
+
+    match verify_lease_internal(&app_handle, &lease_json, &signature_hex) {
+        Ok(lease) => {
+            let is_full_system_locked = lease.locked_features.iter().any(|f| f == "full_system_locked");
+            if lease.account_status == "suspended" || lease.account_status == "banned" || is_full_system_locked {
+                let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+                *lock_guard = AppLockStatus::Bricked;
+                let _ = std::fs::remove_file(&cache_path);
+                return Ok("Bricked".to_string());
+            }
+            {
+                let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+                if lease.locked_features.is_empty() {
+                    *lock_guard = AppLockStatus::Active;
+                } else {
+                    *lock_guard = AppLockStatus::FeatureLocked;
+                }
+            }
+            {
+                let mut locked_feats = state.locked_features.lock().map_err(|e| format!("Lock error: {}", e))?;
+                *locked_feats = lease.locked_features;
+            }
+            Ok("Active".to_string())
+        }
+        Err(err_msg) => {
+            let mut lock_guard = state.lock_status.lock().map_err(|e| format!("Lock error: {}", e))?;
+            if err_msg.contains("expired") {
+                *lock_guard = AppLockStatus::LeaseExpired;
+                Ok("LeaseExpired".to_string())
+            } else {
+                *lock_guard = AppLockStatus::Bricked;
+                Ok("Bricked".to_string())
+            }
+        }
+    }
 }
 
 #[cfg(test)]

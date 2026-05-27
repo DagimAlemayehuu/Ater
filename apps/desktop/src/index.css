@@ -82,11 +82,15 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
 
-  code, pre, kbd, samp, input, textarea {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  code, pre, kbd, samp {
+    font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+  }
+
+  input, textarea {
+    font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif !important;
   }
 
   html,

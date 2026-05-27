@@ -81,6 +81,136 @@ ATER_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limi
 ATER_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
 MAX_SOURCE_CHARS = 80000  # Characters to include in prompt (Lowered for 30k TPM Free Tier)
 
+def determine_dynamic_question_count(note_title: str, modality: str, source_snippet: str, prerequisites_count: int) -> int:
+    snippet_len = len(source_snippet or "")
+    if snippet_len > 1800:
+        base_count = 4
+    elif snippet_len < 600:
+        base_count = 2
+    else:
+        base_count = 3
+        
+    # Boost count for high-complexity modalities or deep dependency nodes
+    if modality in ["Quantitative", "Procedural"] or prerequisites_count >= 2:
+        base_count = min(4, base_count + 1)
+        
+    return base_count
+
+def select_dynamic_question_types(note_title: str, modality: str, source_snippet: str, count: int, mode: str = "ACADEMIC-GENERAL") -> List[str]:
+    snippet_lower = (source_snippet or "").lower()
+    title_lower = (note_title or "").lower()
+    
+    # 1. Code detection heuristic
+    code_words = ["def ", "class ", "function ", "fn ", "let ", "const ", "var ", "return ", "struct ", "import ", "lambda", "print("]
+    has_code = any(w in (source_snippet or "") for w in code_words) or any(w in title_lower for w in ["code", "program", "algor", "function", "variable", "object", "pointer"])
+    
+    # 2. Math/LaTeX/Number detection heuristic
+    has_math = "$" in (source_snippet or "") or any(char.isdigit() for char in snippet_lower) or any(w in title_lower for w in ["math", "formula", "equation", "deriv", "calculat", "matrix", "rate", "probab", "statist", "cost", "price", "elasticity"])
+
+    # Initialize base scores for each of the 13 types available in the practice tab
+    scores = {
+        "mcq": 1.0,
+        "true_false": 1.0,
+        "writing": 1.2,       # slightly favor writing/synthesis for concept mastery
+        "fill_in": 1.0,
+        "matching": 1.0,
+        "order": 1.0,
+        "debug": 1.0,
+        "synthesis": 1.2,
+        "trace": 1.0,
+        "calculation": 1.0,
+        "data_analysis": 1.0,
+        "scenario": 1.2,
+        "code": 1.0
+    }
+
+    # Filter based on domain mode allowed question modes
+    from .agents import DOMAIN_MATRIX
+    domain_config = DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX.get("ACADEMIC-GENERAL", {}))
+    allowed_modes = domain_config.get("question_modes", [])
+    if allowed_modes:
+        allowed_set = set(allowed_modes) | {"mcq", "true_false", "writing"}
+        if modality == "Quantitative" or has_math:
+            allowed_set.add("calculation")
+            allowed_set.add("data_analysis")
+        if has_code or modality == "Procedural":
+            allowed_set.update(["code", "debug", "trace"])
+            
+        for t in list(scores.keys()):
+            if t not in allowed_set:
+                scores[t] = -100.0
+
+    
+    # Modality alignment bonuses
+    if modality == "Quantitative":
+        scores["calculation"] += 3.0
+        scores["data_analysis"] += 2.5
+        scores["trace"] += 2.0
+        scores["mcq"] += 1.0
+        scores["code"] += 1.0
+    elif modality == "Procedural":
+        scores["trace"] += 3.0
+        scores["debug"] += 3.0
+        scores["order"] += 2.5
+        scores["code"] += 2.0
+        scores["mcq"] += 1.0
+    elif modality == "Comparative":
+        scores["matching"] += 3.0
+        scores["synthesis"] += 2.5
+        scores["scenario"] += 2.0
+        scores["writing"] += 1.5
+    elif modality == "Causal/Historical":
+        scores["order"] += 3.0
+        scores["scenario"] += 2.5
+        scores["synthesis"] += 2.0
+        scores["true_false"] += 1.5
+    elif modality == "Qualitative/Definitional":
+        scores["scenario"] += 3.0
+        scores["true_false"] += 2.0
+        scores["writing"] += 2.5
+        scores["fill_in"] += 1.5
+        scores["mcq"] += 1.0
+        
+    # Content-based heuristic bonuses
+    # 1. Code detection
+    if has_code:
+        scores["code"] += 4.0
+        scores["debug"] += 3.5
+        scores["trace"] += 3.0
+        
+    # 2. Math/LaTeX/Number detection
+    if has_math:
+        scores["calculation"] += 4.0
+        scores["data_analysis"] += 3.0
+        
+    # 3. Step/Sequence detection
+    step_words = ["step ", "first", "second", "third", "then", "finally", "workflow", "pipeline", "lifecycle", "sequence", "stage", "phase"]
+    has_steps = any(w in snippet_lower for w in step_words) or any(w in title_lower for w in ["step", "process", "flow", "sequence", "lifecycle", "pipeline"])
+    if has_steps:
+        scores["order"] += 3.0
+        scores["trace"] += 2.5
+        
+    # 4. Comparison detection
+    comp_words = ["versus", "vs", "compare", "contrast", "differ", "analogy", "similar", "unlike", "alternative", "advantage", "disadvantage", "trade-off", "tradeoff"]
+    has_comp = any(w in snippet_lower for w in comp_words) or any(w in title_lower for w in ["vs", "compare", "contrast", "differ", "tradeoff"])
+    if has_comp:
+        scores["matching"] += 3.5
+        scores["synthesis"] += 3.0
+        
+    # Sort types by scores descending
+    sorted_types = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    
+    # Pick the top unique types
+    selected = []
+    for t, score in sorted_types:
+        if len(selected) < count:
+            selected.append(t)
+            
+    while len(selected) < count:
+        selected.append("mcq")
+        
+    return selected
+
 class SynthesisNoteResponse(BaseModel):
     integrated_analogy: str = Field(description="Exactly 3-5 sentences of a vivid, concrete, integrated analogy explaining how the member concepts interact. Bullet points are prohibited.")
     comparative_breakdown: str = Field(description="Continuous prose comparing and contrasting the trade-offs, similarities, and differences of the member concepts. Do NOT use bullet points.")
@@ -1111,6 +1241,30 @@ class AterService:
                             continue
                     notes_to_process.append(note_path)
 
+            if config.prioritizeWeaknesses:
+                try:
+                    inbox_dir = Path(self.secrets.inbox_path) if self.secrets.inbox_path else Path(self.vm.vault_path) / "Inbox"
+                    db_path = inbox_dir / "ater_queue.db"
+                    if db_path.exists():
+                        from .analytics import AnalyticsEngine
+                        engine = AnalyticsEngine(db_path)
+                        note_rel_paths = []
+                        path_map = {}
+                        for p in notes_to_process:
+                            try:
+                                rel = p.relative_to(self.vm.vault_path).as_posix()
+                            except ValueError:
+                                rel = p.as_posix()
+                            note_rel_paths.append(rel)
+                            path_map[rel] = p
+                        
+                        weak_rel_paths = engine.get_weak_notes(note_rel_paths, threshold=0.75)
+                        if weak_rel_paths:
+                            weak_paths = [path_map[r] for r in weak_rel_paths if r in path_map]
+                            notes_to_process = weak_paths + [p for p in notes_to_process if p not in weak_paths]
+                except Exception as ae:
+                    logger.warning(f"Failed to prioritize weaknesses via AnalyticsEngine: {ae}")
+
             if not notes_to_process:
                  # If no specific notes selected, we might want the Hub itself
                  with open(hub_path, "r", encoding="utf-8") as f:
@@ -2057,7 +2211,7 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
                 if len(selected_pages) >= max_pages:
                     break
 
-        selected_pages = sorted(selected_pages[:max_pages])
+        selected_pages = selected_pages[:max_pages]
 
         if not selected_pages:
             return "", []
@@ -2082,7 +2236,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         if len(packet) > max_chars:
             packet = packet[:max_chars].rsplit(" ", 1)[0].strip()
 
-        source_page_anchors = sorted(set(int(p) for p in selected_pages if str(p).isdigit()))
+        # Deduplicate while preserving priority order
+        seen_p = set()
+        source_page_anchors = []
+        for p in selected_pages:
+            p_int = int(p)
+            if p_int not in seen_p:
+                seen_p.add(p_int)
+                source_page_anchors.append(p_int)
         return packet, source_page_anchors
 
     def get_active_academic_context(self) -> Dict[str, str]:
@@ -2625,6 +2786,43 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
             note["mode"] = normalize_mode(note.get("mode"), detected_mode)
             if "prerequisites" in note:
                 note["prerequisites"] = self.validator.sanitize_prerequisites(note["prerequisites"])
+        
+        # Sort notes topologically by prerequisites and page order
+        def topo_sort_notes(notes):
+            title_set = {n["title"] for n in notes}
+            in_degree = {n["title"]: 0 for n in notes}
+            adj = {n["title"]: [] for n in notes}
+            for n in notes:
+                prereqs = [p.replace("[[", "").replace("]]", "").replace(" ", "_") for p in n.get("prerequisites", [])]
+                for p in prereqs:
+                    if p in title_set and p != n["title"]:
+                        adj[p].append(n["title"])
+                        in_degree[n["title"]] += 1
+            
+            def get_min_page(n):
+                pages = [int(p) for p in n.get("source_pages", []) if str(p).isdigit()]
+                return min(pages) if pages else 9999
+            
+            queue = [n for n in notes if in_degree[n["title"]] == 0]
+            queue.sort(key=lambda x: (get_min_page(x), x["title"].lower()))
+            
+            sorted_notes = []
+            while queue:
+                curr = queue.pop(0)
+                sorted_notes.append(curr)
+                for neighbor in adj[curr["title"]]:
+                    in_degree[neighbor] -= 1
+                    if in_degree[neighbor] == 0:
+                        n_obj = next(x for x in notes if x["title"] == neighbor)
+                        queue.append(n_obj)
+                queue.sort(key=lambda x: (get_min_page(x), x["title"].lower()))
+                
+            sorted_titles = {n["title"] for n in sorted_notes}
+            remaining = [n for n in notes if n["title"] not in sorted_titles]
+            sorted_notes.extend(remaining)
+            return sorted_notes
+
+        all_atomic_notes = topo_sort_notes(all_atomic_notes)
         
         hub_note = {
             "title": canonical_hub_title,
@@ -3303,6 +3501,16 @@ generated: true"""
                                 )
                                 prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
                                 
+                                # Determine dynamic count and types of questions (2 to 4)
+                                note_modality = note_schema_dict.get("concept_modality", "Qualitative/Definitional") if note_schema_dict else "Qualitative/Definitional"
+                                prereq_len = len(note_schema.prerequisites or [])
+                                q_count = determine_dynamic_question_count(
+                                    note_schema.title, note_modality, source_snippet, prereq_len
+                                )
+                                q_modes = select_dynamic_question_types(
+                                    note_schema.title, note_modality, source_snippet, q_count, mode=note_schema.mode
+                                )
+
                                 async def generate_candidate():
                                     await self.governor.get_permit(expected_tokens=2500)
                                     try:
@@ -3311,9 +3519,9 @@ generated: true"""
                                             source_text=q_context, 
                                             mechanics="Focus on multi-step causal tracing and artifact verification.",
                                             academic_level=plan_obj.academic_level,
-                                            count=3,
+                                            count=q_count,
                                             prof_domain=prof_domain,
-                                            q_type=None
+                                            q_type=q_modes
                                         )
                                         return res
                                     except Exception as e:
@@ -3631,11 +3839,19 @@ generated: true"""
                             from .post_processing import (
                                 canonicalize_unit, infer_unit_prerequisites, enforce_gutter,
                                 audit_walkthroughs, audit_intra_links, sync_hub_connections,
-                                purge_pedagogical_artifacts, auto_weave_wikilinks
+                                purge_pedagogical_artifacts, auto_weave_wikilinks,
+                                self_heal_vault_links_and_casing
                             )
-                            unit_dir = self.vm.get_note_path({"title": hub_title, "type": "hub"}, session_metadata=session["metadata"]).parent
+                            first_note_meta = {"title": plan_obj.atomic_notes[0].title if plan_obj.atomic_notes else "Dummy", "type": "Atomic Note"}
+                            unit_dir = self.vm.get_note_path(first_note_meta, session_metadata=session["metadata"]).parent
                             print(f"[Ater Service] Running post-processing pipeline on {unit_dir}")
                             
+                            # Self-heal vault casing first
+                            try:
+                                self_heal_vault_links_and_casing(self.vm.vault_path)
+                            except Exception as she:
+                                print(f"[Ater Service] Vault self-healing failed: {she}")
+
                             # Standard cleanup
                             purge_pedagogical_artifacts(unit_dir)
                             canonicalize_unit(unit_dir)
@@ -3833,6 +4049,12 @@ generated: true"""
             if n.source_pages:
                 all_pages.extend(n.source_pages)
         
+        source_pages_range = [1]
+        if all_pages:
+            min_p = min(all_pages)
+            max_p = max(all_pages)
+            source_pages_range = list(range(min_p, max_p + 1))
+        
         metadata = {
             "title": plan.hub_note.title,
             "type": "Hub",
@@ -3840,7 +4062,7 @@ generated: true"""
             "semester": plan.semester,
             "unit": str(plan.unit),
             "source": source_link,
-            "source_pages": [1], # Always jump to page 1 for Hubs to avoid NaN range errors
+            "source_pages": source_pages_range,
             "status": "Not Started",
             "confidence": None,
             "study_date": None,

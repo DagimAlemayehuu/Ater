@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
-const FALLBACK_VERSION = 'v0.6.2';
+const FALLBACK_VERSION = 'v0.8.0';
 
 type ReleaseAsset = {
   name: string;
@@ -29,14 +30,32 @@ export function DownloadAterButton() {
         // Only fetch if we're in a browser environment
         if (typeof window === 'undefined') return;
 
-        const response = await fetch('https://api.github.com/repos/DagimAlemayehuu/Ater_Releases/releases/latest', {
-          // Add a cache header to avoid constant hitting of the API
-          next: { revalidate: 3600 } 
-        } as any);
+        const response = await fetch('https://api.github.com/repos/DagimAlemayehuu/Ater_Releases/releases/latest');
 
         if (!response.ok) {
-          console.warn(`GitHub API returned ${response.status}. Using fallback download links.`);
-          setDownloads(prev => ({ ...prev, loading: false }));
+          console.warn(`GitHub API returned ${response.status}. Using database configuration fallback.`);
+          
+          let dbVersion = FALLBACK_VERSION;
+          try {
+            const { data: settingsData } = await supabase
+              .from('app_settings')
+              .select('config')
+              .eq('id', 'global_config')
+              .single();
+            if (settingsData?.config?.engine_version) {
+              dbVersion = settingsData.config.engine_version.startsWith('v') 
+                ? settingsData.config.engine_version 
+                : `v${settingsData.config.engine_version}`;
+            }
+          } catch (e) {
+            console.error("Failed to fetch engine version from Supabase", e);
+          }
+
+          setDownloads(prev => ({ 
+            ...prev, 
+            version: dbVersion,
+            loading: false 
+          }));
           return;
         }
 
@@ -63,7 +82,28 @@ export function DownloadAterButton() {
         });
       } catch (error) {
         console.error("Failed to fetch latest Ater release", error);
-        setDownloads(prev => ({ ...prev, loading: false }));
+        
+        let dbVersion = FALLBACK_VERSION;
+        try {
+          const { data: settingsData } = await supabase
+            .from('app_settings')
+            .select('config')
+            .eq('id', 'global_config')
+            .single();
+          if (settingsData?.config?.engine_version) {
+            dbVersion = settingsData.config.engine_version.startsWith('v') 
+              ? settingsData.config.engine_version 
+              : `v${settingsData.config.engine_version}`;
+          }
+        } catch (e) {
+          console.error("Failed to fetch engine version from Supabase", e);
+        }
+
+        setDownloads(prev => ({ 
+          ...prev, 
+          version: dbVersion,
+          loading: false 
+        }));
       }
     }
     fetchLatest();

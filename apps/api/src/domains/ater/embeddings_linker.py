@@ -340,13 +340,16 @@ class EmbeddingsLinker:
             member_descriptions = [f"{t}: {notes[idx].get('description', '')}" for idx, t in zip(cluster, [notes[idx]['title'] for idx in cluster])]
             synth_desc = f"Synthesis framework for {', '.join(member_titles)}. Combines: " + " | ".join(member_descriptions)
 
-            # Union page numbers
-            synth_pages = set()
+            # Union page numbers while preserving priority order
+            source_pages = []
+            seen_pages = set()
             for idx in cluster:
                 for p in notes[idx].get("source_pages", []):
                     if str(p).isdigit():
-                        synth_pages.add(int(p))
-            source_pages = sorted(list(synth_pages))
+                        p_int = int(p)
+                        if p_int not in seen_pages:
+                            seen_pages.add(p_int)
+                            source_pages.append(p_int)
 
             # Merged source context
             contexts = []

@@ -1,0 +1,121 @@
+ const navigate = useNavigate()
+ const [searchParams, setSearchParams] = useSearchParams()
+ const activeTab = searchParams.get('tab') === 'pipeline' ? 'pipeline' : 'ater'
+ 
+ // Use Zustand for global telemetry
+ const queueStatus = useTelemetryStore(state => state.queueStatus)
+ const inboxFiles = useTelemetryStore(state => state.inboxFiles)
+ const loadingInbox = useTelemetryStore(state => state.isLoadingInbox)
+ const fetchInbox = useTelemetryStore(state => state.fetchInbox)
+ const startPolling = useTelemetryStore(state => state.startPolling)
+ const stopPolling = useTelemetryStore(state => state.stopPolling)
+ const fetchStatus = useTelemetryStore(state => state.fetchStatus)
+
+ const [selectedInboxFile, setSelectedInboxFile] = useState<any>(null)
+ const [processing, setProcessing] = useState(false)
+ const [activePlan, setActivePlan] = useState<string | null>(null)
+ const [structuredPlan, setStructuredPlan] = useState<any>(null)
+ const [sessionId, setSessionId] = useState<string | null>(null)
+ const [anchoredHub, setAnchoredHub] = useState<any>(null)
+ const [availableHubs, setAvailableHubs] = useState<any[]>([])
+ const [availableOptions, setAvailableOptions] = useState<{courses: string[], semesters: string[], units: string[]}>({courses: [], semesters: [], units: []})
+ const [curriculum, setCurriculum] = useState({course: '', unit: '', semester: '', hub_title: ''})
+ const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
+ const [isCurriculumReady, setIsCurriculumReady] = useState(false)
+ const [currentBatch, setCurrentBatch] = useState<number>(0)
+ const [totalBatches, setTotalBatches] = useState<number>(0)
+ const [isCompleted, setIsCompleted] = useState(false)
+ const [batchFeed, setBatchFeed] = useState<any[]>([])
+ const [aterError, setAterError] = useState<string | null>(null)
+ const [isAwaitingNextBatch, setIsAwaitingNextBatch] = useState(false)
+
+ const {setCenterContent, setRightContent} = useHeader()
+ const parentRef = useRef<HTMLDivElement>(null)
+ const virtualizer = useVirtualizer({
+  count: batchFeed.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 300, 
+  overscan: 5,
+ })
+
+ // Sync Header Actions
+ useEffect(() => {
+  if (activeTab === 'pipeline') {
+    const HeaderActions = (
+     <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-2.5 py-1 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+       <span>Auto-Ingest</span>
+       <button 
+        onClick={toggleAutoDeploy}
+        className={cn(
+         "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent focus:outline-none transition-colors", 
+         config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
+        )}
+       >
+        <span className={cn(
+         "pointer-events-none inline-block h-2.5 w-2.5 mt-0.5 transform rounded-full bg-bento-bg shadow ring-0 transition-transform", 
+         config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0.5'
+        )} />
+       </button>
+      </div>
+      <button 
+       onClick={() => {fetchInbox(); fetchStatus();}} 
+       className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-[8px] hover:text-foreground hover:border-foreground/30 transition-all"
+      >
+       <RefreshCw size={12} />
+      </button>
+     </div>
+    );
+    setRightContent(HeaderActions);
+  } else {
+    // Oracle View Actions
+    setRightContent(
+      <button 
+        onClick={() => {
+          localStorage.removeItem('ater_oracle_chat_history');
+          window.location.reload(); // Refresh to clear state easily
+        }}
+        className="h-8 px-3 border border-border/40 bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]"
+        title="Clear Conversation"
+      >
+        <Trash2 size={12} /> CLEAR
+      </button>
+    );
+  }
+  return () => setRightContent(null);
+ }, [config?.autoDeploy, queueStatus, activeTab]);
+
+  useEffect(() => {
+   fetchInbox();
+   startPolling(2000);
+   return () => stopPolling();
+  }, [])
+
+ const toggleAutoDeploy = async () => {
+ await saveConfig({autoDeploy: !config?.autoDeploy})
+ await sidecarApi.aterWatcherToggle()
+ fetchStatus()
+}
+
+ const resetAterSession = () => {
+ setSessionId(null)
+ setIsAwaitingConfirmation(false)
+ setIsCurriculumReady(false)
+ setIsAwaitingNextBatch(false)
+ setIsCompleted(false)
+ setActivePlan(null)
+ setStructuredPlan(null)
+ setBatchFeed([])
+ setSelectedInboxFile(null)
+ setAterError(null)
+ fetchInbox()
+}
+
+ const processSelectedFile = async (manualHubId?: string) => {
+ if (!selectedInboxFile) return
+ setProcessing(true)
+ setAterError(null)
+ setActivePlan(null)
+ setStructuredPlan(null)
+ setIsCurriculumReady(false)
+ setIsAwaitingConfirmation(false)

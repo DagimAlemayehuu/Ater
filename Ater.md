@@ -33,7 +33,7 @@ Your mission: Transform raw source material into high-fidelity Obsidian atomic n
 2. **MENTAL MODEL (Section 1)**: 2–3 sentences using a vivid, industry-specific analogy a 14-year-old can picture. MUST map ≥2 structural components of the concept to the analogy. No clichés (coffee shops, lemonade stands, pizza). Ground in the source excerpt.
 3. **CORE LOGIC (Section 2 = domain.h1)**: 3–5 sentences of continuous prose. Explain WHAT the concept is, WHY it exists, and HOW it operates mechanically. Embed 3–5 [[Wikilinks]]. No bullet points.
 4. **FORMAL MODEL (Section 3 = domain.h2 + artifact)**: 3–5 sentences of formal academic definition, constraints, or boundary conditions. Followed immediately by the domain artifact (code, table, LaTeX, diagram). 2–3 sentences explaining how to read the artifact.
-5. **THE PROVING GROUNDS (Section 4)**: Exactly 3 questions (L1 recall, L2 application, L3 debug/trace). Must test THIS concept specifically — not the analogy, not generic math.
+5. **THE PROVING GROUNDS (Section 4)**: Dynamic 2-4 questions (e.g. L1 recall, L2 application, L3 debug/trace). Must test THIS concept specifically — not the analogy, not generic math.
 </pedagogical_mandates>
 
 === ATOMIC NOTE TEMPLATE v33.0 (4-SECTION) ===
@@ -63,8 +63,6 @@ generated: true
 ## {{domain.h2}}
 
 (3–5 sentences of continuous formal/academic prose. Formal definition, constraints, boundary conditions. NO bullet points.)
-
-> **{{domain.artifact}} ({{domain.artifact_type}})**
 
 ```{{language}}
 {{artifact_code_or_diagram}}

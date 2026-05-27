@@ -226,6 +226,9 @@ class GetVaultStatsInput(BaseModel):
 class ListHubsInput(BaseModel):
     pass  # No params needed
 
+class GetHubNotesInput(BaseModel):
+    hub_id: str = Field(description="Name or ID of the study hub (e.g., '1_Understanding_International_Relations_Hub' or '1 Understanding International Relations Hub').")
+
 class RenameNoteInput(BaseModel):
     old_path: str = Field(description="Relative vault path to the existing note.")
     new_path: str = Field(description="New relative vault path or new title.")
@@ -271,6 +274,17 @@ class GenerateCustomPracticeInput(BaseModel):
     hub_id: str = Field(description="Name/ID of the study hub.")
     difficulty: str = Field(default="Mixed", description="Difficulty level ('Easy', 'Medium', 'Hard', 'Mixed').")
     preset: str = Field(default="balanced", description="Practice preset ('balanced', 'mcq_blitz', 'deep_write', 'math_mode', 'recall', 'hard_mode', 'exam_sim').")
+    question_distribution: Optional[str] = Field(default=None, description="Optional JSON string specifying custom question distribution, e.g. '{\"mcq\": 7, \"true_false\": 4, \"writing\": 4}'")
+
+class CreateExamInput(BaseModel):
+    hub_ids: List[str] = Field(description="List of study hub names/IDs to compile questions from.")
+    total_questions: int = Field(default=10, description="Total number of questions in the exam.")
+    difficulty: str = Field(default="Mixed", description="Difficulty level ('Easy', 'Medium', 'Hard', 'Mixed').")
+    question_types: Optional[Dict[str, int]] = Field(default=None, description="Optional dict specifying number of questions for each type, e.g. {'mcq': 7, 'true_false': 4, 'writing': 4}.")
+
+class GradeExamInput(BaseModel):
+    exam_id: str = Field(description="The unique identifier of the exam session being graded.")
+    student_answers: Dict[str, Any] = Field(description="A dictionary mapping question IDs to the student's answers, e.g. {'eq_1': 'A', 'eq_2': 'True', 'eq_3': 'Written response...'.}")
 
 class GetGeneratedFilesInput(BaseModel):
     pass
@@ -291,6 +305,40 @@ class ShowPracticeConfigInput(BaseModel):
 
 
 
+def get_fallback_display_name() -> str:
+    import os
+    import json
+    from pathlib import Path
+    
+    home = Path.home()
+    paths = []
+    if os.name == "nt":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            paths.extend([
+                Path(appdata) / "com.dagim.ater" / "ater_config.json",
+                Path(appdata) / "com.ater.app" / "ater_config.json"
+            ])
+    elif os.name == "posix":
+        paths.extend([
+            home / "Library" / "Application Support" / "com.dagim.ater" / "ater_config.json",
+            home / "Library" / "Application Support" / "com.ater.app" / "ater_config.json",
+            home / ".config" / "com.dagim.ater" / "ater_config.json",
+            home / ".config" / "com.ater.app" / "ater_config.json"
+        ])
+        
+    for p in paths:
+        if p.exists() and p.is_file():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                name = data.get("displayName") or data.get("display_name")
+                if name:
+                    return name
+            except Exception:
+                pass
+    return ""
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AterAssistant Class
 # ─────────────────────────────────────────────────────────────────────────────
@@ -299,6 +347,10 @@ class AterAssistant:
     def __init__(self, secrets: AppSecrets, user_context: Optional[Dict[str, Any]] = None):
         self.secrets = secrets
         self.user_context = user_context or {}
+        if not self.user_context.get("display_name"):
+            fallback_name = get_fallback_display_name()
+            if fallback_name:
+                self.user_context["display_name"] = fallback_name
         self.vault_path = secrets.vault_path
         self.academic_path = secrets.academic_path or "Notes"
 
@@ -533,50 +585,146 @@ class AterAssistant:
             return "Error: Vault path not configured."
         root = Path(self.vault_path)
         total_notes = 0
-        hubs = set()
-        db_dir = root / "database"
         for file in root.rglob("*.md"):
             if any(p.startswith(".") for p in file.parts) or ".trash" in file.parts:
                 continue
             total_notes += 1
-            # Detect hub folders (non-database, non-root .md files)
-            rel = file.relative_to(root)
-            if len(rel.parts) > 1:
-                top = rel.parts[0]
-                if top.lower() not in ("database", ".obsidian", ".trash"):
-                    hubs.add(top)
+        
+        try:
+            service = AterService(self.secrets)
+            hub_count = len(service.list_planner_hubs())
+        except Exception:
+            hub_count = 0
+
         return self.render_ui("stats", {
             "total_notes": total_notes,
-            "hub_count": len(hubs),
+            "hub_count": hub_count,
         }, caption="Vault Intelligence Statistics")
+
+    def get_program_info(self) -> str:
+        if not self.vault_path:
+            return ""
+        years_dir = Path(self.vault_path) / "database" / "years"
+        if not years_dir.exists():
+            return ""
+        programs = set()
+        active_year = ""
+        current_year_val = ""
+        for file in years_dir.glob("*.md"):
+            try:
+                post = frontmatter.loads(file.read_text(encoding="utf-8"))
+                prog = post.metadata.get("program") or post.metadata.get("Program")
+                if prog:
+                    programs.add(self._clean_prop(prog))
+                
+                status = self._clean_prop(post.metadata.get("status") or post.metadata.get("Status"))
+                if status.lower() in ("active", "current"):
+                    active_year = file.stem.replace("_", " ")
+                    curr = post.metadata.get("current_year") or post.metadata.get("Current Year")
+                    if curr:
+                        current_year_val = self._clean_prop(curr)
+            except Exception:
+                continue
+        
+        info = []
+        if programs:
+            info.append(f"Program: {', '.join(sorted(programs))}")
+        if active_year:
+            info.append(f"Active Year: {active_year}")
+        if current_year_val:
+            info.append(f"Current Year: {current_year_val}")
+        return " | ".join(info)
 
     def list_hubs(self) -> str:
         if not self.vault_path:
             return "Error: Vault path not configured."
-        root = Path(self.vault_path)
-        hubs = {}
-        for file in root.rglob("*.md"):
-            if any(p.startswith(".") for p in file.parts) or ".trash" in file.parts:
-                continue
-            rel = file.relative_to(root)
-            if len(rel.parts) > 1:
-                top = rel.parts[0]
-                if top.lower() not in ("database", ".obsidian", ".trash"):
-                    hubs[top] = hubs.get(top, 0) + 1
-        result = [{"name": k, "note_count": v, "path": k} for k, v in sorted(hubs.items())]
-        if not result:
-            return "No study hubs found in vault."
-        return self.render_ui("hub_cards", result)
+        try:
+            service = AterService(self.secrets)
+            hubs = service.list_planner_hubs()
+            result = []
+            for h in hubs:
+                note_count = len(service.list_atomic_notes(h["id"]))
+                result.append({
+                    "name": h["title"],
+                    "note_count": note_count,
+                    "path": h["path"]
+                })
+            if not result:
+                return "No study hubs found in vault."
+            return self.render_ui("hub_cards", result)
+        except Exception as e:
+            logger.error(f"Error in list_hubs: {e}", exc_info=True)
+            return f"Error listing hubs: {e}"
 
-    # ── Academic database tools ────────────────────────────────────────────
+    def get_hub_notes(self, hub_id: str) -> str:
+        if not self.vault_path:
+            return "Error: Vault path not configured."
+        try:
+            clean_id = hub_id.strip()
+            if not clean_id.endswith("_Hub"):
+                if clean_id.lower().endswith(" hub"):
+                    clean_id = clean_id[:-4].strip().replace(" ", "_") + "_Hub"
+                else:
+                    clean_id = clean_id.replace(" ", "_") + "_Hub"
+            else:
+                clean_id = clean_id.replace(" ", "_")
+                
+            service = AterService(self.secrets)
+            notes = service.list_atomic_notes(clean_id)
+            if not notes:
+                hubs = service.list_planner_hubs()
+                matched_id = None
+                for h in hubs:
+                    h_id = h.get("id", "").replace(".md", "")
+                    if h_id.lower() == hub_id.lower() or h.get("title", "").lower() == hub_id.lower() or h_id.lower().replace("_", " ") == hub_id.lower():
+                        matched_id = h_id
+                        break
+                if matched_id:
+                    notes = service.list_atomic_notes(matched_id)
+                    clean_id = matched_id
+            
+            if not notes:
+                return f"No atomic notes found for study hub '{hub_id}'."
+                
+            return self.render_ui("note_cards", notes, caption=f"Atomic Notes in {clean_id.replace('_', ' ')}")
+        except Exception as e:
+            logger.error(f"Error in get_hub_notes: {e}", exc_info=True)
+            return f"Error listing notes for hub '{hub_id}': {e}"
+
+    def _clean_prop(self, val: Any) -> str:
+        if val is None: return ""
+        while isinstance(val, list):
+            if len(val) == 0: return ""
+            val = val[0]
+        s = str(val).strip()
+        s = re.sub(r"[\[\]]+", "", s).strip("\"' ")
+        if s.lower() in ("unknown", "none", ""): return ""
+        return s
 
     def query_academic_database(self, record_type: str) -> str:
         if not self.vault_path:
             return "Error: Vault path not configured."
+            
+        ui_map = {
+            "courses": "course_cards",
+            "semesters": "semester_list",
+            "exams": "exam_list",
+            "assignments": "assignment_list",
+            "study planner": "hub_cards",
+            "years": "year_list"
+        }
+        
+        if record_type.lower() not in self.folder_map:
+            return f"Invalid academic record type '{record_type}'. Please use one of: {', '.join(self.folder_map.keys())}"
+            
         folder = self.folder_map.get(record_type.lower(), record_type.lower())
         db_dir = Path(self.vault_path) / "database" / folder
+        
+        ui_type = ui_map.get(record_type.lower(), "course_cards")
+        
         if not db_dir.exists():
-            return json.dumps({"type": "academic_records", "record_type": record_type, "records": []})
+            return self.render_ui(ui_type, [], f"No records found for '{record_type}'")
+            
         records = []
         for file in sorted(db_dir.glob("*.md")):
             try:
@@ -596,17 +744,7 @@ class AterAssistant:
                 records.append(meta)
             except Exception:
                 records.append({"_title": file.stem, "id": file.stem})
-        # Map record_type to ui_type
-        ui_map = {
-            "courses": "course_cards",
-            "semesters": "semester_list",
-            "exams": "exam_list",
-            "assignments": "assignment_list",
-            "study planner": "hub_cards",
-            "years": "stats"
-        }
-        ui_type = ui_map.get(record_type.lower(), "course_cards")
-        
+                
         return self.render_ui(ui_type, records[:50])
 
     def create_academic_record(self, record_type: str, title: str, properties: Dict[str, Any]) -> str:
@@ -891,7 +1029,7 @@ class AterAssistant:
             logger.error(f"Feynman validation failed: {e}", exc_info=True)
             return f"Error validating explanation: {e}"
 
-    async def generate_custom_practice(self, hub_id: str, difficulty: str = "Mixed", preset: str = "balanced") -> str:
+    async def generate_custom_practice(self, hub_id: str, difficulty: str = "Mixed", preset: str = "balanced", question_distribution: Optional[str] = None) -> str:
         """Generate a practice quiz session with custom parameters."""
         if not self.vault_path:
             return "Error: Vault path not configured."
@@ -907,6 +1045,14 @@ class AterAssistant:
                 "exam_sim": {"mcq":5, "true_false":3, "writing":2, "fill_in":3, "calculation":2, "matching":2, "order":1}
             }
             dist = presets.get(preset.lower(), presets["balanced"])
+            if question_distribution:
+                try:
+                    custom_dist = json.loads(question_distribution)
+                    if isinstance(custom_dist, dict):
+                        dist = custom_dist
+                except Exception as je:
+                    logger.warning(f"Failed to parse question_distribution JSON: {je}")
+
             service = AterService(self.secrets)
             config_payload = {
                 "difficulty": difficulty,
@@ -918,17 +1064,108 @@ class AterAssistant:
             if not questions:
                 return "No questions generated."
             
-            # Emit action to start custom quiz
-            payload = {
-                "action": "custom_practice_start",
-                "hub_id": hub_id,
-                "quiz_path": res.get("quiz_path"),
-                "questions_count": len(questions)
-            }
-            return f"ACTION:{json.dumps(payload)}"
+            questions_list = []
+            for q in questions:
+                q_dict = q.model_dump() if hasattr(q, "model_dump") else dict(q)
+                q_dict = {k: v for k, v in q_dict.items() if v is not None}
+                questions_list.append(q_dict)
+            
+            hub_display = hub_id.replace("_", " ")
+            return f"Custom Practice Session on **{hub_display}** ({len(questions_list)} questions, {difficulty}):\n\n```interactive-quiz\n{json.dumps(questions_list, indent=2)}\n```"
         except Exception as e:
             logger.error(f"Generate custom practice failed: {e}", exc_info=True)
             return f"Error: {e}"
+
+    async def create_exam(self, hub_ids: List[str], total_questions: int = 10, difficulty: str = "Mixed", question_types: Optional[Dict[str, int]] = None) -> str:
+        """Create a secure exam across multiple study hubs using ExamEngine."""
+        if not self.vault_path:
+            return "Error: Vault path not configured."
+        try:
+            from .exam_engine import ExamEngine
+            engine = ExamEngine(self.vault_path)
+            
+            if not question_types:
+                question_types = {"mcq": 5, "true_false": 5}
+                
+            config = {
+                "total_questions": total_questions,
+                "difficulty": difficulty,
+                "question_types": question_types
+            }
+            
+            exam = await engine.create_exam(hub_ids, config, self.secrets)
+            
+            # Format questions in markdown for the user to read/take
+            md_lines = []
+            md_lines.append(f"### Secure Exam Session: `{exam['exam_id']}`")
+            md_lines.append(f"**Hubs:** {', '.join(exam['hub_ids'])}")
+            md_lines.append(f"**Total Questions:** {len(exam['questions'])} | **Difficulty:** {difficulty}")
+            md_lines.append("\n---\n")
+            
+            for q in exam["questions"]:
+                q_id = q["id"]
+                q_type = q["type"]
+                q_text = q["question"]
+                
+                md_lines.append(f"**Question {q_id.replace('eq_', '')}** ({q_type.upper()})")
+                md_lines.append(q_text)
+                
+                if q_type == "mcq" and q.get("options"):
+                    for opt_key, opt_val in q["options"].items():
+                        md_lines.append(f"- **{opt_key}**: {opt_val}")
+                elif q_type == "true_false":
+                    md_lines.append("- True\n- False")
+                elif q_type == "fill_in" and q.get("text_with_blanks"):
+                    md_lines.append(f"Fill in the blanks: {q['text_with_blanks']}")
+                
+                md_lines.append("") # spacer
+                
+            md_lines.append("\n---\n")
+            md_lines.append(f"To submit and grade your answers, call the `grade_exam` tool with `exam_id='{exam['exam_id']}'` and your answers dict.")
+            
+            return "\n".join(md_lines)
+        except Exception as e:
+            logger.error(f"Failed to create exam: {e}", exc_info=True)
+            return f"Error creating exam: {e}"
+
+    def grade_exam(self, exam_id: str, student_answers: Dict[str, Any]) -> str:
+        """Grade a completed exam using ExamEngine and return report."""
+        if not self.vault_path:
+            return "Error: Vault path not configured."
+        try:
+            from .exam_engine import ExamEngine
+            engine = ExamEngine(self.vault_path)
+            report = engine.grade_exam(exam_id, student_answers)
+            
+            # Format grading report in markdown
+            md_lines = []
+            md_lines.append(f"### Exam Grading Report: `{exam_id}`")
+            md_lines.append(f"**Score:** {report.get('correct_answers', 0)} / {report.get('total_questions', 0)} ({report.get('score_percentage', 0):.1f}%)")
+            status_text = "PASSED" if report.get("passed", False) else "FAILED"
+            md_lines.append(f"**Status:** {status_text}")
+            md_lines.append("\n---\n")
+            
+            results = report.get("results", {})
+            for q_id, res in results.items():
+                is_correct = res.get("is_correct", False)
+                status = "✅ Correct" if is_correct else "❌ Incorrect"
+                md_lines.append(f"**Question {q_id.replace('eq_', '')}**: {res.get('question')}")
+                md_lines.append(f"- Status: {status}")
+                md_lines.append(f"- Your Answer: `{res.get('student_answer')}`")
+                md_lines.append(f"- Correct Answer: `{res.get('correct_answer')}`")
+                if res.get("explanation"):
+                    md_lines.append(f"- Explanation: {res.get('explanation')}")
+                md_lines.append("")
+                
+            if report.get("recommended_review_notes"):
+                md_lines.append("**Recommended Notes to Review:**")
+                for note in report["recommended_review_notes"]:
+                    md_lines.append(f"- [[{Path(note).stem}]]")
+                    
+            return "\n".join(md_lines)
+        except Exception as e:
+            logger.error(f"Failed to grade exam: {e}", exc_info=True)
+            return f"Error grading exam: {e}"
 
     def get_generated_files(self) -> str:
         """Get list of successfully processed notes in the Generated archive."""
@@ -1072,9 +1309,69 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 HumanMessage(content=f"Generate the summary JSON for:\n\n{combined_context}")
             ])
             import json as _json
-            data = _json.loads(res.content.strip().strip("`json").strip("`").strip())
-            data["is_hub"] = is_hub
-            return self.render_ui("summary_card", data)
+            raw_content = res.content.strip()
+            # Handle potential markdown code block wrapping
+            if raw_content.startswith("```"):
+                # strip code block lines
+                lines = raw_content.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                raw_content = "\n".join(lines).strip()
+            
+            data = _json.loads(raw_content)
+            
+            # Normalize keys to snake_case as expected by frontend
+            normalized = {}
+            for k, v in data.items():
+                k_lower = k.lower().replace("_", "").replace("-", "")
+                if k_lower in ("title",):
+                    normalized["title"] = v
+                elif k_lower in ("ishub",):
+                    normalized["is_hub"] = v
+                elif k_lower in ("overview", "summary"):
+                    normalized["overview"] = v
+                elif k_lower in ("keytakeaways", "takeaways", "takeawayslist", "coretakeaways"):
+                    normalized["key_takeaways"] = v
+                elif k_lower in ("keyterms", "terms", "glossary", "keytermslist", "keyglossary"):
+                    normalized["key_terms"] = v
+                elif k_lower in ("weakspots", "weakspot", "weakspotslist", "reviewtargets", "reviewtarget"):
+                    normalized["weak_spots"] = v
+                else:
+                    normalized[k] = v
+            
+            # Fill missing keys with empty defaults
+            if "title" not in normalized:
+                normalized["title"] = data.get("title") or summary_title
+            if "overview" not in normalized:
+                normalized["overview"] = data.get("overview") or ""
+            if "key_takeaways" not in normalized:
+                normalized["key_takeaways"] = data.get("key_takeaways") or []
+            if "key_terms" not in normalized:
+                normalized["key_terms"] = data.get("key_terms") or []
+            if "weak_spots" not in normalized:
+                normalized["weak_spots"] = data.get("weak_spots") or []
+                
+            # Normalize key_terms list
+            terms = []
+            raw_terms = normalized.get("key_terms", [])
+            if isinstance(raw_terms, list):
+                for item in raw_terms:
+                    if isinstance(item, dict):
+                        term_val = item.get("term") or item.get("word") or item.get("name") or ""
+                        def_val = item.get("definition") or item.get("desc") or item.get("description") or ""
+                        terms.append({"term": term_val, "definition": def_val})
+                    elif isinstance(item, str):
+                        if ":" in item:
+                            parts = item.split(":", 1)
+                            terms.append({"term": parts[0].strip(), "definition": parts[1].strip()})
+                        else:
+                            terms.append({"term": item, "definition": ""})
+            normalized["key_terms"] = terms
+            normalized["is_hub"] = is_hub
+            
+            return self.render_ui("summary_card", normalized)
         except Exception as e:
             return f"Error generating summary: {e}"
 
@@ -1113,13 +1410,28 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
         return f"ACTION:{json.dumps({'action': 'navigate', 'route': route})}"
 
     def navigate_to_note(self, note_path: str) -> str:
-        if self.vault_path and not note_path.endswith(".md"):
+        if self.vault_path:
             root = Path(self.vault_path)
-            stem_target = note_path.replace(" ", "_").lower()
-            for file in root.rglob("*.md"):
-                if file.stem.replace(" ", "_").lower() == stem_target:
-                    note_path = file.relative_to(root).as_posix()
-                    break
+            target = note_path.strip().replace("\\", "/").lstrip("/")
+            
+            if (root / target).exists() and (root / target).is_file():
+                resolved = target
+            else:
+                stem_target = target.replace(".md", "").replace(" ", "_").replace("%20", "_").lower()
+                resolved = None
+                for file in root.rglob("*.md"):
+                    file_stem = file.stem.replace(" ", "_").lower()
+                    if file_stem == stem_target:
+                        resolved = file.relative_to(root).as_posix()
+                        break
+                        
+                if not resolved:
+                    for file in root.rglob("*.md"):
+                        if file.name.lower() == target.lower() or (file.stem + ".md").lower() == target.lower():
+                            resolved = file.relative_to(root).as_posix()
+                            break
+            if resolved:
+                note_path = resolved
         from urllib.parse import quote
         encoded = quote(note_path)
         return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/obsidian?path={encoded}'})}"
@@ -1335,8 +1647,11 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 description="Get vault statistics: total note count, hub count, hub names.",
                 args_schema=GetVaultStatsInput),
             StructuredTool.from_function(name="get_hubs", func=self.list_hubs,
-                description="List all study hubs in the vault with their note counts. Always call render_ui after with ui_type='hub_cards'.",
+                description="List all study hubs in the vault with their note counts. Returns rendered UI cards automatically.",
                 args_schema=ListHubsInput),
+            StructuredTool.from_function(name="get_hub_notes", func=self.get_hub_notes,
+                description="List all atomic notes within a specific study hub. Returns rendered note cards UI automatically.",
+                args_schema=GetHubNotesInput),
             # Pipeline
             StructuredTool.from_function(name="get_inbox_files", func=self.get_inbox_files,
                 description="Get a list of PDF/Text files currently waiting in the inbox.",
@@ -1352,7 +1667,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 args_schema=StartGenerationInput),
             # Academic DB
             StructuredTool.from_function(name="query_academic_database", func=self.query_academic_database,
-                description="List all records of a given type (courses, semesters, exams, assignments, planner, years). Always call render_ui after.",
+                description="List all records of a given type (courses, semesters, exams, assignments, planner, years). Returns rendered UI cards automatically.",
                 args_schema=QueryAcademicDatabaseInput),
             StructuredTool.from_function(name="create_academic_record", func=self.create_academic_record,
                 description="Create a new course, semester, exam, assignment, or study planner entry.",
@@ -1368,7 +1683,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 description="Generate an interactive MCQ quiz for a study hub.",
                 args_schema=GenerateQuizInput),
             StructuredTool.from_function(name="get_srs_cards", func=self.get_srs_cards,
-                description="Get FSRS cards due for review. Always call render_ui after with ui_type='srs_deck'.",
+                description="Get FSRS cards due for review. Returns rendered UI cards automatically.",
                 args_schema=GetSrsCardsInput),
             StructuredTool.from_function(name="override_srs_stability", func=self.override_srs_stability,
                 description="Override FSRS memory stability for a note to postpone or accelerate its review.",
@@ -1428,6 +1743,12 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
             StructuredTool.from_function(name="generate_custom_practice", func=self.generate_custom_practice,
                 description="Generate a custom practice quiz session with specific preset question type distributions.",
                 args_schema=GenerateCustomPracticeInput),
+            StructuredTool.from_function(name="create_exam", coroutine=self.create_exam,
+                description="Assembles a comprehensive secure exam across multiple study hubs using ExamEngine.",
+                args_schema=CreateExamInput),
+            StructuredTool.from_function(name="grade_exam", func=self.grade_exam,
+                description="Grades/evaluates a completed secure exam session using ExamEngine and produces a report.",
+                args_schema=GradeExamInput),
             StructuredTool.from_function(name="validate_feynman_explanation", func=self.validate_feynman_explanation,
                 description="Validate a user's Feynman explanation for a note using AI.",
                 args_schema=ValidateFeynmanExplanationInput),
@@ -1463,6 +1784,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 "get_vault_stats": lambda: self.get_vault_stats(),
                 "get_hubs": lambda: self.list_hubs(),
                 "list_hubs": lambda: self.list_hubs(),
+                "get_hub_notes": lambda: self.get_hub_notes(**args),
                 "get_inbox_files": lambda: self.get_inbox_files(),
                 "get_queue_status": lambda: self.get_queue_status(),
                 "toggle_auto_deploy": lambda: self.toggle_auto_deploy(**args),
@@ -1491,6 +1813,8 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 "factory_reset": lambda: self.factory_reset(),
                 "clear_study_history": lambda: self.clear_study_history(),
                 "generate_custom_practice": lambda: self.generate_custom_practice(**args),
+                "create_exam": lambda: self.create_exam(**args),
+                "grade_exam": lambda: self.grade_exam(**args),
                 "validate_feynman_explanation": lambda: self.validate_feynman_explanation(**args),
                 "get_generated_files": lambda: self.get_generated_files(),
                 "generate_summary": lambda: self.generate_summary(**args),
@@ -1523,6 +1847,7 @@ def get_tool_status_message(name: str, args: dict) -> str:
         "get_vault_stats": lambda: "Getting vault stats...",
         "get_hubs": lambda: "Listing study hubs...",
         "list_hubs": lambda: "Listing study hubs...",
+        "get_hub_notes": lambda: f"Listing atomic notes for '{args.get('hub_id', '')}'...",
         "get_inbox_files": lambda: "Checking inbox...",
         "get_queue_status": lambda: "Checking background pipeline...",
         "toggle_auto_deploy": lambda: f"{'Enabling' if args.get('state') else 'Disabling'} auto-deploy...",
@@ -1551,6 +1876,8 @@ def get_tool_status_message(name: str, args: dict) -> str:
         "factory_reset": lambda: "Performing factory reset...",
         "clear_study_history": lambda: "Clearing study history...",
         "generate_custom_practice": lambda: f"Generating custom quiz preset for '{args.get('hub_id', '')}'...",
+        "create_exam": lambda: f"Creating secure exam for hubs {', '.join(args.get('hub_ids', []))}...",
+        "grade_exam": lambda: f"Grading exam '{args.get('exam_id', '')}'...",
         "validate_feynman_explanation": lambda: f"Analyzing Feynman explanation for '{Path(args.get('note_path', '')).stem.replace('_', ' ')}'...",
         "get_generated_files": lambda: "Listing generated notes...",
         "generate_summary": lambda: f"Generating summary for '{args.get('target_id', '')}'...",
@@ -1590,6 +1917,11 @@ async def run_assistant_chat(
         display_name = user_context.get("display_name")
         if display_name:
             user_identity = display_name
+            
+    if user_identity == "User":
+        fallback_name = get_fallback_display_name()
+        if fallback_name:
+            user_identity = fallback_name
 
         pm = user_context.get("pomodoro", {})
         if pm:
@@ -1631,13 +1963,15 @@ async def run_assistant_chat(
 
     hub_catalog_str = "\n".join(hub_catalog_lines) if hub_catalog_lines else "  (No study-planner hubs found — user must create them first.)"
 
+    program_info = assistant.get_program_info()
     sys_prompt = (
         f"You are Ater, an AI assistant and controller for a desktop knowledge and study management app.\n"
-        f"You are speaking with {user_identity}. You control every feature of the app through tool calls.\n\n"
+        f"You are speaking with {user_identity}." + (f" They are enrolled in: {program_info}.\n" if program_info else "\n") +
+        f"You control every feature of the app through tool calls.\n\n"
 
         "=== STRICT BEHAVIORAL RULES ===\n"
         "1. TOOL-FIRST: For ANY request involving data (courses, hubs, exams, inbox, quiz, history, vault stats), call the correct tool. NEVER answer from memory or guess.\n"
-        "2. NO MANUAL LISTS: NEVER write out lists, tables, or data manually. Always use the rendering tools.\n"
+        "2. NO MANUAL LISTS OR JSON CODE BLOCKS: NEVER manually write out lists, tables, data, or ```ater-ui JSON blocks in your response text. If you want to render a UI card or list, you MUST call the appropriate tool. Direct manual generation of ```ater-ui blocks causes API tool execution errors.\n"
         "3. NO NARRATION: Never say 'I will now query...' or 'Let me check...'. Just call the tool and give a one-sentence reply.\n"
         "4. AFTER RICH UI TOOL: When you call a data tool (query_academic_database, list_hubs, generate_quiz, etc.) the UI renders automatically. Say one sentence only (e.g., 'Here are your courses.'). DO NOT repeat the data in text.\n"
         "5. SHORT REPLIES: Keep conversational text concise. No preambles, no filler like 'Of course!', 'Sure!', 'Great!'.\n"
@@ -1669,6 +2003,7 @@ async def run_assistant_chat(
         "  delete_note(path) — Delete a note permanently.\n"
         "  get_vault_stats() — Get vault statistics (total notes, hub count). Returns stats UI.\n"
         "  get_hubs() — List all top-level study folders with note counts. Returns hub_cards UI.\n"
+        "  get_hub_notes(hub_id) — List all atomic notes inside a specific study hub. Returns note_cards UI automatically.\n"
         "  generate_summary(target_id, is_hub) — Generate a structured dynamic summary card for a hub or atomic note.\n"
         "ACADEMIC DATABASE TOOLS:\n"
         "  query_academic_database(record_type) — List records. record_type must be one of: 'courses', 'semesters', 'exams', 'assignments', 'study planner', 'years'. Returns rich card UI automatically.\n"
@@ -1707,7 +2042,9 @@ async def run_assistant_chat(
         "  factory_reset() — Perform a factory reset. This clears all keys, paths, and metadata, and reloads the application.\n"
         "  clear_study_history() — Delete all accumulated study history (telemetry, logs, sessions).\n"
         "PRACTICE PRESETS & FEYNMAN VALIDATION:\n"
-        "  generate_custom_practice(hub_id, difficulty, preset) — Start a custom practice quiz session using specific question types distribution preset.\n"
+        "  generate_custom_practice(hub_id, difficulty, preset, question_distribution?) — Start a custom practice quiz session using specific question types distribution preset or custom JSON distribution.\n"
+        "  create_exam(hub_ids, total_questions?, difficulty?, question_types?) — Assembles a comprehensive secure exam across multiple study hubs using ExamEngine. Hides answers/explanations.\n"
+        "  grade_exam(exam_id, student_answers) — Grades/evaluates a completed secure exam session using ExamEngine and produces a report.\n"
         "  validate_feynman_explanation(note_path, explanation) — Validate a user's Feynman explanation for a specific note.\n"
         "  get_generated_files() — Get the list of files in the Generated folder.\n"
         "MANUAL UI RENDERING:\n"
@@ -1802,7 +2139,7 @@ async def run_assistant_chat(
                 # Stream tool results that contain rich UI blocks
                 is_rich_ui = tool_name in (
                     "render_ui", "generate_quiz", "search_notes_fulltext",
-                    "get_inbox_files", "get_hubs", "list_hubs",
+                    "get_inbox_files", "get_hubs", "list_hubs", "get_hub_notes",
                     "query_academic_database", "get_srs_cards", "get_vault_stats",
                     "start_generation", "get_focus_hud", "get_academic_calendar",
                     "get_study_history", "get_app_config", "get_queue_status",

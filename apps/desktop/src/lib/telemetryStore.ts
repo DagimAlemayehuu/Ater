@@ -51,18 +51,22 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
     
     set({ isPolling: true });
     
-    const poll = async () => {
-      if (!get().isPolling) return;
-      await get().fetchStatus();
-      pollTimer = setTimeout(poll, intervalMs);
-    };
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
     
-    poll();
+    // Trigger immediately on start
+    get().fetchStatus();
+    
+    pollTimer = setInterval(async () => {
+      await get().fetchStatus();
+    }, intervalMs);
   },
 
   stopPolling: () => {
     if (pollTimer) {
-      clearTimeout(pollTimer);
+      clearInterval(pollTimer);
       pollTimer = null;
     }
     set({ isPolling: false });

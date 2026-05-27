@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from '
 import { sidecarApi } from '@/lib/sidecarApi'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
-import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight } from 'lucide-react'
+import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight, Info, AlertTriangle, ShieldAlert, CheckCircle2, HelpCircle, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import MiniPracticeUI from '../MiniPracticeUI'
 import { useNavigate } from 'react-router-dom'
@@ -99,41 +99,59 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
   const activeChartRef = useRef<string>(chart);
   
   useEffect(() => {
-    activeChartRef.current = chart;
-    const isDark = document.documentElement.classList.contains('dark');
-    // ... rest of mermaid init ...
-    mermaid.initialize({ 
-      theme: isDark ? 'dark' : 'default',
-      themeVariables: {
-        primaryColor: isDark ? '#27272a' : '#f4f4f5',
-        primaryTextColor: isDark ? '#fafafa' : '#18181b',
-        primaryBorderColor: isDark ? '#3f3f46' : '#e4e4e7',
-        lineColor: isDark ? '#52525b' : '#a1a1aa',
-        secondaryColor: isDark ? '#18181b' : '#fafafa',
-        tertiaryColor: isDark ? '#27272a' : '#f4f4f5',
-        fontFamily: 'Inter, sans-serif'
-      }
-    });
-    
-    mermaid.render(`mermaid-${Math.random().toString(36).substring(7)}`, chart).then((result) => {
-      if (activeChartRef.current === chart) {
-        setSvg(result.svg);
-        setError(false);
-      }
-    }).catch((e) => {
-      if (activeChartRef.current === chart) {
-        console.error('Mermaid render error', e);
-        setError(true);
-      }
-    });
+  activeChartRef.current = chart;
+  const isDark = document.documentElement.classList.contains('dark');
+
+  mermaid.initialize({ 
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: isDark ? 'dark' : 'default',
+    themeVariables: {
+      primaryColor: isDark ? '#27272a' : '#f4f4f5',
+      primaryTextColor: isDark ? '#fafafa' : '#18181b',
+      primaryBorderColor: isDark ? '#3f3f46' : '#e4e4e7',
+      lineColor: isDark ? '#52525b' : '#a1a1aa',
+      secondaryColor: isDark ? '#18181b' : '#fafafa',
+      tertiaryColor: isDark ? '#27272a' : '#f4f4f5',
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '11px',
+      mainBkg: isDark ? '#1a1a1c' : '#ffffff',
+      nodeSpacing: 40,
+      rankSpacing: 40,
+      curve: 'basis'
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      useMaxWidth: true
+    }
+  });
+
+  mermaid.render(`mermaid-${Math.random().toString(36).substring(7)}`, chart).then((result) => {
+    if (activeChartRef.current === chart) {
+      setSvg(result.svg);
+      setError(false);
+    }
+  }).catch((e) => {
+    if (activeChartRef.current === chart) {
+      console.error('Mermaid render error', e);
+      setError(true);
+    }
+  });
   }, [chart]);
 
   if (error) return <div className="text-destructive font-mono text-[11px] p-4 bg-destructive/10 rounded-[8px]">Error rendering Mermaid diagram</div>;
   if (!svg) return <div className="text-muted-foreground font-mono text-[11px] p-4 text-center bg-[#1a1a1c] rounded-[8px] border border-[#242426]">Rendering diagram...</div>;
 
-  return <div className="my-6 flex justify-center bg-[#1a1a1c] p-6 rounded-[8px] border border-[#242426]" dangerouslySetInnerHTML={{ __html: svg }} />;
-}
-
+  return (
+  <div className="my-6 flex justify-center">
+      <div 
+          className="max-w-[85%] w-fit bg-[#1a1a1c] p-4 rounded-[8px] border border-[#242426] overflow-hidden [&>svg]:h-auto [&>svg]:w-full" 
+          dangerouslySetInnerHTML={{ __html: svg }} 
+      />
+  </div>
+  );
+  }
 interface MarkdownViewerProps {
     content: string
     onNavigate: (pageName: string) => void
@@ -606,6 +624,61 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                     </div>
                 );
             }
+            case 'year_list': {
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                        {list.map((item: any, i: number) => {
+                            const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Year';
+                            const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
+                            const path = item.path || '';
+                            const status = getMetaVal(item, 'Status') || getMetaVal(item, 'status') || 'Active';
+                            const program = getMetaVal(item, 'Program') || getMetaVal(item, 'program') || '';
+                            const isActive = status.toLowerCase() === 'active' || status.toLowerCase() === 'current';
+                            const gpa = getMetaVal(item, 'GPA') || getMetaVal(item, 'gpa') || '';
+                            const credits = getMetaVal(item, 'Earned Credits') || getMetaVal(item, 'earned_credits') || getMetaVal(item, 'credits') || '';
+                            
+                            return (
+                                <div 
+                                    key={i} 
+                                    onClick={() => handleNavigate(path ? `/obsidian?path=${encodeURIComponent(path)}` : '/academic?tab=PROGRAM')}
+                                    className="p-4 border border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/50 hover:border-foreground/40 cursor-pointer rounded-[12px] transition-all duration-150 group flex flex-col justify-between h-32 select-none shadow-sm"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-start gap-2.5">
+                                            <Calendar size={14} className="text-muted-foreground/60 mt-1" />
+                                            <div>
+                                                <h4 className="text-[12px] font-black uppercase text-foreground leading-snug group-hover:text-primary transition-colors">
+                                                    {cleanTitle}
+                                                </h4>
+                                                {program && (
+                                                    <span className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest mt-1 block">
+                                                        {program}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className={cn(
+                                            "rounded-[6px] px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
+                                            isActive 
+                                                ? "border-foreground bg-foreground text-background" 
+                                                : "border-[#242426] text-muted-foreground"
+                                        )}>
+                                            {status}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em] mt-2 pt-2 border-t border-[#242426]/60">
+                                        <div className="flex items-center gap-2">
+                                            {gpa && <span>GPA: {gpa}</span>}
+                                            {credits && <span>• {credits} CR</span>}
+                                        </div>
+                                        <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            }
             // --- New Dynamic Oracle UI Types ---
             case 'focus_hud':
                 return <FocusHUD payload={data} />;
@@ -661,7 +734,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
 });
 
 const CodeRenderer = memo((props: any) => {
-    const { className, children, node, notePath, onSendMessage } = props;
+    const { className, children, node, notePath, onSendMessage, components } = props;
     const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
     const language = match ? match[1] : null
     
@@ -723,7 +796,11 @@ const CodeRenderer = memo((props: any) => {
     if (language === 'markdown') {
         return (
             <div className="my-6 p-6 bg-[#1a1a1c] border border-[#242426]/60 rounded-[12px] prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
-                <ReactMarkdown remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}>
+                <ReactMarkdown 
+                    remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
+                    rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}
+                    components={components}
+                >
                     {String(children).replace(/\n$/, '')}
                 </ReactMarkdown>
             </div>
@@ -739,17 +816,28 @@ const CodeRenderer = memo((props: any) => {
             .replace(/\\usepackage\{.*?\}/g, '')
             .replace(/\\begin\{document\}|\\end\{document\}/g, '')
             .replace(/\\section\{.*?\}|\\subsection\{.*?\}/g, '')
-            .replace(/\\begin\{equation\}/g, () => '\n$$\n')
-            .replace(/\\end\{equation\}/g, () => '\n$$\n')
+            // Convert standard math environments to block math
+            .replace(/\\begin\{(equation|align|gather|math|displaymath|split|matrix|pmatrix|bmatrix|vmatrix|Vmatrix)\*?\}/g, () => '\n$$\n')
+            .replace(/\\end\{(equation|align|gather|math|displaymath|split|matrix|pmatrix|bmatrix|vmatrix|Vmatrix)\*?\}/g, () => '\n$$\n')
             .replace(/\\\[/g, () => '\n$$\n')
             .replace(/\\\]/g, () => '\n$$\n')
             .trim();
+
         return (
-            <div className="my-6 p-6 bg-[#1a1a1c] border border-[#242426]/60 rounded-[12px]">
-                <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-2">
-                    <ReactMarkdown remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}>
-                        {mathContent}
-                    </ReactMarkdown>
+            <div className="my-6 relative group/latex">
+                <div className="absolute -top-2 left-4 px-2 bg-background border border-border/50 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 z-10">
+                    LaTeX Artifact
+                </div>
+                <div className="p-8 bg-[#1a1a1c] border border-[#242426]/60 rounded-[12px] shadow-sm">
+                    <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-4">
+                        <ReactMarkdown 
+                            remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
+                            rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}
+                            components={components}
+                        >
+                            {mathContent}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             </div>
         );
@@ -787,212 +875,245 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
         }
     }, [onSendMessage]);
 
-    const markdownComponents = useMemo(() => ({
-        ...(components || {}),
-        p: ({ node, children, ...props }: any) => {
-            return (
-                <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
-                    {React.Children.map(children, (child) => 
-                        typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child
-                    )}
-                </p>
-            )
-        },
-        h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground break-words">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
-        </h1>,
-        h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground break-words">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
-        </h2>,
-        h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90 break-words">
-            {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
-        </h3>,
-        h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
-        ul: ({ children, className }: any) => {
-            const isTaskList = className?.includes('contains-task-list');
-            return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-8" : "list-disc pl-5")}>{children}</ul>
-        },
-        ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
-        li: ({ children, className }: any) => {
-            const isTask = className?.includes('task-list-item');
-            
-            const childrenArray = React.Children.toArray(children);
-            const nestedBlocks: any[] = [];
-            const inlineContent: any[] = [];
-            
-            childrenArray.forEach((child: any) => {
-                const tagName = child?.props?.node?.tagName || child?.type;
-                if (tagName === 'ul' || tagName === 'ol' || tagName === 'blockquote') {
-                    nestedBlocks.push(child);
-                } else {
-                    if (typeof child === 'string') {
-                        inlineContent.push(renderWikiLinks(child, handleNavigate));
-                    } else {
-                        inlineContent.push(child);
-                    }
-                }
-            });
-
-            if (isTask) {
+    const markdownComponents = useMemo(() => {
+        const comps: any = {
+            ...(components || {}),
+            p: ({ node, children, ...props }: any) => {
                 return (
-                    <li className="list-none mb-1 group/task">
-                        <div className="flex items-start gap-2">
-                            <div className="flex-1 flex items-start gap-2 text-[13px] leading-relaxed text-foreground/80">
-                                {inlineContent}
-                            </div>
-                        </div>
-                        {nestedBlocks.length > 0 && (
-                            <div className="mt-1">
-                                {nestedBlocks}
-                            </div>
+                    <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
+                        {React.Children.map(children, (child) => 
+                            typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child
                         )}
-                    </li>
-                );
-            }
-
-            return (
-                <li className="text-[13px] leading-relaxed mb-1 text-foreground/80 list-item">
-                    {inlineContent}
-                    {nestedBlocks}
-                </li>
-            );
-        },
-        pre: ({ children }: any) => <div className="not-prose">{children}</div>,
-        code: (props: any) => <CodeRenderer {...props} notePath={path} onSendMessage={handleSendMessage} />,
-        input: ({ node, type, checked, ...props }: any) => {
-            if (type === 'checkbox') {
-                return (
-                    <input 
-                        type="checkbox" 
-                        defaultChecked={checked} 
-                        onChange={async (e) => {
-                            if (!path) return;
-                            const newChecked = e.target.checked;
-                            const line = node?.position?.start?.line;
-                            if (line) {
-                                try {
-                                    const res = await sidecarApi.readObsidianNote(path);
-                                    const lines = res.content.split('\n');
-                                    const targetLine = lines[line - 1];
-                                    if (targetLine && targetLine.match(/\[[ xX]\]/)) {
-                                        lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
-                                        const updatedContent = lines.join('\n');
-                                        await sidecarApi.updateObsidianNote(path, updatedContent);
-                                        
-                                        const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
-                                        if (wikilinkMatch) {
-                                            const targetNote = wikilinkMatch[1].split('|')[0];
-                                            const targetRes = await sidecarApi.findVaultPage(targetNote);
-                                            if (targetRes.path) {
-                                                const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
-                                                let newAtomicContent = atomicRes.content;
-                                                if (newAtomicContent.includes('read: ')) {
-                                                    newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`);
-                                                } else if (newAtomicContent.startsWith('---\n')) {
-                                                    newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`);
-                                                }
-                                                await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
-                                            }
-                                        }
-                                    }
-                                } catch (err) {
-                                    console.error("Failed to toggle markdown checkbox", err);
-                                }
-                            }
-                        }}
-                        aria-label="Toggle task state"
-                        className="mt-1 size-3.5 shrink-0 appearance-none border border-[#242426] bg-[#1a1a1c] rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20" 
-                    />
-                );
-            }
-            return null;
-        },
-        table: ({ children }: any) => (
-            <div className="overflow-x-auto my-6 rounded-[8px] border border-border">
-                <table className="w-full border-collapse text-[12px]">{children}</table>
-            </div>
-        ),
-        thead: ({ children }: any) => <thead className="bg-muted/50 border-b border-border">{children}</thead>,
-        tbody: ({ children }: any) => <tbody className="divide-y divide-border/10">{children}</tbody>,
-        tr: ({ children }: any) => <tr className="hover:bg-muted/5 transition-none">{children}</tr>,
-        th: ({ children }: any) => <th className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-left">{children}</th>,
-        td: ({ children }: any) => <td className="px-4 py-3 text-foreground/80">{children}</td>,
-        blockquote: ({ children, node }: any) => {
-            let isCallout = false;
-            let calloutType = '';
-            const firstPara = node?.children?.[0];
-            if (firstPara && firstPara.type === 'element' && firstPara.tagName === 'p') {
-                const firstTextNode = firstPara.children?.[0];
-                if (firstTextNode && firstTextNode.type === 'text') {
-                    const match = firstTextNode.value.match(/^\[!(.*?)\]/);
-                    if (match) {
-                        isCallout = true;
-                        calloutType = match[1].toLowerCase();
+                    </p>
+                )
+            },
+            h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground break-words">
+                {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
+            </h1>,
+            h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground break-words">
+                {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
+            </h2>,
+            h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90 break-words">
+                {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
+            </h3>,
+            h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
+            ul: ({ children, className }: any) => {
+                const isTaskList = className?.includes('contains-task-list');
+                return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-8" : "list-disc pl-5")}>{children}</ul>
+            },
+            ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
+            li: ({ children, className }: any) => {
+                const isTask = className?.includes('task-list-item');
+                
+                const childrenArray = React.Children.toArray(children);
+                const nestedBlocks: any[] = [];
+                const inlineContent: any[] = [];
+                
+                childrenArray.forEach((child: any) => {
+                    const tagName = child?.props?.node?.tagName || child?.type;
+                    if (tagName === 'ul' || tagName === 'ol' || tagName === 'blockquote') {
+                        nestedBlocks.push(child);
+                    } else {
+                        if (typeof child === 'string') {
+                            inlineContent.push(renderWikiLinks(child, handleNavigate));
+                        } else {
+                            inlineContent.push(child);
+                        }
                     }
-                }
-            }
-
-            if (isCallout) {
-                let borderClass = "border-zinc-500 bg-zinc-500/5";
-                let Icon = "📝";
-                if (['note', 'info'].includes(calloutType)) { borderClass = "border-zinc-400 bg-zinc-400/5"; Icon = "ℹ️"; }
-                else if (['warning', 'caution'].includes(calloutType)) { borderClass = "border-zinc-500 bg-zinc-500/10"; Icon = "⚠️"; }
-                else if (['danger', 'error', 'bug'].includes(calloutType)) { borderClass = "border-zinc-600 bg-zinc-600/10"; Icon = "🚨"; }
-                else if (['success', 'check', 'done'].includes(calloutType)) { borderClass = "border-zinc-300 bg-zinc-300/10"; Icon = "✅"; }
-                else if (['question', 'help', 'faq'].includes(calloutType)) { borderClass = "border-zinc-400 bg-zinc-400/10"; Icon = "❓"; }
-
-                const processedChildren = React.Children.map(children, (child: any, index) => {
-                    if (index === 0 && child?.type === 'p') {
-                        const pChildren = React.Children.toArray(child.props.children);
-                        let title = calloutType.charAt(0).toUpperCase() + calloutType.slice(1);
-                        const newPChildren = pChildren.map((pChild: any, i) => {
-                            if (i === 0 && typeof pChild === 'string') {
-                                const match = pChild.match(/^\[!(.*?)\](.*)/);
-                                if (match) {
-                                    if (match[2].trim()) title = match[2].trim();
-                                    return null;
-                                }
-                            }
-                            return pChild;
-                        });
-                        return (
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2 font-black uppercase tracking-wider text-[11px] text-foreground/70">
-                                    <span>{Icon}</span>
-                                    <span>{title}</span>
-                                </div>
-                                <div className="text-[13px] text-foreground/80 leading-relaxed font-normal">
-                                    {newPChildren}
-                                </div>
-                            </div>
-                        )
-                    }
-                    return child;
                 });
 
-                return (
-                    <div className={cn(
-                        "my-6 rounded-[8px] border-l-2 p-5 not-prose border-border bg-muted/10",
-                        borderClass
-                    )}>
-                        {processedChildren}
-                    </div>
-                );
-            }
+                if (isTask) {
+                    return (
+                        <li className="list-none mb-1 group/task">
+                            <div className="flex items-start gap-2">
+                                <div className="flex-1 flex items-start gap-2 text-[13px] leading-relaxed text-foreground/80">
+                                    {inlineContent}
+                                </div>
+                            </div>
+                            {nestedBlocks.length > 0 && (
+                                <div className="mt-1">
+                                    {nestedBlocks}
+                                </div>
+                            )}
+                        </li>
+                    );
+                }
 
-            return (
-                <blockquote className="border-l-4 border-primary/20 pl-4 italic my-6 text-muted-foreground text-[13px] bg-muted/10 py-3 rounded-[8px]">
+                return (
+                    <li className="text-[13px] leading-relaxed mb-1 text-foreground/80 list-item">
+                        {inlineContent}
+                        {nestedBlocks}
+                    </li>
+                );
+            },
+            pre: ({ children }: any) => <div className="not-prose">{children}</div>,
+            code: (props: any) => <CodeRenderer {...props} notePath={path} onSendMessage={handleSendMessage} components={comps} />,
+            input: ({ node, type, checked, ...props }: any) => {
+                if (type === 'checkbox') {
+                    return (
+                        <input 
+                            type="checkbox" 
+                            defaultChecked={checked} 
+                            onChange={async (e) => {
+                                if (!path) return;
+                                const newChecked = e.target.checked;
+                                const line = node?.position?.start?.line;
+                                if (line) {
+                                    try {
+                                        const res = await sidecarApi.readObsidianNote(path);
+                                        const lines = res.content.split('\n');
+                                        const targetLine = lines[line - 1];
+                                        if (targetLine && targetLine.match(/\[[ xX]\]/)) {
+                                            lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
+                                            const updatedContent = lines.join('\n');
+                                            await sidecarApi.updateObsidianNote(path, updatedContent);
+                                            
+                                            const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
+                                            if (wikilinkMatch) {
+                                                const targetNote = wikilinkMatch[1].split('|')[0];
+                                                const targetRes = await sidecarApi.findVaultPage(targetNote);
+                                                if (targetRes.path) {
+                                                    const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
+                                                    let newAtomicContent = atomicRes.content;
+                                                    if (newAtomicContent.includes('read: ')) {
+                                                        newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`);
+                                                    } else if (newAtomicContent.startsWith('---\n')) {
+                                                        newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`);
+                                                    }
+                                                    await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
+                                                }
+                                            }
+                                        }
+                                    } catch (err) {
+                                        console.error("Failed to toggle markdown checkbox", err);
+                                    }
+                                }
+                            }}
+                            aria-label="Toggle task state"
+                            className="mt-1 size-3.5 shrink-0 appearance-none border border-[#242426] bg-[#1a1a1c] rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20" 
+                        />
+                    );
+                }
+                return null;
+            },
+            table: ({ children }: any) => (
+                <div className="overflow-x-auto my-6 rounded-[8px] border border-border/60">
+                    <table className="w-full border-collapse text-[12px]">{children}</table>
+                </div>
+            ),
+            thead: ({ children }: any) => <thead className="bg-muted/30 border-b border-border/60">{children}</thead>,
+            tbody: ({ children }: any) => <tbody className="divide-y divide-border/20">{children}</tbody>,
+            tr: ({ children }: any) => <tr className="hover:bg-muted/5 transition-none">{children}</tr>,
+            th: ({ children }: any) => <th className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-left border-r border-border/20 last:border-r-0">{children}</th>,
+            td: ({ children }: any) => <td className="px-4 py-3 text-foreground/80 border-r border-border/10 last:border-r-0">{children}</td>,
+            blockquote: ({ children, node }: any) => {
+                let isCallout = false;
+                let calloutType = '';
+                
+                // Find the first paragraph node in HAST (skipping whitespace/text nodes)
+                const firstPara = node?.children?.find((c: any) => c.type === 'element' && c.tagName === 'p');
+                
+                if (firstPara) {
+                    // Find the first text node in that paragraph
+                    const firstTextNode = firstPara.children?.find((c: any) => c.type === 'text');
+                    if (firstTextNode && typeof firstTextNode.value === 'string') {
+                        const match = firstTextNode.value.trimStart().match(/^\[!(.*?)\]/);
+                        if (match) {
+                            isCallout = true;
+                            calloutType = match[1].toLowerCase();
+                        }
+                    }
+                }
+
+                if (isCallout) {
+                    let borderClass = "border-zinc-500 bg-zinc-500/5";
+                    let IconComponent = Info;
+                    if (['note', 'info'].includes(calloutType)) { 
+                        borderClass = "border-zinc-400 bg-zinc-400/5"; 
+                        IconComponent = Info; 
+                    }
+                    else if (['warning', 'caution'].includes(calloutType)) { 
+                        borderClass = "border-zinc-500 bg-zinc-500/10"; 
+                        IconComponent = AlertTriangle; 
+                    }
+                    else if (['danger', 'error', 'bug'].includes(calloutType)) { 
+                        borderClass = "border-zinc-600 bg-zinc-600/10"; 
+                        IconComponent = ShieldAlert; 
+                    }
+                    else if (['success', 'check', 'done'].includes(calloutType)) { 
+                        borderClass = "border-zinc-300 bg-zinc-300/10"; 
+                        IconComponent = CheckCircle2; 
+                    }
+                    else if (['question', 'help', 'faq'].includes(calloutType)) { 
+                        borderClass = "border-zinc-400 bg-zinc-400/10"; 
+                        IconComponent = HelpCircle; 
+                    }
+
+                    let foundFirstP = false;
+                    const processedChildren = React.Children.map(children, (child: any) => {
+                        // We look for the first valid React element (likely our custom 'p' component)
+                        if (!foundFirstP && React.isValidElement(child)) {
+                            foundFirstP = true;
+                            const pProps: any = child.props;
+                            const pChildren = React.Children.toArray(pProps.children);
+                            
+                            let title = calloutType.charAt(0).toUpperCase() + calloutType.slice(1);
+                            let strippedFirstChild = false;
+
+                            const newPChildren = pChildren.map((pChild: any) => {
+                                if (!strippedFirstChild && typeof pChild === 'string') {
+                                    const trimmed = pChild.trimStart();
+                                    const match = trimmed.match(/^\[!(.*?)\](.*)/);
+                                    if (match) {
+                                        strippedFirstChild = true;
+                                        const customTitle = match[2].trim();
+                                        if (customTitle) title = customTitle;
+                                        return null;
+                                    }
+                                }
+                                return pChild;
+                            });
+
+                            return (
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2 font-black uppercase tracking-wider text-[11px] text-foreground/70">
+                                        <IconComponent size={14} className="shrink-0" />
+                                        <span>{title}</span>
+                                    </div>
+                                    <div className="text-[13px] text-foreground/80 leading-relaxed font-normal">
+                                        {newPChildren}
+                                    </div>
+                                </div>
+                            )
+                        }
+                        return child;
+                    });
+
+                    return (
+                        <div className={cn(
+                            "my-6 rounded-[8px] border-l-2 p-5 not-prose bg-muted/10",
+                            borderClass
+                        )}>
+                            {processedChildren}
+                        </div>
+                    );
+                }
+
+                return (
+                    <blockquote className="border-l-4 border-primary/20 pl-4 italic my-6 text-muted-foreground text-[13px] bg-muted/10 py-3 rounded-[8px]">
+                        {children}
+                    </blockquote>
+                );
+            },
+            hr: () => <hr className="my-10 border-t border-border" />,
+            a: ({ href, children }: any) => (
+                <a href={href} target="_blank" rel="noreferrer" className="text-foreground font-black underline underline-offset-4 decoration-border/40 hover:decoration-foreground/40  font-medium">
                     {children}
-                </blockquote>
-            );
-        },
-        hr: () => <hr className="my-10 border-t border-border" />,
-        a: ({ href, children }: any) => (
-            <a href={href} target="_blank" rel="noreferrer" className="text-foreground font-black underline underline-offset-4 decoration-border/40 hover:decoration-foreground/40  font-medium">
-                {children}
-            </a>
-        )
-    }), [path, handleNavigate, components]);
+                </a>
+            )
+        };
+        return comps;
+    }, [path, handleNavigate, components, handleSendMessage]);
 
     return (
         <div className={cn("prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text content-visibility-auto", className)}>

@@ -187,8 +187,8 @@ export default function PomodoroController() {
             className="flex flex-col items-center text-center space-y-12"
           >
             <div className="space-y-4">
-              <h2 className="text-sm font-black text-muted-foreground/30 uppercase tracking-[0.5em] ml-[0.5em]">Break</h2>
-              <div className="text-[160px] font-bold tabular-nums tracking-tighter leading-none text-foreground">
+              <h2 className="text-sm font-black text-muted-foreground/30 uppercase tracking-[0.5em] ml-[0.5em] font-sans">Break</h2>
+              <div className="text-[160px] font-bold tabular-nums tracking-tighter leading-none text-foreground font-sans">
                 {formatTime(timeLeft)}
               </div>
               

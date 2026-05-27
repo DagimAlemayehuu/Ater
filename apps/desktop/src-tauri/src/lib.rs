@@ -198,6 +198,13 @@ pub fn run() {
             }
         })
         .setup(move |app| {
+            app.manage(commands::AppState {
+                db: std::sync::Mutex::new(None),
+                ml: std::sync::Mutex::new(None),
+                lock_status: std::sync::Mutex::new(commands::AppLockStatus::Active),
+                locked_features: std::sync::Mutex::new(Vec::new()),
+                sidecar_pid: std::sync::Mutex::new(None),
+            });
             let mut port = 8765;
             let mut should_spawn = true;
 
@@ -251,6 +258,9 @@ pub fn run() {
                                     if let Ok(mut pid_guard) = sidecar_pid.lock() {
                                         *pid_guard = Some(child.id());
                                     }
+                                    if let Ok(mut pid_guard) = app.state::<commands::AppState>().sidecar_pid.lock() {
+                                        *pid_guard = Some(child.id());
+                                    }
                                     spawned_successfully = true;
                                 }
                                 Err(err) => {
@@ -272,6 +282,9 @@ pub fn run() {
                                     if let Ok(mut pid_guard) = sidecar_pid.lock() {
                                         *pid_guard = Some(child.id());
                                     }
+                                    if let Ok(mut pid_guard) = app.state::<commands::AppState>().sidecar_pid.lock() {
+                                        *pid_guard = Some(child.id());
+                                    }
                                     spawned_successfully = true;
                                 }
                                 Err(err) => {
@@ -290,7 +303,52 @@ pub fn run() {
                 // This prevents the port from being bumped to 8766 unnecessarily.
                 port = 8765;
                 if TcpListener::bind(("127.0.0.1", port)).is_err() {
-                    eprintln!("[Sidecar] Port {} appears occupied (possible zombie). Searching for a free port...", port);
+                    eprintln!("[Sidecar] Port {} is occupied. Attempting to kill zombie process...", port);
+                    
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        if let Ok(output) = std::process::Command::new("lsof")
+                            .args(["-t", "-i", &format!(":{}", port)])
+                            .output()
+                        {
+                            let pid_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                            if !pid_str.is_empty() {
+                                if let Ok(pid) = pid_str.parse::<i32>() {
+                                    eprintln!("[Sidecar] Found zombie process {} on port {}. Killing it.", pid, port);
+                                    unsafe {
+                                        libc::kill(pid, libc::SIGKILL);
+                                    }
+                                    std::thread::sleep(std::time::Duration::from_millis(500));
+                                }
+                            }
+                        }
+                    }
+
+                    #[cfg(target_os = "windows")]
+                    {
+                        if let Ok(output) = std::process::Command::new("cmd")
+                            .args(["/C", &format!("netstat -ano | findstr LISTENING | findstr :{}", port)])
+                            .output()
+                        {
+                            let stdout = String::from_utf8_lossy(&output.stdout);
+                            for line in stdout.lines() {
+                                let parts: Vec<&str> = line.split_whitespace().collect();
+                                if let Some(pid_str) = parts.last() {
+                                    if let Ok(pid) = pid_str.parse::<u32>() {
+                                        eprintln!("[Sidecar] Found zombie process {} on port {}. Killing it.", pid, port);
+                                        let _ = std::process::Command::new("taskkill")
+                                            .args(["/PID", &pid.to_string(), "/F"])
+                                            .output();
+                                        std::thread::sleep(std::time::Duration::from_millis(500));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if TcpListener::bind(("127.0.0.1", port)).is_err() {
+                    eprintln!("[Sidecar] Port {} is still occupied. Searching for a free port...", port);
                     port = get_available_port(8766).unwrap_or(8766);
                 }
 
@@ -305,6 +363,9 @@ pub fn run() {
                             Ok((rx, child)) => {
                                 println!("[Sidecar] Spawned on port {} (PID: {})", port, child.pid());
                                 if let Ok(mut pid_guard) = sidecar_pid.lock() {
+                                    *pid_guard = Some(child.pid());
+                                }
+                                if let Ok(mut pid_guard) = app.state::<commands::AppState>().sidecar_pid.lock() {
                                     *pid_guard = Some(child.pid());
                                 }
 
@@ -358,10 +419,6 @@ pub fn run() {
             }
 
             app.manage(SidecarConfig { port });
-            app.manage(commands::AppState {
-                db: std::sync::Mutex::new(None),
-                ml: std::sync::Mutex::new(None),
-            });
 
             Ok(())
         })
@@ -449,7 +506,10 @@ pub fn run() {
             commands::update_vault_option,
             commands::delete_vault_option,
             commands::get_vault_graph,
-            commands::get_vault_backlinks
+            commands::get_vault_backlinks,
+            commands::process_security_heartbeat,
+            commands::get_security_state,
+            commands::load_cached_security_state
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

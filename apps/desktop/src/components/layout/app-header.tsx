@@ -8,6 +8,7 @@ import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useConfig } from '@/lib/ConfigContext'
 import { Timer } from 'lucide-react'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { useSecurityStore } from '@/context/securityStore'
 
 export function AppHeader() {
   const { goBack, goForward, canGoBack, canGoForward, history, currentIndex } = useNavigation()
@@ -15,6 +16,7 @@ export function AppHeader() {
   const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore()
   const { config } = useConfig()
   const location = useLocation()
+  const creditBalance = useSecurityStore(state => state.creditBalance)
 
   // Dynamic Breadcrumb Logic
   const renderBreadcrumbs = () => {
@@ -52,13 +54,13 @@ export function AppHeader() {
     }
 
     return (
-      <div className="flex flex-col items-center gap-0.5">
+      <div className="flex flex-col items-center gap-0.5 font-sans">
         <div className="flex items-center gap-1.5">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{module}</span>
           {subPath && <span className="text-[9px] text-muted-foreground font-bold">/</span>}
         </div>
         {subPath && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-foreground truncate max-w-[500px] font-mono leading-none">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-foreground truncate max-w-[500px] leading-none">
             {subPath}
           </span>
         )}
@@ -107,12 +109,12 @@ export function AppHeader() {
         <button 
           onClick={() => setShowOverlay(true)}
           className={cn(
-            "flex items-center gap-1.5 rounded-[8px] border border-[#242426] px-3 py-1 text-xs font-medium text-foreground bg-bento-item shadow-sm h-8",
-            pomodoroActive && "border-foreground/20"
+            "flex items-center gap-1.5 rounded-[8px] border border-border/40 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item transition-all h-8 font-sans",
+            pomodoroActive && "border-foreground/20 text-foreground bg-bento-item"
           )}
         >
-          <Timer size={14} className={cn("text-[#a1a1aa] shrink-0", pomodoroActive && "text-foreground")} />
-          <span>{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
+          <Timer size={16} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground")} />
+          <span className="tabular-nums">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
         </button>
       </div>
 
@@ -130,9 +132,13 @@ export function AppHeader() {
       {/* Right: Actions */}
       <div className="flex items-center justify-end gap-2 shrink-0 z-10">
         {rightContent}
-        <div className="size-8 flex items-center justify-center rounded-[8px] hover:bg-bento-item transition-colors">
-          <ThemeSwitch />
+        <div className="border border-border/40 px-3 py-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 h-8 bg-bento-item/50 rounded-[8px]">
+          <span>CR:</span>
+          <span className="font-bold text-foreground">
+            {creditBalance >= 99999999 ? 'UNLIMITED' : creditBalance}
+          </span>
         </div>
+        <ThemeSwitch />
       </div>
     </header>
   )

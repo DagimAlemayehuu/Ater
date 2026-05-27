@@ -125,6 +125,14 @@ The above equation describes the basic system state.
     "question": "What is the CPU compared to in the mental model?",
     "answer": "A conductor",
     "explanation": "The analogy maps the CPU to an orchestra conductor."
+  },
+  {
+    "id": "q2",
+    "type": "recall",
+    "difficulty": "L1",
+    "question": "What are operations managed by the CPU?",
+    "answer": "Addition and subtraction",
+    "explanation": "The text states the CPU manages addition and subtraction."
   }
 ]
 ```

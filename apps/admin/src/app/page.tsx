@@ -1,236 +1,365 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect, Suspense } from 'react'
+import { supabase } from '@/lib/supabase'
+import { UserManagementGrid } from '@/components/UserManagementGrid'
+import { GlobalEconomyConfig } from '@/components/GlobalEconomyConfig'
+import { SecurityPipelines } from '@/components/SecurityPipelines'
+import { RefreshCw, Activity, Terminal } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
-type WaitlistEntry = {
-  id: string;
-  email: string;
-  full_name: string;
-  status: "pending" | "approved" | "rejected";
+type TabId = 'telemetry' | 'users' | 'economy' | 'pipelines'
+
+interface LedgerRow {
+  amount: number;
   created_at: string;
-};
+  feature_slug: string | null;
+}
 
-export default function Dashboard() {
+interface UsageLogRow {
+  id?: string;
+  model_name: string | null;
+  academic_domain: string | null;
+  feature_type: string | null;
+  token_count: number | null;
+  created_at: string;
+}
+
+function ControllerContent() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab') as TabId
+  const [activeTab, setActiveTab] = useState<TabId>('telemetry')
   const [stats, setStats] = useState({
-    totalApproved: 0,
-    waitlistPending: 0,
-    totalTokens: 0,
-    totalRejected: 0,
-  });
-  const [recentEntries, setRecentEntries] = useState<WaitlistEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+    creditsBurned: 0,
+    activeNodes: 0,
+    geminiRatio: 100,
+    waitlistCount: 0
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [logFeed, setLogFeed] = useState<string[]>([])
+  const [chartPaths, setChartPaths] = useState({
+    linePath: "M 0 28 L 100 28",
+    areaPath: "M 0 28 L 100 28 L 100 30 L 0 30 Z"
+  })
+  const [chartLabels, setChartLabels] = useState<string[]>([])
 
-  async function fetchStats() {
-    setError(null);
+  // Sync tab from URL query params
+  useEffect(() => {
+    if (tabParam && ['telemetry', 'users', 'economy', 'pipelines'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
+
+  async function fetchSummaryMetrics() {
+    setIsLoading(true)
     try {
-      const [approvedRes, pendingRes, rejectedRes, logsRes, recentRes] = await Promise.all([
-        supabase.from("waiting_list").select("id", { count: "exact", head: true }).eq("status", "approved"),
-        supabase.from("waiting_list").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("waiting_list").select("id", { count: "exact", head: true }).eq("status", "rejected"),
-        supabase.from("usage_logs").select("token_count"),
-        supabase
-          .from("waiting_list")
-          .select("id, email, full_name, status, created_at")
-          .order("created_at", { ascending: false })
-          .limit(5),
-      ]);
+      // 1. Calculate credits burned today
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const { data: ledgerData } = await supabase
+        .from('credit_ledger')
+        .select('amount, created_at, feature_slug')
+        .gte('created_at', today.toISOString())
+      
+      const burned = ledgerData 
+        ? Math.abs((ledgerData as LedgerRow[]).filter((l: LedgerRow) => l.amount < 0).reduce((acc: number, l: LedgerRow) => acc + l.amount, 0)) 
+        : 0
 
-      if (approvedRes.error) throw approvedRes.error;
-      if (pendingRes.error) throw pendingRes.error;
-      if (rejectedRes.error) throw rejectedRes.error;
-      if (logsRes.error) throw logsRes.error;
-      if (recentRes.error) throw recentRes.error;
+      // 2. Count active profiles
+      const { count: nodes } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_status', 'active')
+
+      // 3. Count waitlist queue volume
+      const { count: waitlist } = await supabase
+        .from('waiting_list')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending')
+
+      // 4. Fetch usage logs for the last 7 days to dynamically calculate chart & geminiRatio
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6) // Include today and 6 days before
+      sevenDaysAgo.setHours(0, 0, 0, 0)
+
+      const { data: usageData } = await supabase
+        .from('usage_logs')
+        .select('id, model_name, created_at, academic_domain, token_count, feature_type')
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: true })
+
+      let ratio = 100
+      let computedLinePath = "M 0 28 L 100 28"
+      let computedAreaPath = "M 0 28 L 100 28 L 100 30 L 0 30 Z"
+      const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      const days: Date[] = []
+      const counts = new Array(7).fill(0)
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        days.push(d)
+      }
+
+      const labels = days.map((d, index) => {
+        if (index === 6) return 'Today'
+        const dayName = weekdayNames[d.getDay()]
+        const dayNum = d.getDate()
+        return `${dayName} ${dayNum}`
+      })
+      setChartLabels(labels)
+
+      if (usageData && usageData.length > 0) {
+        // Calculate Gemini Ratio
+        const totalLogs = usageData.length
+        const geminiLogs = usageData.filter((log: UsageLogRow) => 
+          log.model_name && log.model_name.toLowerCase().includes('gemini')
+        ).length
+        ratio = Math.round((geminiLogs / totalLogs) * 100)
+
+        // Calculate usage trend coordinates
+        usageData.forEach((log: UsageLogRow) => {
+          const logDateStr = new Date(log.created_at).toDateString()
+          const dayIndex = days.findIndex(d => d.toDateString() === logDateStr)
+          if (dayIndex !== -1) {
+            counts[dayIndex]++
+          }
+        })
+
+        const maxCount = Math.max(...counts, 1)
+        const points = counts.map((count, index) => {
+          const x = index * (100 / 6)
+          const y = 26 - (count / maxCount) * 22 // Map count between y=4 and y=26
+          return { x, y }
+        })
+
+        computedLinePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+        computedAreaPath = `${computedLinePath} L 100 30 L 0 30 Z`
+      }
+
+      setChartPaths({
+        linePath: computedLinePath,
+        areaPath: computedAreaPath
+      })
 
       setStats({
-        totalApproved: approvedRes.count || 0,
-        waitlistPending: pendingRes.count || 0,
-        totalRejected: rejectedRes.count || 0,
-        totalTokens: logsRes.data?.reduce((acc, l) => acc + (l.token_count || 0), 0) || 0,
-      });
+        creditsBurned: burned,
+        activeNodes: nodes || 0,
+        geminiRatio: ratio,
+        waitlistCount: waitlist || 0
+      })
 
-      if (recentRes.data) setRecentEntries(recentRes.data);
-      setLastRefreshed(new Date());
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load data.";
-      setError(message);
+      // Hydrate live Activity Feed from the latest 15 usage logs
+      const { data: latestLogs } = await supabase
+        .from('usage_logs')
+        .select('model_name, academic_domain, created_at, feature_type, token_count')
+        .order('created_at', { ascending: false })
+        .limit(15)
+
+      if (latestLogs && latestLogs.length > 0) {
+        const formattedLogs = latestLogs.map((log: UsageLogRow) => {
+          const timestamp = new Date(log.created_at).toISOString().slice(0, 19).replace('T', ' ')
+          const feature = (log.feature_type || 'EXEC').toUpperCase()
+          const model = log.model_name || 'unknown'
+          const domain = (log.academic_domain || 'general').toUpperCase()
+          const tokens = log.token_count || 0
+          return `${timestamp} ${feature} - ${model} [${domain}]: Deducted ${tokens} tokens`
+        })
+        setLogFeed(formattedLogs)
+      } else {
+        const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ')
+        setLogFeed([
+          `${nowStr} SEC_GATE - Core engine monitoring initiated.`,
+          `${nowStr} DRM_AUDIT - Hardware blacklist cache synchronized.`,
+          `${nowStr} RPC_BILL - Credit monitoring system: OK.`
+        ])
+      }
+
+    } catch (e) {
+      console.error('[Telemetry] Failed to load summaries:', e)
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchStats();
+    fetchSummaryMetrics()
 
-    // Subscribe to realtime changes for waiting_list
+    // Realtime subscribers
     const channel = supabase
-      .channel("admin-dashboard-changes")
+      .channel("admin-realtime-telemetry")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => {
+          fetchSummaryMetrics()
+        }
+      )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "waiting_list" },
         () => {
-          // Re-fetch stats when waitlist changes
-          fetchStats();
+          fetchSummaryMetrics()
         }
       )
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "usage_logs" },
         () => {
-          // Re-fetch stats when new usage logs are added (token count)
-          fetchStats();
+          fetchSummaryMetrics()
         }
       )
-      .subscribe();
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const statCards = [
-    { label: "Approved", value: stats.totalApproved, sub: "Active users" },
-    { label: "Pending", value: stats.waitlistPending, sub: "Awaiting review" },
-    { label: "Rejected", value: stats.totalRejected, sub: "Access denied" },
-    { label: "Tokens Used", value: stats.totalTokens > 0 ? `${(stats.totalTokens / 1000).toFixed(1)}k` : "0", sub: "Total usage" },
-  ];
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background text-foreground font-sans overflow-auto custom-scrollbar">
-      <header className="bg-background border-b border-border py-6 sm:py-8 px-4 sm:px-10 shrink-0">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="flex-1 flex flex-col h-full bg-transparent overflow-hidden">
+      {/* Top Header */}
+      <header className="border-b border-border/40 bg-bento-panel/30 py-6 px-10 shrink-0 select-none">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase">
-              Overview
-            </h1>
+            <h2 className="text-[14px] font-black uppercase tracking-[0.2em] text-foreground leading-none">
+              Controller
+            </h2>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-2">
+              System overview and user stats
+            </p>
           </div>
-          <div className="flex items-center gap-4">
-            {error && (
-              <p className="text-[10px] font-black uppercase text-destructive">{error}</p>
-            )}
-            <button
-              onClick={fetchStats}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2.5 border border-border bg-card hover:bg-accent text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-            >
-              <RefreshCw className="size-3.5" />
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
+          <button 
+            onClick={fetchSummaryMetrics}
+            disabled={isLoading}
+            className="flex items-center gap-2 border border-border/40 bg-bento-card hover:bg-bento-item text-muted-foreground hover:text-foreground px-4 py-2 rounded-[8px] text-[9px] uppercase tracking-widest transition-all cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`size-3 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Syncing...' : 'Sync'}
+          </button>
+        </div>
+
+        {/* Telemetry Summary Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="p-5 bg-bento-card border border-border/40 rounded-[8px]">
+            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">
+              Credits Used Today
+            </div>
+            <div className="text-xl font-black text-foreground">
+              {stats.creditsBurned}
+            </div>
+          </div>
+          <div className="p-5 bg-bento-card border border-border/40 rounded-[8px]">
+            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">
+              Active Users
+            </div>
+            <div className="text-xl font-black text-foreground">
+              {stats.activeNodes}
+            </div>
+          </div>
+          <div className="p-5 bg-bento-card border border-border/40 rounded-[8px]">
+            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">
+              Waitlist Applicants
+            </div>
+            <div className="text-xl font-black text-foreground">
+              {stats.waitlistCount}
+            </div>
+          </div>
+          <div className="p-5 bg-bento-card border border-border/40 rounded-[8px]">
+            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">
+              Gemini Execution Ratio
+            </div>
+            <div className="text-xl font-black text-foreground">
+              {stats.geminiRatio}%
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 p-4 sm:p-10">
-        <div className="max-w-5xl mx-auto space-y-8">
-
-          {/* Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {statCards.map((stat, i) => (
-              <div key={i} className="p-6 bg-card border border-border">
-                <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
-                  {stat.sub}
+      {/* Tab Render Viewport */}
+      <div className="flex-1 overflow-auto p-8 custom-scrollbar bg-transparent">
+        {activeTab === 'telemetry' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl">
+            {/* Rolling Usage Chart */}
+            <div className="lg:col-span-2 bg-bento-card border border-border/40 rounded-[8px] p-6 flex flex-col justify-between">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <Activity className="size-3.5 text-foreground" />
+                  Usage trend
+                </h3>
+                <span className="text-[8px] text-muted-foreground uppercase tracking-widest">Live</span>
+              </div>
+              
+              <div className="h-64 border border-border/40 bg-bento-bg/80 rounded-[8px] flex flex-col justify-end p-4 text-[9px] uppercase tracking-widest text-muted-foreground relative">
+                {/* SVG Graph Layout Grid */}
+                <div className="absolute inset-0 p-6 flex flex-col justify-between pointer-events-none opacity-20">
+                  <div className="w-full border-t border-muted-foreground h-px" />
+                  <div className="w-full border-t border-muted-foreground h-px" />
+                  <div className="w-full border-t border-muted-foreground h-px" />
+                  <div className="w-full border-t border-muted-foreground h-px" />
                 </div>
-                {loading ? (
-                  <Skeleton className="h-9 w-20 mb-1" />
-                ) : (
-                  <p className="text-3xl font-black tracking-tighter text-foreground tabular-nums">
-                    {stat.value}
-                  </p>
-                )}
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-2">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </div>
+                
+                <svg className="w-full h-full text-foreground/80" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  {/* Area fill */}
+                  <path
+                    fill="currentColor"
+                    className="text-foreground/5"
+                    d={chartPaths.areaPath}
+                  />
+                  {/* Clean vector line */}
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    className="text-foreground"
+                    d={chartPaths.linePath}
+                  />
+                </svg>
 
-          {/* Recent Applicants */}
-          <div className="bg-card border border-border">
-            <div className="px-8 py-6 border-b border-border flex items-center justify-between">
-              <div>
-                <h2 className="text-[11px] font-black uppercase tracking-[0.25em] text-foreground">
-                  Recent Applicants
-                </h2>
-                <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">
-                  Last 5 entries
-                </p>
+                <div className="flex justify-between mt-4 text-[8px] text-muted-foreground uppercase tracking-widest border-t border-border/40 pt-3 select-none">
+                  {chartLabels.map((lbl, idx) => (
+                    <span key={idx}>{lbl}</span>
+                  ))}
+                </div>
               </div>
-              {lastRefreshed && (
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Updated {lastRefreshed.toLocaleTimeString()}
-                </span>
-              )}
             </div>
 
-            <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full min-w-[560px] text-left">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">
-                    User
-                  </th>
-                  <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground text-right">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {loading
-                  ? Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={i}>
-                        <td className="px-8 py-5">
-                          <Skeleton className="h-4 w-48" />
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <Skeleton className="h-5 w-20 ml-auto" />
-                        </td>
-                      </tr>
-                    ))
-                  : recentEntries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-accent/20">
-                        <td className="px-8 py-5">
-                          <div className="font-bold text-foreground text-[13px]">
-                            {entry.full_name || "—"}
-                          </div>
-                          <div className="text-[11px] font-medium text-muted-foreground mt-0.5">
-                            {entry.email}
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <span
-                            className={cn(
-                              "px-3 py-1 text-[9px] font-black uppercase tracking-widest border",
-                              entry.status === "approved"
-                                ? "bg-primary/10 border-primary/20 text-primary"
-                                : entry.status === "rejected"
-                                ? "bg-destructive/10 border-destructive/20 text-destructive"
-                                : "bg-muted/30 border-border text-muted-foreground"
-                            )}
-                          >
-                            {entry.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-              </tbody>
-            </table>
-            </div>
-
-            {!loading && recentEntries.length === 0 && (
-              <div className="py-16 text-center">
-                <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">
-                  No applicants yet.
-                </p>
+            {/* Live Terminal Feed */}
+            <div className="bg-bento-card border border-border/40 rounded-[8px] p-6 flex flex-col h-full max-h-[360px] lg:max-h-none">
+              <div className="flex items-center justify-between mb-4 shrink-0">
+                <h3 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <Terminal className="size-3.5 text-foreground" />
+                  Activity
+                </h3>
+                <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
               </div>
-            )}
+              <div className="flex-1 p-4 text-[9px] leading-relaxed text-muted-foreground overflow-y-auto bg-bento-bg/80 border border-border/40 rounded-[8px] custom-scrollbar select-text">
+                {logFeed.map((log, index) => (
+                  <div key={index} className="border-b border-border/20 py-1.5 last:border-0 hover:text-foreground transition-colors break-words">
+                    {log}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'users' && <UserManagementGrid />}
+        {activeTab === 'economy' && <GlobalEconomyConfig />}
+        {activeTab === 'pipelines' && <SecurityPipelines />}
       </div>
     </div>
-  );
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center text-muted-foreground text-[10px] uppercase tracking-widest">
+        Loading...
+      </div>
+    }>
+      <ControllerContent />
+    </Suspense>
+  )
 }

@@ -87,7 +87,7 @@ export default function PomodoroStats() {
   }, [filteredHistory, timeFilter, referenceNow]);
 
   return (
-    <div className="bg-bento-panel border border-border shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground">
+    <div className="bg-bento-panel border border-border shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground font-sans">
       {/* Header */}
       <div className="h-16 border-b border-[#242426] flex items-center justify-between px-8 bg-[#151517] shrink-0">
         <div className="flex items-center gap-6">

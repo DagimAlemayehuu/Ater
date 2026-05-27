@@ -160,7 +160,7 @@ course: test
 Body content. [[Link1]], [[Link2]], [[Link3]].
 ```interactive-quiz
 [
-  {"type": "writing", "question": "Q1", "answer": "10", "explanation": "This explanation is cut of"},
+  {"type": "writing", "question": "Q1", "answer": "10", "explanation": "This explanation is cut of -"},
   {"type": "writing", "question": "Q2", "answer": "10", "explanation": "Correct."},
   {"type": "writing", "question": "Q3", "answer": "10", "explanation": "Correct."}
 ]

@@ -923,24 +923,98 @@ DOMAIN_QUESTION_PROTOCOLS = {
 
 
 
+UNIVERSAL_MODALITY_MATRIX = {
+    "Quantitative": {
+        "persona_suffix": "Quantitative Analyst and Modeler",
+        "h1": "How the Math Works",
+        "h2": "Formulas & Equations",
+        "artifact": "Calculation Schedule",
+        "type": "LaTeX block ($$...$$) or well-formatted Markdown Table tracing numerical relationships",
+        "sanity_check": "All mathematical derivations must be fully written out in LaTeX. Ensure step-by-step mathematical logic.",
+        "l3_law": "L3 MUST be a multi-step calculation or numerical derivation.",
+        "question_modes": ["calculation", "mcq", "trace", "data_analysis"]
+    },
+    "Qualitative/Definitional": {
+        "persona_suffix": "Feynman Educator and Conceptual Analyst",
+        "h1": "How It Works",
+        "h2": "Definition & Boundary Conditions",
+        "artifact": "Concept Mapping Table",
+        "type": "Markdown Table",
+        "sanity_check": "Focus on the 'Why' and the conceptual foundations. Avoid complex math.",
+        "l3_law": "L3 MUST be a scenario-based conceptual evaluation puzzle.",
+        "question_modes": ["scenario", "true_false", "writing", "mcq"]
+    },
+    "Procedural": {
+        "persona_suffix": "Systems and Process Engineer",
+        "h1": "Process & Pipeline Flow",
+        "h2": "Operational Steps",
+        "artifact": "Execution Flowchart",
+        "type": "Basic Mermaid flowchart (graph TD)",
+        "sanity_check": "Focus on the logical sequence of operations, transitions, and step execution.",
+        "l3_law": "L3 MUST be a process failure audit or trace.",
+        "question_modes": ["trace", "debug", "order", "mcq"]
+    },
+    "Comparative": {
+        "persona_suffix": "Structural Analyst and Comparative Expert",
+        "h1": "Concept Analysis & Contrast",
+        "h2": "Trade-offs & Comparisons",
+        "artifact": "Feature Parity Matrix",
+        "type": "Markdown Table (comparing/contrasting at least 2 distinct concepts)",
+        "sanity_check": "Ensure a direct contrast is maintained between concepts. Avoid describing them in isolation.",
+        "l3_law": "L3 MUST be a comparative trade-off selection task.",
+        "question_modes": ["synthesis", "matching", "mcq", "writing"]
+    },
+    "Causal/Historical": {
+        "persona_suffix": "Causal Analyst and Lineage Expert",
+        "h1": "Causal & Chronological Progression",
+        "h2": "Evolutionary Chain & Timelines",
+        "artifact": "Causal Timeline Flowchart",
+        "type": "Basic Mermaid flowchart (graph LR)",
+        "sanity_check": "Focus on cascading events over time and cause-and-effect transitions.",
+        "l3_law": "L3 MUST predict a cascading outcome based on causal factors.",
+        "question_modes": ["order", "scenario", "synthesis", "true_false"]
+    }
+}
+
 def get_persona(mode: str, modality: str = "Qualitative/Definitional") -> dict:
-    """Helper to fetch the congruent persona based on domain and epistemic nature."""
+    """Helper to fetch the congruent persona based on domain and epistemic nature dynamically."""
     mode = normalize_mode(mode)
     
-    # 1. Unknown Domain Fallback (v30.0 Pantheon Protocol)
-    if mode == "DOMAIN-UNKNOWN":
-        return UNIVERSAL_MODALITY_PERSONAS.get(modality, UNIVERSAL_MODALITY_PERSONAS["Qualitative/Definitional"])
-
-    # 2. Check Dynamic Matrix
-    if mode in DYNAMIC_DOMAIN_MATRIX:
-        if modality in DYNAMIC_DOMAIN_MATRIX[mode]:
-            return DYNAMIC_DOMAIN_MATRIX[mode][modality]
-        # Option A: Stay within domain, fall back to Qualitative default
-        if "Qualitative/Definitional" in DYNAMIC_DOMAIN_MATRIX[mode]:
-            return DYNAMIC_DOMAIN_MATRIX[mode]["Qualitative/Definitional"]
+    # Get base domain config
+    base_config = DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
+    base_persona = base_config.get("persona", "Subject Matter Expert")
     
-    # 3. Domain Matrix Fallback (Preserve technical context over modality flavor)
-    return DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
+    # Normalize modality
+    norm_modality = "Qualitative/Definitional"
+    if modality:
+        if "Quant" in modality:
+            norm_modality = "Quantitative"
+        elif "Proc" in modality:
+            norm_modality = "Procedural"
+        elif "Comp" in modality:
+            norm_modality = "Comparative"
+        elif "Caus" in modality or "Hist" in modality:
+            norm_modality = "Causal/Historical"
+            
+    mod_config = UNIVERSAL_MODALITY_MATRIX.get(norm_modality, UNIVERSAL_MODALITY_MATRIX["Qualitative/Definitional"])
+    
+    # Build a dynamically blended persona and configuration
+    dynamic_persona = f"{base_persona} specializing as a {mod_config['persona_suffix']}"
+    
+    # Render dynamic, simple headings
+    h1_title = mod_config["h1"]
+    h2_title = mod_config["h2"]
+    
+    return {
+        "persona": dynamic_persona,
+        "h1": h1_title,
+        "h2": h2_title,
+        "artifact": mod_config["artifact"],
+        "type": mod_config["type"],
+        "sanity_check": f"{base_config.get('sanity_check', '')} {mod_config['sanity_check']}".strip(),
+        "l3_law": mod_config["l3_law"],
+        "question_modes": base_config.get("question_modes", ["mcq", "true_false", "writing"])
+    }
 
 
 # ── EPISTEMIC CLASSIFIER AGENT ────────────────────────────────────────────────
@@ -1279,7 +1353,7 @@ S-TIER ANALOGY LAWS:
    - If TECHNICAL/SCIENCE: Use circuits, chemical catalysts, or distributed networks.
    - Prohibited: Gears, clockwork, community centers, coffee shops, burger stands.
 2. GROUNDING: The analogy MUST map ≥2 structural components of the concept from the source.
-3. COGNITIVE SIMPLICITY: A smart 12-year-old must understand it in one read.
+3. COGNITIVE SIMPLICITY & DE-COMPLEXIFYING: A smart 12-year-old must understand it in one read. Keep it extremely simple, concrete, and grounded in physical objects (like phones, water pipes, kitchen tools, lego bricks) rather than abstract jargon. Keep it extremely intuitive for maximum retention.
 
 SOURCE TEXT:
 {source_text[:1200]}
@@ -1347,6 +1421,7 @@ LAWS:
    - Paragraph 1: Define "{title_readable}" exactly as the source does.
    - Paragraph 2: Explain the underlying mechanism or logic step-by-step.
    - Paragraph 3: Explain the real-world significance or consequence.
+4. JARGON-FREE SIMPLICITY: Explain everything in ultra-clear, simple, and direct language. Avoid unnecessary academic jargon. Assume the reader is a beginner who knows nothing about the subject. De-complexify the explanations so they are incredibly easy to understand, reducing reading time and maximizing retention.
 
 SOURCE TEXT:
 {source_text[:2500]}
@@ -1463,6 +1538,7 @@ SANITY CHECK LAW:
 
 LAWS FOR FORMAL TEXTBOOK EXPLANATION (formal_model):
 - Generate exactly 3-5 sentences of continuous formal prose, academic definitions, constraints, boundary conditions.
+- Keep the explanation very clean, simple, and easy to grasp for beginners.
 - LINGUISTIC DIVERSITY: Do NOT repeat words or phrases from the "CORE THEORY" section provided above. Phrasing MUST be distinct and more academic.
 - Keep the tone academic, precise, and rigorous.
 - Bullet points or lists are strictly forbidden. Use continuous prose only.
@@ -1471,12 +1547,14 @@ LAWS FOR FORMAL TEXTBOOK EXPLANATION (formal_model):
 LAWS FOR PEDAGOGICAL ARTIFACT (artifact_content):
 1. SOURCE GROUNDING: All numbers, labels, and values in the artifact MUST come from the SOURCE TEXT.
 2. ARTIFACT TYPE: Generate a {artifact_type} — this is domain-mandated.
-3. worked example: If Quantitative/Calculative, the artifact MUST show a worked numerical example from the source.
-4. SYNTAX LAW: Mermaid must be in its own ```mermaid block. NEVER wrap in table pipes.
-5. LATEX LAW: For math domains, use block LaTeX ($$...$$) for equations.
-6. SIZE LAW: Keep the artifact compact — max 12 rows for tables, max 8 nodes for Mermaid.
-7. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE THEORY and SOURCE TEXT. Do not introduce any new terminology.
-8. DOMAIN QUARANTINE: Do NOT introduce medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
+3. VISUAL GROUNDING: Ground the concept visually. For tables/diagrams, ensure they trace a concrete example step-by-step (e.g. input -> output) so a beginner can immediately grasp how it functions. Avoid abstract or overly sparse tables.
+4. worked example: If Quantitative/Calculative, the artifact MUST show a worked numerical example from the source.
+5. SYNTAX LAW: Mermaid must be in its own ```mermaid block. NEVER wrap in table pipes.
+6. LATEX LAW: For math domains, use block LaTeX ($$...$$) for equations.
+7. SIZE LAW: Keep the artifact compact — max 12 rows for tables, max 8 nodes for Mermaid.
+8. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE THEORY and SOURCE TEXT. Do not introduce any new terminology.
+9. DOMAIN QUARANTINE: Do NOT introduce medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
+10. BRIDGE LAW (MANDATORY): Immediately after the table, LaTeX, or Mermaid block, you MUST provide 2-3 sentences of "Bridge" text. If the artifact is a Mermaid diagram, include a Notation Legend explaining what the shapes, nodes, and arrows represent. If a table or formula, include a reading guide explaining how to interpret the rows/equations.
 
 LAWS FOR LIMITATIONS (limitations):
 - Exactly 3 bullet points, each describing a specific, source-grounded failure state or edge case for "{title_readable}".
@@ -1612,29 +1690,37 @@ class QuestionAgent:
             "data_analysis": '"type": "data_analysis", "question": "...", "content": "Data table or dataset description", "answer": "...", "explanation": "..."'
         }
 
-        # Handle heterogeneous question modes if no specific single type requested
-        if not q_type:
-            q_modes = self.domain.get("question_modes", ["mcq", "true_false", "writing"]).copy()
+        # Handle heterogeneous question modes if list/tuple or no specific single type requested
+        if not q_type or isinstance(q_type, (list, tuple)):
+            if isinstance(q_type, (list, tuple)):
+                q_modes = list(q_type)
+            else:
+                q_modes = self.domain.get("question_modes", ["mcq", "true_false", "writing"]).copy()
+            
             while len(q_modes) < count:
                 q_modes.append("mcq")
+            q_modes = q_modes[:count]
+            
             schema_list = []
             for i in range(count):
                 m = q_modes[i]
                 sch = schemas.get(m, schemas["mcq"])
                 schema_list.append(f"Question {i+1} (type: '{m}'):\n{{\n  {sch}\n}}")
             type_schema = "\n\n".join(schema_list)
-            q_type_str = f" Generate exactly {count} heterogeneous questions matching these types respectively: {q_modes[:count]}."
+            q_type_str = f" Generate exactly {count} heterogeneous questions matching these types respectively: {q_modes}."
         else:
             type_schema = schemas.get(q_type, schemas["mcq"])
             q_type_str = f" Ensure ALL {count} questions are of type '{q_type}'."
 
         # For MCQ: explicitly require 4 options
         mcq_extra = ""
-        if q_type == "mcq" or not q_type:
+        is_mcq_present = (q_type == "mcq") or (not q_type) or (isinstance(q_type, (list, tuple)) and "mcq" in q_type)
+        if is_mcq_present:
             mcq_extra = "\nCRITICAL FOR MCQ: You MUST provide EXACTLY 4 options (A, B, C, D). Never generate only 2 options. All 4 distractors must be plausible but only one is correct."
 
         keyword_extra = ""
-        if q_type in ["writing", "synthesis", "debug", "scenario", "trace"] or not q_type:
+        has_writing_types = not q_type or (isinstance(q_type, str) and q_type in ["writing", "synthesis", "debug", "scenario", "trace"]) or (isinstance(q_type, (list, tuple)) and any(t in q_type for t in ["writing", "synthesis", "debug", "scenario", "trace"]))
+        if has_writing_types:
             keyword_extra = """
 MANDATORY FOR WRITING, SYNTHESIS, DEBUG, SCENARIO, AND TRACE TYPES:
 You MUST include "required_keywords": ["term1", "term2", "term3"] in those question objects.
@@ -1681,14 +1767,17 @@ JSON FORMAT:
 
 
 LAWS (non-negotiable):
-1. LEVEL: Match {academic_level} difficulty.
+1. LEVEL: Match {academic_level} difficulty. Generate highly challenging, conceptual, or analytical questions that force the student to reason deeply. Avoid simple, rote recall questions.
 2. DOMAIN: Use professional context "{prof_domain}" for examples.
-3. APPLICATION: No simple recall. Test application, tracing, or analysis.
+3. APPLICATION: No simple recall. Ask questions that require applying the concept, tracing pathways, debugging processes, analyzing data, or synthesis.
 4. SOURCE LOCK: Every single question MUST test ONLY vocabulary and concepts found in the SOURCE CONTEXT below. If a term or idea is NOT in the source context, you MUST NOT use it.
 5. DOMAIN DRIFT PROHIBITION: You are STRICTLY FORBIDDEN from introducing advanced topics not in the source (e.g. aggregate demand curves, monetary policy, game theory, regression analysis, quantum mechanics, etc.) unless they are explicitly stated in the source context.
 6. CONTEXT QUARANTINE: Do NOT use medical, hospital, patient, diagnostic, finance, aerospace, physics, or engineering scenarios unless those exact domains appear in the SOURCE CONTEXT.
 7. JSON ONLY: Output ONLY the JSON array inside <QUIZ_JSON></QUIZ_JSON> tags. Zero other text.
 8. LEAKAGE GUARD: For 'scenario', 'writing', 'trace', and 'debug' types: The 'answer' field MUST BE A DETAILED TEXTUAL EXPLANATION (minimum 2 sentences). NEVER use a single letter (A, B, C, D) as the answer for these types. Single letters are ONLY for 'mcq'.
+9. DISTRACTOR PLAUSIBILITY: For MCQ questions, all distractors (incorrect options) must be highly plausible, logical, and representative of common student misconceptions or subtle errors when applying the concept.
+10. COGNITIVE DEPTH: Choose questions that target specific operational logic, execution sequences, mathematical relationships, or corner cases that test actual memory of the details of the concept, not vague generalizations.
+11. FORMAT INTEGRITY: Ensure the keys and structure of each question type match the schema exactly (e.g., 'textWithBlanks' for fill_in, 'pairs' for matching, 'steps' & 'answer' for order).
 {mcq_extra}
 {keyword_extra}
 

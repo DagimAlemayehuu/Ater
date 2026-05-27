@@ -1,9 +1,44 @@
+import sys
 import pytest
 import numpy as np
 import re
+from unittest.mock import MagicMock
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Guard: mock heavy ML deps so this module can be collected in environments
+# where `transformers` and `onnxruntime` are not installed.
+# ──────────────────────────────────────────────────────────────────────────────
+_mock_transformers = MagicMock()
+_mock_tokenizer_instance = MagicMock()
+_mock_tokenizer_instance.return_value = {
+    "input_ids": np.array([[1, 2, 3]]),
+    "attention_mask": np.array([[1, 1, 1]]),
+}
+_mock_transformers.AutoTokenizer.from_pretrained.return_value = _mock_tokenizer_instance
+sys.modules.setdefault("transformers", _mock_transformers)
+sys.modules.setdefault("onnxruntime", MagicMock())
+
 from src.domains.ater.keywords import chunk_text, reduce_concepts
 from src.domains.ater.embeddings_linker import EmbeddingsLinker
 from src.domains.ater.validator import AterValidator
+
+# Detect if a real ONNX model is available — only when transformers is genuinely installed
+_MODEL_AVAILABLE = False
+try:
+    import sys as _sys
+    _real_transformers = _sys.modules.get("transformers")
+    _is_mocked = isinstance(_real_transformers, MagicMock)
+    if not _is_mocked:
+        _linker_check = EmbeddingsLinker()
+        _mp = _linker_check._get_model_paths()
+        _MODEL_AVAILABLE = _mp[1].exists()
+except Exception:
+    pass
+
+requires_model = pytest.mark.skipif(
+    not _MODEL_AVAILABLE,
+    reason="ONNX model file not available in this environment"
+)
 
 def test_chunk_text_slicing():
     """Verify overlapping text slicing, clean boundary handling, and whitespace/junk pruning."""
@@ -67,6 +102,7 @@ def test_reduce_concepts():
     assert sorted(note["prerequisites"]) == sorted(["[[Physics]]", "[[Linear_Algebra]]"])
 
 
+@requires_model
 def test_embeddings_linker_onnx():
     """Verify local ONNX lazy-loading, shape validation of embeddings (N, 384), normalization, and manual unload memory release."""
     linker = EmbeddingsLinker()
@@ -91,6 +127,7 @@ def test_embeddings_linker_onnx():
     assert EmbeddingsLinker._tokenizer is None
 
 
+@requires_model
 def test_prerequisite_mapping():
     """Verify semantic prerequisites mapping (>0.65), exact-page co-requisites resolution, and programmatically escaped title regex matching."""
     notes = [
