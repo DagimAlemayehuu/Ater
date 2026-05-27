@@ -93,7 +93,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
       !INTERNAL.includes(k) && !['Status', 'status', 'Course', 'course', 'Priority', 'priority', 'due_date'].includes(k))
 
     return (
-      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+      <div data-tour="assignment-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
         <div className="flex items-start justify-between">
           <div>
             <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2">← Assignments</button>
@@ -242,6 +242,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
           return (
             <div key={idx} onClick={() => setSelectedId(a.id)}
+              data-tour={`assignment-card-${a.id}`}
               className={cn('flex items-center gap-4 p-3 border rounded-[8px] cursor-pointer group hover:border-foreground/40 transition-colors',
                 isDone ? 'opacity-40 border-[#242426] bg-[#1a1a1c]/50' : isLate ? 'border-[#242426] bg-[#1a1a1c] ring-1 ring-destructive/20' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
               <button onClick={e => handleToggleDone(a, e)}

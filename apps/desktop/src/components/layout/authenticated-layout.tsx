@@ -3,6 +3,7 @@ import { LayoutProvider, useLayout } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppHeader } from '@/components/layout/app-header'
+import { InteractiveTour } from '@/components/layout/InteractiveTour'
 import React from 'react'
 
 type AuthenticatedLayoutProps = {
@@ -21,6 +22,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
           {children ?? <Outlet />}
         </div>
       </main>
+      <InteractiveTour />
     </div>
   )
 }

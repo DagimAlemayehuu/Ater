@@ -222,6 +222,7 @@ export default function AcademicDashboard() {
        <button 
          aria-label="Sync Vault Databases" 
          onClick={handleSync} 
+         data-tour="db-sync"
          className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest" 
          title="Sync Vault Databases"
        >
@@ -231,6 +232,7 @@ export default function AcademicDashboard() {
          onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
          title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
          aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
+         data-tour="db-calendar"
          className={cn(
            'h-8 flex items-center gap-1.5 px-3 rounded-[8px] text-[9px] font-black uppercase tracking-widest focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
            activeTab === 'CALENDAR' 

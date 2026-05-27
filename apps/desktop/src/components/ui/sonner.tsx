@@ -7,12 +7,16 @@ export function Toaster({ ...props }: ToasterProps) {
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
-      className='toaster group [&_div[data-content]]:w-full'
+      position="top-right"
+      className='toaster group [&_div[data-content]]:w-full font-sans'
+      toastOptions={{
+        className: 'bg-[#151517] border border-[#242426] text-foreground rounded-[8px] p-4 shadow-xl',
+      }}
       style={
         {
-          '--normal-bg': 'var(--popover)',
-          '--normal-text': 'var(--popover-foreground)',
-          '--normal-border': 'var(--border)',
+          '--normal-bg': '#151517',
+          '--normal-text': '#ffffff',
+          '--normal-border': '#242426',
         } as React.CSSProperties
       }
       {...props}

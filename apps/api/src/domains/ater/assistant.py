@@ -170,9 +170,19 @@ class StartGenerationInput(BaseModel):
 class NavigateToRouteInput(BaseModel):
     route: str = Field(
         description=(
-            "App route to navigate to. Options: "
-            "'/oracle', '/obsidian', '/academic', '/practice', '/agents', '/settings'. "
-            "Append query params like '/academic?tab=exams' or '/obsidian?path=Notes/My_Note.md'."
+            "App route to navigate to. Exact valid routes: "
+            "'/agents?tab=ater' (Oracle AI chat), "
+            "'/agents?tab=pipeline' (Ingestion pipeline), "
+            "'/obsidian' (Vault browser/note editor), "
+            "'/academic?tab=COURSES' (Courses), "
+            "'/academic?tab=EXAMS' (Exams), "
+            "'/academic?tab=ASSIGNMENTS' (Assignments), "
+            "'/academic?tab=PLANNER' (Study planner), "
+            "'/academic?tab=PROGRAM' (Program/Semesters/Years), "
+            "'/academic?tab=CALENDAR' (Academic calendar), "
+            "'/practice' (SRS practice arena), "
+            "'/settings' (App settings). "
+            "Always use the EXACT route string. Never use '/oracle' — use '/agents?tab=ater' instead."
         )
     )
 
@@ -704,7 +714,7 @@ class AterAssistant:
     def query_academic_database(self, record_type: str) -> str:
         if not self.vault_path:
             return "Error: Vault path not configured."
-            
+
         ui_map = {
             "courses": "course_cards",
             "semesters": "semester_list",
@@ -713,38 +723,52 @@ class AterAssistant:
             "study planner": "hub_cards",
             "years": "year_list"
         }
-        
-        if record_type.lower() not in self.folder_map:
+
+        record_type_lower = record_type.lower()
+        if record_type_lower not in self.folder_map:
             return f"Invalid academic record type '{record_type}'. Please use one of: {', '.join(self.folder_map.keys())}"
-            
-        folder = self.folder_map.get(record_type.lower(), record_type.lower())
+
+        folder = self.folder_map.get(record_type_lower, record_type_lower)
         db_dir = Path(self.vault_path) / "database" / folder
-        
-        ui_type = ui_map.get(record_type.lower(), "course_cards")
-        
+        ui_type = ui_map.get(record_type_lower, "course_cards")
+
+        # Friendly label for user-facing messages
+        label_map = {
+            "courses": "courses",
+            "semesters": "semesters",
+            "exams": "exams",
+            "assignments": "assignments",
+            "study planner": "study planner hubs",
+            "years": "academic years"
+        }
+        label = label_map.get(record_type_lower, record_type)
+
         if not db_dir.exists():
-            return self.render_ui(ui_type, [], f"No records found for '{record_type}'")
-            
+            return f"You don't have any {label} yet. You can create one by asking me to add a {record_type.rstrip('s')}."
+
         records = []
         for file in sorted(db_dir.glob("*.md")):
             try:
                 post = frontmatter.loads(file.read_text(encoding="utf-8"))
                 meta = dict(post.metadata)
-                
+
                 # Clean metadata for UI (convert empty lists/dicts to empty strings)
                 for k, v in meta.items():
                     if isinstance(v, (list, dict)) and not v:
                         meta[k] = ""
                     elif isinstance(v, (list, dict)):
                         meta[k] = str(v)
-                
+
                 meta["_title"] = file.stem
                 meta["id"] = file.stem
                 meta["path"] = f"database/{folder}/{file.name}"
                 records.append(meta)
             except Exception:
                 records.append({"_title": file.stem, "id": file.stem})
-                
+
+        if not records:
+            return f"You don't have any {label} yet. You can create one by asking me to add a {record_type.rstrip('s')}."
+
         return self.render_ui(ui_type, records[:50])
 
     def create_academic_record(self, record_type: str, title: str, properties: Dict[str, Any]) -> str:
@@ -890,7 +914,7 @@ class AterAssistant:
             return "Error: Inbox path not configured."
         db_path = Path(self.secrets.inbox_path) / "ater_queue.db"
         if not db_path.exists():
-            return "No study history yet."
+            return "No study history yet. Start a Pomodoro session or complete a practice quiz to begin tracking."
         try:
             conn = sqlite3.connect(str(db_path))
             conn.row_factory = sqlite3.Row
@@ -901,6 +925,8 @@ class AterAssistant:
                 "SELECT * FROM practice_log ORDER BY timestamp DESC LIMIT ?", (limit,)
             ).fetchall()]
             conn.close()
+            if not sessions and not practice:
+                return "No study history yet. Start a Pomodoro session or complete a practice quiz to begin tracking."
             return self.render_ui("study_history", {"sessions": sessions, "practice": practice}, caption="Recent Study History")
         except Exception as e:
             return f"Error reading study history: {e}"
@@ -1403,11 +1429,28 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
     # ── Navigation tools ───────────────────────────────────────────────────
 
     def navigate_to_route(self, route: str) -> str:
-        valid_routes = {"/oracle", "/obsidian", "/academic", "/practice", "/agents", "/settings"}
-        base = route.split("?")[0]
-        if base not in valid_routes:
-            return f"'{base}' is not a valid route. Valid: {', '.join(sorted(valid_routes))}."
-        return f"ACTION:{json.dumps({'action': 'navigate', 'route': route})}"
+        # Normalize aliases to real frontend routes
+        alias_map = {
+            "/oracle": "/agents?tab=ater",
+            "/pipeline": "/agents?tab=pipeline",
+            "/chat": "/agents?tab=ater",
+        }
+        # Apply alias if the full route matches a known alias
+        route_normalized = alias_map.get(route.split("?")[0], route)
+        # If the alias already has a query string but original had none, use the full alias
+        if route.split("?")[0] in alias_map and "?" not in route:
+            route_normalized = alias_map[route.split("?")[0]]
+
+        valid_bases = {"/agents", "/obsidian", "/academic", "/practice", "/settings"}
+        base = route_normalized.split("?")[0]
+        if base not in valid_bases:
+            return (
+                f"'{base}' is not a valid route. "
+                f"Valid routes: /agents?tab=ater (Oracle), /agents?tab=pipeline (Pipeline), "
+                f"/obsidian, /academic?tab=COURSES|EXAMS|ASSIGNMENTS|PLANNER|PROGRAM|CALENDAR, "
+                f"/practice, /settings."
+            )
+        return f"ACTION:{json.dumps({'action': 'navigate', 'route': route_normalized})}"
 
     def navigate_to_note(self, note_path: str) -> str:
         if self.vault_path:
@@ -1596,28 +1639,39 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
     def get_academic_calendar(self) -> str:
         """Fetches upcoming exams and assignments for the calendar bar."""
         if not self.vault_path: return "Error: Vault path not configured."
-        
-        exams = json.loads(self.query_academic_database("exams")).get("records", [])
-        assignments = json.loads(self.query_academic_database("assignments")).get("records", [])
-        
+
+        def _read_folder(folder_name: str) -> list:
+            db_dir = Path(self.vault_path) / "database" / folder_name
+            records = []
+            if not db_dir.exists():
+                return records
+            for file in sorted(db_dir.glob("*.md")):
+                try:
+                    post = frontmatter.loads(file.read_text(encoding="utf-8"))
+                    meta = dict(post.metadata)
+                    meta["_title"] = file.stem
+                    meta["id"] = file.stem
+                    records.append(meta)
+                except Exception:
+                    records.append({"_title": file.stem, "id": file.stem})
+            return records
+
+        exams_raw = _read_folder("exams")
+        assignments_raw = _read_folder("assignments")
+
         events = []
-        for e in exams[:5]:
-            events.append({
-                "type": "Exam",
-                "title": e.get("title", "Exam").replace("_", " "),
-                "date": e.get("metadata", {}).get("Date") or e.get("date") or "TBD",
-                "priority": "High"
-            })
-        for a in assignments[:5]:
-            events.append({
-                "type": "Assignment",
-                "title": a.get("title", "Assignment").replace("_", " "),
-                "date": a.get("metadata", {}).get("Due Date") or a.get("due_date") or "TBD",
-                "priority": "Normal"
-            })
-        
-        # Sort by date (naive)
+        for e in exams_raw[:5]:
+            title = e.get("_title", "Exam").replace("_", " ")
+            date = self._clean_prop(e.get("Date") or e.get("date")) or "TBD"
+            events.append({"type": "Exam", "title": title, "date": date, "priority": "High"})
+        for a in assignments_raw[:5]:
+            title = a.get("_title", "Assignment").replace("_", " ")
+            date = self._clean_prop(a.get("Due Date") or a.get("due_date")) or "TBD"
+            events.append({"type": "Assignment", "title": title, "date": date, "priority": "Normal"})
+
         events.sort(key=lambda x: x["date"])
+        if not events:
+            return "You don't have any upcoming exams or assignments yet. Add some via the Academic Dashboard."
         return self.render_ui("calendar_bar", {"events": events})
 
     # ── Tool registry ──────────────────────────────────────────────────────
@@ -1713,8 +1767,14 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
             # Navigation
             StructuredTool.from_function(name="navigate_to_route", func=self.navigate_to_route,
                 description=(
-                    "Navigate the app to a page. Options: /oracle, /obsidian, /academic, /practice, /agents, /settings. "
-                    "Use /academic?tab=courses etc. for specific tabs."
+                    "Navigate the app to a specific page. Use EXACT routes: "
+                    "'/agents?tab=ater' (Oracle AI chat — this page), "
+                    "'/agents?tab=pipeline' (ingestion pipeline), "
+                    "'/obsidian' (vault/note viewer), "
+                    "'/academic?tab=COURSES', '/academic?tab=EXAMS', '/academic?tab=ASSIGNMENTS', "
+                    "'/academic?tab=PLANNER', '/academic?tab=PROGRAM', '/academic?tab=CALENDAR', "
+                    "'/practice' (SRS practice), '/settings'. "
+                    "NEVER use '/oracle' — it does not exist."
                 ),
                 args_schema=NavigateToRouteInput),
             StructuredTool.from_function(name="navigate_to_note", func=self.navigate_to_note,
@@ -1740,7 +1800,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 description="Delete all study history (telemetry, practice log, study sessions) from the database.",
                 args_schema=ClearStudyHistoryInput),
             # Practice presets / Feynman
-            StructuredTool.from_function(name="generate_custom_practice", func=self.generate_custom_practice,
+            StructuredTool.from_function(name="generate_custom_practice", coroutine=self.generate_custom_practice,
                 description="Generate a custom practice quiz session with specific preset question type distributions.",
                 args_schema=GenerateCustomPracticeInput),
             StructuredTool.from_function(name="create_exam", coroutine=self.create_exam,
@@ -1749,7 +1809,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
             StructuredTool.from_function(name="grade_exam", func=self.grade_exam,
                 description="Grades/evaluates a completed secure exam session using ExamEngine and produces a report.",
                 args_schema=GradeExamInput),
-            StructuredTool.from_function(name="validate_feynman_explanation", func=self.validate_feynman_explanation,
+            StructuredTool.from_function(name="validate_feynman_explanation", coroutine=self.validate_feynman_explanation,
                 description="Validate a user's Feynman explanation for a note using AI.",
                 args_schema=ValidateFeynmanExplanationInput),
             StructuredTool.from_function(name="get_generated_files", func=self.get_generated_files,
@@ -1888,6 +1948,76 @@ def get_tool_status_message(name: str, args: dict) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Helper: build context hint for LLM after rich-UI tool renders
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_tool_context_hint(tool_name: str, tool_result_str: str, tool_args: dict) -> str:
+    """
+    Produce a concise factual context string for the LLM after a rich-UI tool renders.
+    The LLM must know EXACTLY what was found so it cannot contradict the rendered UI.
+    Returns something like: '[Tool result: Found 3 course(s). UI rendered. Do NOT describe the items in text.]'
+    """
+    import re as _re
+
+    # Count items in the ater-ui JSON payload
+    count: Optional[int] = None
+    try:
+        # Extract the ater-ui JSON block
+        m = _re.search(r'```ater-ui\s*(\{.*?\}|\[.*?\])\s*```', tool_result_str, _re.DOTALL)
+        if m:
+            payload = json.loads(m.group(1))
+            # Payload is either a list or {"ui_type":..., "data":..., ...}
+            if isinstance(payload, list):
+                count = len(payload)
+            elif isinstance(payload, dict):
+                data = payload.get("data", payload)
+                if isinstance(data, list):
+                    count = len(data)
+                elif isinstance(data, dict):
+                    for key in ("records", "results", "files", "events", "sessions", "cards", "hubs", "results"):
+                        if isinstance(data.get(key), list):
+                            count = len(data[key])
+                            break
+    except Exception:
+        pass
+
+    # Build label from tool name
+    label_map = {
+        "query_academic_database": tool_args.get("record_type", "records"),
+        "list_hubs": "study hubs",
+        "get_hubs": "study hubs",
+        "get_hub_notes": "atomic notes",
+        "search_notes_fulltext": "search results",
+        "get_srs_cards": "SRS cards due",
+        "get_study_history": "study sessions",
+        "get_vault_stats": "vault statistics",
+        "get_inbox_files": "inbox files",
+        "get_generated_files": "generated files",
+        "get_queue_status": "queue status",
+        "get_app_config": "config settings",
+        "get_focus_hud": "focus HUD",
+        "get_academic_calendar": "calendar events",
+        "generate_quiz": "quiz questions",
+        "generate_custom_practice": "practice questions",
+        "generate_summary": "summary",
+        "show_practice_config": "practice config",
+        "create_exam": "exam",
+        "start_generation": "generation pipeline",
+        "render_ui": "UI block",
+    }
+    label = label_map.get(tool_name, "items")
+
+    count_str = f"Found {count} {label}." if count is not None else f"Returned {label}."
+    return (
+        f"[Tool executed successfully. {count_str} "
+        f"The UI block has been rendered for the user. "
+        f"Do NOT describe, list, or summarize the data in plain text. "
+        f"Do NOT say 'no data found' or any empty-state message. "
+        f"End your turn or ask a single helpful follow-up question.]"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main agent loop
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1923,6 +2053,7 @@ async def run_assistant_chat(
         if fallback_name:
             user_identity = fallback_name
 
+    if user_context:
         pm = user_context.get("pomodoro", {})
         if pm:
             status = "running" if pm.get("is_active") else "paused/stopped"
@@ -1973,7 +2104,7 @@ async def run_assistant_chat(
         "1. TOOL-FIRST: For ANY request involving data (courses, hubs, exams, inbox, quiz, history, vault stats), call the correct tool. NEVER answer from memory or guess.\n"
         "2. NO MANUAL LISTS OR JSON CODE BLOCKS: NEVER manually write out lists, tables, data, or ```ater-ui JSON blocks in your response text. If you want to render a UI card or list, you MUST call the appropriate tool. Direct manual generation of ```ater-ui blocks causes API tool execution errors.\n"
         "3. NO NARRATION: Never say 'I will now query...' or 'Let me check...'. Just call the tool and give a one-sentence reply.\n"
-        "4. AFTER RICH UI TOOL: When you call a data tool (query_academic_database, list_hubs, generate_quiz, etc.) the UI renders automatically. Say one sentence only (e.g., 'Here are your courses.'). DO NOT repeat the data in text.\n"
+        "4. UI-FIRST, TEXT-AFTER: When calling a data tool (query_academic_database, list_hubs, generate_quiz, get_srs_cards, get_study_history, get_vault_stats, get_focus_hud, get_academic_calendar, get_inbox_files, get_queue_status, search_notes_fulltext, generate_summary, show_practice_config, etc.), DO NOT write ANY text before the tool call. Call the tool immediately and silently. The UI block renders automatically in the chat for the user. After the UI renders, you may write ONE short follow-up sentence if helpful (e.g., a tip or offer to do more). If the tool returns a plain-text error or empty-state message, respond naturally with that information in a helpful conversational tone — do NOT render a UI block in this case.\n"
         "5. SHORT REPLIES: Keep conversational text concise. No preambles, no filler like 'Of course!', 'Sure!', 'Great!'.\n"
         "6. NAVIGATION: When navigating ('/obsidian', '/academic?tab=EXAMS'), confirm in one sentence.\n"
         "7. POMODORO: For timer commands, call the Pomodoro tools immediately. Do not explain.\n"
@@ -1986,12 +2117,18 @@ async def run_assistant_chat(
         "15. PRACTICE CONFIGURATION: When a user wants to start a practice or quiz session, do NOT launch it immediately. Instead, parse their requests for question types (like mcq, true_false, matching, calculation, etc.), counts, and difficulty, and call `show_practice_config` to present an interactive config card so they can confirm or tweak it first.\n\n"
 
         "=== APP PAGES ===\n"
-        "  /oracle — This AI chat (you are here)\n"
+        "  /agents?tab=ater — This Oracle AI chat page (you are here)\n"
+        "  /agents?tab=pipeline — Background note ingestion pipeline\n"
         "  /obsidian — Vault browser and note editor\n"
-        "  /academic — Academic dashboard (tabs: COURSES, EXAMS, ASSIGNMENTS, PLANNER, PROGRAM, CALENDAR)\n"
+        "  /academic?tab=COURSES — Enrolled courses\n"
+        "  /academic?tab=EXAMS — Exams\n"
+        "  /academic?tab=ASSIGNMENTS — Assignments\n"
+        "  /academic?tab=PLANNER — Study planner hubs\n"
+        "  /academic?tab=PROGRAM — Academic program, years, semesters\n"
+        "  /academic?tab=CALENDAR — Academic calendar\n"
         "  /practice — FSRS spaced repetition practice arena\n"
-        "  /agents — Note generation agent dashboard\n"
-        "  /settings — AI keys, vault path, model config\n\n"
+        "  /settings — AI keys, vault path, model config\n"
+        "  NOTE: '/oracle' does NOT exist. Always use '/agents?tab=ater'.\n\n"
 
         "=== TOOL CATALOG ===\n"
         "VAULT TOOLS:\n"
@@ -2032,9 +2169,12 @@ async def run_assistant_chat(
         "  get_focus_hud() — Render the interactive Focus HUD in chat for timer control.\n"
         "  get_academic_calendar() — Render upcoming exams/assignments as a calendar bar.\n"
         "NAVIGATION TOOLS:\n"
-        "  navigate_to_route(route) — Navigate to a page. Valid: /oracle, /obsidian, /academic, /practice, /agents, /settings. Use query params like /academic?tab=EXAMS.\n"
-        "  navigate_to_note(note_path) — Open a specific note in the vault viewer.\n"
-        "  switch_academic_tab(tab) — Switch academic dashboard tab. Tab names: courses, semesters, exams, assignments, planner, program.\n"
+        "  navigate_to_route(route) — Navigate to an exact page route. "
+        "Valid routes: '/agents?tab=ater' (Oracle chat), '/agents?tab=pipeline' (Pipeline), "
+        "'/obsidian' (vault), '/academic?tab=COURSES|EXAMS|ASSIGNMENTS|PLANNER|PROGRAM|CALENDAR', "
+        "'/practice', '/settings'. NEVER use '/oracle'.\n"
+        "  navigate_to_note(note_path) — Open a specific note in the vault viewer by path or title.\n"
+        "  switch_academic_tab(tab) — Switch academic dashboard tab. Tab values: courses, exams, assignments, planner, program, calendar.\n"
         "  trigger_notification(variant, message) — Show a toast. variant: 'success', 'error', 'info', 'warning'.\n"
         "CONFIG & RESET TOOLS:\n"
         "  get_app_config() — Fetch all settings: paths, AI provider/model, Pomodoro durations, display name. Returns app_config UI.\n"
@@ -2136,21 +2276,31 @@ async def run_assistant_chat(
                 tool_result = await assistant.execute_tool(tool_name, tool_args)
                 tool_result_str = str(tool_result)
 
-                # Stream tool results that contain rich UI blocks
-                is_rich_ui = tool_name in (
+                # Stream tool results that contain rich UI blocks.
+                # Only treat as rich UI if the result actually contains a UI block marker.
+                _is_rich_ui_tool = tool_name in (
                     "render_ui", "generate_quiz", "search_notes_fulltext",
                     "get_inbox_files", "get_hubs", "list_hubs", "get_hub_notes",
                     "query_academic_database", "get_srs_cards", "get_vault_stats",
                     "start_generation", "get_focus_hud", "get_academic_calendar",
                     "get_study_history", "get_app_config", "get_queue_status",
-                    "get_generated_files"
+                    "get_generated_files", "generate_summary", "show_practice_config",
+                    "generate_custom_practice", "create_exam"
+                )
+                # Only stream as a UI chunk if the tool result actually contains a UI block.
+                # Plain-text error/empty responses must flow as normal LLM text.
+                is_rich_ui = _is_rich_ui_tool and (
+                    "```ater-ui" in tool_result_str
+                    or "```interactive-quiz" in tool_result_str
                 )
 
                 if is_rich_ui:
                     ui_chunk_content = "\n\n" + tool_result_str + "\n\n"
                     yield f"data: {json.dumps({'type': 'chunk', 'content': ui_chunk_content})}\n\n"
-                    # Tell the LLM the UI rendered — forbid any text summary of the data
-                    tool_result_str = "[UI block rendered for user. Do NOT repeat or summarize this data in plain text. Just end your turn or ask a follow-up question.]"
+                    # Give the LLM a context-preserving summary so it knows what was found.
+                    # Never strip all context — that causes contradictory empty-state messages.
+                    _ctx = _build_tool_context_hint(tool_name, tool_result_str, tool_args)
+                    tool_result_str = _ctx
 
                 # ACTION: payloads → emit as SSE action events
                 elif tool_result_str.startswith("ACTION:"):

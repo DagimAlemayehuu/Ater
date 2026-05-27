@@ -185,7 +185,12 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                 const vaultPath = config?.obsidianVaultPath || '';
                 const normalizedPath = path.replace(/\\/g, '/');
                 const url = `http://127.0.0.1:${sidecarPort}/api/obsidian/pdf-metadata/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}`;
-                const res = await fetch(url);
+                const sidecarToken = await invoke<string>('get_sidecar_token');
+                const res = await fetch(url, {
+                    headers: {
+                        'X-Ater-Token': sidecarToken
+                    }
+                });
                 const data = await res.json();
                 if (active && data.page_count) {
                     setPageCount(data.page_count);

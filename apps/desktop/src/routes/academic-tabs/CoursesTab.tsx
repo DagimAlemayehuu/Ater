@@ -93,7 +93,7 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
       })
 
     return (
-      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+      <div data-tour="course-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -263,6 +263,7 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
 
             return (
               <div key={idx} onClick={() => setSelectedId(course.id)}
+                data-tour={`course-card-${course.id}`}
                 className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-all flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="text-[13px] font-black uppercase leading-tight text-foreground">{cleanTitle(course.title)}</h3>

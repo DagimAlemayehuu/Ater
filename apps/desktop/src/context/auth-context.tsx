@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, realSupabase } from '@/lib/supabase'
 import { useConfig } from '@/lib/ConfigContext'
 import { sidecarApi } from '@/lib/sidecarApi'
 
@@ -46,38 +46,113 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const activate = async (email: string, password: string, code: string) => {
     setLoading(true)
     setError(null)
-    console.log('[DRM] Starting offline-first activation...')
+    console.log('[DRM] Starting activation sequence...')
 
     try {
-      // Offline Validation: Simple check to ensure credentials feel real and robust
-      if (!email.includes('@') || email.length < 5) {
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanCode = code.trim().toUpperCase();
+
+      // Basic format validations
+      if (!cleanEmail.includes('@') || cleanEmail.length < 5) {
         throw new Error('Please enter a valid email address.')
       }
       if (password.length < 4) {
         throw new Error('Password must be at least 4 characters long.')
       }
-      if (code.trim().length < 6) {
+      if (cleanCode.length < 6) {
         throw new Error('Invalid activation code. Code must be at least 6 characters.')
       }
 
-      // Simulate a small, elegant processing delay to feel high-fidelity
+      // Simulate a processing delay for visual feedback
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanCode = code.trim().toUpperCase();
-      const derivedName = cleanEmail.split('@')[0].replace(/[\._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      let derivedName = cleanEmail.split('@')[0].replace(/[\._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+      // Live verification if real backend configuration exists
+      if (realSupabase) {
+        console.log('[DRM] Live backend active. Checking waitlist credentials...');
+        
+        // 1. Sign in to check email & password
+        const { data: authData, error: authError } = await realSupabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password,
+        });
+
+        if (authError) {
+          throw new Error(authError.message || 'Incorrect password or account does not exist.');
+        }
+
+        if (!authData?.user) {
+          throw new Error('Failed to retrieve user session.');
+        }
+
+        // 2. Fetch the user profile
+        const { data: profileData, error: profileError } = await realSupabase
+          .from('profiles')
+          .select('full_name, waitlist_status, is_approved, activation_code, account_status, machine_id')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profileError || !profileData) {
+          throw new Error('Waitlist activation profile not found. Please sign up for the waitlist.');
+        }
+
+        // 3. Check status validation
+        if (profileData.account_status && profileData.account_status !== 'active') {
+          throw new Error(`Your account status is currently ${profileData.account_status}. Please contact support.`);
+        }
+
+        if (profileData.waitlist_status !== 'approved' || profileData.is_approved !== true) {
+          throw new Error('Your waitlist status is not approved yet.');
+        }
+
+        const dbCode = (profileData.activation_code || '').trim().toUpperCase();
+        if (dbCode !== cleanCode) {
+          throw new Error('Invalid activation code. Please check your waitlist approval email.');
+        }
+
+        if (profileData.full_name) {
+          derivedName = profileData.full_name;
+        }
+
+        // 4. Validate and Bind Machine ID Hash
+        let machineId: string | null = null;
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          machineId = await invoke<string>('get_machine_id');
+        } catch (tauriError) {
+          console.warn('[DRM] Could not fetch machine ID hash:', tauriError);
+        }
+
+        if (profileData.machine_id && machineId && profileData.machine_id !== machineId) {
+          throw new Error('This activation key is already linked to another device. It cannot be used on multiple devices.');
+        }
+
+        if (!profileData.machine_id && machineId) {
+          console.log('[DRM] Binding activation key to this device...');
+          const { error: updateError } = await realSupabase
+            .from('profiles')
+            .update({ machine_id: machineId })
+            .eq('id', authData.user.id);
+          
+          if (updateError) {
+            console.error('[DRM] Failed to bind machine ID:', updateError);
+            throw new Error('Failed to bind activation key to this device. Please try again.');
+          }
+        }
+      }
 
       await saveConfig({ 
         isActivated: true, 
         activationEmail: cleanEmail, 
         activationCode: cleanCode,
-        isProgramConfigured: false, // forces onboarding on first run
+        isProgramConfigured: false,
         displayName: derivedName
       })
       
       setStatus('approved')
       setProfile({ full_name: derivedName })
-      console.log('[DRM] Activation sequence complete. Access granted locally.');
+      console.log('[DRM] Activation sequence complete. Access granted.');
     } catch (error: any) {
       console.error('[DRM] Activation error:', error.message);
       setError(error.message)

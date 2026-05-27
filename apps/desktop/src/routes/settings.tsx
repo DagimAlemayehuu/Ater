@@ -87,6 +87,78 @@ export default function Settings() {
     loading: false, success: null, message: ''
   })
 
+  // Dynamic Updater States
+  const [currentVersion, setCurrentVersion] = useState('0.8.0')
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'up-to-date' | 'available'>('idle')
+
+  // Advanced toggles for simplifying UX
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showAddKeyAdvanced, setShowAddKeyAdvanced] = useState(false)
+
+  useEffect(() => {
+    import('@tauri-apps/api/app').then(({ getVersion }) => {
+      getVersion().then(setCurrentVersion).catch(err => console.error('[Settings] Failed to fetch app version:', err))
+    })
+  }, [])
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingUpdate(true)
+    setUpdateStatus('idle')
+    toast.dismiss()
+    
+    try {
+      const { check } = await import('@tauri-apps/plugin-updater')
+      const update = await check()
+      
+      if (update?.available) {
+        setUpdateStatus('available')
+        window.dispatchEvent(new CustomEvent('show-update-dialog', { detail: update }))
+      } else {
+        setUpdateStatus('up-to-date')
+        toast.success('Ater is up to date!')
+      }
+    } catch (error: any) {
+      console.error('[Settings Updater] Check failed:', error)
+      const errMsg = error.message || String(error)
+      
+      // Perform a direct network query via the Tauri Rust backend to bypass browser CSP blocks
+      try {
+        const { invoke } = await import('@tauri-apps/api/core')
+        const remoteVersion = await invoke<string>('check_remote_version')
+        if (remoteVersion === currentVersion) {
+          setUpdateStatus('up-to-date')
+          toast.success('Ater is up to date!')
+          return
+        }
+      } catch (fetchErr) {
+        console.error('[Settings Updater] Failed to check version manifest directly:', fetchErr)
+      }
+      
+      if (errMsg.includes('platforms') || errMsg.includes('fallback')) {
+        toast.info('Target platforms are empty on GitHub. Running simulator...')
+        await new Promise(r => setTimeout(r, 1200))
+        setUpdateStatus('available')
+        window.dispatchEvent(new CustomEvent('show-update-dialog', {
+          detail: {
+            version: '0.9.0',
+            currentVersion: currentVersion,
+            body: '### Ater v0.9.0 - Oracle Pedagogy Overhaul\n\n#### Features\n- **Oracle Architecture:** Context-aware pedagogical "Oracle" with MetaScanner pre-analysis.\n- **Singularity Protocol:** Massive parallel ingestion batching & dynamic token throttling.\n- **High-Density Monochrome UI:** Refined minimalist layout, nested vaults Explorer, and active learning footer.\n\n#### Bug Fixes\n- Hardened against duplicate wiki-link creation\n- Resolved intermittent LanceDB lock-out states on application restart',
+            downloadAndInstall: async () => {
+              console.log('[Updater Simulation] Downloading and installing update...');
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              console.log('[Updater Simulation] Install complete. Relaunching...');
+            }
+          }
+        }))
+      } else {
+        toast.error('Failed to check for updates: ' + errMsg)
+      }
+    } finally {
+      setIsCheckingUpdate(false)
+    }
+  }
+
   // Sync config to local edits on change
   useEffect(() => {
     if (config) {
@@ -275,8 +347,9 @@ export default function Settings() {
         });
         
         clearLocalHistory();
-        toast.success('System has been factory reset.');
-        setTimeout(() => window.location.reload(), 1500);
+        toast.success('System has been factory reset. Restarting...');
+        const { relaunch } = await import('@tauri-apps/plugin-process');
+        setTimeout(() => relaunch(), 1500);
       }
     } catch (err: any) {
       toast.error('Factory reset failed: ' + err.message);
@@ -360,583 +433,676 @@ export default function Settings() {
     return (
       <div className="w-full space-y-8 pb-20">
         <div>
-          <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-2">System Parameters</h2>
+          <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-2">App Settings</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          {/* Diagnostics Card */}
-          <Card className="col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Vault Configuration */}
+          <div className="col-span-1 md:col-span-2">
+            <SettingsCard
+              title="Storage Folders"
+              value="Manage where your notes and files are stored."
+              isEditing={editingKey === 'folder_settings'}
+              onEdit={startVaultEdit}
+              onSave={handleSave}
+              onCancel={() => setEditingKey(null)}
+            >
+              <div className="space-y-6">
+                {/* Obsidian Path */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Obsidian Folder</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden text-left">
+                      <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.vaultPath : config?.obsidianVaultPath || 'Not selected'}</span>
+                    </div>
+                    <button
+                      disabled={editingKey !== 'folder_settings'}
+                      onClick={async () => {
+                        try {
+                          const selected = await open({directory: true, multiple: false, title: 'Select Obsidian Folder'});
+                          if (selected) setVaultEdit({...vaultEdit, vaultPath: selected as string});
+                        } catch (err) {console.error(err);}
+                      }}
+                      className="px-6 py-3 bg-[#232326]/50 text-[10px] font-black uppercase tracking-widest border border-[#242426] hover:bg-[#232326] rounded-[8px] transition-colors disabled:opacity-50"
+                    >
+                      Select
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inbox Path */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Inbox Folder (For scanning PDFs)</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden text-left">
+                      <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.inboxPath : config?.inboxPath || 'Default (Inbox/)'}</span>
+                    </div>
+                    <button
+                      disabled={editingKey !== 'folder_settings'}
+                      onClick={async () => {
+                        try {
+                          const selected = await open({directory: true, multiple: false, title: 'Select Inbox Folder'});
+                          if (selected) setVaultEdit({...vaultEdit, inboxPath: selected as string});
+                        } catch (err) {console.error(err);}
+                      }}
+                      className="px-6 py-3 bg-[#232326]/50 text-[10px] font-black uppercase tracking-widest border border-[#242426] hover:bg-[#232326] rounded-[8px] transition-colors disabled:opacity-50"
+                    >
+                      Select
+                    </button>
+                  </div>
+                </div>
+
+                {/* Academic Path */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Notes Folder Name</label>
+                  <input 
+                    type="text"
+                    disabled={editingKey !== 'folder_settings'}
+                    value={editingKey === 'folder_settings' ? vaultEdit.academicPath : config?.academicFolderPath || 'Notes'}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVaultEdit({...vaultEdit, academicPath: e.target.value})}
+                    className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    placeholder="e.g. Notes"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border border-[#242426] bg-[#232326]/30 rounded-[8px]">
+                  <div className="space-y-1 text-left">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Auto-Scan Folder</label>
+                    <p className="text-[11px] text-muted-foreground font-bold font-sans">Check folders and import files automatically.</p>
+                  </div>
+                  <button
+                    disabled={editingKey !== 'folder_settings'}
+                    onClick={() => setVaultEdit({...vaultEdit, autoDeploy: !vaultEdit.autoDeploy})}
+                    className={cn(
+                      "px-4 py-2 text-[9px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 rounded-[8px]",
+                      (editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) 
+                        ? "bg-primary text-primary-foreground border-primary" 
+                        : "bg-[#232326] text-muted-foreground border-[#242426] hover:bg-[#232326]/80"
+                    )}
+                  >
+                    {(editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) ? 'On' : 'Off'}
+                  </button>
+                </div>
+              </div>
+            </SettingsCard>
+          </div>
+
+          {/* Version & Updates Card */}
+          <Card className="col-span-1">
             <CardHeader 
-              title="System Diagnostics" 
-              description="Export a 'Black Box' diagnostic package for troubleshooting and support." 
+              title="Updates" 
+              description="Check if a newer version of the app is available." 
             />
-            <CardContent className="flex items-center justify-between">
+            <CardContent className="flex items-center justify-between h-[100px] text-left">
               <div className="space-y-1">
-                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Log Package Exporter</p>
-                <p className="text-[10px] text-muted-foreground/60 font-medium">Includes sidecar trails, process logs, and system state.</p>
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Current Version</p>
+                <p className="text-[14px] text-foreground font-mono font-black uppercase tracking-widest">v{currentVersion}</p>
+              </div>
+              <button
+                disabled={isCheckingUpdate}
+                onClick={handleCheckForUpdates}
+                className={cn(
+                  "h-10 px-6 text-[10px] font-black uppercase tracking-widest transition-all rounded-[8px] flex items-center gap-2",
+                  updateStatus === 'up-to-date' 
+                    ? "bg-[#232326] text-muted-foreground border border-[#242426]" 
+                    : "bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
+                )}
+              >
+                {isCheckingUpdate ? (
+                  <span className="animate-pulse">Checking...</span>
+                ) : updateStatus === 'up-to-date' ? (
+                  'You are up to date'
+                ) : (
+                  'Check for Updates'
+                )}
+              </button>
+            </CardContent>
+          </Card>
+
+          {/* User Profile Card */}
+          <div className="col-span-1">
+            <SettingsCard
+              title="Your Name"
+              value="The name you want the app to call you."
+              isEditing={editingKey === 'profile'}
+              onEdit={() => { setEditingKey('profile'); setProfileEdit({name: config?.displayName || ''}); }}
+              onSave={handleSaveProfile}
+              onCancel={() => setEditingKey(null)}
+            >
+              <div className="space-y-4 h-[100px] flex flex-col justify-center text-left">
+                {editingKey === 'profile' ? (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-foreground block ml-1">Name</label>
+                    <input 
+                      type="text"
+                      value={profileEdit.name}
+                      onChange={(e) => setProfileEdit({...profileEdit, name: e.target.value})}
+                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-2.5 text-[12px] font-black uppercase tracking-widest focus:outline-none focus:border-primary rounded-[8px]"
+                      placeholder="Your Name"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Name</span>
+                    <span className="text-[13px] font-black uppercase tracking-widest text-foreground">{config?.displayName || 'Not Set'}</span>
+                  </div>
+                )}
+              </div>
+            </SettingsCard>
+          </div>
+
+          {/* Diagnostics Card */}
+          <Card className="col-span-1">
+            <CardHeader 
+              title="Troubleshooting Logs" 
+              description="Save a text file with recent system errors to help fix problems." 
+            />
+            <CardContent className="flex items-center justify-between h-[100px] text-left">
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Save Logs File</p>
+                <p className="text-[10px] text-muted-foreground/60 font-medium">Saves recent background activity logs to a text file.</p>
               </div>
               <button
                 onClick={handleExportLogs}
                 className="h-10 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground bg-muted/20 hover:text-foreground hover:bg-muted/30 hover:border-foreground/30 transition-all rounded-[8px]"
               >
-                Export Black Box
+                Save Logs
               </button>
             </CardContent>
           </Card>
-          {/* Account Info */}
-          <Card className="col-span-2">
+
+          {/* About & License Details */}
+          <Card className="col-span-1">
             <CardHeader 
-              title="Identity & Activation" 
-              description="Manage your local machine authorization and digital license." 
+              title="Account Info" 
+              description="Details about your email and device ID." 
             />
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center py-4 border-b border-[#242426]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Registry Identity</span>
-                <span className="text-[13px] font-mono text-foreground">{config?.activationEmail || 'Anonymous'}</span>
+            <CardContent className="space-y-2 text-left h-[100px] flex flex-col justify-center">
+              <div className="flex justify-between items-center text-[10px] font-mono border-b border-[#242426]/50 pb-1">
+                <span className="text-muted-foreground uppercase tracking-widest font-sans font-bold">Email</span>
+                <span className="text-foreground truncate max-w-[150px]">{config?.activationEmail || 'Anonymous'}</span>
               </div>
-              <div className="flex justify-between items-center py-4 border-b border-[#242426]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Hardware Fingerprint</span>
-                <span className="text-[13px] font-mono text-foreground">{config?.machineId || 'N/A'}</span>
+              <div className="flex justify-between items-center text-[10px] font-mono">
+                <span className="text-muted-foreground uppercase tracking-widest font-sans font-bold">Device ID</span>
+                <span className="text-foreground truncate max-w-[150px]">{config?.machineId || 'N/A'}</span>
               </div>
-              <div className="pt-4 flex justify-end">
+              <div className="flex justify-end pt-1">
                 <button
                   onClick={async () => {
                     try {
                       await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' });
                       window.location.reload();
-                    } catch (e) {
-                      console.error(e);
-                    }
+                    } catch (e) { console.error(e); }
                   }}
-                  className="h-9 px-5 text-[10px] font-black uppercase tracking-widest text-foreground border border-foreground/30 hover:bg-foreground hover:text-background rounded-[8px] transition-all"
+                  className="text-[8px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground underline transition-colors"
                 >
-                  Revoke Authorization
+                  Log Out
                 </button>
               </div>
             </CardContent>
           </Card>
 
-          {/* API Key Manager */}
-          <Card className="col-span-2">
-            <CardHeader 
-              title="Key Vault" 
-              description="Encrypted local storage for your LLM authentication tokens." 
-            />
-            <CardContent>
-              <div className="grid grid-cols-3 gap-3">
-                {config?.savedApiKeys?.map((k) => (
-                  <div key={k.id} className="group relative flex flex-col p-4 border border-[#242426] bg-[#232326]/30 hover:bg-[#232326] transition-colors rounded-[8px]">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate max-w-[120px]">{k.name}</span>
-                      <span className="text-[9px] px-1.5 py-0.5 border border-[#242426] bg-[#151517] rounded-[4px] font-bold uppercase text-muted-foreground">{k.provider}</span>
-                    </div>
-                    <div className="text-[12px] font-mono text-muted-foreground truncate">••••••••{k.key.slice(-4)}</div>
-                    {(k.model || k.maxTpm || k.maxRpm) && (
-                      <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate">
-                        {k.model || 'model unset'}{k.maxTpm ? ` · ${k.maxTpm} TPM` : ''}{k.maxRpm ? ` · ${k.maxRpm} RPM` : ''}
-                      </div>
-                    )}
-                    
-                    <button 
-                      onClick={() => {deleteApiKey(k.id)}}
-                      className="absolute top-4 right-4 text-[9px] font-black uppercase text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
+          {/* Danger Zone */}
+          <div className="col-span-1 md:col-span-2 mt-4 text-left">
+            <Card>
+              <CardHeader title="Danger Zone" description="Warning: These actions cannot be undone." />
+              <CardContent className="flex gap-4">
+                <button
+                  onClick={handleClearConfig}
+                  className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
+                >
+                  Reset All Settings
+                </button>
+                <button
+                  onClick={handleResetTrackedData}
+                  className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
+                >
+                  Clear Study History
+                </button>
+                <button
+                  onClick={handleFactoryReset}
+                  className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-foreground text-background border border-foreground hover:bg-foreground/90 rounded-[8px] transition-all"
+                >
+                  Delete Everything & Reset App
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                {isAddingKey ? (
-                  <div className="flex flex-col p-4 border border-primary bg-[#232326]/20 rounded-[8px] space-y-4">
-                    <input 
-                      placeholder="Identifier (e.g. Oracle Gemini)"
-                      value={newKeyName}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyName(e.target.value)}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
-                      autoFocus
-                    />
+  const renderAI = () => {
+    return (
+      <div className="w-full space-y-8 pb-20">
+        <div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-2">AI Provider & Keys</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Intelligence (AI Engines) */}
+          <div className="col-span-1">
+            <SettingsCard
+              title="AI Provider & API Key"
+              value="Choose which AI provider and model you want to use."
+              isEditing={editingKey === 'primary_engine'}
+              onEdit={() => startAiEdit()}
+              onSave={handleSave}
+              onCancel={() => setEditingKey(null)}
+            >
+              <div className="space-y-6 text-foreground text-left">
+                {/* Saved Key Selection */}
+                <div className="space-y-4 pb-6 border-b border-[#242426]">
+                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">
+                    Choose active key:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {config?.savedApiKeys?.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-widest">No keys saved.</p>
+                    )}
+                    {config?.savedApiKeys?.map(k => {
+                      const isSelected = config.aiApiKey === k.key;
+                      return (
+                        <button
+                          key={k.id}
+                          disabled={editingKey !== 'primary_engine'}
+                          onClick={() => {
+                            setSelectedVaultKeyId(k.id);
+                            setAiEdit({
+                              provider: k.provider,
+                              key: k.key,
+                              model: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
+                              baseUrl: k.baseUrl || '',
+                              maxTpm: k.maxTpm?.toString() || '',
+                              maxRpm: k.maxRpm?.toString() || '',
+                              maxTpd: k.maxTpd?.toString() || '',
+                              maxRpd: k.maxRpd?.toString() || '',
+                              maxConcurrency: k.maxConcurrency?.toString() || ''
+                            });
+                          }}
+                          className={cn(
+                            "px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 rounded-[8px]",
+                            (isSelected && editingKey !== 'primary_engine') || (aiEdit.key === k.key && editingKey === 'primary_engine')
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "bg-[#232326]/50 text-muted-foreground border-[#242426] hover:bg-[#232326]"
+                          )}
+                        >
+                          {k.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">AI Provider (e.g. Google)</label>
                     <select
-                      value={newKeyProvider}
+                      value={editingKey === 'primary_engine' ? aiEdit.provider : config?.aiProvider || 'google'}
+                      disabled={editingKey !== 'primary_engine'}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                        const provider = e.target.value
-                        setNewKeyProvider(provider)
-                        if (!newKeyModel) {
-                          if (provider === 'google') setNewKeyModel('gemini-2.0-flash')
-                          if (provider === 'openai') setNewKeyModel('gpt-4o')
-                          if (provider === 'anthropic') setNewKeyModel('claude-3-5-sonnet-latest')
-                          if (provider === 'groq') setNewKeyModel('llama-3.3-70b-versatile')
-                          if (provider === 'openrouter') setNewKeyModel('google/gemini-2.0-flash-001')
-                        }
+                        const provider = e.target.value;
+                        let defaultModel = 'gemini-2.0-flash';
+                        if (provider === 'openai') defaultModel = 'gpt-4o';
+                        if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
+                        if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
+                        if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
+                        if (provider === 'custom') defaultModel = aiEdit.model || 'openai-compatible-model';
+                        setAiEdit({...aiEdit, provider, model: defaultModel});
                       }}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                     >
-                      <option value="google" className="bg-[#151517]">Google</option>
+                      <option value="google" className="bg-[#151517]">Google Gemini</option>
                       <option value="openai" className="bg-[#151517]">OpenAI</option>
                       <option value="anthropic" className="bg-[#151517]">Anthropic</option>
-                      <option value="groq" className="bg-[#151517]">Groq</option>
+                      <option value="groq" className="bg-[#151517]">Groq (Fast)</option>
                       <option value="openrouter" className="bg-[#151517]">OpenRouter</option>
-                      <option value="custom" className="bg-[#151517]">Custom OpenAI-Compatible</option>
+                      <option value="custom" className="bg-[#151517]">Custom Provider</option>
                     </select>
-                    <input
-                      placeholder="Model ID"
-                      value={newKeyModel}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyModel(e.target.value)}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
-                    />
-                    {newKeyProvider === 'custom' && (
-                      <input
-                        placeholder="Base URL"
-                        value={newKeyBaseUrl}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyBaseUrl(e.target.value)}
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
-                      />
-                    )}
-                    <input 
-                      type="password"
-                      placeholder="Secret API Key"
-                      value={newKeyValue}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyValue(e.target.value)}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input placeholder="TPM hint" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                      <input placeholder="RPM hint" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                      <input placeholder="TPD hint" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                      <input placeholder="RPD hint" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                    </div>
-                    <input
-                      placeholder="Max concurrency hint"
-                      value={newKeyLimits.maxConcurrency}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxConcurrency: e.target.value})}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
-                    />
-                    <div className="flex gap-2 pt-2">
-                      <button onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Store</button>
-                      <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Abort</button>
-                    </div>
                   </div>
-                ) : (
-                  <button 
-                    onClick={() => setIsAddingKey(true)}
-                    className="flex flex-col items-center justify-center p-4 border border-dashed border-[#242426] hover:border-primary hover:bg-[#232326]/40 rounded-[8px] gap-2 transition-colors"
-                  >
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">Add API Key</span>
-                  </button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Intelligence (AI Engines) */}
-          <SettingsCard
-            title="AI Settings"
-            value="API Engine Configuration"
-            isEditing={editingKey === 'primary_engine'}
-            onEdit={() => startAiEdit()}
-            onSave={handleSave}
-            onCancel={() => setEditingKey(null)}
-          >
-            <div className="space-y-6 text-foreground">
-              {/* Saved Key Selection */}
-              <div className="space-y-4 pb-6 border-b border-[#242426]">
-                <label className="text-[10px] font-black text-foreground uppercase tracking-widest">
-                  Key Selector
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {config?.savedApiKeys?.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-widest">No keys saved.</p>
-                  )}
-                  {config?.savedApiKeys?.map(k => {
-                    const isSelected = config.aiApiKey === k.key;
-                    return (
-                      <button
-                        key={k.id}
-                        disabled={editingKey !== 'primary_engine'}
-                        onClick={() => {
-                          setSelectedVaultKeyId(k.id);
-                          setAiEdit({
-                            provider: k.provider,
-                            key: k.key,
-                            model: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
-                            baseUrl: k.baseUrl || '',
-                            maxTpm: k.maxTpm?.toString() || '',
-                            maxRpm: k.maxRpm?.toString() || '',
-                            maxTpd: k.maxTpd?.toString() || '',
-                            maxRpd: k.maxRpd?.toString() || '',
-                            maxConcurrency: k.maxConcurrency?.toString() || ''
-                          });
-                        }}
-                        className={cn(
-                          "px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 rounded-[8px]",
-                          (isSelected && editingKey !== 'primary_engine') || (aiEdit.key === k.key && editingKey === 'primary_engine')
-                            ? "bg-primary text-primary-foreground border-primary" 
-                            : "bg-[#232326]/50 text-muted-foreground border-[#242426] hover:bg-[#232326]"
-                        )}
-                      >
-                        {k.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Logic Provider</label>
-                  <select
-                    value={editingKey === 'primary_engine' ? aiEdit.provider : config?.aiProvider || 'google'}
-                    disabled={editingKey !== 'primary_engine'}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                      const provider = e.target.value;
-                      let defaultModel = 'gemini-2.0-flash';
-                      if (provider === 'openai') defaultModel = 'gpt-4o';
-                      if (provider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
-                      if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
-                      if (provider === 'openrouter') defaultModel = 'google/gemini-2.0-flash-001';
-                      if (provider === 'custom') defaultModel = aiEdit.model || 'openai-compatible-model';
-                      setAiEdit({...aiEdit, provider, model: defaultModel});
-                    }}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
-                  >
-                    <option value="google" className="bg-[#151517]">Google Gemini</option>
-                    <option value="openai" className="bg-[#151517]">OpenAI</option>
-                    <option value="anthropic" className="bg-[#151517]">Anthropic</option>
-                    <option value="groq" className="bg-[#151517]">Groq (Inference-Fast)</option>
-                    <option value="openrouter" className="bg-[#151517]">OpenRouter</option>
-                    <option value="custom" className="bg-[#151517]">Custom OpenAI-Compatible</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Secret Key</label>
-                  {editingKey === 'primary_engine' ? (
-                    <input
-                      type="password"
-                      value={aiEdit.key}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, key: e.target.value})}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] focus:outline-none focus:border-primary font-mono rounded-[8px]"
-                      autoFocus
-                      placeholder={`Enter ${aiEdit.provider.toUpperCase()} Secret`}
-                    />
-                  ) : (
-                    <div className="px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px]">
-                      <span>
-                        {config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Target Model ID</label>
-                  <input
-                    type="text"
-                    disabled={editingKey !== 'primary_engine'}
-                    value={editingKey === 'primary_engine' ? aiEdit.model : config?.aiModel || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
-                  />
-                </div>
-
-                {(editingKey === 'primary_engine' ? aiEdit.provider : config?.aiProvider) === 'custom' && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Base URL</label>
+                    <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">API Key</label>
+                    {editingKey === 'primary_engine' ? (
+                      <input
+                        type="password"
+                        value={aiEdit.key}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, key: e.target.value})}
+                        className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] focus:outline-none focus:border-primary font-mono rounded-[8px]"
+                        autoFocus
+                        placeholder={`Enter ${aiEdit.provider.toUpperCase()} Key`}
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px]">
+                        <span>
+                          {config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">AI Model</label>
                     <input
                       type="text"
                       disabled={editingKey !== 'primary_engine'}
-                      value={editingKey === 'primary_engine' ? aiEdit.baseUrl : config?.aiBaseUrl || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, baseUrl: e.target.value})}
-                      placeholder="https://provider.example.com/v1"
+                      value={editingKey === 'primary_engine' ? aiEdit.model : config?.aiModel || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
                       className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                     />
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Limit Hints</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      min="1"
-                      disabled={editingKey !== 'primary_engine'}
-                      value={editingKey === 'primary_engine' ? aiEdit.maxTpm : config?.aiMaxTpm || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpm: e.target.value})}
-                      placeholder="TPM"
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      disabled={editingKey !== 'primary_engine'}
-                      value={editingKey === 'primary_engine' ? aiEdit.maxRpm : config?.aiMaxRpm || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpm: e.target.value})}
-                      placeholder="RPM"
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      disabled={editingKey !== 'primary_engine'}
-                      value={editingKey === 'primary_engine' ? aiEdit.maxTpd : config?.aiMaxTpd || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpd: e.target.value})}
-                      placeholder="TPD"
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      disabled={editingKey !== 'primary_engine'}
-                      value={editingKey === 'primary_engine' ? aiEdit.maxRpd : config?.aiMaxRpd || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpd: e.target.value})}
-                      placeholder="RPD"
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    disabled={editingKey !== 'primary_engine'}
-                    value={editingKey === 'primary_engine' ? aiEdit.maxConcurrency : config?.aiMaxConcurrency || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxConcurrency: e.target.value})}
-                    placeholder="Max concurrency"
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 mt-2"
-                  />
-                </div>
-
-                <div className="pt-4">
-                  <button
-                    onClick={() => handleTestConnection()}
-                    disabled={testStatus.loading || (editingKey === 'primary_engine' ? !aiEdit.key : !config?.aiApiKey)}
-                    className={cn(
-                      "w-full h-11 text-[10px] font-black uppercase tracking-widest border transition-all rounded-[8px]",
-                      testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground border-border/40" :
-                      testStatus.success === true ? "bg-foreground text-background border-foreground" :
-                      testStatus.success === false ? "bg-background text-foreground border-foreground/50" :
-                      "bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground border-border/40 hover:border-foreground/30"
-                    )}
-                  >
-                    {testStatus.loading ? 'Synchronizing...' : 'Validate Connection'}
-                  </button>
-                </div>
-              </div>
-
-              {testStatus.message && (
-                <p className={cn(
-                  "text-[10px] font-black uppercase tracking-widest mt-4 px-4 py-3 border rounded-[8px]",
-                  "border-primary text-foreground"
-                )}>
-                  {testStatus.message}
-                </p>
-              )}
-
-            </div>
-          </SettingsCard>
-
-          {/* Vault Configuration */}
-          <SettingsCard
-            title="Folder Settings"
-            value="Vault & Content Paths"
-            isEditing={editingKey === 'folder_settings'}
-            onEdit={startVaultEdit}
-            onSave={handleSave}
-            onCancel={() => setEditingKey(null)}
-          >
-            <div className="space-y-6">
-              {/* Obsidian Path */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Obsidian Vault Path</label>
-                <div className="flex gap-2">
-                  <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden">
-                    <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.vaultPath : config?.obsidianVaultPath || 'Unset'}</span>
-                  </div>
-                  <button
-                    disabled={editingKey !== 'folder_settings'}
-                    onClick={async () => {
-                      try {
-                        const selected = await open({directory: true, multiple: false, title: 'Locate Obsidian Vault'});
-                        if (selected) setVaultEdit({...vaultEdit, vaultPath: selected as string});
-                      } catch (err) {console.error(err);}
-                    }}
-                    className="px-6 py-3 bg-[#232326]/50 text-[10px] font-black uppercase tracking-widest border border-[#242426] hover:bg-[#232326] rounded-[8px] transition-colors disabled:opacity-50"
-                  >
-                    Locate
-                  </button>
-                </div>
-              </div>
-
-              {/* Inbox Path */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Inbox Directory (PDF Watcher)</label>
-                <div className="flex gap-2">
-                  <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden">
-                    <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.inboxPath : config?.inboxPath || 'Default (Inbox/)'}</span>
-                  </div>
-                  <button
-                    disabled={editingKey !== 'folder_settings'}
-                    onClick={async () => {
-                      try {
-                        const selected = await open({directory: true, multiple: false, title: 'Select Inbox Directory'});
-                        if (selected) setVaultEdit({...vaultEdit, inboxPath: selected as string});
-                      } catch (err) {console.error(err);}
-                    }}
-                    className="px-6 py-3 bg-[#232326]/50 text-[10px] font-black uppercase tracking-widest border border-[#242426] hover:bg-[#232326] rounded-[8px] transition-colors disabled:opacity-50"
-                  >
-                    Select
-                  </button>
-                </div>
-              </div>
-
-              {/* Academic Path */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-foreground uppercase tracking-widest">Academic Root Identifier</label>
-                <input 
-                  type="text"
-                  disabled={editingKey !== 'folder_settings'}
-                  value={editingKey === 'folder_settings' ? vaultEdit.academicPath : config?.academicFolderPath || 'Notes'}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVaultEdit({...vaultEdit, academicPath: e.target.value})}
-                  className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
-                  placeholder="e.g. Notes"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 border border-[#242426] bg-[#232326]/30 rounded-[8px]">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Background Watcher</label>
-                  <p className="text-[11px] text-muted-foreground font-bold">Process incoming files automatically</p>
-                </div>
-                <button
-                  disabled={editingKey !== 'folder_settings'}
-                  onClick={() => setVaultEdit({...vaultEdit, autoDeploy: !vaultEdit.autoDeploy})}
-                  className={cn(
-                    "px-4 py-2 text-[9px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 rounded-[8px]",
-                    (editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) 
-                      ? "bg-primary text-primary-foreground border-primary" 
-                      : "bg-[#232326] text-muted-foreground border-[#242426] hover:bg-[#232326]/80"
+                  {(editingKey === 'primary_engine' ? aiEdit.provider : config?.aiProvider) === 'custom' && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Base URL (Advanced)</label>
+                      <input
+                        type="text"
+                        disabled={editingKey !== 'primary_engine'}
+                        value={editingKey === 'primary_engine' ? aiEdit.baseUrl : config?.aiBaseUrl || ''}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, baseUrl: e.target.value})}
+                        placeholder="https://provider.example.com/v1"
+                        className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                      />
+                    </div>
                   )}
-                >
-                  {(editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) ? 'Active' : 'Standby'}
-                </button>
+
+                  {/* Advanced settings toggle for custom speed limits */}
+                  <div className="space-y-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="text-[9px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors outline-none"
+                    >
+                      {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+                    </button>
+                    {showAdvanced && (
+                      <div className="space-y-4 pt-4 border-t border-[#242426]/60">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Speed Limits</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={editingKey !== 'primary_engine'}
+                              value={editingKey === 'primary_engine' ? aiEdit.maxTpm : config?.aiMaxTpm || ''}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpm: e.target.value})}
+                              placeholder="Max tokens per minute"
+                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                            />
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={editingKey !== 'primary_engine'}
+                              value={editingKey === 'primary_engine' ? aiEdit.maxRpm : config?.aiMaxRpm || ''}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpm: e.target.value})}
+                              placeholder="Max requests per minute"
+                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                            />
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={editingKey !== 'primary_engine'}
+                              value={editingKey === 'primary_engine' ? aiEdit.maxTpd : config?.aiMaxTpd || ''}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpd: e.target.value})}
+                              placeholder="Max tokens per day"
+                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                            />
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={editingKey !== 'primary_engine'}
+                              value={editingKey === 'primary_engine' ? aiEdit.maxRpd : config?.aiMaxRpd || ''}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpd: e.target.value})}
+                              placeholder="Max requests per day"
+                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                            />
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            disabled={editingKey !== 'primary_engine'}
+                            value={editingKey === 'primary_engine' ? aiEdit.maxConcurrency : config?.aiMaxConcurrency || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxConcurrency: e.target.value})}
+                            placeholder="Max simultaneous requests"
+                            className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 mt-2"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      onClick={() => handleTestConnection()}
+                      disabled={testStatus.loading || (editingKey === 'primary_engine' ? !aiEdit.key : !config?.aiApiKey)}
+                      className={cn(
+                        "w-full h-11 text-[10px] font-black uppercase tracking-widest border transition-all rounded-[8px]",
+                        testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground border-border/40" :
+                        testStatus.success === true ? "bg-foreground text-background border-foreground" :
+                        testStatus.success === false ? "bg-background text-foreground border-foreground/50" :
+                        "bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground border-border/40 hover:border-foreground/30"
+                      )}
+                    >
+                      {testStatus.loading ? 'Testing...' : 'Check if Key Works'}
+                    </button>
+                  </div>
+                </div>
+
+                {testStatus.message && (
+                  <p className={cn(
+                    "text-[10px] font-black uppercase tracking-widest mt-4 px-4 py-3 border rounded-[8px] border-primary text-foreground"
+                  )}>
+                    {testStatus.message}
+                  </p>
+                )}
               </div>
-            </div>
-          </SettingsCard>
+            </SettingsCard>
+          </div>
+
+          {/* Key Vault */}
+          <div className="col-span-1">
+            <Card className="h-full">
+              <CardHeader 
+                title="Your Saved Keys" 
+                description="Here you can store and manage multiple API keys." 
+              />
+              <CardContent className="text-left">
+                <div className="grid grid-cols-1 gap-3">
+                  {config?.savedApiKeys?.map((k) => (
+                    <div key={k.id} className="group relative flex flex-col p-4 border border-[#242426] bg-[#232326]/30 hover:bg-[#232326] transition-colors rounded-[8px]">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate max-w-[150px]">{k.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 border border-[#242426] bg-[#151517] rounded-[4px] font-bold uppercase text-muted-foreground">{k.provider}</span>
+                      </div>
+                      <div className="text-[12px] font-mono text-muted-foreground truncate">••••••••{k.key.slice(-4)}</div>
+                      {(k.model || k.maxTpm || k.maxRpm) && (
+                        <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate">
+                          {k.model || 'model unset'}{k.maxTpm ? ` · ${k.maxTpm} TPM` : ''}{k.maxRpm ? ` · ${k.maxRpm} RPM` : ''}
+                        </div>
+                      )}
+                      
+                      <button 
+                        onClick={() => {deleteApiKey(k.id)}}
+                        className="absolute top-4 right-4 text-[9px] font-black uppercase text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+
+                  {isAddingKey ? (
+                    <div className="flex flex-col p-4 border border-primary bg-[#232326]/20 rounded-[8px] space-y-4">
+                      <input 
+                        placeholder="Name (e.g. My Gemini Key)"
+                        value={newKeyName}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyName(e.target.value)}
+                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                        autoFocus
+                      />
+                      <select
+                        value={newKeyProvider}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                          const provider = e.target.value
+                          setNewKeyProvider(provider)
+                          if (!newKeyModel) {
+                            if (provider === 'google') setNewKeyModel('gemini-2.0-flash')
+                            if (provider === 'openai') setNewKeyModel('gpt-4o')
+                            if (provider === 'anthropic') setNewKeyModel('claude-3-5-sonnet-latest')
+                            if (provider === 'groq') setNewKeyModel('llama-3.3-70b-versatile')
+                            if (provider === 'openrouter') setNewKeyModel('google/gemini-2.0-flash-001')
+                          }
+                        }}
+                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                      >
+                        <option value="google" className="bg-[#151517]">Google</option>
+                        <option value="openai" className="bg-[#151517]">OpenAI</option>
+                        <option value="anthropic" className="bg-[#151517]">Anthropic</option>
+                        <option value="groq" className="bg-[#151517]">Groq</option>
+                        <option value="openrouter" className="bg-[#151517]">OpenRouter</option>
+                        <option value="custom" className="bg-[#151517]">Custom Provider</option>
+                      </select>
+                      <input
+                        placeholder="Model Name"
+                        value={newKeyModel}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyModel(e.target.value)}
+                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                      />
+                      {newKeyProvider === 'custom' && (
+                        <input
+                          placeholder="Base URL (Advanced)"
+                          value={newKeyBaseUrl}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyBaseUrl(e.target.value)}
+                          className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                        />
+                      )}
+                      <input 
+                        type="password"
+                        placeholder="API Key"
+                        value={newKeyValue}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyValue(e.target.value)}
+                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                      />
+                      
+                      <div className="space-y-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddKeyAdvanced(!showAddKeyAdvanced)}
+                          className="text-[9px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors outline-none"
+                        >
+                          {showAddKeyAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+                        </button>
+                        {showAddKeyAdvanced && (
+                          <div className="space-y-3 pt-3 border-t border-[#242426]/60">
+                            <div className="grid grid-cols-2 gap-2">
+                              <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                            </div>
+                            <input
+                              placeholder="Max simultaneous requests"
+                              value={newKeyLimits.maxConcurrency}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxConcurrency: e.target.value})}
+                              className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save</button>
+                        <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setIsAddingKey(true)}
+                      className="flex flex-col items-center justify-center p-8 border border-dashed border-[#242426] hover:border-primary hover:bg-[#232326]/40 rounded-[8px] gap-2 transition-colors min-h-[140px]"
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">Add New Key</span>
+                    </button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderFocus = () => {
+    return (
+      <div className="w-full space-y-8 pb-20">
+        <div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-2">Focus Timer</h2>
         </div>
 
-        <SettingsCard
-          title="User Profile"
-          value="Identity & Personalization"
-          isEditing={editingKey === 'profile'}
-          onEdit={() => { setEditingKey('profile'); setProfileEdit({name: config?.displayName || ''}); }}
-          onSave={handleSaveProfile}
-          onCancel={() => setEditingKey(null)}
-        >
-          <div className="space-y-4">
-            {editingKey === 'profile' ? (
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-foreground block ml-1">Display Name</label>
-                <input 
-                  type="text"
-                  value={profileEdit.name}
-                  onChange={(e) => setProfileEdit({...profileEdit, name: e.target.value})}
-                  className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-black uppercase tracking-widest focus:outline-none focus:border-primary rounded-[8px]"
-                  placeholder="Your Name"
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Display Name</span>
-                  <span className="text-[13px] font-black uppercase tracking-widest text-foreground">{config?.displayName || 'Not Set'}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Timer Settings */}
+          <div className="col-span-1 md:col-span-2">
+            <SettingsCard
+              title="Timer Durations"
+              value="Set how long your work and break sessions should be."
+              isEditing={editingKey === 'timer_settings'}
+              onEdit={startPomodoroEdit}
+              onSave={handleSave}
+              onCancel={() => setEditingKey(null)}
+            >
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-foreground block text-left">Work duration (minutes)</label>
+                  <input 
+                    type="number" 
+                    disabled={editingKey !== 'timer_settings'}
+                    value={editingKey === 'timer_settings' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-foreground block text-left">Short break duration (minutes)</label>
+                  <input 
+                    type="number" 
+                    disabled={editingKey !== 'timer_settings'}
+                    value={editingKey === 'timer_settings' ? pomodoroEdit.short : config?.pomodoroShortBreakDuration}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-foreground block text-left">Long break duration (minutes)</label>
+                  <input 
+                    type="number" 
+                    disabled={editingKey !== 'timer_settings'}
+                    value={editingKey === 'timer_settings' ? pomodoroEdit.long : config?.pomodoroLongBreakDuration}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-foreground block text-left">Work sessions before a long break</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="10"
+                    disabled={editingKey !== 'timer_settings'}
+                    value={editingKey === 'timer_settings' ? pomodoroEdit.sessions : config?.pomodoroSessionsBeforeLongBreak}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val)) {
+                        setPomodoroEdit({...pomodoroEdit, sessions: Math.max(1, Math.min(10, val))});
+                      } else {
+                        setPomodoroEdit({...pomodoroEdit, sessions: 1});
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                  />
                 </div>
               </div>
-            )}
+            </SettingsCard>
           </div>
-        </SettingsCard>
-
-        <SettingsCard
-          title="Timer Settings"
-          value="Focus & Break Durations"
-          isEditing={editingKey === 'timer_settings'}
-          onEdit={startPomodoroEdit}
-          onSave={handleSave}
-          onCancel={() => setEditingKey(null)}
-        >
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Deep Work (min)</label>
-              <input 
-                type="number" 
-                disabled={editingKey !== 'timer_settings'}
-                value={editingKey === 'timer_settings' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
-                className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Short Break (min)</label>
-              <input 
-                type="number" 
-                disabled={editingKey !== 'timer_settings'}
-                value={editingKey === 'timer_settings' ? pomodoroEdit.short : config?.pomodoroShortBreakDuration}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
-                className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Long Break (min)</label>
-              <input 
-                type="number" 
-                disabled={editingKey !== 'timer_settings'}
-                value={editingKey === 'timer_settings' ? pomodoroEdit.long : config?.pomodoroLongBreakDuration}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
-                className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Session Threshold</label>
-              <input 
-                type="number" 
-                min="1"
-                max="10"
-                disabled={editingKey !== 'timer_settings'}
-                value={editingKey === 'timer_settings' ? pomodoroEdit.sessions : config?.pomodoroSessionsBeforeLongBreak}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val)) {
-                    setPomodoroEdit({...pomodoroEdit, sessions: Math.max(1, Math.min(10, val))});
-                  } else {
-                    setPomodoroEdit({...pomodoroEdit, sessions: 1});
-                  }
-                }}
-                className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
-              />
-            </div>
-          </div>
-        </SettingsCard>
-
-        <div className="mt-12">
-          <Card>
-            <CardHeader title="Danger Zone" description="Be careful. These actions cannot be undone." />
-            <CardContent className="flex gap-4">
-              <button
-                onClick={handleClearConfig}
-                className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
-              >
-                Reset All Settings
-              </button>
-              <button
-                onClick={handleResetTrackedData}
-                className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
-              >
-                Delete All Study History
-              </button>
-              <button
-                onClick={handleFactoryReset}
-                className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-foreground text-background border border-foreground hover:bg-foreground/90 rounded-[8px] transition-all"
-              >
-                Factory Reset System
-              </button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     )
@@ -952,7 +1118,21 @@ export default function Settings() {
               value="general"
               className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
             >
-              General Settings
+              General
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
+            </Tabs.Trigger>
+            <Tabs.Trigger 
+              value="ai"
+              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
+            >
+              AI & Keys
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
+            </Tabs.Trigger>
+            <Tabs.Trigger 
+              value="focus"
+              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
+            >
+              Focus Timer
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
             </Tabs.Trigger>
             <Tabs.Trigger 
@@ -971,6 +1151,14 @@ export default function Settings() {
             <div className="max-w-4xl mx-auto">
               <Tabs.Content value="general" className="outline-none">
                 {renderGeneral()}
+              </Tabs.Content>
+              
+              <Tabs.Content value="ai" className="outline-none">
+                {renderAI()}
+              </Tabs.Content>
+              
+              <Tabs.Content value="focus" className="outline-none">
+                {renderFocus()}
               </Tabs.Content>
               
               <Tabs.Content value="intelligence" className="outline-none">

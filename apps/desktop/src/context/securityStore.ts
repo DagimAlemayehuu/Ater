@@ -1,9 +1,7 @@
 import { create } from 'zustand'
 import { invoke } from '@tauri-apps/api/core'
 import { supabase } from '@/lib/supabase'
-import { load } from '@tauri-apps/plugin-store'
-
-const STORE_FILENAME = 'ater_config.json'
+import { getAppStore } from '@/lib/store'
 
 
 export type LockStatus = 'Active' | 'FeatureLocked' | 'Bricked' | 'LeaseExpired'
@@ -31,9 +29,15 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   initializeSecurity: async () => {
     set({ isChecking: true })
     try {
-      // 1. Hydrate security state from local cache in Tauri Rust layer
-      await invoke<string>('load_cached_security_state')
-      const securityState = await invoke<{ status: LockStatus; locked_features: string[] }>('get_security_state')
+      // 1. Hydrate security state from local cache in Tauri Rust layer with timeout safeguards
+      await Promise.race([
+        invoke<string>('load_cached_security_state'),
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('load_cached_security_state timeout')), 1500))
+      ])
+      const securityState = await Promise.race([
+        invoke<{ status: LockStatus; locked_features: string[] }>('get_security_state'),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('get_security_state timeout')), 1500))
+      ])
       
       set({
         status: securityState.status,
@@ -60,6 +64,11 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
   checkOnlineLockout: async () => {
     try {
+      // If not activated, do not perform remote license checks or trigger reload loops
+      const store = await getAppStore()
+      const isActivated = (await store.get<boolean>('isActivated')) ?? false
+      if (!isActivated) return
+
       // 1. Retrieve session user from Supabase client
       const { data: authData } = await supabase.auth.getUser()
       const user = authData?.user
@@ -86,7 +95,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
         if (navigator.onLine) {
           console.warn('[Security System] Cloud profile not found while online. Wiping local configurations...')
           try {
-            const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+            const store = await getAppStore()
             await store.set('isActivated', false)
             await store.set('activationEmail', '')
             await store.set('activationCode', '')
@@ -133,7 +142,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
               async () => {
                 console.warn('[Security System] Realtime profile deletion detected! Wiping local configuration...');
                 try {
-                  const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+                  const store = await getAppStore()
                   await store.set('isActivated', false)
                   await store.set('activationEmail', '')
                   await store.set('activationCode', '')
@@ -160,7 +169,15 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       // If banned, suspended or full-system locked, lock immediately without signature verification
       if (profile.account_status === 'suspended' || profile.account_status === 'banned' || profile.is_approved === false || profile.waitlist_status === 'revoked' || isFullSystemLocked) {
         set({ status: 'Bricked', lockedFeatures: profile.locked_features || [] })
-        const machineId = await invoke<string>('get_machine_id')
+        let machineId = 'unknown-device'
+        try {
+          machineId = await Promise.race([
+            invoke<string>('get_machine_id'),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+          ])
+        } catch (err) {
+          console.warn('[Security System] Failed to resolve device footprint during lockout, using fallback:', err)
+        }
         // Send heartbeat to trigger sidecar kill & Rust bricking
         await invoke('process_security_heartbeat', {
           leaseJson: JSON.stringify({
@@ -176,7 +193,16 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       }
 
       // 3. Request signed Ed25519 lease from the Edge Function
-      const machineId = await invoke<string>('get_machine_id')
+      let machineId = 'unknown-device'
+      try {
+        machineId = await Promise.race([
+          invoke<string>('get_machine_id'),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+        ])
+      } catch (err) {
+        console.warn('[Security System] Failed to resolve device footprint, falling back to random UUID:', err)
+        machineId = crypto.randomUUID()
+      }
       let leaseApplied = false
 
       // Call Supabase Edge function (checking support on mock client too)

@@ -41,6 +41,7 @@ def sanitize_api_key(key: Optional[str]) -> Optional[str]:
     return cleaned if cleaned else None
 
 async def get_app_secrets(
+    x_ater_token: Optional[str] = Header(None),
     x_ai_provider: str = Header("google"),
     x_ai_key: Optional[str] = Header(None),
     x_ai_model: str = Header("gemini-2.0-flash"),
@@ -71,6 +72,13 @@ async def get_app_secrets(
     Extracts core secrets from request headers.
     Supports 3-tier reasoning levels.
     """
+    import os
+    from fastapi import HTTPException
+    expected_token = os.environ.get("ATER_SIDECAR_TOKEN")
+    if expected_token:
+        if not x_ater_token or x_ater_token != expected_token:
+            raise HTTPException(status_code=401, detail="ACCESS_DENIED: Invalid sidecar authentication token.")
+
     primary_provider = x_ai_provider.lower()
     
     # Sanitize all incoming keys to prevent quotes, newlines, and non-ascii from crashing httpx

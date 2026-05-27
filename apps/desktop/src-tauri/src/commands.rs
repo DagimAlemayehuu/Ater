@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::sync::OnceLock;
 use tauri::{State, Manager};
 use tauri::path::BaseDirectory;
 use crate::db::{VectorDB, SearchResult, VectorDocument};
 use crate::ml::ModelEngine;
+
+pub static SIDECAR_TOKEN: OnceLock<String> = OnceLock::new();
 
 macro_rules! verify_licensing {
     ($state:expr, $feature:expr) => {
@@ -64,6 +67,7 @@ pub struct AppState {
     pub lock_status: Mutex<AppLockStatus>,
     pub locked_features: Mutex<Vec<String>>,
     pub sidecar_pid: Mutex<Option<u32>>,
+    pub sidecar_token: String,
 }
 
 fn find_model_dir(app_handle: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -429,6 +433,12 @@ fn resolve_path_robust(path_str: &str, app_handle: &tauri::AppHandle) -> Result<
 fn get_proxy_headers(config: &AppConfig) -> reqwest::header::HeaderMap {
     use reqwest::header::{HeaderMap, HeaderValue};
     let mut headers = HeaderMap::new();
+
+    if let Some(token) = SIDECAR_TOKEN.get() {
+        if let Ok(h_val) = HeaderValue::from_str(token) {
+            headers.insert("X-Ater-Token", h_val);
+        }
+    }
     
     if let Some(ref val) = config.ai_provider {
         if let Ok(h_val) = HeaderValue::from_str(val) {
@@ -2933,6 +2943,11 @@ pub fn get_security_state(state: State<'_, AppState>) -> Result<serde_json::Valu
 }
 
 #[tauri::command]
+pub fn get_sidecar_token(state: State<'_, AppState>) -> String {
+    state.sidecar_token.clone()
+}
+
+#[tauri::command]
 pub async fn load_cached_security_state(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<String, String> {
     let cache_path = match get_lease_cache_path(&app_handle) {
         Ok(path) => path,
@@ -3001,8 +3016,9 @@ pub async fn load_cached_security_state(state: State<'_, AppState>, app_handle: 
                 *lock_guard = AppLockStatus::LeaseExpired;
                 Ok("LeaseExpired".to_string())
             } else {
-                *lock_guard = AppLockStatus::Bricked;
-                Ok("Bricked".to_string())
+                // Cryptographic validation failures or corruption offline must degrade to LeaseExpired (restricting server AI) rather than bricking local note tools
+                *lock_guard = AppLockStatus::LeaseExpired;
+                Ok("LeaseExpired".to_string())
             }
         }
     }

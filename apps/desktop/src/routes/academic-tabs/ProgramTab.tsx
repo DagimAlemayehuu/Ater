@@ -329,12 +329,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   return (
     <div className="h-full flex gap-3 overflow-hidden">
       {/* Left Roadmap Panel Bento Box */}
-      <aside className="w-64 shrink-0 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col overflow-hidden shadow-sm">
+      <aside data-tour="program-bento" className="w-64 shrink-0 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col overflow-hidden shadow-sm">
         <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/5">
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 flex items-center gap-2">
             <GraduationCap size={12} /> Roadmap
           </span>
           <button onClick={() => setShowSetup(!showSetup)}
+            data-tour="program-edit"
             className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all">
             {showSetup ? 'Back' : programYears.length > 0 ? 'Edit' : 'Setup'}
           </button>
@@ -370,14 +371,22 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
             {/* Program Stats */}
             <div className="grid grid-cols-4 gap-4">
-              <StatCard label="Progress" value={`${completedYears} / ${targetYears} Years`}
-                sub={`${Math.round((completedYears / targetYears) * 100)}% complete`} />
-              <StatCard label="Active Year" value={cleanTitle(activeYear?.title || '--')}
-                onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
-              <StatCard label="Active Semester" value={cleanTitle(activeSem?.title || '--')} accent
-                onClick={() => activeSem && setSelectedSemId(activeSem.id)} />
-              <StatCard label="Cumulative GPA"
-                value={getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'} />
+              <div data-tour="program-progress">
+                <StatCard label="Progress" value={`${completedYears} / ${targetYears} Years`}
+                  sub={`${Math.round((completedYears / targetYears) * 100)}% complete`} />
+              </div>
+              <div data-tour="program-active-year">
+                <StatCard label="Active Year" value={cleanTitle(activeYear?.title || '--')}
+                  onClick={() => activeYear && setSelectedYearId(activeYear.id)} />
+              </div>
+              <div data-tour="program-active-semester">
+                <StatCard label="Active Semester" value={cleanTitle(activeSem?.title || '--')} accent
+                  onClick={() => activeSem && setSelectedSemId(activeSem.id)} />
+              </div>
+              <div data-tour="program-gpa">
+                <StatCard label="Cumulative GPA"
+                  value={getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'} />
+              </div>
             </div>
 
             {/* Active Courses */}
@@ -402,7 +411,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
             )}
 
             {/* All Years */}
-            <section className="space-y-6">
+            <section className="space-y-6" data-tour="program-grid">
               <SectionHeader title="All Years" count={programYears.length} />
               <div className="grid grid-cols-2 gap-4">
                 {programYears.map((y, idx) => {

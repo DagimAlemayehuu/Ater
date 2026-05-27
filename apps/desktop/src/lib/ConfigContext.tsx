@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { load } from '@tauri-apps/plugin-store';
+import { getAppStore } from '@/lib/store';
 
 import DEFAULT_SYSTEM_PROMPT_STRATEGIST from '@/templates/system-prompts/strategist.md?raw';
 import DEFAULT_SYSTEM_PROMPT_CREATOR from '@/templates/system-prompts/creator.md?raw';
@@ -78,6 +78,7 @@ export interface AppConfig {
     machineId: string;
     displayName: string;
     isProgramConfigured: boolean;
+    isDemoMode: boolean;
 }
 
 interface ConfigContextType {
@@ -128,6 +129,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     machineId: '',
     displayName: '',
     isProgramConfigured: false,
+    isDemoMode: false,
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -137,7 +139,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     useEffect(() => {
         const initStore = async () => {
             try {
-                const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
+                const store = await getAppStore();
 
                 // Load existing values or use defaults
                 const aiProvider = (await store.get<string>('aiProvider')) || DEFAULT_CONFIG.aiProvider;
@@ -183,12 +185,16 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const activationCode = (await store.get<string>('activationCode')) || '';
                 const displayName = (await store.get<string>('displayName')) || '';
                 const isProgramConfigured = (await store.get<boolean>('isProgramConfigured')) ?? false;
+                const isDemoMode = (await store.get<boolean>('isDemoMode')) ?? false;
                 
                 let machineId = await store.get<string>('machineId');
                 if (!machineId) {
                     try {
-                        const { sidecarApi } = await import('@/lib/sidecarApi');
-                        machineId = await sidecarApi.getMachineId();
+                        const { invoke } = await import('@tauri-apps/api/core');
+                        machineId = await Promise.race([
+                            invoke<string>('get_machine_id'),
+                            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+                        ]);
                     } catch (err) {
                         console.warn('[Config] Failed to get native machine ID, generating fallback:', err);
                         machineId = crypto.randomUUID();
@@ -228,6 +234,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     machineId,
                     displayName,
                     isProgramConfigured,
+                    isDemoMode,
                 };
 
                 // Auto-select first key if none active
@@ -271,7 +278,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!config) return;
 
         try {
-            const store = await load(STORE_FILENAME, { autoSave: true, defaults: DEFAULT_CONFIG });
+            const store = await getAppStore();
             const updatedConfig = { ...config, ...newConfig } as any;
 
             // Update store — skip undefined values (not JSON-serializable by Tauri IPC).

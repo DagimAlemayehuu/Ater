@@ -547,20 +547,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         return;
       }
       
-      setTimeout(() => {
-        setQuestions(res.questions); 
-        setCurrentPracticePath(res.quiz_path); 
-        setCurrentQuestionIdx(0); 
-        setUserAnswers({}); 
-        setIsRevealed(false); 
-        setGradedAnswers({}); 
-        setStreak(0); 
-        setBookmarked(new Set());
-        setView('session');
-        (window as any).__practiceStartTime = Date.now();
-        if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
-        if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
-      }, 1000);
+      setView('session');
+      (window as any).__practiceStartTime = Date.now();
+      if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
+      if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
     } catch (err: any) {
       toast.error(getCleanErrorMessage(err)); 
       setView('configuring');
@@ -789,7 +779,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          return;
       }
       
-      setTimeout(() => {
          setQuestions(res.questions); 
          setCurrentPracticePath(res.quiz_path); 
          setCurrentQuestionIdx(0); 
@@ -801,7 +790,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          (window as any).__practiceStartTime = Date.now();
          if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
          if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
-      }, 1000);
     } catch (err) {
       console.error(err);
       toast.error("Error generating practice from due cards");
@@ -850,12 +838,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1", (view as string) === 'vault' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}><BookOpen size={10}/>Reference Vault</button>
      </div>
      <div className="flex gap-2 w-auto">
-     <Button onClick={handleReviewDueCards} className="h-9 flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
-     <Button onClick={() => setView('configuring')} className="h-9 flex-none px-6 bg-[#1a1a1c] border border-[#242426] hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">Custom</Button>
+     <Button data-tour="practice-due-btn" onClick={handleReviewDueCards} className="h-9 flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
+     <Button data-tour="practice-custom-btn" onClick={() => setView('configuring')} className="h-9 flex-none px-6 bg-[#1a1a1c] border border-[#242426] hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">Custom</Button>
      </div>
      </div>
 
-     <div className="grid grid-cols-3 gap-4">
+     <div data-tour="practice-stats-grid" className="grid grid-cols-3 gap-4">
      <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
      <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
@@ -1079,7 +1067,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     <div className="text-xl font-black tracking-tight text-foreground">{totalQuestions} Questions</div>
     </div>
 
-    <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
+    <div data-tour="practice-config-panel" className="grid grid-cols-4 gap-4 flex-1 min-h-0">
       <div className="col-span-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
        <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-5">
         
@@ -1244,7 +1232,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     !unlockedNotes.has(currentCardPath);
 
  return (
- <div className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
+ <div data-tour="practice-session-card" className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
     {/* ── Feynman Gate Locked Overlay ── */}
     {isFeynmanLocked && (
       <div className="absolute inset-0 z-40 bg-bento-bg/90 backdrop-blur-md flex items-center justify-center p-6">

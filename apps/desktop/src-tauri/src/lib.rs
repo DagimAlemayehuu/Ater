@@ -25,6 +25,15 @@ fn get_sidecar_port(state: State<'_, SidecarConfig>) -> u16 {
     state.port
 }
 
+fn generate_random_token() -> String {
+    use std::time::SystemTime;
+    use sha2::Digest;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(machine_uid::get().unwrap_or_default().as_bytes());
+    hasher.update(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_nanos().to_le_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
 /// Minimal health response — used for the `get_health` IPC command.
 #[tauri::command]
 fn get_health() -> serde_json::Value {
@@ -133,6 +142,26 @@ async fn export_logs(_app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn check_remote_version() -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+    
+    let url = "https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/update.json";
+    let res = client.get(url).send().await.map_err(|e| e.to_string())?;
+    
+    if res.status().is_success() {
+        let json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+        if let Some(version) = json.get("version").and_then(|v| v.as_str()) {
+            return Ok(version.to_string());
+        }
+    }
+    
+    Err("Failed to read version from remote manifest".to_string())
+}
+
+#[tauri::command]
 fn get_machine_id() -> Result<String, String> {
     let id = machine_uid::get().map_err(|e| e.to_string())?;
     let mut hasher = sha2::Sha256::new();
@@ -198,12 +227,15 @@ pub fn run() {
             }
         })
         .setup(move |app| {
+            let sidecar_token = generate_random_token();
+            let _ = commands::SIDECAR_TOKEN.set(sidecar_token.clone());
             app.manage(commands::AppState {
                 db: std::sync::Mutex::new(None),
                 ml: std::sync::Mutex::new(None),
                 lock_status: std::sync::Mutex::new(commands::AppLockStatus::Active),
                 locked_features: std::sync::Mutex::new(Vec::new()),
                 sidecar_pid: std::sync::Mutex::new(None),
+                sidecar_token: sidecar_token.clone(),
             });
             let mut port = 8765;
             let mut should_spawn = true;
@@ -250,6 +282,7 @@ pub fn run() {
                                 .env("PYTHONUTF8", "1")
                                 .env("PYTHONIOENCODING", "utf-8")
                                 .env("ATER_PARENT_PID", &std::process::id().to_string())
+                                .env("ATER_SIDECAR_TOKEN", &sidecar_token)
                                 .spawn()
                             {
                                 Ok(child) => {
@@ -275,6 +308,7 @@ pub fn run() {
                                 .env("PYTHONUTF8", "1")
                                 .env("PYTHONIOENCODING", "utf-8")
                                 .env("ATER_PARENT_PID", &std::process::id().to_string())
+                                .env("ATER_SIDECAR_TOKEN", &sidecar_token)
                                 .spawn()
                             {
                                 Ok(child) => {
@@ -358,7 +392,8 @@ pub fn run() {
                             .args(["--port", &port.to_string()])
                             .env("PYTHONUTF8", "1")
                             .env("PYTHONIOENCODING", "utf-8")
-                            .env("ATER_PARENT_PID", &std::process::id().to_string());
+                            .env("ATER_PARENT_PID", &std::process::id().to_string())
+                            .env("ATER_SIDECAR_TOKEN", &sidecar_token);
                         match sidecar.spawn() {
                             Ok((rx, child)) => {
                                 println!("[Sidecar] Spawned on port {} (PID: {})", port, child.pid());
@@ -427,6 +462,7 @@ pub fn run() {
             get_health,
             export_logs,
             get_machine_id,
+            check_remote_version,
             commands::initialize_database,
             commands::init_app,
             commands::add_document,
@@ -509,7 +545,8 @@ pub fn run() {
             commands::get_vault_backlinks,
             commands::process_security_heartbeat,
             commands::get_security_state,
-            commands::load_cached_security_state
+            commands::load_cached_security_state,
+            commands::get_sidecar_token
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

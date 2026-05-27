@@ -5,11 +5,20 @@
  * The old Python sidecar dependencies and HTTP fetch calls have been completely removed.
  */
 
-import { load } from '@tauri-apps/plugin-store'
+import { getAppStore } from '@/lib/store'
 import { invoke } from '@tauri-apps/api/core'
 import { useSecurityStore } from '@/context/securityStore'
+import * as mockDemo from './mockDemoData'
 
-const STORE_FILENAME = 'ater_config.json'
+async function isDemoActive(): Promise<boolean> {
+    try {
+        const store = await getAppStore()
+        return (await store.get<boolean>('isDemoMode')) ?? false
+    } catch {
+        return false
+    }
+}
+
 let isInitialized = false
 let syncProgress = 0
 let syncTotal = 0
@@ -20,7 +29,7 @@ const optionsCache = new Map<string, any>()
 async function ensureDbInitialized(): Promise<void> {
     if (isInitialized) return
     try {
-        const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+        const store = await getAppStore()
         const vaultPath = (await store.get<string>('obsidianVaultPath')) || ''
         
         const dbPath = vaultPath
@@ -367,6 +376,9 @@ export const sidecarApi = {
     },
 
     listObsidianFiles: async () => {
+        if (await isDemoActive()) {
+            return { files: mockDemo.MOCK_FILES }
+        }
         try {
             const files = await invoke<ObsidianFile[]>('list_obsidian_files')
             return { files }
@@ -377,6 +389,15 @@ export const sidecarApi = {
     },
     
     readObsidianNote: async (path: string) => {
+        if (await isDemoActive()) {
+            const cleanPath = path.replace(/\\/g, '/');
+            if (cleanPath.endsWith('Binary_Search.md')) {
+                return { metadata: { title: 'Binary_Search', course: 'CS 201: Algorithms & Data Structures', semester: 'Semester III', unit: "1" }, content: mockDemo.MOCK_NOTE_BINARY_SEARCH };
+            }
+            if (cleanPath.endsWith('Time_Complexity.md')) {
+                return { metadata: { title: 'Time_Complexity', course: 'CS 201: Algorithms & Data Structures', semester: 'Semester III', unit: "1" }, content: mockDemo.MOCK_NOTE_TIME_COMPLEXITY };
+            }
+        }
         try {
             return await invoke<any>('read_obsidian_note', { path })
         } catch (err) {
@@ -482,6 +503,9 @@ export const sidecarApi = {
     },
 
     aterQueueStatus: async () => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_QUEUE_STATUS;
+        }
         try {
             return await invoke<any>('ater_queue_status')
         } catch (err) {
@@ -547,6 +571,9 @@ export const sidecarApi = {
     },
 
     listHubs: async () => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_HUBS;
+        }
         try {
             return await invoke<any>('list_hubs')
         } catch (err) {
@@ -556,6 +583,9 @@ export const sidecarApi = {
     },
     
     listHubNotes: async (hubId: string) => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_HUB_NOTES;
+        }
         try {
             return await invoke<any>('list_hub_notes', { hubId })
         } catch (err) {
@@ -565,6 +595,73 @@ export const sidecarApi = {
     },
     
     generatePractice: async (hubId: string, config: any) => {
+        if (await isDemoActive()) {
+            return {
+                quiz_path: 'mock_quiz.json',
+                questions: [
+                    {
+                        id: 'q_mock_1',
+                        type: 'mcq',
+                        question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
+                        options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
+                        answer: "O(log N)",
+                        explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
+                    },
+                    {
+                        id: 'q_mock_2',
+                        type: 'true_false',
+                        question: "Binary Search can be applied to an unsorted array as long as we know the target element exists in the array.",
+                        answer: false,
+                        explanation: "Binary Search relies on the sorting invariant to discard half of the search space. Unsorted arrays require linear O(N) scanning."
+                    },
+                    {
+                        id: 'q_mock_3',
+                        type: 'fill_in',
+                        question: "To calculate the midpoint without integer overflow, the standard formulation is [[low]] + ([[high]] - [[low]]) / 2.",
+                        textWithBlanks: "To calculate the midpoint without integer overflow, the standard formulation is [[low]] + ([[high]] - [[low]]) / 2.",
+                        answer: ["low", "high", "low"],
+                        explanation: "The addition-based midpoint formulation `(low + high) / 2` is prone to integer overflow bugs when the bounds are large."
+                    },
+                    {
+                        id: 'q_mock_4',
+                        type: 'matching',
+                        question: "Match the algorithmic time complexity classes with their corresponding asymptotic Big O notations.",
+                        pairs: [
+                          { left: "Constant", right: "O(1)" },
+                          { left: "Logarithmic", right: "O(log N)" },
+                          { left: "Linear", right: "O(N)" },
+                          { left: "Quadratic", right: "O(N^2)" }
+                        ],
+                        explanation: "Constant execution is O(1). Logarithmic convergence is O(log N). Linear scaling is O(N). Nested loops scale quadratically O(N^2)."
+                    },
+                    {
+                        id: 'q_mock_5',
+                        type: 'order',
+                        question: "Sort the structural execution steps of a Binary Search iteration from start to end.",
+                        steps: [
+                          "Initialize low and high boundary pointers.",
+                          "Calculate the midpoint index using overflow prevention.",
+                          "Compare midpoint value against the target element.",
+                          "Shift low/high pointers to discard the useless half."
+                        ],
+                        answer: [
+                          "Initialize low and high boundary pointers.",
+                          "Calculate the midpoint index using overflow prevention.",
+                          "Compare midpoint value against the target element.",
+                          "Shift low/high pointers to discard the useless half."
+                        ],
+                        explanation: "Binary search begins with boundary initialization, followed by midpoint estimation, comparison checks, and boundary updates."
+                    },
+                    {
+                        id: 'q_mock_6',
+                        type: 'writing',
+                        question: "Feynman Model: In your own words, explain why logarithmic O(log N) scaling convergence is highly superior to linear O(N) iteration as N grows extremely large.",
+                        required_keywords: ["halving", "growth", "asymptotic", "scaling"],
+                        explanation: "As N scales (e.g. to a billion records), O(log N) requires at most 30 comparisons due to repeated halving, whereas O(N) requires a billion comparisons. This asymptotic growth variance makes halving exponentially faster."
+                    }
+                ]
+            };
+        }
         try {
             return await invoke<any>('generate_practice', { hubId, configPayload: config })
         } catch (err) {
@@ -583,6 +680,9 @@ export const sidecarApi = {
     },
     
     getPracticeStatus: async () => {
+        if (await isDemoActive()) {
+            return { status: { "mock_session": "Generation completed successfully!" } };
+        }
         try {
             return await invoke<any>('get_practice_status')
         } catch (err) {
@@ -592,6 +692,20 @@ export const sidecarApi = {
     },
     
     getPractice: async (path: string) => {
+        if (await isDemoActive()) {
+            return {
+                questions: [
+                    {
+                        id: 'q_mock_1',
+                        type: 'mcq',
+                        question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
+                        options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
+                        answer: "O(log N)",
+                        explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
+                    }
+                ]
+            };
+        }
         try {
             return await invoke<any>('get_practice', { path })
         } catch (err) {
@@ -619,6 +733,9 @@ export const sidecarApi = {
     },
 
     academicsDashboard: async () => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_ACADEMIC_DASHBOARD;
+        }
         try {
             return await invoke<any>('academics_dashboard')
         } catch (err) {
@@ -628,6 +745,9 @@ export const sidecarApi = {
     },
 
     academicsSyncProfile: async () => {
+        if (await isDemoActive()) {
+            return { success: true };
+        }
         try {
             return await invoke<any>('academics_sync_profile')
         } catch (err) {
@@ -637,6 +757,11 @@ export const sidecarApi = {
     },
 
     explainPdfSelection: async (payload: { path: string, selection: string, page?: number, note_mode?: string, note_title?: string, note_course?: string }) => {
+        if (await isDemoActive()) {
+            return {
+                explanation: "Logarithmic scaling (O(log N)) halves search boundaries at each iteration, resulting in exceptionally fast target retrieval compared to linear O(N) array traversals."
+            };
+        }
         try {
             return await invoke<any>('explain_pdf_selection', { payload })
         } catch (err) {
@@ -666,6 +791,11 @@ export const sidecarApi = {
         source_kind?: 'markdown' | 'pdf',
         selection_context?: string,
     }) => {
+        if (await isDemoActive()) {
+            return {
+                explanation: "This mock note details Binary Search, an algorithm that halves the search space at each logical decision point. It terminates in O(log N) operations once the bounds converge."
+            };
+        }
         try {
             return await invoke<any>('ater_explain', { payload })
         } catch (err) {
@@ -722,12 +852,51 @@ export const sidecarApi = {
             recent_notes?: string[];
         }
     }): Promise<Response> => {
+        if (await isDemoActive()) {
+            const query = (payload.history[payload.history.length - 1]?.content || '').toLowerCase();
+            let mockText = mockDemo.MOCK_ORACLE_RESPONSES.default;
+            for (const key of Object.keys(mockDemo.MOCK_ORACLE_RESPONSES)) {
+                if (query.includes(key)) {
+                    mockText = mockDemo.MOCK_ORACLE_RESPONSES[key];
+                    break;
+                }
+            }
+
+            const stream = new ReadableStream({
+                async start(controller) {
+                    const encoder = new TextEncoder();
+                    
+                    // Push Status 1
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Analyzing local context...' })}\n`));
+                    await new Promise(r => setTimeout(r, 600));
+
+                    // Push Status 2
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Retrieving Socratic insights...' })}\n`));
+                    await new Promise(r => setTimeout(r, 600));
+
+                    // Push response chunks
+                    const words = mockText.split(' ');
+                    for (const word of words) {
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content: word + ' ' })}\n`));
+                        await new Promise(r => setTimeout(r, 45));
+                    }
+                    
+                    controller.close();
+                }
+            });
+
+            return new Response(stream, {
+                headers: { 'Content-Type': 'text/event-stream' },
+                status: 200,
+                statusText: 'OK'
+            });
+        }
         try {
             if (useSecurityStore.getState().isFeatureLocked('oracle-chat')) {
                 throw new Error("ACCESS_DENIED: Module [oracle-chat] restricted by controller.");
             }
             const port = await invoke<number>('get_sidecar_port');
-            const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} });
+            const store = await getAppStore();
             
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
@@ -771,6 +940,9 @@ export const sidecarApi = {
             
             const autoDeploy = await store.get<boolean>('autoDeploy');
             if (autoDeploy !== undefined && autoDeploy !== null) headers['X-Auto-Deploy'] = String(autoDeploy);
+
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            headers['X-Ater-Token'] = sidecarToken;
 
             return await fetch(`http://127.0.0.1:${port}/api/ater/assistant/chat`, {
                 method: 'POST',
@@ -820,6 +992,9 @@ export const sidecarApi = {
     },
     
     getStudyHistory: async () => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_STUDY_HISTORY;
+        }
         try {
             return await invoke<any>('get_study_history')
         } catch (err) {
@@ -874,6 +1049,9 @@ export const sidecarApi = {
     },
     
     srsDue: async (hubId?: string) => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_SRS_DUE;
+        }
         try {
             return await invoke<any>('srs_due', { hubId })
         } catch (err) {
@@ -883,6 +1061,9 @@ export const sidecarApi = {
     },
 
     srsCards: async () => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_SRS_CARDS;
+        }
         try {
             return await invoke<any>('srs_cards')
         } catch (err) {
@@ -892,6 +1073,13 @@ export const sidecarApi = {
     },
 
     srsFeynmanValidate: async (notePath: string, explanation: string) => {
+        if (await isDemoActive()) {
+            return {
+                success: true,
+                score: 85,
+                feedback: "Excellent analysis. Your explanation correctly references logarithmic search division and sorted bounds."
+            };
+        }
         try {
             return await invoke<any>('srs_feynman_validate', { notePath, explanation })
         } catch (err) {
@@ -961,7 +1149,7 @@ export const sidecarApi = {
     },
 
     getConfig: async () => {
-        const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+        const store = await getAppStore()
         return {
             obsidianVaultPath: (await store.get<string>('obsidianVaultPath')) || '',
             inboxPath: (await store.get<string>('inboxPath')) || '',
@@ -972,6 +1160,11 @@ export const sidecarApi = {
     },
 
     explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string; userAnswer?: string }) => {
+        if (await isDemoActive()) {
+            return {
+                explanation: "The selected answer is correct. Logarithmic O(log N) runtime scaling is achieved by cutting the search space in half at each discrete logical step. In contrast, linear algorithms verify elements sequentially."
+            };
+        }
         try {
             return await invoke<any>('explain_question', { payload })
         } catch (err) {
@@ -980,6 +1173,9 @@ export const sidecarApi = {
         }
     },
     getPracticeAnalytics: async () => {
+        if (await isDemoActive()) {
+            return mockDemo.MOCK_PRACTICE_ANALYTICS;
+        }
         try {
             return await invoke<any>('get_practice_analytics')
         } catch (err) {

@@ -2,9 +2,6 @@
 // Seamlessly routes requests to your cloud Supabase database when online, falling back to local mock when offline.
 
 import { createClient } from '@supabase/supabase-js'
-import { load } from '@tauri-apps/plugin-store'
-
-const STORE_FILENAME = 'ater_config.json'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -13,6 +10,8 @@ export const realSupabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null
 
+import { getAppStore } from '@/lib/store'
+
 console.info(`[Supabase] Hybrid client initialized. Real client connected: ${!!realSupabase}`);
 
 // Cache the real user ID in memory after fetching profile to allow the Realtime engine to filter by real cloud UUID
@@ -20,7 +19,7 @@ let cachedUserId = 'local-session-user-id'
 
 async function getActivationEmail(): Promise<string | null> {
   try {
-    const store = await load(STORE_FILENAME, { autoSave: true, defaults: {} })
+    const store = await getAppStore()
     const email = await store.get<string>('activationEmail')
     return email ?? null
   } catch {
@@ -43,26 +42,42 @@ const fallbackProfile = {
 
 export const supabase: any = {
   auth: {
-    getUser: async () => ({
-      data: {
-        user: {
-          id: cachedUserId,
-          email: 'user@local.ater',
-        } as any
-      },
-      error: null
-    }),
-    signInWithPassword: async ({ email }: { email: string }) => ({
-      data: {
-        user: {
-          id: cachedUserId,
-          email: email,
-        }
-      },
-      error: null
-    }),
-    signOut: async () => ({ error: null }),
-    onAuthStateChange: () => {
+    getUser: async () => {
+      if (realSupabase) {
+        try {
+          return await realSupabase.auth.getUser()
+        } catch {}
+      }
+      return {
+        data: {
+          user: {
+            id: cachedUserId,
+            email: 'user@local.ater',
+          } as any
+        },
+        error: null
+      }
+    },
+    signInWithPassword: async (credentials: { email: string; password: any }) => {
+      if (realSupabase) {
+        return await realSupabase.auth.signInWithPassword(credentials)
+      }
+      return {
+        data: {
+          user: {
+            id: cachedUserId,
+            email: credentials.email,
+          }
+        },
+        error: null
+      }
+    },
+    signOut: async () => {
+      if (realSupabase) return await realSupabase.auth.signOut()
+      return { error: null }
+    },
+    onAuthStateChange: (callback: any) => {
+      if (realSupabase) return realSupabase.auth.onAuthStateChange(callback)
       return {
         data: {
           subscription: {
@@ -99,47 +114,18 @@ export const supabase: any = {
     }
   },
   from: (table: string) => {
+    if (realSupabase) {
+      return realSupabase.from(table)
+    }
     return {
       select: (columns: string = '*') => {
         return {
           eq: (field: string, value: any) => {
             return {
               single: async () => {
-                if (realSupabase && table === 'profiles') {
-                  const email = await getActivationEmail()
-                  if (email) {
-                    const { data, error } = await realSupabase
-                      .from('profiles')
-                      .select(columns)
-                      .eq('email', email)
-                      .maybeSingle()
-                    if (!error && data) {
-                      if ((data as any).id) cachedUserId = (data as any).id
-                      return { data, error: null }
-                    }
-                  }
-                  // When online with real client, return null if no profile exists
-                  return { data: null, error: null }
-                }
                 return { data: fallbackProfile, error: null }
               },
               maybeSingle: async () => {
-                if (realSupabase && table === 'profiles') {
-                  const email = await getActivationEmail()
-                  if (email) {
-                    const { data, error } = await realSupabase
-                      .from('profiles')
-                      .select(columns)
-                      .eq('email', email)
-                      .maybeSingle()
-                    if (!error && data) {
-                      if ((data as any).id) cachedUserId = (data as any).id
-                      return { data, error: null }
-                    }
-                  }
-                  // When online with real client, return null if no profile exists
-                  return { data: null, error: null }
-                }
                 return { data: fallbackProfile, error: null }
               }
             }
@@ -151,33 +137,9 @@ export const supabase: any = {
           eq: (field: string, value: any) => {
             return {
               single: async () => {
-                if (realSupabase && table === 'profiles') {
-                  const email = await getActivationEmail()
-                  if (email) {
-                    const { data, error } = await realSupabase
-                      .from('profiles')
-                      .update(values)
-                      .eq('email', email)
-                      .select()
-                      .maybeSingle()
-                    return { data, error }
-                  }
-                }
                 return { data: null, error: null }
               },
               maybeSingle: async () => {
-                if (realSupabase && table === 'profiles') {
-                  const email = await getActivationEmail()
-                  if (email) {
-                    const { data, error } = await realSupabase
-                      .from('profiles')
-                      .update(values)
-                      .eq('email', email)
-                      .select()
-                      .maybeSingle()
-                    return { data, error }
-                  }
-                }
                 return { data: null, error: null }
               }
             }

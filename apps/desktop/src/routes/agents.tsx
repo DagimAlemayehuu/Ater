@@ -230,6 +230,44 @@ function OracleView() {
                 const store = usePomodoroStore.getState();
                 store.setShowOverlay(true);
                 toast.info("Opening Focus HUD");
+              } else if (parsed.action === 'update_config' && parsed.key_values) {
+                try {
+                  await saveConfig(parsed.key_values);
+                  toast.success('Settings updated.');
+                } catch {
+                  toast.error('Failed to save settings.');
+                }
+              } else if (parsed.action === 'factory_reset') {
+                try {
+                  await sidecarApi.factoryReset();
+                  toast.success('Factory reset complete. Reloading...');
+                  setTimeout(() => window.location.reload(), 1500);
+                } catch {
+                  toast.error('Factory reset failed.');
+                }
+              } else if (parsed.action === 'clear_study_history') {
+                try {
+                  await sidecarApi.clearStudyHistory();
+                  toast.success('Study history cleared.');
+                } catch {
+                  toast.error('Failed to clear study history.');
+                }
+              } else if (parsed.action === 'toggle_auto_deploy') {
+                try {
+                  await saveConfig({ autoDeploy: parsed.state });
+                  await sidecarApi.aterWatcherToggle();
+                  toast.success(`Auto-deploy ${parsed.state ? 'enabled' : 'disabled'}.`);
+                } catch {
+                  toast.error('Failed to toggle auto-deploy.');
+                }
+              } else if (parsed.action === 'feynman_validated') {
+                const score = parsed.score ?? 0;
+                const feedback = parsed.feedback ?? '';
+                if (parsed.is_valid) {
+                  toast.success(`Feynman validated ✓ Score: ${score}/100`);
+                } else {
+                  toast.warning(`Feynman check: ${feedback || 'Needs improvement.'}`);
+                }
               }
             }
           } catch (e) {}

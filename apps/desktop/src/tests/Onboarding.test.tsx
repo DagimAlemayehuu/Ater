@@ -19,6 +19,11 @@ vi.mock('@/lib/supabase', () => ({
       update: vi.fn().mockReturnValue({
         eq: vi.fn().mockResolvedValue({ error: null }),
       }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: { full_name: 'Dagim Alemayehu' }, error: null })
+        })
+      })
     }),
   },
 }));

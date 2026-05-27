@@ -25,7 +25,7 @@ export function AppSidebar() {
 
             {/* Navigation Links */}
             <div className="flex flex-col gap-4 items-center w-full">
-                <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="Ater">
+                <NavLink to="/agents" className={({ isActive }) => linkClass(isActive)} title="Ater" data-tour="sidebar-ater">
                   {({ isActive }) => (
                     <>
                       {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
@@ -33,7 +33,7 @@ export function AppSidebar() {
                     </>
                   )}
                 </NavLink>
-                <NavLink to="/academic" className={({ isActive }) => linkClass(isActive)} title="Academic Dashboard">
+                <NavLink to="/academic" className={({ isActive }) => linkClass(isActive)} title="Academic Dashboard" data-tour="sidebar-academic">
                   {({ isActive }) => (
                     <>
                       {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
@@ -41,7 +41,7 @@ export function AppSidebar() {
                     </>
                   )}
                 </NavLink>
-                <NavLink to="/obsidian" className={({ isActive }) => linkClass(isActive)} title="Knowledge Base">
+                <NavLink to="/obsidian" className={({ isActive }) => linkClass(isActive)} title="Knowledge Base" data-tour="sidebar-knowledge">
                   {({ isActive }) => (
                     <>
                       {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
@@ -53,7 +53,7 @@ export function AppSidebar() {
         </div>
 
         <div className="flex flex-col gap-4 items-center w-full">
-            <NavLink to="/settings" className={({ isActive }) => linkClass(isActive)} title="Settings">
+            <NavLink to="/settings" className={({ isActive }) => linkClass(isActive)} title="Settings" data-tour="sidebar-settings">
               {({ isActive }) => (
                 <>
                   {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}

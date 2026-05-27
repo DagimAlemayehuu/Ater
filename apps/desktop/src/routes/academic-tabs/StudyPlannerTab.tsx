@@ -72,7 +72,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
       !INTERNAL.includes(k) && !['status', 'Status', 'course', 'Course', 'exam', 'Exam', 'total_time', 'study_time', 'practice_score', 'practice_total'].includes(k))
 
     return (
-      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+      <div data-tour="planner-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
         <div className="flex items-start justify-between">
           <div>
             <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2">← Study Planner</button>
@@ -213,6 +213,7 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
 
                 return (
                   <div key={idx} onClick={() => setSelectedId(hub.id)}
+                    data-tour={`planner-card-${hub.id}`}
                     className={cn('p-5 border cursor-pointer rounded-[8px] flex flex-col gap-3 hover:border-foreground/40 transition-colors',
                       isDone ? 'border-[#242426] bg-[#1a1a1c]/50 opacity-60' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
                     <div className="flex items-start gap-2">

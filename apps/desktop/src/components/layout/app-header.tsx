@@ -80,6 +80,7 @@ export function AppHeader() {
             onClick={goBack}
             disabled={!canGoBack}
             title="Back (Cmd+[)"
+            data-tour="header-back"
             className={cn(
               "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoBack 
@@ -94,6 +95,7 @@ export function AppHeader() {
             onClick={() => goForward()}
             disabled={!canGoForward}
             title="Forward (Cmd+])"
+            data-tour="header-forward"
             className={cn(
               "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoForward 
@@ -108,6 +110,7 @@ export function AppHeader() {
         {/* Timer Display (Academic Style) */}
         <button 
           onClick={() => setShowOverlay(true)}
+          data-tour="header-timer"
           className={cn(
             "flex items-center gap-1.5 rounded-[8px] border border-border/40 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item transition-all h-8 font-sans",
             pomodoroActive && "border-foreground/20 text-foreground bg-bento-item"
@@ -132,13 +135,15 @@ export function AppHeader() {
       {/* Right: Actions */}
       <div className="flex items-center justify-end gap-2 shrink-0 z-10">
         {rightContent}
-        <div className="border border-border/40 px-3 py-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 h-8 bg-bento-item/50 rounded-[8px]">
+        <div data-tour="header-credit" className="border border-border/40 px-3 py-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 h-8 bg-bento-item/50 rounded-[8px]">
           <span>CR:</span>
           <span className="font-bold text-foreground">
             {creditBalance >= 99999999 ? 'UNLIMITED' : creditBalance}
           </span>
         </div>
-        <ThemeSwitch />
+        <div data-tour="header-theme">
+          <ThemeSwitch />
+        </div>
       </div>
     </header>
   )

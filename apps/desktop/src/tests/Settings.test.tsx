@@ -35,7 +35,7 @@ describe('Settings Panel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/System Parameters/i)).toBeInTheDocument();
+      expect(screen.getByText(/App Settings/i)).toBeInTheDocument();
     });
   });
 });

@@ -79,7 +79,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
       !INTERNAL.includes(k) && !['Status', 'Grade', 'Score', 'Max Score', 'Type', 'Course', 'date', 'Exam Type', 'Difficulty', 'Confidence'].includes(k))
 
     return (
-      <div className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+      <div data-tour="exam-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -258,6 +258,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
 
             return (
               <div key={idx} onClick={() => setSelectedId(exam.id)}
+                data-tour={`exam-card-${exam.id}`}
                 className={cn('p-5 border rounded-[8px] cursor-pointer flex flex-col gap-3 hover:border-foreground/40 transition-colors',
                   isUrgent ? 'border-[#242426] bg-[#1a1a1c] ring-1 ring-white/10' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
                 <div className="flex items-start justify-between gap-2">
