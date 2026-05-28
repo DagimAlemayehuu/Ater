@@ -573,6 +573,17 @@ window.__TAURI__ = {
         };
       }
 
+      // ── Security & Licensing mock commands ──
+      if (cmd === 'load_cached_security_state') {
+        return 'Active';
+      }
+      if (cmd === 'get_security_state') {
+        return { status: 'Active', locked_features: [] };
+      }
+      if (cmd === 'process_security_heartbeat') {
+        return 'Active';
+      }
+
       console.warn(`[TauriMock] Unhandled invoke: ${cmd}`, args);
       return null;
     },

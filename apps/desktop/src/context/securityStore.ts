@@ -178,17 +178,46 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
         } catch (err) {
           console.warn('[Security System] Failed to resolve device footprint during lockout, using fallback:', err)
         }
-        // Send heartbeat to trigger sidecar kill & Rust bricking
-        await invoke('process_security_heartbeat', {
-          leaseJson: JSON.stringify({
-            user_id: user.id,
-            machine_id_hash: machineId,
-            expiration: new Date(Date.now() + 86400 * 1000).toISOString(),
-            locked_features: profile.locked_features || [],
-            account_status: profile.account_status
-          }),
-          signatureHex: "00".repeat(64) // dummy signature - will force brick state locally
-        }).catch(() => {})
+
+        // Securely request a signed brick lease from the Edge Function so Rust can verify it in Release builds
+        let signatureObtained = false
+        if (supabase.functions && typeof supabase.functions.invoke === 'function') {
+          try {
+            const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('generate-security-lease', {
+              body: {
+                userId: user.id,
+                machineIdHash: machineId,
+                accountStatus: profile.account_status,
+                lockedFeatures: profile.locked_features || []
+              }
+            })
+
+            if (!edgeErr && edgeData) {
+              const { lease_json, signature_hex } = edgeData
+              await invoke('process_security_heartbeat', {
+                leaseJson: lease_json,
+                signatureHex: signature_hex
+              })
+              signatureObtained = true
+            }
+          } catch (e) {
+            console.warn('[Security System] Failed to get signed brick lease from Edge Function:', e)
+          }
+        }
+
+        // Only fallback to dummy signature if edge function is unreachable (works in debug, fails in release but UI is already bricked)
+        if (!signatureObtained) {
+          await invoke('process_security_heartbeat', {
+            leaseJson: JSON.stringify({
+              user_id: user.id,
+              machine_id_hash: machineId,
+              expiration: new Date(Date.now() + 86400 * 1000).toISOString(),
+              locked_features: profile.locked_features || [],
+              account_status: profile.account_status
+            }),
+            signatureHex: "00".repeat(64) // dummy signature - will force brick state locally in debug mode
+          }).catch(() => {})
+        }
         return
       }
 

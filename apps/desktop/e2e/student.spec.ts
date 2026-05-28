@@ -154,10 +154,13 @@ test.describe('Ater Active Student Hub', () => {
 
     // Settings page rendering check
     await expect(page.locator('body')).toBeVisible();
-    await expect(page.getByText(/System Parameters/i)).toBeVisible();
+    
+    // Click on the AI & Keys tab trigger
+    await page.getByRole('tab', { name: /AI & Keys/i }).click();
+    await expect(page.getByText(/AI Provider & Keys/i)).toBeVisible();
 
-    // Click Validate Connection (testAiConnection command returns success in expanded mock)
-    const validateBtn = page.getByRole('button', { name: /Validate Connection/i });
+    // Click Check if Key Works (testAiConnection command returns success in expanded mock)
+    const validateBtn = page.getByRole('button', { name: /Check if Key Works/i });
     await expect(validateBtn).toBeVisible();
     await validateBtn.click();
 

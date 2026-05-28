@@ -155,3 +155,130 @@ async def test_assistant_custom_practice_and_exams(tmp_path):
         assert "Exam Grading Report:" in grade_res
         assert "**Score:** 1 / 1" in grade_res
         assert "✅ Correct" in grade_res
+
+
+@pytest.mark.asyncio
+async def test_run_assistant_chat_scoping(tmp_path):
+    from src.domains.ater.assistant import run_assistant_chat
+    from unittest.mock import patch, MagicMock
+
+    secrets = AppSecrets(
+        ai_provider="google",
+        ai_key="mock-key",
+        ai_model="gemini-2.0-flash",
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path / "Inbox"),
+        academic_path="Notes"
+    )
+
+    user_context = {
+        "display_name": "Alice",
+        "active_hub": "distributed-systems",
+        "pomodoro": {
+            "is_active": True,
+            "time_left": 1500,
+            "mode": "focus",
+            "session_count": 2
+        }
+    }
+
+    mock_model = MagicMock()
+    mock_llm_with_tools = MagicMock()
+
+    async def mock_astream(*args, **kwargs):
+        chunk = MagicMock()
+        chunk.content = "Hello there!"
+        chunk.tool_call_chunks = []
+        yield chunk
+
+    mock_llm_with_tools.astream = mock_astream
+    mock_model.bind_tools.return_value = mock_llm_with_tools
+
+    with patch("src.domains.ai.factory.ModelFactory.get_model", return_value=mock_model), \
+         patch("src.domains.ater.assistant.AterAssistant.get_all_vault_notes", return_value=[]), \
+         patch("src.domains.ater.assistant.resolve_assistant_oracle_path", return_value=tmp_path / "non_existent_oracle.md"):
+
+        chunks = []
+        async for sse_event in run_assistant_chat(
+            secrets=secrets,
+            messages_history=[],
+            rag_context=None,
+            user_context=user_context
+        ):
+            chunks.append(sse_event)
+
+        assert len(chunks) > 0
+        assert any("Hello there!" in chunk for chunk in chunks)
+
+
+@pytest.mark.asyncio
+async def test_validate_feynman_missing_note(tmp_path):
+    secrets = AppSecrets(
+        ai_provider="google",
+        ai_key="mock-key",
+        ai_model="gemini-2.0-flash",
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path / "Inbox"),
+        academic_path="Notes"
+    )
+
+    db_path = tmp_path / "Inbox" / "ater_queue.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    import sqlite3
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("CREATE TABLE IF NOT EXISTS srs_cards (note_path TEXT PRIMARY KEY)")
+    conn.close()
+
+    assistant = AterAssistant(secrets)
+
+    res = await assistant.validate_feynman_explanation("database/courses/NonExistent.md", "This is an explanation.")
+    assert "ACTION:" in res
+    import json
+    payload = json.loads(res.replace("ACTION:", ""))
+    assert payload["action"] == "feynman_validated"
+    assert payload["is_valid"] is False
+    assert "Note file not found" in payload["feedback"]
+
+
+def test_navigate_to_note_routing(tmp_path):
+    secrets = AppSecrets(
+        ai_provider="google",
+        ai_key="mock-key",
+        ai_model="gemini-2.0-flash",
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path / "Inbox"),
+        academic_path="Notes"
+    )
+
+    assistant = AterAssistant(secrets)
+    import json
+
+    # 1. Course redirection check
+    res_course = assistant.navigate_to_note("database/courses/Distributed_Systems.md")
+    assert "ACTION:" in res_course
+    payload_course = json.loads(res_course.replace("ACTION:", ""))
+    assert payload_course["action"] == "navigate"
+    assert payload_course["route"] == "/academic?tab=COURSES&id=Distributed_Systems"
+
+    # 2. Semester redirection check
+    res_semester = assistant.navigate_to_note("database/semesters/Autumn_2026.md")
+    payload_semester = json.loads(res_semester.replace("ACTION:", ""))
+    assert payload_semester["route"] == "/academic?tab=PROGRAM&id=Autumn_2026"
+
+    # 3. Exam redirection check
+    res_exam = assistant.navigate_to_note("database/exams/Midterm.md")
+    payload_exam = json.loads(res_exam.replace("ACTION:", ""))
+    assert payload_exam["route"] == "/academic?tab=EXAMS&id=Midterm"
+
+    # 4. Practice redirection check
+    res_practice = assistant.navigate_to_note("practice")
+    payload_practice = json.loads(res_practice.replace("ACTION:", ""))
+    assert payload_practice["route"] == "/practice?id=practice"
+
+    # 5. Regular note should still open in Obsidian view
+    res_regular = assistant.navigate_to_note("Notes/General_Note.md")
+    payload_regular = json.loads(res_regular.replace("ACTION:", ""))
+    assert "/obsidian?path=" in payload_regular["route"]
+
+
+

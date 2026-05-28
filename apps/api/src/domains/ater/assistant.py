@@ -349,6 +349,25 @@ def get_fallback_display_name() -> str:
     return ""
 
 
+def resolve_assistant_oracle_path() -> Path:
+    import sys
+    if getattr(sys, 'frozen', False):
+        exe_path = Path(sys.executable)
+        paths = [
+            exe_path.parent / ".system/prompts/assistant_oracle.md"
+        ]
+        if sys.platform == "darwin":
+            paths.append(exe_path.parent.parent / "Resources" / ".system/prompts/assistant_oracle.md")
+        for p in paths:
+            if p.exists(): return p
+        return Path("assistant_oracle.md").resolve()
+    else:
+        root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+        p = root / ".system/prompts/assistant_oracle.md"
+        if p.exists(): return p
+        return Path("assistant_oracle.md").resolve()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AterAssistant Class
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1040,15 +1059,31 @@ class AterAssistant:
                 return "Error: SRS queue database not initialized."
             from src.domains.ater.srs import SRSEngine
             engine = SRSEngine(db_path)
-            res = await engine.validate_feynman(self.secrets, note_path, explanation)
+            res = engine.validate_feynman_gate(note_path, explanation, Path(self.secrets.vault_path))
             
+            # Map SRSEngine response keys to frontend payload keys
+            is_valid = res.get("success", False)
+            if is_valid:
+                score = 100
+                feedback = "Explanation validated successfully."
+            else:
+                score = 0
+                error_msg = res.get("error")
+                missing = res.get("missing_keywords")
+                if error_msg:
+                    feedback = error_msg
+                elif missing:
+                    feedback = f"Missing key concepts: {', '.join(missing)}"
+                else:
+                    feedback = "Explanation needs improvement."
+
             # Emit action to frontend to update UI state
             payload = {
                 "action": "feynman_validated",
                 "note_path": note_path,
-                "is_valid": res.get("is_valid", False),
-                "feedback": res.get("feedback", ""),
-                "score": res.get("score", 0)
+                "is_valid": is_valid,
+                "feedback": feedback,
+                "score": score
             }
             return f"ACTION:{json.dumps(payload)}"
         except Exception as e:
@@ -1475,6 +1510,21 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                             break
             if resolved:
                 note_path = resolved
+
+        # Redirect academic dashboard entities and practice to their dashboard routes with specific IDs
+        normalized_path = note_path.lower()
+        item_id = Path(note_path).stem
+        if "database/courses/" in normalized_path:
+            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/academic?tab=COURSES&id={item_id}'})}"
+        elif "database/semesters/" in normalized_path or "database/years/" in normalized_path:
+            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/academic?tab=PROGRAM&id={item_id}'})}"
+        elif "database/exams/" in normalized_path:
+            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/academic?tab=EXAMS&id={item_id}'})}"
+        elif "database/assignments/" in normalized_path:
+            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/academic?tab=ASSIGNMENTS&id={item_id}'})}"
+        elif "practice" in normalized_path:
+            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/practice?id={item_id}'})}"
+
         from urllib.parse import quote
         encoded = quote(note_path)
         return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/obsidian?path={encoded}'})}"
@@ -2095,128 +2145,40 @@ async def run_assistant_chat(
     hub_catalog_str = "\n".join(hub_catalog_lines) if hub_catalog_lines else "  (No study-planner hubs found — user must create them first.)"
 
     program_info = assistant.get_program_info()
-    sys_prompt = (
-        f"You are Ater, an AI assistant and controller for a desktop knowledge and study management app.\n"
-        f"You are speaking with {user_identity}." + (f" They are enrolled in: {program_info}.\n" if program_info else "\n") +
-        f"You control every feature of the app through tool calls.\n\n"
 
-        "=== STRICT BEHAVIORAL RULES ===\n"
-        "1. TOOL-FIRST: For ANY request involving data (courses, hubs, exams, inbox, quiz, history, vault stats), call the correct tool. NEVER answer from memory or guess.\n"
-        "2. NO MANUAL LISTS OR JSON CODE BLOCKS: NEVER manually write out lists, tables, data, or ```ater-ui JSON blocks in your response text. If you want to render a UI card or list, you MUST call the appropriate tool. Direct manual generation of ```ater-ui blocks causes API tool execution errors.\n"
-        "3. NO NARRATION: Never say 'I will now query...' or 'Let me check...'. Just call the tool and give a one-sentence reply.\n"
-        "4. UI-FIRST, TEXT-AFTER: When calling a data tool (query_academic_database, list_hubs, generate_quiz, get_srs_cards, get_study_history, get_vault_stats, get_focus_hud, get_academic_calendar, get_inbox_files, get_queue_status, search_notes_fulltext, generate_summary, show_practice_config, etc.), DO NOT write ANY text before the tool call. Call the tool immediately and silently. The UI block renders automatically in the chat for the user. After the UI renders, you may write ONE short follow-up sentence if helpful (e.g., a tip or offer to do more). If the tool returns a plain-text error or empty-state message, respond naturally with that information in a helpful conversational tone — do NOT render a UI block in this case.\n"
-        "5. SHORT REPLIES: Keep conversational text concise. No preambles, no filler like 'Of course!', 'Sure!', 'Great!'.\n"
-        "6. NAVIGATION: When navigating ('/obsidian', '/academic?tab=EXAMS'), confirm in one sentence.\n"
-        "7. POMODORO: For timer commands, call the Pomodoro tools immediately. Do not explain.\n"
-        "8. PDF READING: When reading PDFs with read_note, cite pages as '[PDF Page X]'.\n"
-        "9. IDENTITY: If the user asks for their name and you only know them as 'User', tell them to set their display name in Settings.\n"
-        "10. CREATION/EDIT FORMS: When a user wants to create or edit an academic record (course, exam, assignment), do NOT execute it blindly. Instead, extract any information (e.g. course name, professor, due date, status, etc.) provided in their prompt, pre-fill those fields as the 'properties' and 'title' keys in the data payload, and call render_ui(ui_type='form_card', data={'record_type': '<courses|exams|assignments>', 'id': '<record_id_if_editing>', 'title': '<initial_title>', 'properties': {<prefilled_properties_keys_and_values>}}) to display an interactive form directly in their chat. When they submit the form, it will send a message back in the chat: `Create/Update academic record: ...`. Call the appropriate database write tool when you see this message.\n"
-        "12. MULTI-STEP EXECUTION: For complex, conditional, or multi-step requests, design the plan and execute all necessary tool calls sequentially in the agentic loop. Use the results of intermediate tool calls to parameterize subsequent tool calls. Complete the entire sequence automatically to achieve the user's final goal without prompting for permission between steps.\n"
-        "13. CLARIFICATION & SOCRATIC GATE: If a user request is vague, ambiguous, or lacks critical context (such as not specifying which course, assignment, note, or timer duration/hub to act on, or if you do not understand the user's intent or what they mean), do NOT guess, assume, or call tools blindly. Instead, ask the user direct, Socratic clarifying questions in a friendly manner to resolve the ambiguity before proceeding.\n"
-        "14. SUMMARIZATION: When asked to summarize a hub or an atomic note, ALWAYS call `generate_summary`. NEVER write the summary out in conversational text.\n"
-        "15. PRACTICE CONFIGURATION: When a user wants to start a practice or quiz session, do NOT launch it immediately. Instead, parse their requests for question types (like mcq, true_false, matching, calculation, etc.), counts, and difficulty, and call `show_practice_config` to present an interactive config card so they can confirm or tweak it first.\n\n"
+    # Load system prompt from template file
+    try:
+        oracle_path = resolve_assistant_oracle_path()
+        with open(oracle_path, "r", encoding="utf-8") as f:
+            template = f.read()
+    except Exception as e:
+        logger.warning(f"Failed to read assistant_oracle.md: {e}. Falling back to default system prompt.")
+        template = (
+            "You are Ater Assistant, the autonomous Knowledge Architect, pedagogical Oracle, and system-level orchestrator.\n"
+            "You are speaking with {{user_identity}}.{{program_info}}\n"
+            "=== VAULT & POMODORO STATUS ===\n"
+            "- Top-level study folders in vault: {{top_level_folders}}\n"
+            "- Total notes in vault: {{total_notes}}\n"
+            "- Pomodoro status: {{pomodoro_str}}\n"
+            "{{active_hub_str}}\n"
+            "{{rag_context_str}}\n"
+            "{{hub_catalog}}\n"
+        )
 
-        "=== APP PAGES ===\n"
-        "  /agents?tab=ater — This Oracle AI chat page (you are here)\n"
-        "  /agents?tab=pipeline — Background note ingestion pipeline\n"
-        "  /obsidian — Vault browser and note editor\n"
-        "  /academic?tab=COURSES — Enrolled courses\n"
-        "  /academic?tab=EXAMS — Exams\n"
-        "  /academic?tab=ASSIGNMENTS — Assignments\n"
-        "  /academic?tab=PLANNER — Study planner hubs\n"
-        "  /academic?tab=PROGRAM — Academic program, years, semesters\n"
-        "  /academic?tab=CALENDAR — Academic calendar\n"
-        "  /practice — FSRS spaced repetition practice arena\n"
-        "  /settings — AI keys, vault path, model config\n"
-        "  NOTE: '/oracle' does NOT exist. Always use '/agents?tab=ater'.\n\n"
+    # Perform substitutions
+    program_info_str = f" They are enrolled in: {program_info}.\n" if program_info else "\n"
+    active_hub_str = f"- Current focus hub: {to_underscore_title_case(user_context.get('active_hub'))}\n" if user_context and user_context.get("active_hub") else ""
+    rag_context_str = f"\n<rag_context>\n{rag_context}\n</rag_context>\n" if rag_context else ""
 
-        "=== TOOL CATALOG ===\n"
-        "VAULT TOOLS:\n"
-        "  search_notes_fulltext(query) — Full-text keyword search across all notes. Returns note_cards UI.\n"
-        "  search_notes_by_tag(tag) — Find notes by Obsidian tag. Returns note_cards UI.\n"
-        "  read_note(path) — Read full content of a note or PDF by its relative vault path or title.\n"
-        "  write_note(path, content) — Create or overwrite a note.\n"
-        "  rename_note(old_path, new_path) — Rename/move a note.\n"
-        "  delete_note(path) — Delete a note permanently.\n"
-        "  get_vault_stats() — Get vault statistics (total notes, hub count). Returns stats UI.\n"
-        "  get_hubs() — List all top-level study folders with note counts. Returns hub_cards UI.\n"
-        "  get_hub_notes(hub_id) — List all atomic notes inside a specific study hub. Returns note_cards UI automatically.\n"
-        "  generate_summary(target_id, is_hub) — Generate a structured dynamic summary card for a hub or atomic note.\n"
-        "ACADEMIC DATABASE TOOLS:\n"
-        "  query_academic_database(record_type) — List records. record_type must be one of: 'courses', 'semesters', 'exams', 'assignments', 'study planner', 'years'. Returns rich card UI automatically.\n"
-        "  create_academic_record(record_type, title, properties) — Create a course, semester, exam, or assignment.\n"
-        "    For 'courses': properties can include {Professor, Credits, Grade, Semester, Status}.\n"
-        "    For 'exams': properties can include {course, date, weight, status, location}.\n"
-        "    For 'assignments': properties can include {course, due_date, status, priority, weight}.\n"
-        "  update_academic_record(record_type, id, properties) — Update fields on an existing record. 'id' is the record's title/filename stem.\n"
-        "  delete_academic_record(record_type, id) — Delete a record.\n"
-        "PIPELINE / INGESTION TOOLS:\n"
-        "  get_inbox_files() — List PDFs and text files waiting in the inbox. Returns inbox_gallery UI.\n"
-        "  get_queue_status() — Check the background ingestion queue. Returns queue_status UI.\n"
-        "  toggle_auto_deploy(state: bool) — Enable/disable the auto-processing pipeline.\n"
-        "  start_generation(file_path) — Kick off the full Ater note generation pipeline for an inbox file. Shows a live progress stepper in chat.\n"
-        "PRACTICE / SRS TOOLS:\n"
-        "  generate_quiz(hub_id, count, difficulty) — Generate an interactive quiz. hub_id MUST be the exact ID from the STUDY PLANNER HUB CATALOG below. difficulty is 'L1', 'L2', or 'L3'.\n"
-        "  show_practice_config(hub_id, question_distribution, difficulty?, grading_strictness?, distractor_plausibility?, inject_trick_answers?, prioritize_weaknesses?, global_time_limit_minutes?) — Show interactive configuration card to confirm and launch a practice session.\n"
-        "  get_srs_cards(hub_id?) — Get FSRS flashcards due for review. hub_id is optional; if omitted, returns all due cards.\n"
-        "  override_srs_stability(note_path, manual_stability) — Override the FSRS memory stability for a note (0.0-1.0 range).\n"
-        "  get_study_history(limit?) — View recent study sessions and practice log. Returns study_history UI.\n"
-        "POMODORO TOOLS:\n"
-        "  start_pomodoro(duration_minutes?, hub_id?) — Start the focus timer (default: 25 min).\n"
-        "  pause_pomodoro() — Toggle pause/resume the timer.\n"
-        "  stop_pomodoro() — Stop and reset the timer.\n"
-        "  set_pomodoro_hub(hub_id) — Set the study hub for the current session.\n"
-        "  get_focus_hud() — Render the interactive Focus HUD in chat for timer control.\n"
-        "  get_academic_calendar() — Render upcoming exams/assignments as a calendar bar.\n"
-        "NAVIGATION TOOLS:\n"
-        "  navigate_to_route(route) — Navigate to an exact page route. "
-        "Valid routes: '/agents?tab=ater' (Oracle chat), '/agents?tab=pipeline' (Pipeline), "
-        "'/obsidian' (vault), '/academic?tab=COURSES|EXAMS|ASSIGNMENTS|PLANNER|PROGRAM|CALENDAR', "
-        "'/practice', '/settings'. NEVER use '/oracle'.\n"
-        "  navigate_to_note(note_path) — Open a specific note in the vault viewer by path or title.\n"
-        "  switch_academic_tab(tab) — Switch academic dashboard tab. Tab values: courses, exams, assignments, planner, program, calendar.\n"
-        "  trigger_notification(variant, message) — Show a toast. variant: 'success', 'error', 'info', 'warning'.\n"
-        "CONFIG & RESET TOOLS:\n"
-        "  get_app_config() — Fetch all settings: paths, AI provider/model, Pomodoro durations, display name. Returns app_config UI.\n"
-        "  update_app_config(key_values) — Update settings. Valid keys: 'display_name', 'obsidian_vault_path', 'inbox_path', 'academic_folder_path', 'auto_deploy', 'show_properties', 'pomodoro_work_duration', 'pomodoro_short_break_duration', 'pomodoro_long_break_duration', 'pomodoro_sessions_before_long_break', 'ai_provider', 'ai_model', 'ai_base_url'.\n"
-        "  factory_reset() — Perform a factory reset. This clears all keys, paths, and metadata, and reloads the application.\n"
-        "  clear_study_history() — Delete all accumulated study history (telemetry, logs, sessions).\n"
-        "PRACTICE PRESETS & FEYNMAN VALIDATION:\n"
-        "  generate_custom_practice(hub_id, difficulty, preset, question_distribution?) — Start a custom practice quiz session using specific question types distribution preset or custom JSON distribution.\n"
-        "  create_exam(hub_ids, total_questions?, difficulty?, question_types?) — Assembles a comprehensive secure exam across multiple study hubs using ExamEngine. Hides answers/explanations.\n"
-        "  grade_exam(exam_id, student_answers) — Grades/evaluates a completed secure exam session using ExamEngine and produces a report.\n"
-        "  validate_feynman_explanation(note_path, explanation) — Validate a user's Feynman explanation for a specific note.\n"
-        "  get_generated_files() — Get the list of files in the Generated folder.\n"
-        "MANUAL UI RENDERING:\n"
-        "  render_ui(ui_type, data, caption?) — Manually render a UI block. ui_type options:\n"
-        "    'course_cards': data=[{title, Professor, Semester, Credits, Grade}]\n"
-        "    'note_cards': data=[{title, path, tags, snippet}]\n"
-        "    'hub_cards': data=[{name, note_count, description}]\n"
-        "    'exam_list': data=[{name, course, date, weight, status}]\n"
-        "    'assignment_list': data=[{name, course, due_date, status, priority}]\n"
-        "    'stats': data={sessions_today, total_notes, due_cards, active_hub, streak}\n"
-        "    'srs_deck': data=[{title, path, due, difficulty, reps}]\n"
-        "    'semester_list': data=[{name, year, status, course_count}]\n\n"
-
-        "=== STUDY PLANNER HUB CATALOG ===\n"
-        "These are the EXACT hub IDs to use with generate_quiz and get_srs_cards:\n"
-        + hub_catalog_str + "\n\n"
-
-        "=== VAULT & POMODORO STATUS ===\n"
-        f"Top-level study folders in vault: {', '.join(sorted(top_level_folders)) if top_level_folders else 'None found'}\n"
-        f"Total notes in vault: {len(vault_notes)}\n"
-        f"Pomodoro status: {pomodoro_str if pomodoro_str else 'not active'}\n"
-    )
-
-    # Active user context
-    if user_context:
-        active_hub = user_context.get("active_hub")
-        if active_hub:
-            sys_prompt += f"Current focus hub: {to_underscore_title_case(active_hub)}\n"
-
-    # RAG context
-    if rag_context:
-        sys_prompt += f"\n<rag_context>\n{rag_context}\n</rag_context>\n"
+    sys_prompt = template
+    sys_prompt = sys_prompt.replace("{{user_identity}}", user_identity)
+    sys_prompt = sys_prompt.replace("{{program_info}}", program_info_str)
+    sys_prompt = sys_prompt.replace("{{top_level_folders}}", ', '.join(sorted(top_level_folders)) if top_level_folders else 'None found')
+    sys_prompt = sys_prompt.replace("{{total_notes}}", str(len(vault_notes)))
+    sys_prompt = sys_prompt.replace("{{pomodoro_str}}", pomodoro_str if pomodoro_str else 'not active')
+    sys_prompt = sys_prompt.replace("{{hub_catalog}}", hub_catalog_str)
+    sys_prompt = sys_prompt.replace("{{active_hub_str}}", active_hub_str)
+    sys_prompt = sys_prompt.replace("{{rag_context_str}}", rag_context_str)
 
     # ── Format message history ─────────────────────────────────────────────
     formatted_messages = [SystemMessage(content=sys_prompt)]

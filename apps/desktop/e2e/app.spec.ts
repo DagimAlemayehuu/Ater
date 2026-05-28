@@ -27,12 +27,9 @@ test.describe('Login Page', () => {
   test('should render the login/activation screen for unauthenticated users', async ({ page }) => {
     // The AuthGuard should show Login when isActivated=false (mock default)
     await expect(page.locator('body')).toBeVisible();
-    // Look for activation-related content — the exact label depends on your Login component
-    const hasLoginIndicator = await page.getByText(/activation/i).isVisible()
-      .catch(() => false);
-    const hasEmailInput = await page.locator('input[type="email"], input[type="text"]').isVisible()
-      .catch(() => false);
-    expect(hasLoginIndicator || hasEmailInput).toBeTruthy();
+    // Wait for email input to be visible (Playwright automatically retries this assertion)
+    const emailInput = page.locator('input[type="email"]').first();
+    await expect(emailInput).toBeVisible({ timeout: 5000 });
   });
 
   test('should show error message with wrong credentials', async ({ page }) => {
@@ -46,6 +43,70 @@ test.describe('Login Page', () => {
       await page.getByRole('button', { name: /activate|login|sign in/i }).click();
       // Should show an error state — not navigate away
       await expect(page.locator('body')).toBeVisible();
+    }
+  });
+
+  test('should display verification failure UI on Supabase 500 server crash', async ({ page }) => {
+    // Route Supabase token requests to return 500 Internal Server Error
+    await page.route('**/auth/v1/token*', async route => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'server_error',
+          error_description: 'Database connection failed'
+        })
+      });
+    });
+
+    const emailInput = page.locator('input[type="email"]').first();
+    const passwordInput = page.locator('input[type="password"]').first();
+    const codeInput = page.locator('input[type="text"]').first();
+
+    if (await emailInput.isVisible()) {
+      await emailInput.fill('user@local.ater');
+      await passwordInput.fill('somepassword123');
+      await codeInput.fill('ATER-PRO');
+      await page.getByRole('button', { name: /activate|login|sign in/i }).click();
+
+      // Ensure error card appears and prints the message
+      const errorTitle = page.getByText(/Verification Failure/i);
+      await expect(errorTitle).toBeVisible({ timeout: 5000 });
+      
+      const errorText = page.getByText(/Database connection failed/i);
+      await expect(errorText).toBeVisible();
+    }
+  });
+
+  test('should display verification failure UI on Supabase 429 rate limit', async ({ page }) => {
+    // Route Supabase token requests to return 429 Too Many Requests
+    await page.route('**/auth/v1/token*', async route => {
+      await route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'too_many_requests',
+          error_description: 'Rate limit exceeded. Please try again later.'
+        })
+      });
+    });
+
+    const emailInput = page.locator('input[type="email"]').first();
+    const passwordInput = page.locator('input[type="password"]').first();
+    const codeInput = page.locator('input[type="text"]').first();
+
+    if (await emailInput.isVisible()) {
+      await emailInput.fill('user@local.ater');
+      await passwordInput.fill('somepassword123');
+      await codeInput.fill('ATER-PRO');
+      await page.getByRole('button', { name: /activate|login|sign in/i }).click();
+
+      // Ensure error card appears and prints the rate-limit message
+      const errorTitle = page.getByText(/Verification Failure/i);
+      await expect(errorTitle).toBeVisible({ timeout: 5000 });
+      
+      const errorText = page.getByText(/Rate limit exceeded/i);
+      await expect(errorText).toBeVisible();
     }
   });
 });
