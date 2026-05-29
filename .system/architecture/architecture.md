@@ -5,7 +5,7 @@
 *   `apps/mobile-client`: React/Vite (IIFE) + Scriptable Bridge
 *   `apps/api`: Python FastAPI Sidecar (Desktop Only)
 
-### Core Reasoning Engine: Ater v32.0 Oracle (Context-Aware & Massive Parallel)
+### Core Reasoning Engine: Ater v33.0 Oracle (Hostile Protocols & 2B LLM Optimization)
 1.  **Oracle Context Briefing**: Document pre-processing via `MetaScannerAgent` generates a global context summary, primary discipline detection, and core keywords before any note generation begins. This eliminates "chunk-level amnesia."
 2.  **Law of Cognitive Anchoring**: Every atomic concept is anchored to a globally-detected domain mode during the planning phase. This prevents hallucinated domain modes (e.g., bio-ecology in a CS textbook) by enforcing strict persona compliance.
 3.  **Singularity Parallel Protocol**: Massively parallelized generation loop for atomic notes, governed by the `TokenGovernor`. High-throughput concurrency is balanced by deterministic rate-limit protection.

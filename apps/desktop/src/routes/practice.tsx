@@ -65,6 +65,7 @@ import {cn} from '@/lib/utils'
 
 import {AdvancedPracticeConfig, Question} from '@/types/practice'
 import { MarkdownBlock } from '@/components/MiniPracticeUI'
+import { usePracticeSession } from '@/hooks/usePracticeSession'
 import { BlockingLoader, MiniLoader } from '@/components/ui/loading-state'
 
 interface Hub {
@@ -119,36 +120,24 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   })
  const [advancedConfig, setAdvancedConfig] = useState<AdvancedPracticeConfig>(DEFAULT_CONFIG)
  const [isLoading, setIsLoading] = useState(false)
- const view = (searchParams.get('view') || 'dashboard') as 'dashboard' | 'history' | 'configuring' | 'loading' | 'session' | 'results'
+ const view = (searchParams.get('view') || 'dashboard') as 'dashboard' | 'history' | 'configuring' | 'loading' | 'session' | 'results' | 'vault'
  const setView = (v: string) => setSearchParams(prev => {
    prev.set('view', v)
    return prev
  })
  
- const [questions, setQuestions] = useState<Question[]>([])
- const currentQuestionIdx = parseInt(searchParams.get('q') || '0')
- const setCurrentQuestionIdx = (idx: number) => setSearchParams(prev => {
-   prev.set('q', String(idx))
-   return prev
- })
- const currentQuestion = questions[currentQuestionIdx]
- const [userAnswers, setUserAnswers] = useState<Record<number, any>>({})
- const [isRevealed, setIsRevealed] = useState(false)
- const [gradedAnswers, setGradedAnswers] = useState<Record<number, boolean>>({})
- const [keywordChecks, setKeywordChecks] = useState<Record<string, boolean>>({})
- const [pastPractices, setPastPractices] = useState<any[]>([])
- const [currentPracticePath, setCurrentPracticePath] = useState<string | null>(null)
- const [genStatus, setGenStatus] = useState<string>('Initializing...')
+  const session = usePracticeSession();
+
+  // Route-bound UI and past session telemetry state
+  const [pastPractices, setPastPractices] = useState<any[]>([])
+  const [genStatus, setGenStatus] = useState<string>('Initializing...')
   const [availableNotes, setAvailableNotes] = useState<any[]>([])
   const [analytics, setAnalytics] = useState<{ modalities: Record<string, number>; weakest_concepts: any[] }>({
     modalities: {},
     weakest_concepts: []
   })
-  const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null)
-  const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // ── Reference Vault state ──────────────────────────────────────────────────
+  // Reference Vault states
   const [vaultFiles, setVaultFiles] = useState<any[]>([])
   const [vaultLoading, setVaultLoading] = useState(false)
   const [vaultStatus, setVaultStatus] = useState('')
@@ -158,31 +147,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   const [vaultMode, setVaultMode] = useState<'vault_only'|'hard_only'|'ai_variants'|'mixed'|'weak_spots'|'exam_sim'>('vault_only')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Session enhancement state ──────────────────────────────────────────────
-  const [streak, setStreak] = useState(0)
-  const [bookmarked, setBookmarked] = useState<Set<number>>(new Set())
-  const [confidenceWager, setConfidenceWager] = useState<Record<number,number>>({})
-
-  // ── Explain More state ─────────────────────────────────────────
+  // Explain dialog state
   const [explainOpen, setExplainOpen] = useState(false)
-  const [explainQuestion, setExplainQuestion] = useState<typeof currentQuestion | null>(null)
-
-  // ── FSRS Spaced Repetition state ───────────────────────────────────────────
-  const [srsCardsCache, setSrsCardsCache] = useState<Record<string, any>>({})
-  const [unlockedNotes, setUnlockedNotes] = useState<Set<string>>(new Set())
-  const [feynmanExplanation, setFeynmanExplanation] = useState<string>('')
-  const [feynmanError, setFeynmanError] = useState<string | null>(null)
-  const [isFeynmanValidating, setIsFeynmanValidating] = useState<boolean>(false)
-
-  const globalTimeLeftRef = useRef(globalTimeLeft);
-  const questionTimeLeftRef = useRef(questionTimeLeft);
-  const isRevealedRef = useRef(isRevealed);
-  const currentQuestionRef = useRef(currentQuestion);
-
-  useEffect(() => { globalTimeLeftRef.current = globalTimeLeft; }, [globalTimeLeft]);
-  useEffect(() => { questionTimeLeftRef.current = questionTimeLeft; }, [questionTimeLeft]);
-  useEffect(() => { isRevealedRef.current = isRevealed; }, [isRevealed]);
-  useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
+  const [explainQuestion, setExplainQuestion] = useState<Question | null>(null)
 
   const [elapsedSec, setElapsedSec] = useState(0);
   useEffect(() => {
@@ -192,12 +159,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     }
   }, [view]);
 
-  const questionStartTimeRef = useRef<number>(Date.now());
-  useEffect(() => {
-    questionStartTimeRef.current = Date.now();
-  }, [currentQuestionIdx, view]);
-
-  // ── Reference Vault handlers ─────────────────────────────────────────────
+  // Reference Vault handlers
   const loadVaultFiles = async (hubId: string) => {
     if (!hubId) return
     try {
@@ -236,11 +198,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     setIsLoading(true)
     try {
       const res = await sidecarApi.vaultGenerate(vaultSelectedFiles, vaultMode, selectedHub)
-      setQuestions(res.questions || [])
-      setCurrentPracticePath(res.quiz_path || null)
-      setCurrentQuestionIdx(0); setUserAnswers({}); setIsRevealed(false)
-      setGradedAnswers({}); setStreak(0); setBookmarked(new Set())
-      setView('session')
+      setView('session');
+      (window as any).__practiceStartTime = Date.now()
+      await session.startSession(res.questions || [], {}, undefined, res.quiz_path || null)
     } catch (e: any) {
       toast.error(e.message || 'Generation failed')
     } finally { setIsLoading(false) }
@@ -267,18 +227,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
           
           (async () => {
             try {
-              const cacheRes = await sidecarApi.srsCards();
-              const cacheMap: Record<string, any> = {};
-              if (cacheRes && Array.isArray(cacheRes.cards)) {
-                cacheRes.cards.forEach((c: any) => {
-                  cacheMap[c.note_path] = c;
-                });
-              }
-              setSrsCardsCache(cacheMap);
-              setUnlockedNotes(new Set());
-              setFeynmanExplanation('');
-              setFeynmanError(null);
-
               setAdvancedConfig(config);
               setSelectedHub(hubId);
 
@@ -300,18 +248,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                 return;
               }
 
-              setQuestions(res.questions); 
-              setCurrentPracticePath(res.quiz_path); 
-              setCurrentQuestionIdx(0); 
-              setUserAnswers({}); 
-              setIsRevealed(false); 
-              setGradedAnswers({}); 
-              setStreak(0); 
-              setBookmarked(new Set());
               setView('session');
               (window as any).__practiceStartTime = Date.now();
-              if (config.globalTimeLimitMinutes) setGlobalTimeLeft(config.globalTimeLimitMinutes * 60);
-              if (config.perQuestionTimeLimitSeconds) setQuestionTimeLeft(config.perQuestionTimeLimitSeconds);
+              await session.startSession(res.questions, config, undefined, res.quiz_path);
             } catch (err: any) {
               toast.error(getCleanErrorMessage(err));
               setView('configuring');
@@ -324,127 +263,81 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         }
       }
     }
-  }, [searchParams, hubs]);
-
-
- useEffect(() => {
- const searchParams = new URLSearchParams(window.location.search);
- const hubId = searchParams.get('hubId') || searchParams.get('id');
- if (hubId && hubs.length > 0) {
- const hub = hubs.find(h => h.id === hubId || h.path.includes(hubId));
- if (hub) setSelectedHub(hub.id);
-}
-}, [hubs]);
-
- useEffect(() => {if (selectedHub) loadHubNotes(selectedHub);}, [selectedHub])
- 
- const loadHubNotes = async (hubId: string) => {
-  if (!hubId) return;
-  try {
-    let notes: any[] = [];
-    if (hubId === "all") {
-      const allNotesPromises = hubs.map(h => sidecarApi.listHubNotes(h.id));
-      const allNotesResults = await Promise.all(allNotesPromises);
-      const notePaths = new Set<string>();
-      allNotesResults.forEach(res => {
-        const hubNotes = Array.isArray(res?.notes) ? res.notes : [];
-        hubNotes.forEach((n: any) => {
-          if (n && n.path && !notePaths.has(n.path)) {
-            notePaths.add(n.path);
-            notes.push(n);
-          }
-        });
-      });
-    } else {
-      const res = await sidecarApi.listHubNotes(hubId); 
-      notes = Array.isArray(res?.notes) ? res.notes : [];
-    }
-    setAvailableNotes(notes);
-    setAdvancedConfig(prev => {
-     // Omit label property
-     const { label: _l, ...cleanedDist } = prev.questionDistribution as any;
-     
-     return {
-       ...prev,
-       selectedAtomicNotes: notes.map((n: any) => n.path),
-       questionDistribution: cleanedDist
-     };
-    })
-  } catch (err) {
-    console.error("Error loading notes:", err); 
-    setAvailableNotes([]);
-  } 
-  }
-
- useEffect(() => {
- let interval: any;
- if (view === 'loading') {
- interval = setInterval(async () => {
- try {
- const res = await sidecarApi.getPracticeStatus();
- // Find the latest status. Since we don't have the session_id yet, we just take the most recent one.
- const statuses = Object.values(res.status);
- if (statuses.length > 0) {
-  setGenStatus(statuses[statuses.length - 1] as string);
-}
-} catch (e) {
- console.error("Status polling failed", e);
-}
-}, 2000);
-}
- return () => clearInterval(interval);
-}, [view]);
-
- useEffect(() => {
-  if (view === 'session' && questions.length === 0) {
-   setView('configuring');
-  }
- }, [view, questions]);
+  }, [searchParams, hubs, session.startSession]);
 
   useEffect(() => {
-    if (questions.length > 0 && view === 'session') {
-      const interval = setInterval(() => {
-        // Handle Global Timer
-        if (globalTimeLeftRef.current !== null) {
-          if (globalTimeLeftRef.current <= 1) {
-            clearInterval(interval);
-            setGlobalTimeLeft(0);
-            toast.error("Total session time expired!");
-            setView('results');
-            return;
-          }
-          setGlobalTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
-        }
-
-        // Handle Per-Question Timer
-        if (questionTimeLeftRef.current !== null) {
-          if (questionTimeLeftRef.current <= 1) {
-            setQuestionTimeLeft(0);
-            // Automatic "Wrong" mark and next question
-            if (!isRevealedRef.current) {
-              handleSubmitAnswer(); // Reveal the answer first
-              toast.warning("Question time expired! Marked as incorrect.");
-              if (currentQuestionRef.current) {
-                setGradedAnswers(prev => ({...prev, [currentQuestionRef.current.id]: false}));
-              }
-              // Add a small delay before moving to next so the user sees it's wrong
-              setTimeout(() => {
-                nextQuestion();
-              }, 1500);
-            }
-          } else {
-            setQuestionTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0));
-          }
-        }
-      }, 1000);
-      timerRef.current = interval;
-      return () => clearInterval(interval);
+    const searchParams = new URLSearchParams(window.location.search);
+    const hubId = searchParams.get('hubId') || searchParams.get('id');
+    if (hubId && hubs.length > 0) {
+      const hub = hubs.find(h => h.id === hubId || h.path.includes(hubId));
+      if (hub) setSelectedHub(hub.id);
     }
-  }, [questions, view])
+  }, [hubs]);
+
+  useEffect(() => {if (selectedHub) loadHubNotes(selectedHub);}, [selectedHub])
+  
+  const loadHubNotes = async (hubId: string) => {
+    if (!hubId) return;
+    try {
+      let notes: any[] = [];
+      if (hubId === "all") {
+        const allNotesPromises = hubs.map(h => sidecarApi.listHubNotes(h.id));
+        const allNotesResults = await Promise.all(allNotesPromises);
+        const notePaths = new Set<string>();
+        allNotesResults.forEach(res => {
+          const hubNotes = Array.isArray(res?.notes) ? res.notes : [];
+          hubNotes.forEach((n: any) => {
+            if (n && n.path && !notePaths.has(n.path)) {
+              notePaths.add(n.path);
+              notes.push(n);
+            }
+          });
+        });
+      } else {
+        const res = await sidecarApi.listHubNotes(hubId); 
+        notes = Array.isArray(res?.notes) ? res.notes : [];
+      }
+      setAvailableNotes(notes);
+      setAdvancedConfig(prev => {
+        const { label: _l, ...cleanedDist } = prev.questionDistribution as any;
+        return {
+          ...prev,
+          selectedAtomicNotes: notes.map((n: any) => n.path),
+          questionDistribution: cleanedDist
+        };
+      })
+    } catch (err) {
+      console.error("Error loading notes:", err); 
+      setAvailableNotes([]);
+    } 
+  }
+
+  useEffect(() => {
+    let interval: any;
+    if (view === 'loading') {
+      interval = setInterval(async () => {
+        try {
+          const res = await sidecarApi.getPracticeStatus();
+          const statuses = Object.values(res.status);
+          if (statuses.length > 0) {
+            setGenStatus(statuses[statuses.length - 1] as string);
+          }
+        } catch (e) {
+          console.error("Status polling failed", e);
+        }
+      }, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [view]);
+
+  useEffect(() => {
+    if (view === 'session' && session.questions.length === 0) {
+      setView('configuring');
+    }
+  }, [view, session.questions]);
 
   const getCleanErrorMessage = (err: any): string => {
     if (!err) return 'Error starting.';
-    
     let msg = '';
     if (typeof err === 'string') {
       msg = err;
@@ -457,7 +350,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         msg = String(err);
       }
     }
-
     const sidecarPattern = /Sidecar API returned error status \d+:\s*([\s\S]*)/i;
     const match = msg.match(sidecarPattern);
     if (match && match[1]) {
@@ -475,7 +367,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         return rawDetail;
       }
     }
-
     return msg || 'Error starting.';
   };
 
@@ -489,6 +380,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   };
 
   const loadPastPractices = async () => {try {const res = await sidecarApi.listPractices(); setPastPractices(res.practices);} catch {console.error("Error");}}
+  
   const loadHubs = async () => {
     try {
       const res = await sidecarApi.listHubs();
@@ -522,19 +414,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         )
       );
 
-      // Fetch and cache FSRS cards state
-      const cacheRes = await sidecarApi.srsCards();
-      const cacheMap: Record<string, any> = {};
-      if (cacheRes && Array.isArray(cacheRes.cards)) {
-        cacheRes.cards.forEach((c: any) => {
-          cacheMap[c.note_path] = c;
-        });
-      }
-      setSrsCardsCache(cacheMap);
-      setUnlockedNotes(new Set());
-      setFeynmanExplanation('');
-      setFeynmanError(null);
-
       const res = await sidecarApi.generatePractice(selectedHub, {
         ...advancedConfig, 
         hubId: selectedHub,
@@ -549,8 +428,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       
       setView('session');
       (window as any).__practiceStartTime = Date.now();
-      if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
-      if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
+      await session.startSession(res.questions, advancedConfig, undefined, res.quiz_path);
     } catch (err: any) {
       toast.error(getCleanErrorMessage(err)); 
       setView('configuring');
@@ -559,152 +437,79 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     }
   };
 
- const handleResumePractice = async (path: string) => {
- setIsLoading(true);
- setView('loading');
- try {
- const res = await sidecarApi.getPractice(path);
- if (!res.questions || res.questions.length === 0) {
- toast.error('No questions.');
- setView('history');
- return;
-}
- setTimeout(() => {
- setQuestions(res.questions); 
- setCurrentPracticePath(path); 
- setCurrentQuestionIdx(0); 
- setUserAnswers({}); 
- setIsRevealed(false); 
- setGradedAnswers({}); 
- setView('session');
-  (window as any).__practiceStartTime = Date.now();
-}, 500);
-} catch {
- toast.error('Error loading.'); 
- setView('history');
-} finally {setIsLoading(false);}
-}
-
- const handleSubmitAnswer = () => {
- setIsRevealed(true);
- const q = questions[currentQuestionIdx];
- let isCorrect = false;
-
- const isSelfGraded = ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(q.type);
-
- if (!isSelfGraded) {
-  if (q.type === 'mcq' || q.type === 'true_false') {
-   const userVal = String(userAnswers[q.id] || '').trim();
-   const correctVal = String(q.answer || '').trim();
-   
-   if (q.type === 'true_false') {
-   const userBool = userVal.toLowerCase() === 'true';
-   const correctBool = typeof q.answer === 'boolean' ? q.answer : String(q.answer).toLowerCase() === 'true';
-   isCorrect = userBool === correctBool;
-   } else if (q.type === 'mcq') {
-    isCorrect = userVal.trim().toUpperCase() === String(q.answer || '').trim().toUpperCase();
-   }
-  } else if (q.type === 'fill_in') {
-   const answers = userAnswers[q.id] || [];
-   const correctAnswers = q.answer || [];
-   isCorrect = Array.isArray(correctAnswers) && correctAnswers.every((ans: string, idx: number) => 
-   String(answers[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
-   );
-  } else if (q.type === 'matching') {
-   const userPairs = userAnswers[q.id] || {};
-   const correctPairs = q.pairs || [];
-   isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
-   String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
-   );
-  } else if (q.type === 'order') {
-   const userOrder = userAnswers[q.id] || (q as any).steps || [];
-   const correctOrder = (q as any).answer || [];
-   isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
-   String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
-   );
+  const handleResumePractice = async (path: string) => {
+    setIsLoading(true);
+    setView('loading');
+    try {
+      const res = await sidecarApi.getPractice(path);
+      if (!res.questions || res.questions.length === 0) {
+        toast.error('No questions.');
+        setView('history');
+        return;
+      }
+      setView('session');
+      (window as any).__practiceStartTime = Date.now();
+      await session.startSession(res.questions, {}, undefined, path);
+    } catch {
+      toast.error('Error loading.'); 
+      setView('history');
+    } finally {setIsLoading(false);}
   }
-  setGradedAnswers(prev => ({...prev, [q.id]: isCorrect}));
-  setStreak(prev => isCorrect ? prev + 1 : 0);
- }
-}
 
- const toggleBookmark = (idx: number) => {
-   setBookmarked(prev => {
-     const next = new Set(prev)
-     if (next.has(idx)) next.delete(idx)
-     else next.add(idx)
-     return next
-   })
- }
+  const handleSubmitAnswer = () => {
+    session.checkAnswer();
+  }
 
   const nextQuestion = async (latestGrade?: boolean) => {
-    const currentQ = questions[currentQuestionIdx];
-    if (currentQ) {
-      const isCorrect = latestGrade !== undefined ? latestGrade : gradedAnswers[currentQ.id] === true;
-      const timeTaken = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
-      sidecarApi.logPracticeAttempt(
-        currentQ.note_id || selectedHub || 'unknown',
-        currentQ.type || 'unknown',
-        isCorrect,
-        timeTaken
-      ).catch(err => {
-        console.error("Failed to log practice attempt:", err);
-      });
-    }
-
-    if (latestGrade !== undefined) setStreak(prev => latestGrade ? prev + 1 : 0);
-    if (currentQuestionIdx < questions.length - 1) {
-      setCurrentQuestionIdx(currentQuestionIdx + 1); 
-      setIsRevealed(false); 
-      setKeywordChecks({});
-      setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds || null);
-    } else {
-      const newGradedAnswers = latestGrade !== undefined ? {...gradedAnswers, [questions[currentQuestionIdx].id]: latestGrade} : gradedAnswers;
-      let correct = 0;
-      const total = questions.length;
-      questions.forEach(q => {
-        if (newGradedAnswers[q.id] === true) correct++;
-      });
-      const score = Math.round((correct / (total || 1)) * 100);
- 
-      if (currentPracticePath) await sidecarApi.updatePracticeScore(currentPracticePath, score); 
+    await session.nextQuestion(latestGrade);
+    if (session.currentQuestionIdx >= session.questions.length - 1 && latestGrade !== undefined) {
       loadPastPractices(); 
       loadAnalytics();
-      setView('results'); 
+      setView('results');
     }
   }
 
   const calculateScore = () => {
-   let correct = 0;
-   const total = questions.length;
-   questions.forEach(q => {
-    if (gradedAnswers[q.id] === true) correct++;
-   });
-   return {score: Math.round((correct / (total || 1)) * 100), correct, total};
+    let correct = 0;
+    const total = session.questions.length;
+    session.questions.forEach(q => {
+      if (session.scores[q.id] === true) correct++;
+    });
+    return {score: Math.round((correct / (total || 1)) * 100), correct, total};
   }
 
- const resetSession = () => {setQuestions([]); setView('dashboard');}
- const handleSelectAnswer = (val: any) => {if (!isRevealed) setUserAnswers(prev => ({...prev, [questions[currentQuestionIdx].id]: val}));}
- const handleDeletePractice = async (path: string) => {await sidecarApi.deletePractice(path); loadPastPractices();}
+  const resetSession = () => {
+    session.reset();
+    setView('dashboard');
+  }
+
+  const handleSelectAnswer = (val: any) => {
+    session.selectAnswer(val);
+  }
+
+  const handleDeletePractice = async (path: string) => {
+    await sidecarApi.deletePractice(path); 
+    loadPastPractices();
+  }
 
   const handleExplainMore = () => {
-    if (!currentQuestion) return
-    setExplainQuestion(currentQuestion)
+    if (!session.currentQuestion) return
+    setExplainQuestion(session.currentQuestion)
     setExplainOpen(true)
   }
 
- const toggleAtomicNote = (noteId: string) => {
- setAdvancedConfig(prev => ({
- ...prev,
- selectedAtomicNotes: prev.selectedAtomicNotes.includes(noteId)
- ? prev.selectedAtomicNotes.filter(n => n !== noteId)
- : [...prev.selectedAtomicNotes, noteId]
-}))
-}
+  const toggleAtomicNote = (noteId: string) => {
+    setAdvancedConfig(prev => ({
+      ...prev,
+      selectedAtomicNotes: prev.selectedAtomicNotes.includes(noteId)
+        ? prev.selectedAtomicNotes.filter(n => n !== noteId)
+        : [...prev.selectedAtomicNotes, noteId]
+    }))
+  }
 
- const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
- setAdvancedConfig(prev => ({...prev, questionDistribution: {...prev.questionDistribution, [type]: val}}))
-}
+  const updateDistribution = (type: keyof AdvancedPracticeConfig['questionDistribution'], val: number) => {
+    setAdvancedConfig(prev => ({...prev, questionDistribution: {...prev.questionDistribution, [type]: val}}))
+  }
 
   const applyPreset = (key: string) => {
     const p = PRESETS[key]
@@ -733,20 +538,6 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     setIsLoading(true);
     setView('loading');
     try {
-      // Fetch and cache FSRS cards state
-      const cacheRes = await sidecarApi.srsCards();
-      const cacheMap: Record<string, any> = {};
-      if (cacheRes && Array.isArray(cacheRes.cards)) {
-        cacheRes.cards.forEach((c: any) => {
-          cacheMap[c.note_path] = c;
-        });
-      }
-      setSrsCardsCache(cacheMap);
-      setUnlockedNotes(new Set());
-      setFeynmanExplanation('');
-      setFeynmanError(null);
-
-      // If selectedHub === "all", srsDue is called without params
       const dueRes = selectedHub === "all" ? await sidecarApi.srsDue() : await sidecarApi.srsDue(selectedHub);
       if (!dueRes.due_cards || dueRes.due_cards.length === 0) {
         toast.info("No cards are due right now!");
@@ -755,14 +546,13 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       }
       
       let duePaths = dueRes.due_cards.map((c: any) => c.note_path);
-      // Shuffle the array of returned note paths in JS if hub is "all"
       if (selectedHub === "all") {
         duePaths = [...duePaths].sort(() => Math.random() - 0.5);
       }
 
       const cleanDistribution = Object.fromEntries(
          Object.entries(advancedConfig.questionDistribution).filter(([k]) => 
-         ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
+           ['mcq', 'true_false', 'writing', 'fill_in', 'matching', 'order', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(k)
          )
       );
 
@@ -779,17 +569,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          return;
       }
       
-         setQuestions(res.questions); 
-         setCurrentPracticePath(res.quiz_path); 
-         setCurrentQuestionIdx(0); 
-         setUserAnswers({}); 
-         setIsRevealed(false); 
-         setGradedAnswers({}); 
-         setStreak(0); setBookmarked(new Set());
-         setView('session');
-         (window as any).__practiceStartTime = Date.now();
-         if (advancedConfig.globalTimeLimitMinutes) setGlobalTimeLeft(advancedConfig.globalTimeLimitMinutes * 60);
-         if (advancedConfig.perQuestionTimeLimitSeconds) setQuestionTimeLeft(advancedConfig.perQuestionTimeLimitSeconds);
+      setView('session');
+      (window as any).__practiceStartTime = Date.now();
+      await session.startSession(res.questions, advancedConfig, undefined, res.quiz_path);
     } catch (err) {
       console.error(err);
       toast.error("Error generating practice from due cards");
@@ -1168,8 +950,8 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         {key: 'matching', label: 'Matching Pairs'},
         {key: 'synthesis', label: 'Synthesis / Scenario'},
         {key: 'calculation', label: 'Math / Calculation'},
-        {key: 'data_analysis', label: 'Data Analysis'},
-        {key: 'scenario', label: 'Scenario Analysis'},
+        {key: 'data_analysis', label: 'Data Analysis'}, 
+        {key: 'scenario', label: 'Scenario Analysis'}, 
         {key: 'code', label: 'Code / Implementation'}
         ].map(type => (
          <div key={type.key} className="space-y-2 p-3 bg-[#232326]/50 border border-[#242426] hover:border-foreground/20 transition-colors rounded-[8px]">
@@ -1188,635 +970,602 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   </div>
  );
 }
- // LOADING RENDERER
- // ──────────────────────────────────────────────────────────────────────────
- if (view === 'loading') {
- return (
-  <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
-    <div className="flex-1 overflow-hidden flex items-center justify-center">
-      <BlockingLoader label={genStatus} />
-    </div>
-  </div>
- );
-}
 
- // ──────────────────────────────────────────────────────────────────────────
- // SESSION RENDERER
- // ──────────────────────────────────────────────────────────────────────────
- if (view === 'session' && currentQuestion) {
-  const progress = ((currentQuestionIdx + 1) / questions.length) * 100;
+  // ──────────────────────────────────────────────────────────────────────────
+  // LOADING RENDERER
+  // ──────────────────────────────────────────────────────────────────────────
+  if (view === 'loading') {
+    return (
+      <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+        <div className="flex-1 overflow-hidden flex items-center justify-center">
+          <BlockingLoader label={genStatus} />
+        </div>
+      </div>
+    );
+  }
 
-  // Calculate Feynman Lock properties
-  const currentCardPath = currentQuestion ? currentQuestion.note_id : null;
-  const currentCard = currentCardPath ? srsCardsCache[currentCardPath] : null;
-  
-  // R = (1 + t / (9 * s))^-1
-  const getRetrievability = (card: any): number => {
-    if (!card) return 1.0;
-    const stability = Math.max(0.01, card.stability || 0);
-    if (!card.last_review) return 1.0;
-    
-    const lastReviewTime = new Date(card.last_review).getTime();
-    const now = Date.now();
-    const elapsedMs = Math.max(0, now - lastReviewTime);
-    const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
-    
-    return Math.pow(1 + elapsedDays / (9 * stability), -1);
-  };
-  
-  const retrievability = currentCard ? getRetrievability(currentCard) : 1.0;
-  const lapses = currentCard ? (currentCard.lapses || 0) : 0;
-  
-  const isFeynmanLocked = currentCardPath && 
-    (lapses >= 3 || retrievability < 0.70) && 
-    !unlockedNotes.has(currentCardPath);
+  // ──────────────────────────────────────────────────────────────────────────
+  // SESSION RENDERER
+  // ──────────────────────────────────────────────────────────────────────────
+  if (view === 'session' && session.currentQuestion) {
+    const progress = ((session.currentQuestionIdx + 1) / session.questions.length) * 100;
+    const currentQuestion = session.currentQuestion;
+    const currentQuestionIdx = session.currentQuestionIdx;
+    const questions = session.questions;
+    const isRevealed = session.isRevealed;
+    const userAnswers = session.userAnswers;
+    const globalTimeLeft = session.globalTimeLeft;
+    const questionTimeLeft = session.questionTimeLeft;
+    const bookmarked = session.bookmarked;
+    const keywordChecks = session.keywordChecks;
 
- return (
- <div data-tour="practice-session-card" className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
-    {/* ── Feynman Gate Locked Overlay ── */}
-    {isFeynmanLocked && (
-      <div className="absolute inset-0 z-40 bg-bento-bg/90 backdrop-blur-md flex items-center justify-center p-6">
-        <div className="max-w-xl w-full border border-[#242426] bg-[#151517] p-8 rounded-[12px] space-y-6 shadow-2xl relative">
-          <div className="flex items-center gap-3 border-b border-[#242426] pb-4">
-            <BrainCircuit className="text-primary shrink-0" size={24} />
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Cognitive Lock Engaged</h3>
-              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">FSRS Telemetry: Memory Decay Detected</p>
-            </div>
-            <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-[6px]">
-              Locked
+    const currentCardPath = currentQuestion.note_id;
+    const currentCard = currentCardPath ? session.srsCardsCache[currentCardPath] : null;
+
+    const getRetrievability = (card: any): number => {
+      if (!card) return 1.0;
+      const stability = Math.max(0.01, card.stability || 0);
+      if (!card.last_review) return 1.0;
+      const lastReviewTime = new Date(card.last_review).getTime();
+      const elapsedDays = Math.max(0, Date.now() - lastReviewTime) / (1000 * 60 * 60 * 24);
+      return Math.pow(1 + elapsedDays / (9 * stability), -1);
+    };
+
+    const retrievability = currentCard ? getRetrievability(currentCard) : 1.0;
+    const lapses = currentCard ? (currentCard.lapses || 0) : 0;
+
+    return (
+      <div data-tour="practice-session-card" className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
+        {/* ── Feynman Gate Locked Overlay ── */}
+        {session.isFeynmanLocked && (
+          <div className="absolute inset-0 z-40 bg-[#151517]/90 backdrop-blur-md flex items-center justify-center p-6">
+            <div className="max-w-xl w-full border border-[#242426] bg-[#151517] p-8 rounded-[12px] space-y-6 shadow-2xl relative">
+              <div className="flex items-center gap-3 border-b border-[#242426] pb-4">
+                <BrainCircuit className="text-primary shrink-0" size={24} />
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-primary">Cognitive Lock Engaged</h3>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">FSRS Telemetry: Memory Decay Detected</p>
+                </div>
+                <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-[6px]">
+                  Locked
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
+                  <span className={cn("text-xs font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
+                    {(retrievability * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
+                  <span className="text-xs font-black tracking-tight text-foreground">
+                    {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
+                  </span>
+                </div>
+                <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
+                  <span className={cn("text-xs font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
+                    {lapses}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">The Feynman Challenge</h4>
+                <p className="text-xs text-foreground/80 leading-relaxed">
+                  Your memory weights for <strong className="text-foreground">{cleanTitle(currentQuestion.note_title || currentCardPath)}</strong> indicate high fading. Write a clear, comprehensive explanation of this topic in your own words to unlock.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <textarea
+                  value={session.feynmanExplanation}
+                  onChange={(e) => session.setFeynmanExplanation(e.target.value)}
+                  disabled={session.isFeynmanValidating}
+                  rows={5}
+                  placeholder="Explain the core concepts, mechanisms, and rules of this topic..."
+                  className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+                />
+
+                {session.feynmanError && (
+                  <div className="p-4 bg-destructive/5 border border-destructive/20 text-destructive text-[10px] font-bold rounded-[8px] space-y-2">
+                    <span className="uppercase tracking-widest text-[8px] font-black text-destructive/40 block">Unlocking Failed</span>
+                    <p>{session.feynmanError}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={resetSession}
+                  disabled={session.isFeynmanValidating}
+                  className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] bg-[#232326] rounded-[8px]"
+                >
+                  Exit Session
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!session.feynmanExplanation.trim()) {
+                      toast.error("Please write an explanation first.");
+                      return;
+                    }
+                    await session.submitFeynmanChallenge();
+                  }}
+                  disabled={session.isFeynmanValidating || !session.feynmanExplanation.trim()}
+                  className="h-10 flex-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-[8px]"
+                >
+                  {session.isFeynmanValidating ? "Analyzing Telemetry..." : "Validate & Unlock"}
+                </Button>
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-3 gap-2">
-            <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
-              <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
-              <span className={cn("text-xs font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
-                {(retrievability * 100).toFixed(1)}%
-              </span>
-            </div>
-            <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
-              <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
-              <span className="text-xs font-black tracking-tight text-foreground">
-                {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
-              </span>
-            </div>
-            <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
-              <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
-              <span className={cn("text-xs font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
-                {lapses}
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">The Feynman Challenge</h4>
-            <p className="text-xs text-foreground/80 leading-relaxed">
-              Your memory weights for <strong className="text-foreground">{cleanTitle(currentQuestion.note_title || currentCardPath)}</strong> indicate high fading. Write a clear, comprehensive explanation of this topic in your own words to unlock.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <textarea
-              value={feynmanExplanation}
-              onChange={(e) => setFeynmanExplanation(e.target.value)}
-              disabled={isFeynmanValidating}
-              rows={5}
-              placeholder="Explain the core concepts, mechanisms, and rules of this topic..."
-              className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+        {/* ── Explain More Dialog ── */}
+        {explainOpen && explainQuestion && (() => {
+          const rawAns = session.userAnswers[explainQuestion.id]
+          const formattedUserAnswer = Array.isArray(rawAns)
+            ? rawAns.join(', ')
+            : typeof rawAns === 'object' && rawAns !== null
+              ? JSON.stringify(rawAns)
+              : rawAns !== undefined && rawAns !== null ? String(rawAns) : ''
+          const { initialFetcher, followUpFetcher } = makePracticeExplainFetchers({
+            question: explainQuestion.question,
+            type: explainQuestion.type,
+            answer: (explainQuestion as any).answer,
+            explanation: explainQuestion.explanation,
+            context: (explainQuestion as any).content || (explainQuestion as any).codeSnippet || '',
+            userAnswer: formattedUserAnswer,
+          })
+          return (
+            <AterExplainDialog
+              isOpen={explainOpen}
+              onClose={() => { setExplainOpen(false); setExplainQuestion(null) }}
+              contextLabel={explainQuestion.question}
+              initialFetcher={initialFetcher}
+              followUpFetcher={followUpFetcher}
             />
+          )
+        })()}
 
-            {feynmanError && (
-              <div className="p-4 bg-destructive/5 border border-destructive/20 text-destructive text-[10px] font-bold rounded-[8px] space-y-2">
-                <span className="uppercase tracking-widest text-[8px] font-black text-destructive/40 block">Unlocking Failed</span>
-                <p>{feynmanError}</p>
+        <div className="px-8 py-3 border-b border-border flex flex-row items-center justify-between gap-3">
+          <div className="flex flex-row items-center gap-8 w-auto">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
+              <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
+            </div>
+            <div className="flex-1 w-64 h-1 bg-muted/20 rounded-none overflow-hidden">
+              <div className="h-full bg-primary" style={{width: `${progress}%`}} />
+            </div>
+          </div>
+          <div className="flex items-center justify-end w-auto gap-6 text-[9px] font-black uppercase tracking-widest">
+            {globalTimeLeft !== null && (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-muted-foreground/20 text-[7px]">Total</span>
+                <div className={cn("px-2 py-0.5 rounded-none border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
+                  {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
+                </div>
               </div>
             )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={resetSession}
-              disabled={isFeynmanValidating}
-              className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] bg-[#232326] rounded-[8px]"
-            >
-              Exit Session
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!feynmanExplanation.trim()) {
-                  toast.error("Please write an explanation first.");
-                  return;
-                }
-                setIsFeynmanValidating(true);
-                setFeynmanError(null);
-                try {
-                  const res = await sidecarApi.srsFeynmanValidate(currentCardPath, feynmanExplanation);
-                  if (res.success) {
-                    toast.success("Cognitive Lock Unlocked! Memory weights successfully sync'd.");
-                    setUnlockedNotes(prev => {
-                      const next = new Set(prev);
-                      next.add(currentCardPath);
-                      return next;
-                    });
-                    setFeynmanExplanation('');
-                    // Update card in local FSRS cache with rating 3 (Good)
-                    setSrsCardsCache(prev => ({
-                      ...prev,
-                      [currentCardPath]: {
-                        ...prev[currentCardPath],
-                        lapses: 0,
-                        stability: prev[currentCardPath] ? prev[currentCardPath].stability * 1.5 : 1.5,
-                        last_review: new Date().toISOString()
-                      }
-                    }));
-                  } else {
-                    if (res.missing_keywords && res.missing_keywords.length > 0) {
-                      setFeynmanError(`Missing mandatory concepts: ${res.missing_keywords.join(', ')}`);
-                    } else if (res.error) {
-                      setFeynmanError(res.error);
-                    } else {
-                      setFeynmanError("Validation failed. Please verify your explanation covers all key concepts.");
-                    }
-                  }
-                } catch (e: any) {
-                  setFeynmanError(e.message || "Failed to validate explanation.");
-                } finally {
-                  setIsFeynmanValidating(false);
-                }
-              }}
-              disabled={isFeynmanValidating || !feynmanExplanation.trim()}
-              className="h-10 flex-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-[8px]"
-            >
-              {isFeynmanValidating ? "Analyzing Telemetry..." : "Validate & Unlock"}
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
- {/* ── Explain More Dialog ── */}
- {explainOpen && explainQuestion && (() => {
-   const rawAns = userAnswers[explainQuestion.id]
-   const formattedUserAnswer = Array.isArray(rawAns)
-     ? rawAns.join(', ')
-     : typeof rawAns === 'object' && rawAns !== null
-       ? JSON.stringify(rawAns)
-       : rawAns !== undefined && rawAns !== null ? String(rawAns) : ''
-   const { initialFetcher, followUpFetcher } = makePracticeExplainFetchers({
-     question: explainQuestion.question,
-     type: explainQuestion.type,
-     answer: (explainQuestion as any).answer,
-     explanation: explainQuestion.explanation,
-     context: (explainQuestion as any).content || (explainQuestion as any).codeSnippet || '',
-     userAnswer: formattedUserAnswer,
-   })
-   return (
-     <AterExplainDialog
-       isOpen={explainOpen}
-       onClose={() => { setExplainOpen(false); setExplainQuestion(null) }}
-       contextLabel={explainQuestion.question}
-       initialFetcher={initialFetcher}
-       followUpFetcher={followUpFetcher}
-     />
-   )
- })()}
- <div className="px-8 py-3 border-b border-border flex flex-row items-center justify-between gap-3">
- <div className="flex flex-row items-center gap-8 w-auto">
- <div className="flex flex-col gap-0.5">
- <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
- <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">{cleanTitle(hubs.find(h => h.id === selectedHub)?.title || '')}</div>
- </div>
- <div className="flex-1 w-64 h-1 bg-muted/20 rounded-none overflow-hidden">
- <div className="h-full bg-primary" style={{width: `${progress}%`}} />
- </div>
- </div>
- <div className="flex items-center justify-end w-auto gap-6 text-[9px] font-black uppercase tracking-widest">
- {globalTimeLeft !== null && (
- <div className="flex flex-col items-end gap-0.5">
- <span className="text-muted-foreground/20 text-[7px]">Total</span>
-  <div className={cn("px-2 py-0.5 rounded-none border", globalTimeLeft < 60 ? "border-destructive text-destructive" : "border-border text-muted-foreground/60")}>
- {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
- </div>
- </div>
- )}
- {questionTimeLeft !== null && (
- <div className="flex flex-col items-end gap-0.5">
- <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
-  <div className={cn("px-2 py-0.5 rounded-none border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
- {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
- </div>
- </div>
- )}
- <div className="flex flex-col items-end gap-0.5">
- <span className="text-muted-foreground/20 text-[7px]">Progress</span>
-  <div className="px-2 py-0.5 rounded-none border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
- </div>
- </div>
- </div>
-
- <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center py-8 px-10">
- <div className="max-w-3xl w-full space-y-8">
- <div className="space-y-4">
- <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
- <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-[6px] px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
- <div className="w-1 h-1 rounded-none bg-primary/20" />
- <span>{(
-      {
-          'mcq': 'Multiple Choice',
-          'true_false': 'True or False',
-          'writing': 'Writing / Essay',
-          'fill_in': 'Fill in the Blank',
-          'debug': 'Debugging / Error Finding',
-          'trace': 'Logic / Calculation Trace',
-          'order': 'Ordering / Steps',
-          'matching': 'Matching Pairs',
-          'synthesis': 'Synthesis / Scenario',
-          'calculation': 'Math / Calculation',
-          'data_analysis': 'Data Analysis',
-          'scenario': 'Scenario Analysis',
-          'code': 'Code / Implementation'
-      } as any)[currentQuestion.type as string] || (currentQuestion.type || '').replace('_', ' ')
-  } MODE</span>
-  <button onClick={() => toggleBookmark(currentQuestionIdx)} className={cn("ml-auto transition-none", bookmarked.has(currentQuestionIdx) ? "text-primary" : "text-muted-foreground/20 hover:text-foreground")} title="Bookmark Question">
-    <Bookmark size={14} className={bookmarked.has(currentQuestionIdx) ? "fill-primary" : ""} />
-  </button>
- </div>
- <div className="text-2xl font-black tracking-tight leading-snug text-foreground/90"><MarkdownBlock content={currentQuestion.question} /></div>
- </div>
-
- <div className="space-y-6">
- {currentQuestion.type === 'mcq' && (
-  <div className="grid grid-cols-1 gap-2">
-  {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
-  const isSelected = userAnswers[currentQuestion.id] === key; 
-  const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
-  const isWrongSelected = isRevealed && isSelected && !isCorrect;
-  return (
-  <button 
-    key={key} 
-    disabled={isRevealed} 
-    onClick={() => handleSelectAnswer(key)} 
-    className={cn(
-      "p-4 border rounded-[8px] text-left text-sm font-bold flex items-start w-full transition-all duration-150",
-      isCorrect 
-        ? "bg-primary/10 border-primary text-primary" 
-        : isWrongSelected 
-          ? "bg-destructive/10 border-destructive text-destructive" 
-          : isRevealed 
-            ? "border-[#242426] opacity-30 grayscale" 
-            : isSelected 
-              ? "bg-[#232326] border-foreground text-foreground" 
-              : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground"
-    )}
-  >
-  <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold rounded-[6px]", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-[#242426] bg-[#232326] text-muted-foreground/50")}>{key}</span>
-  <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
-  </button>
-  );
-})}
-  </div>
- )}
-
- {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
-  <div className="space-y-6">
-  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-[#242426] rounded-[8px] bg-[#151517]"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
-  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-[#242426]/40 rounded-[8px] bg-[#151517] text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
-  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
-  {isRevealed && (
-    <div className="p-4 border border-primary/20 bg-primary/5 rounded-[8px] space-y-2">
-      <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
-      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer || '')} /></div>
-    </div>
-  )}
-  </div>
-  )}
-
-  {currentQuestion.type === 'true_false' && (
-  <div className="grid grid-cols-2 gap-4">
-  {['True', 'False'].map(v => {
-  const isSelected = userAnswers[currentQuestion.id] === v; 
-  const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
-  const isWrongSelected = isRevealed && isSelected && !isCorrect;
-  return (
-  <button 
-    key={v} 
-    disabled={isRevealed} 
-    onClick={() => handleSelectAnswer(v)} 
-    className={cn(
-      "h-24 border rounded-[8px] text-xs font-bold uppercase tracking-widest transition-all duration-150", 
-      isCorrect 
-        ? "bg-primary/10 border-primary text-primary font-extrabold ring-1 ring-inset ring-primary" 
-        : isWrongSelected 
-          ? "bg-destructive/10 border-destructive text-destructive ring-1 ring-inset ring-destructive" 
-          : isRevealed 
-            ? "border-[#242426] opacity-30 grayscale text-muted-foreground/40" 
-            : isSelected 
-              ? "bg-[#232326] border-foreground text-foreground ring-1 ring-inset ring-foreground" 
-              : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground/80"
-    )}
-  >
-    {v}
-  </button>
-  );
-})}
-  </div>
-  )}
-
- 
- {currentQuestion.type === 'order' && (
-  <div className="space-y-3">
-  {(userAnswers[currentQuestion.id] || currentQuestion.steps || []).map((step: string, i: number) => {
-     const list = userAnswers[currentQuestion.id] || currentQuestion.steps || [];
-     const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
-     const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
-     const isCorrect = isRevealed && step === (currentQuestion.answer || [])[i];
-     const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
-     return (
-         <div key={i} className={cn(
-             "flex items-center gap-4 p-3 border rounded-[8px] ",
-             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
-         )}>
-             <div className="flex flex-col gap-1.5 border-r border-border/10 pr-4">
-                 <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▲</button>
-                 <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▼</button>
-             </div>
-             <div className="text-sm font-bold tracking-tight text-foreground/80 pl-1">{step}</div>
-         </div>
-     )
-  })}
-  </div>
-  )}
-
- {currentQuestion.type === 'matching' && currentQuestion.pairs && (
-  <div className="space-y-4">
-  {currentQuestion.pairs.map((pair: any, i: number) => {
-     const rights = currentQuestion.pairs.map((p: any) => p.right).sort();
-     const selected = (userAnswers[currentQuestion.id] || {})[pair.left] || "";
-     const isCorrect = isRevealed && selected === pair.right;
-     const isWrong = isRevealed && selected !== pair.right;
-     return (
-         <div key={i} className={cn(
-             "flex items-center gap-4 p-3 border rounded-[8px] ",
-             isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
-         )}>
-             <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
-             <div className="flex-1">
-                 <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-[#232326] hover:bg-[#232326]/80 border border-[#242426] focus:border-primary rounded-[8px] outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
-                     <option value="">Select match...</option>
-                     {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
-                 </select>
-             </div>
-             {isRevealed && isWrong && (
-                <div className="flex-1">
-                    <div className="text-[8px] font-black uppercase text-primary/40 mb-1">Correct Match</div>
-                    <div className="text-xs font-black uppercase tracking-widest text-primary">{pair.right}</div>
+            {questionTimeLeft !== null && (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
+                <div className={cn("px-2 py-0.5 rounded-none border", questionTimeLeft < 10 ? "border-destructive text-destructive" : "border-border text-primary")}>
+                  {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
                 </div>
-             )}
-         </div>
-     )
-  })}
-  </div>
-  )}
+              </div>
+            )}
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-muted-foreground/20 text-[7px]">Progress</span>
+              <div className="px-2 py-0.5 rounded-none border border-border">{currentQuestionIdx + 1} / {questions.length}</div>
+            </div>
+          </div>
+        </div>
 
- {currentQuestion.type === 'fill_in' && (
-  <div className="p-5 bg-[#151517] border border-[#242426] rounded-[8px] text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
- {(() => {
- const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
- return parts.map((part: string, i: number) => (
- <React.Fragment key={i}>
- <div className="inline-block align-middle"><MarkdownBlock content={part} variant="inline" /></div>
- {i < parts.length - 1 && (
- <div className="inline-flex flex-col items-center">
-   <input 
-      type="text" 
-      disabled={isRevealed} 
-      value={(userAnswers[currentQuestion.id] || [])[i] || ''} 
-      onChange={(e) => {
-        const newAns = [...(userAnswers[currentQuestion.id] || [])]; 
-        newAns[i] = e.target.value; 
-        handleSelectAnswer(newAns);
-      }} 
-      className={cn(
-        "mx-2 border-b-2 bg-[#232326] hover:bg-[#232326]/80 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150 rounded-[6px]", 
-        isRevealed 
-          ? (String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() === String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() 
-            ? "border-primary bg-primary/10 text-primary" 
-            : "border-destructive bg-destructive/10 text-destructive") 
-          : "border-[#242426] focus:border-primary text-foreground"
-      )} 
-    />
-   {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() !== String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() && (
-     <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 font-black uppercase mt-1 tracking-wider whitespace-nowrap">Correct: {String((currentQuestion.answer || [])[i] || '')}</div>
-   )}
- </div>
- )}
- </React.Fragment>
- ));
-})()}
- </div>
- )}
+        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center py-8 px-10">
+          <div className="max-w-3xl w-full space-y-8">
+            <div className="space-y-4">
+              <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
+                <Badge variant="outline" className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-[6px] px-1.5 py-0">{currentQuestion.difficulty || '1'}</Badge>
+                <div className="w-1 h-1 rounded-none bg-primary/20" />
+                <span>{(
+                  {
+                    'mcq': 'Multiple Choice',
+                    'true_false': 'True or False',
+                    'writing': 'Writing / Essay',
+                    'fill_in': 'Fill in the Blank',
+                    'debug': 'Debugging / Error Finding',
+                    'trace': 'Logic / Calculation Trace',
+                    'order': 'Ordering / Steps',
+                    'matching': 'Matching Pairs',
+                    'synthesis': 'Synthesis / Scenario',
+                    'calculation': 'Math / Calculation',
+                    'data_analysis': 'Data Analysis',
+                    'scenario': 'Scenario Analysis',
+                    'code': 'Code / Implementation'
+                  } as any)[currentQuestion.type as string] || (currentQuestion.type || '').replace('_', ' ')
+                } MODE</span>
+                <button onClick={() => session.toggleBookmark(currentQuestionIdx)} className={cn("ml-auto transition-none", bookmarked.has(currentQuestionIdx) ? "text-primary" : "text-muted-foreground/20 hover:text-foreground")} title="Bookmark Question">
+                  <Bookmark size={14} className={bookmarked.has(currentQuestionIdx) ? "fill-primary" : ""} />
+                </button>
+              </div>
+              <div className="text-2xl font-black tracking-tight leading-snug text-foreground/90"><MarkdownBlock content={currentQuestion.question} /></div>
+            </div>
 
-   {isRevealed && currentQuestion.explanation && (
-     <div className="p-5 border border-border/10 rounded-none bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed   ">
-         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">Explanation</div>
-         <MarkdownBlock content={currentQuestion.explanation} />
-     </div>
-   )}
+            <div className="space-y-6">
+              {currentQuestion.type === 'mcq' && (
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
+                    const isSelected = userAnswers[currentQuestion.id] === key; 
+                    const isCorrect = isRevealed && (key === currentQuestion.answer || String(val).toLowerCase() === String(currentQuestion.answer).toLowerCase());
+                    const isWrongSelected = isRevealed && isSelected && !isCorrect;
+                    return (
+                      <button 
+                        key={key} 
+                        disabled={isRevealed} 
+                        onClick={() => handleSelectAnswer(key)} 
+                        className={cn(
+                          "p-4 border rounded-[8px] text-left text-sm font-bold flex items-start w-full transition-all duration-150",
+                          isCorrect 
+                            ? "bg-primary/10 border-primary text-primary" 
+                            : isWrongSelected 
+                              ? "bg-destructive/10 border-destructive text-destructive" 
+                              : isRevealed 
+                                ? "border-[#242426] opacity-30 grayscale" 
+                                : isSelected 
+                                  ? "bg-[#232326] border-foreground text-foreground" 
+                                  : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground"
+                        )}
+                      >
+                        <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold rounded-[6px]", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-[#242426] bg-[#232326] text-muted-foreground/50")}>{key}</span>
+                        <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-  {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && (
-    <div className="p-8 border border-[#242426] rounded-[8px] bg-[#151517] space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
-        <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
-          {currentQuestion.required_keywords.filter((kw: string) => String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length} / {currentQuestion.required_keywords.length} Found
+              {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
+                <div className="space-y-6">
+                  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-[#242426] rounded-[8px] bg-[#151517]"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
+                  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-[#242426]/40 rounded-[8px] bg-[#151517] text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
+                  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+                  {isRevealed && (
+                    <div className="p-4 border border-primary/20 bg-primary/5 rounded-[8px] space-y-2">
+                      <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
+                      <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap"><MarkdownBlock content={String(currentQuestion.answer || '')} /></div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {currentQuestion.type === 'true_false' && (
+                <div className="grid grid-cols-2 gap-4">
+                  {['True', 'False'].map(v => {
+                    const isSelected = userAnswers[currentQuestion.id] === v; 
+                    const isCorrect = isRevealed && v.toLowerCase() === String(currentQuestion.answer).toLowerCase(); 
+                    const isWrongSelected = isRevealed && isSelected && !isCorrect;
+                    return (
+                      <button 
+                        key={v} 
+                        disabled={isRevealed} 
+                        onClick={() => handleSelectAnswer(v)} 
+                        className={cn(
+                          "h-24 border rounded-[8px] text-xs font-bold uppercase tracking-widest transition-all duration-150", 
+                          isCorrect 
+                            ? "bg-primary/10 border-primary text-primary font-extrabold ring-1 ring-inset ring-primary" 
+                            : isWrongSelected 
+                              ? "bg-destructive/10 border-destructive text-destructive ring-1 ring-inset ring-destructive" 
+                              : isRevealed 
+                                ? "border-[#242426] opacity-30 grayscale text-muted-foreground/40" 
+                                : isSelected 
+                                  ? "bg-[#232326] border-foreground text-foreground ring-1 ring-inset ring-foreground" 
+                                  : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground/80"
+                        )}
+                      >
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {currentQuestion.type === 'order' && (
+                <div className="space-y-3">
+                  {(userAnswers[currentQuestion.id] || currentQuestion.steps || []).map((step: string, i: number) => {
+                    const list = userAnswers[currentQuestion.id] || currentQuestion.steps || [];
+                    const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
+                    const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
+                    const isCorrect = isRevealed && step === (currentQuestion.answer || [])[i];
+                    const isWrong = isRevealed && step !== (currentQuestion.answer || [])[i];
+                    return (
+                      <div key={i} className={cn(
+                        "flex items-center gap-4 p-3 border rounded-[8px] ",
+                        isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
+                      )}>
+                        <div className="flex flex-col gap-1.5 border-r border-border/10 pr-4">
+                          <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▲</button>
+                          <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▼</button>
+                        </div>
+                        <div className="text-sm font-bold tracking-tight text-foreground/80 pl-1">{step}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {currentQuestion.type === 'matching' && currentQuestion.pairs && (
+                <div className="space-y-4">
+                  {currentQuestion.pairs.map((pair: any, i: number) => {
+                    const rights = currentQuestion.pairs.map((p: any) => p.right).sort();
+                    const selected = (userAnswers[currentQuestion.id] || {})[pair.left] || "";
+                    const isCorrect = isRevealed && selected === pair.right;
+                    const isWrong = isRevealed && selected !== pair.right;
+                    return (
+                      <div key={i} className={cn(
+                        "flex items-center gap-4 p-3 border rounded-[8px] ",
+                        isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
+                      )}>
+                        <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
+                        <div className="flex-1">
+                          <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-[#232326] hover:bg-[#232326]/80 border border-[#242426] focus:border-primary rounded-[8px] outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
+                            <option value="">Select match...</option>
+                            {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
+                          </select>
+                        </div>
+                        {isRevealed && isWrong && (
+                          <div className="flex-1">
+                            <div className="text-[8px] font-black uppercase text-primary/40 mb-1">Correct Match</div>
+                            <div className="text-xs font-black uppercase tracking-widest text-primary">{pair.right}</div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {currentQuestion.type === 'fill_in' && (
+                <div className="p-5 bg-[#151517] border border-[#242426] rounded-[8px] text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
+                  {(() => {
+                    const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
+                    return parts.map((part: string, i: number) => (
+                      <React.Fragment key={i}>
+                        <div className="inline-block align-middle"><MarkdownBlock content={part} variant="inline" /></div>
+                        {i < parts.length - 1 && (
+                          <div className="inline-flex flex-col items-center">
+                            <input 
+                              type="text" 
+                              disabled={isRevealed} 
+                              value={(userAnswers[currentQuestion.id] || [])[i] || ''} 
+                              onChange={(e) => {
+                                const newAns = [...(userAnswers[currentQuestion.id] || [])]; 
+                                newAns[i] = e.target.value; 
+                                handleSelectAnswer(newAns);
+                              }} 
+                              className={cn(
+                                "mx-2 border-b-2 bg-[#232326] hover:bg-[#232326]/80 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150 rounded-[6px]", 
+                                isRevealed 
+                                  ? (String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() === String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() 
+                                    ? "border-primary bg-primary/10 text-primary" 
+                                    : "border-destructive bg-destructive/10 text-destructive") 
+                                  : "border-[#242426] focus:border-primary text-foreground"
+                              )} 
+                            />
+                            {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() !== String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() && (
+                              <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 font-black uppercase mt-1 tracking-wider whitespace-nowrap">Correct: {String((currentQuestion.answer || [])[i] || '')}</div>
+                            )}
+                          </div>
+                        )}
+                      </React.Fragment>
+                    ));
+                  })()}
+                </div>
+              )}
+
+              {isRevealed && currentQuestion.explanation && (
+                <div className="p-5 border border-border/10 rounded-none bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed   ">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">Explanation</div>
+                  <MarkdownBlock content={currentQuestion.explanation} />
+                </div>
+              )}
+
+              {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && (
+                <div className="p-8 border border-[#242426] rounded-[8px] bg-[#151517] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
+                    <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
+                      {currentQuestion.required_keywords.filter((kw: string) => String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length} / {currentQuestion.required_keywords.length} Found
+                    </div>
+                  </div>
+                  
+                  {currentQuestion.required_keywords.filter((kw: string) => !String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-[8px] text-sm font-bold text-destructive/90 mb-4">
+                      Warning: Your answer is missing core concepts. Are you sure you mastered this?
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    {currentQuestion.required_keywords.map((kw: string, i: number) => {
+                      const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
+                      return (
+                        <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer transition-colors shadow-sm", isFound ? "border-primary/50 bg-primary/5" : "border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]")}>
+                          <input 
+                            type="checkbox" 
+                            checked={keywordChecks[kw] || false} 
+                            onChange={(e) => session.setKeywordCheck(kw, e.target.checked)} 
+                            className="w-5 h-5 shrink-0 appearance-none border border-[#242426] bg-[#232326] rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
+                          />
+                          <span className={cn("text-sm font-bold transition-colors", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3 font-black">(Found in your answer)</span>}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-border/10 bg-transparent">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exit</Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={handleExplainMore}
+                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-[#242426] bg-[#232326] hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-[8px] flex items-center gap-2 transition-colors duration-150"
+                title="Get a detailed lesson on this question's concept"
+              >
+                <BookOpen size={12} />
+                Explain More
+              </Button>
+              <div className="flex items-center gap-2">
+                {!isRevealed ? (
+                  <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Check</Button>
+                ) : (
+                  <div className="flex gap-2">
+                    {session.scores[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type) && (
+                      <>
+                        <Button onClick={() => { nextQuestion(false); }} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
+                        <Button 
+                          onClick={() => { nextQuestion(true); }} 
+                          disabled={Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])}
+                          className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
+                        >Correct</Button>
+                      </>
+                    )} 
+                    {((!['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) || session.scores[currentQuestion.id] !== undefined) && (
+                      <Button onClick={() => nextQuestion()} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Next</Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {currentQuestion.required_keywords.filter((kw: string) => !String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-[8px] text-sm font-bold text-destructive/90 mb-4">
-          Warning: Your answer is missing core concepts. Are you sure you mastered this?
-        </div>
-      )}
-      
-      <div className="grid grid-cols-1 gap-3">
-        {currentQuestion.required_keywords.map((kw: string, i: number) => {
-          const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
-          return (
-            <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer transition-colors shadow-sm", isFound ? "border-primary/50 bg-primary/5" : "border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]")}>
-              <input 
-                type="checkbox" 
-                checked={keywordChecks[kw] || false} 
-                onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} 
-                className="w-5 h-5 shrink-0 appearance-none border border-[#242426] bg-[#232326] rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
-              />
-              <span className={cn("text-sm font-bold transition-colors", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3 font-black">(Found in your answer)</span>}</span>
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  )}
- </div>
- </div>
- </div>
+    );
+  }
 
-  <div className="p-6 border-t border-border/10 bg-transparent">
- <div className="max-w-2xl mx-auto flex items-center justify-between">
- <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Exit</Button>
- <div className="flex items-center gap-2">
-  <Button
-    variant="ghost"
-    onClick={handleExplainMore}
-    className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-[#242426] bg-[#232326] hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-[8px] flex items-center gap-2 transition-colors duration-150"
-    title="Get a detailed lesson on this question's concept"
-  >
-    <BookOpen size={12} />
-    Explain More
-  </Button>
-  <div className="flex items-center gap-2">
- {!isRevealed ? (
- <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Check</Button>
- ) : (
- <div className="flex gap-2">
- {gradedAnswers[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type) && (
- <>
- <Button onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: false})); nextQuestion(false);}} variant="outline" className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40">Wrong</Button>
- <Button 
-    onClick={() => {setGradedAnswers(p => ({...p, [currentQuestion.id]: true})); nextQuestion(true);}} 
-    disabled={Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])}
-    className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-    title={Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
- >Correct</Button>
- </>
- )} 
- {((!['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) || gradedAnswers[currentQuestion.id] !== undefined) && (
- <Button onClick={() => nextQuestion()} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Next</Button>
- )}
- </div>
- )}
-  </div>
- </div>
- </div>
- </div>
- </div>
- );
-}
-
- // ──────────────────────────────────────────────────────────────────────────
- // RESULTS RENDERER
- // ──────────────────────────────────────────────────────────────────────────
-
+  // ──────────────────────────────────────────────────────────────────────────
+  // RESULTS RENDERER
+  // ──────────────────────────────────────────────────────────────────────────
   if (view === 'results') {
-   const {score, correct, total} = calculateScore();
-  const avgTime = total > 0 ? Math.round(elapsedSec / total) : 0;
+    const {score, correct, total} = calculateScore();
+    const avgTime = total > 0 ? Math.round(elapsedSec / total) : 0;
 
-  // Per-type breakdown
-  const typeMap: Record<string,{correct:number,total:number}> = {};
-  questions.forEach(q => {
-    const t = q.type || 'other';
-    if (!typeMap[t]) typeMap[t] = {correct:0, total:0};
-    typeMap[t].total++;
-    if (gradedAnswers[q.id] === true) typeMap[t].correct++;
-  });
+    // Per-type breakdown
+    const typeMap: Record<string,{correct:number,total:number}> = {};
+    session.questions.forEach(q => {
+      const t = q.type || 'other';
+      if (!typeMap[t]) typeMap[t] = {correct:0, total:0};
+      typeMap[t].total++;
+      if (session.scores[q.id] === true) typeMap[t].correct++;
+    });
 
-  const TYPE_LABELS: Record<string,string> = {
-    mcq:'MCQ', true_false:'True/False', writing:'Writing', fill_in:'Fill Blank',
-    debug:'Debug', trace:'Trace', order:'Order', matching:'Matching',
-    synthesis:'Synthesis', calculation:'Calculation', data_analysis:'Data Analysis',
-    scenario:'Scenario', code:'Code'
-  };
+    const TYPE_LABELS: Record<string,string> = {
+      mcq:'MCQ', true_false:'True/False', writing:'Writing', fill_in:'Fill Blank',
+      debug:'Debug', trace:'Trace', order:'Order', matching:'Matching',
+      synthesis:'Synthesis', calculation:'Calculation', data_analysis:'Data Analysis',
+      scenario:'Scenario', code:'Code'
+    };
 
-  const bookmarkedQuestions = questions.filter((_,i) => bookmarked.has(i));
+    const bookmarkedQuestions = session.questions.filter((_,i) => session.bookmarked.has(i));
+
+    return (
+      <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col p-10">
+          <div className="max-w-3xl mx-auto w-full space-y-8 overflow-y-auto pr-2 custom-scrollbar">
+            {/* Score hero */}
+            <div className="flex items-end justify-between border-b border-[#242426] pb-6">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
+                <h1 className="text-9xl font-black tracking-tighter leading-none text-foreground">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
+              </div>
+              <div className="flex flex-col items-end gap-2 pb-2">
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{correct} / {total} correct</div>
+                {avgTime > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{avgTime}s avg per question</div>}
+                {bookmarkedQuestions.length > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-primary/60">{bookmarkedQuestions.length} bookmarked</div>}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2.5 w-full bg-[#1a1a1c] rounded-full overflow-hidden border border-[#242426]">
+              <div className="h-full bg-[#e4e4e7] rounded-none transition-all duration-700" style={{width:`${score}%`}}/>
+            </div>
+
+            {/* Type breakdown */}
+            {Object.entries(typeMap).length > 0 && (
+              <div className="space-y-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Breakdown by Type</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(typeMap).map(([t, s]) => {
+                    const pct = Math.round((s.correct/s.total)*100);
+                    return (
+                      <div key={t} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
+                          <span className="text-[10px] font-black tabular-nums text-foreground/80">{pct}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'white' : pct >= 50 ? 'rgba(255,255,255,0.4)' : 'rgba(239, 68, 68, 0.6)'}}/>
+                        </div>
+                        <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Bookmarked questions review */}
+            {bookmarkedQuestions.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
+                <div className="space-y-2">
+                  {bookmarkedQuestions.map((q,i) => (
+                    <div key={i} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[8px] border-[#242426] rounded-[4px] px-1.5 bg-[#232326]">{q.difficulty||'?'}</Badge>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
+                        {session.scores[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
+                        {session.scores[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
+                      </div>
+                      <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
+                      {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-[#242426]/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-row gap-3 pt-6 border-t border-[#242426]">
+              <Button onClick={() => { session.reset(); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
+              <Button variant="outline" onClick={() => { const distribution = Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any; session.reset(); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: distribution }); setView('configuring'); }} className="h-11 flex-1 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
+              <Button variant="outline" onClick={() => { session.reset(); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Done</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-   <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
-    <div className="flex-1 overflow-hidden flex flex-col p-10">
-     <div className="max-w-3xl mx-auto w-full space-y-8 overflow-y-auto pr-2 custom-scrollbar">
-      {/* Score hero */}
-      <div className="flex items-end justify-between border-b border-[#242426] pb-6">
-       <div>
-        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
-        <h1 className="text-9xl font-black tracking-tighter leading-none text-foreground">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
-       </div>
-       <div className="flex flex-col items-end gap-2 pb-2">
-        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{correct} / {total} correct</div>
-        {avgTime > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">{avgTime}s avg per question</div>}
-        {bookmarkedQuestions.length > 0 && <div className="text-[9px] font-black uppercase tracking-widest text-primary/60">{bookmarkedQuestions.length} bookmarked</div>}
-       </div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="h-2.5 w-full bg-[#1a1a1c] rounded-full overflow-hidden border border-[#242426]">
-       <div className="h-full bg-[#e4e4e7] rounded-none transition-all duration-700" style={{width:`${score}%`}}/>
-      </div>
-
-      {/* Type breakdown */}
-      {Object.entries(typeMap).length > 0 && (
-       <div className="space-y-3">
-        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Breakdown by Type</div>
-        <div className="grid grid-cols-2 gap-2">
-         {Object.entries(typeMap).map(([t, s]) => {
-           const pct = Math.round((s.correct/s.total)*100);
-           return (
-            <div key={t} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-2">
-             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
-              <span className="text-[10px] font-black tabular-nums text-foreground/80">{pct}%</span>
-             </div>
-             <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
-              <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'white' : pct >= 50 ? 'rgba(255,255,255,0.4)' : 'rgba(239, 68, 68, 0.6)'}}/>
-             </div>
-             <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
-            </div>
-           )
-         })}
+    <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
+      <div className="flex-1 overflow-hidden flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Session state invalidated</p>
+          <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] text-foreground rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
         </div>
-       </div>
-      )}
-
-      {/* Bookmarked questions review */}
-      {bookmarkedQuestions.length > 0 && (
-       <div className="space-y-3">
-        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
-        <div className="space-y-2">
-         {bookmarkedQuestions.map((q,i) => (
-          <div key={i} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-2">
-           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[8px] border-[#242426] rounded-[4px] px-1.5 bg-[#232326]">{q.difficulty||'?'}</Badge>
-            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
-            {gradedAnswers[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
-            {gradedAnswers[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
-           </div>
-           <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
-            {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-[#242426]/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
-          </div>
-         ))}
-        </div>
-       </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex flex-row gap-3 pt-6 border-t border-[#242426]">
-       <Button onClick={() => { setStreak(0); setBookmarked(new Set()); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
-       <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any }); setView('configuring'); }} className="h-11 flex-1 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
-       <Button variant="outline" onClick={() => { setStreak(0); setBookmarked(new Set()); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Done</Button>
       </div>
-     </div>
     </div>
-   </div>
   );
-  }
- return (
- <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
-  <div className="flex-1 overflow-hidden flex items-center justify-center">
-    <div className="text-center space-y-4">
-      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Session state invalidated</p>
-      <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] text-foreground rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
-    </div>
-  </div>
- </div>
- );
 }
 
 export default PracticeModule;

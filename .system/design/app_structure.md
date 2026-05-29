@@ -13,29 +13,33 @@ Define the structure, content, and interactive states in extremely high detail.
 
 ## 2. Route Map (The Pages)
 *   `/obsidian` - **Knowledge Base**: The primary vault explorer and markdown reader.
-*   `/vault-sync` - **Vault Sync**: Management of knowledge clusters and database views.
-*   `/agents` - **Intelligence Hub**: Central registry for the Ater dashboard.
-*   `/settings` - **System Settings**: Global configuration for Appearance, Identity Profiles, and LLM Intelligence.
+*   `/academic` - **Academic Dashboard**: High-fidelity bento box view with program tracking, courses, study planners, assignments, exams, recall practice module, and unified calendar.
+*   `/agents` - **Ater Dashboard**: Central registry for automated ingestion pipelines, MetaScanner, and token concurrency monitoring.
+*   `/settings` - **System Settings**: Global configuration for Storage Folders, AI Providers & API Keys, Pomodoro timers, and usage statistics.
 
 ## 3. Page Specifications
 ### Page: `/obsidian` (Knowledge Base)
-*   **Sidebar**: Nested vault tree.
-*   **Main**: High-fidelity markdown renderer with integrated property card for YAML frontmatter extraction.
+*   **Sidebar**: Nested vault tree explorer.
+*   **Main**: Single-pane Markdown reader with professional typography and vertical list alignment.
 
-### Page: `/vault-sync` (Vault Sync)
-*   **Header**: Cluster selection (e.g., Study Planner, Reading List).
-*   **View Switcher**: Tabs for Table, Board, Gallery, and Calendar views.
-*   **Data Grid**: Interactive records tracking confidence, status, and unit alignment.
-*   **Persistence**: View states (filters, sorts, columns) persist via LocalStorage per-database.
-
+### Page: `/academic` (Academic Dashboard)
+*   **Header**: Sync controls and calendar view trigger.
+*   **Navigation**: Bento box top bar navigation to switch between categories (Program, Courses, Planner, Assignments, Exams, Practice, Calendar).
+*   **Main Views**:
+    *   *Program*: Roadmap view showing course status and degree scaffolding.
+    *   *Courses*: Detailed grid of enrolled courses and credits.
+    *   *Planner*: Study sessions, schedules, and active workflows.
+    *   *Assignments & Exams*: Critical timelines, grades, and task statuses.
+    *   *Practice*: Adaptive flashcard-style recall testing of concepts in note titles.
 
 ### Page: `/agents` (Ater Dashboard)
-*   **Pipeline Control**: Inbox for raw documents, status tracking for generation plans.
-*   **Action Hub**: Plan visualization in card-view, batch execution controls.
+*   **Pipeline Control**: Inbox for raw PDF/text documents, status tracking for generation plans.
+*   **Action Hub**: Concept planning visualization and batch execution controls.
 
 ### Page: `/settings` (System Settings)
-*   **Navigation**: Inner sidebar with "General", "Profiles", and "Intelligence".
-*   **General**: Theme toggle (Light/Dark) and Gemini API / LLM provider configuration.
-*   **Profiles**: Management of Ater domains (Personal, Academic, Financial, Fitness).
-*   **Intelligence**: RAG engine management and vault synchronization trigger.
+*   **Navigation**: Radix tabs layout (General, AI & Keys, Focus Timer, Usage Tracker).
+*   **General**: Storage folders selection (Obsidian vault, Inbox, Notes folder), update checker, and user profile name configuration.
+*   **AI & Keys**: Choice of provider (Google, OpenAI, Anthropic, Groq, OpenRouter, Custom), API keys vault, and model limits (TPM/RPM limits and concurrency).
+*   **Focus Timer**: Pomodoro durations (Work, Short Break, Long Break, Session Count).
+*   **Usage Tracker**: Token tracker panel displaying consumption and cost metrics.
 

@@ -375,7 +375,7 @@ export default function AcademicDashboard() {
          </div>
         )}
         
-        {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} />}
+        {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
 
         {activeTab === 'COURSES' && (
           <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
@@ -385,13 +385,13 @@ export default function AcademicDashboard() {
 
         {activeTab === 'PLANNER' && (
           <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
-            <StudyPlannerTab {...tabProps} />
+            <StudyPlannerTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
           </div>
         )}
 
         {activeTab === 'ASSIGNMENTS' && (
           <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
-            <AssignmentsTab {...tabProps} />
+            <AssignmentsTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
           </div>
         )}
 

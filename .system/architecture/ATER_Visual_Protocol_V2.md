@@ -3,7 +3,7 @@
 This protocol establishes the mandatory visual asset and UI standards for the Ater Industrial Design System.
 
 ## Section 0: INDUSTRIAL DESIGN FOUNDATIONS (v33.4)
-1. **Monochrome High-Fidelity**: Strictly grayscale palette. Primary: `#000000`, Surface: `#111111`, Border: `#222222`, Muted: `#666666`.
+1. **Monochrome High-Fidelity**: Strictly grayscale palette. Primary: `#e8e8e8`, Surface: `#131313`, Border: `#444748`, Muted: `#666666`, Foreground: `#e2e2e2`.
 2. **Typography**: Inter for UI, Outfit for Headings. Compact font sizes (`text-sm` for UI controls).
 3. **The Industrial Footer**: Mandatory 3-column structural grid across all main views:
    - **Column 1**: Navigation (Product, Roadmap, Status).

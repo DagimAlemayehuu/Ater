@@ -2,6 +2,18 @@
 
 This file preserves the completed technical implementation path and milestones of the Ater project.
 
+## Sprint: Spaced-Repetition Sync & 2B LLM (Ater v33.0)
+- [x] Optimize generation pipeline for low-power offline execution using 2B parameter local models.
+- [x] Integrate cognitive spaced-repetition synchronization between local Obsidian Markdown vault files and Tauri desktop client.
+- [x] Enforce hostile senior persona constraints inside note-authoring loops to prevent content amnesia.
+
+## Sprint: Oracle Architecture (Ater v32.0)
+- [x] Integrate MetaScannerAgent for global document pre-analysis and primary discipline anchoring.
+- [x] Migrate vector index storage to local LanceDB and completed 100% native Rust ML inference within Tauri v2.
+- [x] Implement cognitive anchoring with strict domain routing against a canonical LLM-assisted taxonomy.
+- [x] Implement Singularity Concurrency batch generation loops with high-throughput rate limiting.
+- [x] Clean up deprecated codebases, old design mockups, and configuration cache.
+
 ## Sprint: Ironclad Ingestion (Ater v22.0)
 - [x] Implement Validation-Regeneration Loop (3-attempt limit).
 - [x] Fix "Load Failed" API crashes via global try-except in `main.py`.

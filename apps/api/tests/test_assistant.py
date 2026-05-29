@@ -273,12 +273,55 @@ def test_navigate_to_note_routing(tmp_path):
     # 4. Practice redirection check
     res_practice = assistant.navigate_to_note("practice")
     payload_practice = json.loads(res_practice.replace("ACTION:", ""))
-    assert payload_practice["route"] == "/practice?id=practice"
+    assert payload_practice["route"] == "/academic?tab=PRACTICE&id=practice"
 
     # 5. Regular note should still open in Obsidian view
     res_regular = assistant.navigate_to_note("Notes/General_Note.md")
     payload_regular = json.loads(res_regular.replace("ACTION:", ""))
     assert "/obsidian?path=" in payload_regular["route"]
+
+
+def test_get_vault_stats_filtering(tmp_path):
+    secrets = AppSecrets(
+        ai_provider="google",
+        ai_key="mock-key",
+        ai_model="gemini-2.0-flash",
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path / "Inbox"),
+        academic_path="Notes"
+    )
+
+    # Setup directories
+    (tmp_path / "database" / "courses" / "difficulty").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "Notes").mkdir(parents=True, exist_ok=True)
+
+    # Create files
+    (tmp_path / "database" / "courses" / "OOP.md").write_text("--- \nstatus: Planned\n ---", encoding="utf-8")
+    (tmp_path / "database" / "courses" / "difficulty" / "Hard.md").write_text("Option", encoding="utf-8")
+    (tmp_path / "Notes" / "Atomic1.md").write_text("--- \ntype: atomic\n ---", encoding="utf-8")
+
+    assistant = AterAssistant(secrets)
+
+    # 1. Check full stats without category
+    stats_ui = assistant.get_vault_stats()
+    assert "```ater-ui" in stats_ui
+    import json
+    content = stats_ui.replace("```ater-ui", "").replace("```", "").strip()
+    action_data = json.loads(content)
+    assert action_data["ui_type"] == "stats"
+    payload = action_data["data"]
+    assert payload["courses"] == 1
+    assert payload["atomic_notes"] == 1
+    assert payload["total_notes"] == 2  # OOP.md + Atomic1.md
+
+    # 2. Check stats with courses category filter
+    courses_result = assistant.get_vault_stats(category="courses")
+    assert courses_result == "courses: 1"
+
+    # 3. Check stats with atomic_notes category filter
+    atomic_result = assistant.get_vault_stats(category="atomic_notes")
+    assert atomic_result == "atomic_notes: 1"
+
 
 
 

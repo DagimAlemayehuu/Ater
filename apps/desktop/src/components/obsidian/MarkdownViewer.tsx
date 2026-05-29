@@ -6,6 +6,7 @@ import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react'
 import { sidecarApi } from '@/lib/sidecarApi'
+import { updateProperty } from '@/lib/markdownHelper'
 import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
 import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight, Info, AlertTriangle, ShieldAlert, CheckCircle2, HelpCircle, Calendar } from 'lucide-react'
@@ -974,12 +975,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
                                                 const targetRes = await sidecarApi.findVaultPage(targetNote);
                                                 if (targetRes.path) {
                                                     const atomicRes = await sidecarApi.readObsidianNote(targetRes.path);
-                                                    let newAtomicContent = atomicRes.content;
-                                                    if (newAtomicContent.includes('read: ')) {
-                                                        newAtomicContent = newAtomicContent.replace(/read:\s*(true|false|True|False)/i, `read: ${newChecked}`);
-                                                    } else if (newAtomicContent.startsWith('---\n')) {
-                                                        newAtomicContent = newAtomicContent.replace('---\n', `---\nread: ${newChecked}\n`);
-                                                    }
+                                                    const newAtomicContent = updateProperty(atomicRes.content, 'read', newChecked);
                                                     await sidecarApi.updateObsidianNote(targetRes.path, newAtomicContent);
                                                 }
                                             }

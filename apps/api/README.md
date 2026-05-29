@@ -7,7 +7,7 @@ This is the high-performance reasoning orchestration and Notion synchronization 
 - **AI Orchestration**: Direct integration interface for Google Gemini models (Gemini 1.5 Pro/Flash, Gemini 2.0, Gemini 3.5).
     - **Instruction Injection**: Dynamic prompt injection for structural Ater note generation.
     - **Multimodal Context**: Processing and validation of files using Gemini Generative SDKs.
-- **Ater Ingestion Engine (v32.0 / v33.0)**: Manages structured study-note generation.
+- **Ater Ingestion Engine (v33.0)**: Manages structured study-note generation.
     - **Oracle Pre-Analysis**: MetaScannerAgent briefing for global document context.
     - **Singularity Parallelism**: Massively parallel generation governed by the `TokenGovernor`.
     - **Cognitive Anchoring**: Strict domain-persona stability via anchoring laws.

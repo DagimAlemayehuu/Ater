@@ -8,22 +8,9 @@ import { SecurityPipelines } from '@/components/SecurityPipelines'
 import { RefreshCw, Activity, Terminal } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
+import { TelemetryBroker, UsageLogRow } from '@/lib/telemetryBroker'
+
 type TabId = 'telemetry' | 'users' | 'economy' | 'pipelines'
-
-interface LedgerRow {
-  amount: number;
-  created_at: string;
-  feature_slug: string | null;
-}
-
-interface UsageLogRow {
-  id?: string;
-  model_name: string | null;
-  academic_domain: string | null;
-  feature_type: string | null;
-  token_count: number | null;
-  created_at: string;
-}
 
 function ControllerContent() {
   const searchParams = useSearchParams()
@@ -53,40 +40,7 @@ function ControllerContent() {
   async function fetchSummaryMetrics() {
     setIsLoading(true)
     try {
-      // 1. Calculate credits burned today
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const { data: ledgerData } = await supabase
-        .from('credit_ledger')
-        .select('amount, created_at, feature_slug')
-        .gte('created_at', today.toISOString())
-      
-      const burned = ledgerData 
-        ? Math.abs((ledgerData as LedgerRow[]).filter((l: LedgerRow) => l.amount < 0).reduce((acc: number, l: LedgerRow) => acc + l.amount, 0)) 
-        : 0
-
-      // 2. Count active profiles
-      const { count: nodes } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('account_status', 'active')
-
-      // 3. Count waitlist queue volume
-      const { count: waitlist } = await supabase
-        .from('waiting_list')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending')
-
-      // 4. Fetch usage logs for the last 7 days to dynamically calculate chart & geminiRatio
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6) // Include today and 6 days before
-      sevenDaysAgo.setHours(0, 0, 0, 0)
-
-      const { data: usageData } = await supabase
-        .from('usage_logs')
-        .select('id, model_name, created_at, academic_domain, token_count, feature_type')
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: true })
+      const metrics = await TelemetryBroker.fetchSummaryMetrics()
 
       let ratio = 100
       let computedLinePath = "M 0 28 L 100 28"
@@ -109,16 +63,16 @@ function ControllerContent() {
       })
       setChartLabels(labels)
 
-      if (usageData && usageData.length > 0) {
+      if (metrics.usageLogs7Days && metrics.usageLogs7Days.length > 0) {
         // Calculate Gemini Ratio
-        const totalLogs = usageData.length
-        const geminiLogs = usageData.filter((log: UsageLogRow) => 
+        const totalLogs = metrics.usageLogs7Days.length
+        const geminiLogs = metrics.usageLogs7Days.filter((log: UsageLogRow) => 
           log.model_name && log.model_name.toLowerCase().includes('gemini')
         ).length
         ratio = Math.round((geminiLogs / totalLogs) * 100)
 
         // Calculate usage trend coordinates
-        usageData.forEach((log: UsageLogRow) => {
+        metrics.usageLogs7Days.forEach((log: UsageLogRow) => {
           const logDateStr = new Date(log.created_at).toDateString()
           const dayIndex = days.findIndex(d => d.toDateString() === logDateStr)
           if (dayIndex !== -1) {
@@ -143,21 +97,14 @@ function ControllerContent() {
       })
 
       setStats({
-        creditsBurned: burned,
-        activeNodes: nodes || 0,
+        creditsBurned: metrics.creditsBurned,
+        activeNodes: metrics.activeNodes,
         geminiRatio: ratio,
-        waitlistCount: waitlist || 0
+        waitlistCount: metrics.waitlistCount
       })
 
-      // Hydrate live Activity Feed from the latest 15 usage logs
-      const { data: latestLogs } = await supabase
-        .from('usage_logs')
-        .select('model_name, academic_domain, created_at, feature_type, token_count')
-        .order('created_at', { ascending: false })
-        .limit(15)
-
-      if (latestLogs && latestLogs.length > 0) {
-        const formattedLogs = latestLogs.map((log: UsageLogRow) => {
+      if (metrics.latestLogs15 && metrics.latestLogs15.length > 0) {
+        const formattedLogs = metrics.latestLogs15.map((log: UsageLogRow) => {
           const timestamp = new Date(log.created_at).toISOString().slice(0, 19).replace('T', ' ')
           const feature = (log.feature_type || 'EXEC').toUpperCase()
           const model = log.model_name || 'unknown'

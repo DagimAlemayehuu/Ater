@@ -14,12 +14,19 @@ const DB_ID = 'study planner'
 
 type GroupMode = 'course' | 'status' | 'none'
 
-export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId || null)
   const [groupMode,  setGroupMode]  = useState<GroupMode>('course')
   const [filter,     setFilter]     = useState<'Active' | 'All' | 'Completed'>('Active')
   const [search,     setSearch]     = useState('')
   const [adding,     setAdding]     = useState(false)
+  const [prevInitId,    setPrevInitId]    = useState<string | null>(initialSelectedId || null)
+
+  // Sync external navigation
+  if (initialSelectedId && initialSelectedId !== prevInitId) {
+    setSelectedId(initialSelectedId); setPrevInitId(initialSelectedId)
+  }
+  React.useEffect(() => { if (initialSelectedId && onClearSelection) onClearSelection() }, [initialSelectedId, onClearSelection])
 
   // study_sessions maps to "study planner" folder
   const allHubs    = data.study_sessions || []

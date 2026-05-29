@@ -10,13 +10,12 @@ DO NOT put routing or page structures here. Put them in `app_structure.md`.
 ## 1. Visual Identity
 **Brand Essence**: Monochrome High-Fidelity. A professional, minimalist interface focused on information density without cognitive load. Uses subtle shadows, refined typography (Outfit/Inter), and glassmorphism.
 
-## 2. Color Palette (Tailwind Tokens)
-*   `background`: `#ffffff` (Light) / `#0a0a0a` (Dark)
-*   `foreground`: `#171717` (Light) / `#ededed` (Dark)
-*   `primary`: `#171717` (White on Dark, Black on Light)
-*   `secondary`: `#f5f5f5` (Light) / `#171717` (Dark)
+## 2. Color Palette (Tailwind Tokens - Dark Mode Only)
+*   `background`: `#131313` (Surface)
+*   `foreground`: `#e2e2e2` (On-surface)
+*   `primary`: `#e8e8e8` (Primary text/accent)
 *   `muted`: `#737373` (Neutral gray for secondary text)
-*   `border`: `#e5e5e5` (Light) / `#262626` (Dark)
+*   `border`: `#444748` (Outline-variant)
 
 ## 3. Typography & Spacing
 *   **Primary Font**: Inter / Outfit
@@ -29,13 +28,12 @@ DO NOT put routing or page structures here. Put them in `app_structure.md`.
 *   **Buttons**: Strict `rounded-md` or `rounded-full`. Monochrome only. High-fidelity glass effect on hover.
 *   **Cards**: Sub-pixel borders (`border-[0.5px]`), subtle `shadow-sm`, and `bg-card` with slight transparency if glassmorphism is active.
 *   **Inputs**: Minimalist borders, focus state uses `ring-offset-background` and `ring-1 ring-ring`.
-+
-+## 5. Terminology & Navigation
-+*   **Direct-English Rule**: UI labels must use the simplest possible English. 
-+    *   `Master Unit Hub` → `Topic`
+
+## 5. Terminology & Navigation
+*   **Direct-English Rule**: UI labels must use the simplest possible English. 
+    *   `Master Unit Hub` → `Topic`
     *   `Architectural Fragment` → `Note`
     *   `Binary` → `True/False`
     *   `Note Properties` → `Info`
     *   `Hub Connections` → `Map`
 *   **Direct-Entry Rule**: No intermediary list screens for primary modules. Clicking an icon (e.g., Agents) must resolve to the primary functional dashboard (e.g., Ater Dashboard) immediately.
-

@@ -12,13 +12,20 @@ const INTERNAL = ['id', 'title', 'path', 'last_synced', 'links', 'done']
 const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Completed', 'Submitted', 'Graded', 'Late']
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical']
 
-export default function AssignmentsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
+export default function AssignmentsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
   const [filter,       setFilter]       = useState<'All' | 'Pending' | 'Completed'>('Pending')
   const [courseFilter, setCourseFilter] = useState<string>('All')
   const [search,       setSearch]       = useState('')
-  const [selectedId,   setSelectedId]   = useState<string | null>(null)
+  const [selectedId,   setSelectedId]   = useState<string | null>(initialSelectedId || null)
   const [adding,       setAdding]       = useState(false)
   const [sortBy,       setSortBy]       = useState<'due' | 'priority' | 'course'>('due')
+  const [prevInitId,    setPrevInitId]    = useState<string | null>(initialSelectedId || null)
+
+  // Sync external navigation
+  if (initialSelectedId && initialSelectedId !== prevInitId) {
+    setSelectedId(initialSelectedId); setPrevInitId(initialSelectedId)
+  }
+  useEffect(() => { if (initialSelectedId && onClearSelection) onClearSelection() }, [initialSelectedId, onClearSelection])
 
   const allAssignments = data.assignments || []
   const courses        = data.courses     || []

@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, RotateCcw, BookOpen, X } from 'lucide-react';
+import { Check, ArrowRight, RotateCcw, BookOpen, BrainCircuit } from 'lucide-react';
 import { AterMarkdown } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question } from '@/types/practice';
-import { sidecarApi } from '@/lib/sidecarApi';
+import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { AterExplainDialog, makePracticeExplainFetchers } from '@/components/obsidian/AterExplainDialog';
+import { toast } from 'sonner';
 
 export const MarkdownBlock = ({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
   if (variant === 'inline') {
@@ -29,7 +30,6 @@ export const MarkdownBlock = ({ content, variant = 'block' }: { content: string;
   );
 };
 
-
 interface MiniPracticeUIProps {
     question: Question | Question[];
     notePath?: string;
@@ -37,136 +37,55 @@ interface MiniPracticeUIProps {
 }
 
 export default function MiniPracticeUI({ question, notePath, onComplete }: MiniPracticeUIProps) {
-  const { addPracticeResult, currentHub } = usePomodoroStore();
+  const { currentHub } = usePomodoroStore();
   const questions = Array.isArray(question) ? question : [question];
 
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
-  const [revealedStates, setRevealedStates] = useState<Record<number, boolean>>({});
-  const [scores, setScores] = useState<Record<number, boolean>>({});
-  const [showScore, setShowScore] = useState(false);
-  const [keywordChecks, setKeywordChecks] = useState<Record<string, boolean>>({});
-  
-  const [startTime] = useState(() => Date.now());
-  const startTimeRef = useRef(startTime);
-  const [confidenceWager, setConfidenceWager] = useState<number | null>(null);
+  const session = usePracticeSession();
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainQuestion, setExplainQuestion] = useState<Question | null>(null);
 
-  const currentQ = questions[currentIdx];
+  // Initialize the session hook with the questions prop
+  useEffect(() => {
+    session.startSession(questions, {}, notePath);
+  }, [question, notePath]);
 
-  const isRevealed = revealedStates[currentIdx] || false;
+  // Handle completion event callback
+  useEffect(() => {
+    if (session.showScore && onComplete) {
+      const score = Object.values(session.scores).filter(Boolean).length;
+      onComplete(score, questions.length);
+    }
+  }, [session.showScore]);
+
+  const currentQ = session.currentQuestion;
+  const isRevealed = session.isRevealed;
+  const userAnswers = session.userAnswers;
+  const scores = session.scores;
+  const showScore = session.showScore;
+  const keywordChecks = session.keywordChecks;
+  const currentIdx = session.currentQuestionIdx;
+
+  if (!currentQ && !showScore) return null;
 
   const handleSelectAnswer = (val: any) => {
-    if (!isRevealed) setUserAnswers({ ...userAnswers, [currentQ.id]: val });
+    session.selectAnswer(val);
   };
 
   const checkAnswer = () => {
-    const ans = userAnswers[currentQ.id];
-    if (ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0)) return;
-
-    let isCorrect = false;
-    const userVal = String(ans).trim().toLowerCase();
-    const correctVal = String(currentQ.answer).trim().toLowerCase();
-
-    if (currentQ.type === 'true_false') {
-        isCorrect = userVal === correctVal;
-        setScores({...scores, [currentIdx]: isCorrect});
-    } else if (currentQ.type === 'mcq') {
-        isCorrect = userVal === correctVal;
-        if (currentQ.options && !isCorrect) {
-            const correctText = String(currentQ.options[currentQ.answer] || '').trim().toLowerCase();
-            isCorrect = userVal === correctText;
-        }
-        setScores({...scores, [currentIdx]: isCorrect});
-    } else if (currentQ.type === 'fill_in') {
-        const userAnswersArr = userAnswers[currentQ.id] || [];
-        const rawAnswer = currentQ.answer || [];
-        const correctAnswersArr = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
-        
-        isCorrect = correctAnswersArr.every((ans: string, idx: number) => 
-            String(userAnswersArr[idx] || '').trim().toLowerCase() === String(ans || '').trim().toLowerCase()
-        );
-        setScores({...scores, [currentIdx]: isCorrect});
-    } else if (currentQ.type === 'matching') {
-        const userPairs = userAnswers[currentQ.id] || {};
-        const correctPairs = currentQ.pairs || [];
-        isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) => 
-            String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
-        );
-        setScores({...scores, [currentIdx]: isCorrect});
-    } else if (currentQ.type === 'order') {
-        const userOrder = userAnswers[currentQ.id] || currentQ.steps || [];
-        const correctOrder = currentQ.answer || [];
-        isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) => 
-            String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
-        );
-        setScores({...scores, [currentIdx]: isCorrect});
-    }
-    
-    setRevealedStates({ ...revealedStates, [currentIdx]: true });
-    
-    if (notePath) {
-      const timeMs = Date.now() - startTimeRef.current;
-      sidecarApi.recordPerformance({
-        note_path: notePath,
-        was_correct: isCorrect,
-        time_ms: timeMs,
-        question_type: currentQ.type,
-        difficulty: String(currentQ.difficulty || '1'),
-        confidence: confidenceWager || undefined,
-        question_id: String(currentQ.id)
-      }).catch(console.error);
-    }
+    session.checkAnswer();
   };
 
   const handleSelfGrade = (isCorrect: boolean) => {
-    setScores({...scores, [currentIdx]: isCorrect});
-    
-    if (notePath) {
-      const timeMs = Date.now() - startTimeRef.current;
-      sidecarApi.recordPerformance({
-        note_path: notePath,
-        was_correct: isCorrect,
-        time_ms: timeMs,
-        question_type: currentQ.type,
-        difficulty: String(currentQ.difficulty || '1'),
-        confidence: confidenceWager || undefined,
-        question_id: String(currentQ.id)
-      }).catch(console.error);
-    }
-
-    if (currentIdx < questions.length - 1) {
-      nextQuestion();
-    } else {
-      finishQuiz();
-    }
+    session.selfGrade(isCorrect);
   };
 
   const nextQuestion = () => {
-    if (currentIdx < questions.length - 1) {
-      setCurrentIdx(currentIdx + 1);
-      setKeywordChecks({});
-      setConfidenceWager(null);
-      startTimeRef.current = Date.now();
-    }
-  };
-
-  const finishQuiz = () => {
-    const score = Object.values(scores).filter(Boolean).length;
-    addPracticeResult(currentHub, score, questions.length, notePath);
-    if (onComplete) onComplete(score, questions.length);
-    setShowScore(true);
+    session.nextQuestion();
   };
 
   const resetQuiz = () => {
-    setCurrentIdx(0);
-    setUserAnswers({});
-    setRevealedStates({});
-    setScores({});
-    setShowScore(false);
-    setConfidenceWager(null);
-    startTimeRef.current = Date.now();
+    session.reset();
+    session.startSession(questions, {}, notePath);
   };
 
   const handleExplainMore = () => {
@@ -209,10 +128,110 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     ));
   };
 
-  if (!currentQ && !showScore) return null;
+  const cleanTitle = (val: any): string => {
+    if (val === undefined || val === null) return '';
+    return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim();
+  };
+
+  // Calculate Feynman properties for lock screen
+  const currentCardPath = currentQ ? currentQ.note_id : null;
+  const currentCard = currentCardPath ? session.srsCardsCache[currentCardPath] : null;
+
+  const getRetrievability = (card: any): number => {
+    if (!card) return 1.0;
+    const stability = Math.max(0.01, card.stability || 0);
+    if (!card.last_review) return 1.0;
+    const lastReviewTime = new Date(card.last_review).getTime();
+    const elapsedDays = Math.max(0, Date.now() - lastReviewTime) / (1000 * 60 * 60 * 24);
+    return Math.pow(1 + elapsedDays / (9 * stability), -1);
+  };
+
+  const retrievability = currentCard ? getRetrievability(currentCard) : 1.0;
+  const lapses = currentCard ? (currentCard.lapses || 0) : 0;
+  const confidenceWager = currentQ ? (session.confidenceWagers[currentQ.id] || null) : null;
 
   return (
-    <div className="my-1 border border-border rounded-[12px] overflow-hidden bg-bento-panel shadow-sm not-prose">
+    <div className="my-1 border border-border rounded-[12px] overflow-hidden bg-bento-panel shadow-sm not-prose relative">
+      {/* ── Feynman Gate Locked Overlay ── */}
+      {session.isFeynmanLocked && (
+        <div className="absolute inset-0 z-40 bg-[#151517]/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md border border-[#242426] bg-[#151517] p-4 rounded-[12px] space-y-4 shadow-2xl relative">
+            <div className="flex items-center gap-2 border-b border-[#242426] pb-2">
+              <BrainCircuit className="text-primary shrink-0" size={18} />
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-widest text-primary">Cognitive Lock</h3>
+                <p className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">FSRS Telemetry: Memory Decay</p>
+              </div>
+              <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-[4px]">
+                Locked
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-2 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
+                <span className={cn("text-[10px] font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
+                  {(retrievability * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
+                <span className="text-[10px] font-black tracking-tight text-foreground">
+                  {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
+                </span>
+              </div>
+              <div className="p-2 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
+                <span className={cn("text-[10px] font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
+                  {lapses}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Feynman Explanation Challenge</h4>
+              <p className="text-[10px] text-foreground/80 leading-relaxed">
+                Explain <strong className="text-foreground">{cleanTitle(currentQ.note_title || currentCardPath)}</strong> in your own words to unlock this card.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <textarea
+                value={session.feynmanExplanation}
+                onChange={(e) => session.setFeynmanExplanation(e.target.value)}
+                disabled={session.isFeynmanValidating}
+                rows={3}
+                placeholder="Explain the core mechanisms, concepts, and rules..."
+                className="w-full p-2 bg-[#232326] border border-[#242426] rounded-[8px] text-[10px] font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+              />
+
+              {session.feynmanError && (
+                <div className="p-2 bg-destructive/5 border border-destructive/20 text-destructive text-[9px] font-bold rounded-[8px] space-y-1">
+                  <span className="uppercase tracking-widest text-[7px] font-black text-destructive/40 block">Failed</span>
+                  <p>{session.feynmanError}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  if (!session.feynmanExplanation.trim()) {
+                    toast.error("Please write an explanation first.");
+                    return;
+                  }
+                  await session.submitFeynmanChallenge();
+                }}
+                disabled={session.isFeynmanValidating || !session.feynmanExplanation.trim()}
+                className="w-full h-8 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest rounded-[6px]"
+              >
+                {session.isFeynmanValidating ? "Analyzing Telemetry..." : "Validate & Unlock"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-bento-panel">
         <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
@@ -244,181 +263,180 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
       ) : (
         <div className="p-3 flex flex-col justify-center space-y-2 min-h-[120px]">
           <div className="space-y-2" key={`header-${currentQ.id}`}>
-              <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
-    <Badge variant="outline" className="text-[7px] border-border bg-bento-item text-muted-foreground rounded-[8px] px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
-    <div className="w-0.5 h-0.5 rounded-[8px] bg-muted-foreground/20" />
-    <span>{currentQ.type.replace('_', ' ')}</span>
-    </div>
-              {currentQ.type !== 'fill_in' && (
-                <div className="text-[13px] font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
-                  <MarkdownBlock content={currentQ.question} />
-                </div>
-              )}
+            <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
+              <Badge variant="outline" className="text-[7px] border-border bg-bento-item text-muted-foreground rounded-[8px] px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
+              <div className="w-0.5 h-0.5 rounded-[8px] bg-muted-foreground/20" />
+              <span>{currentQ.type.replace('_', ' ')}</span>
+            </div>
+            {currentQ.type !== 'fill_in' && (
+              <div className="text-[13px] font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
+                <MarkdownBlock content={currentQ.question} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-4" key={`body-${currentQ.id}`}>
-              
-              {/* MCQ / True False */}
-              {(currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
+            {/* MCQ / True False */}
+            {(currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
               <div className="grid grid-cols-1 gap-2">
-                  {Object.entries(currentQ.options || (currentQ.type === 'true_false' ? {'True':'True', 'False':'False'} : {})).map(([key, val]) => { 
+                {Object.entries(currentQ.options || (currentQ.type === 'true_false' ? {'True':'True', 'False':'False'} : {})).map(([key, val]) => { 
                   const isSelected = userAnswers[currentQ.id] === key; 
                   const isCorrectAnswer = key === currentQ.answer || String(val).toLowerCase() === String(currentQ.answer).toLowerCase();
                   const isCorrectHighlight = isRevealed && isCorrectAnswer;
                   return (
-                      <button 
+                    <button 
                       key={key} 
                       disabled={isRevealed} 
                       onClick={() => handleSelectAnswer(key)} 
                       className={cn(
-                          "group flex items-center gap-2 p-1.5 border rounded-[8px] text-left  ", 
-                          isCorrectHighlight 
+                        "group flex items-center gap-2 p-1.5 border rounded-[8px] text-left  ", 
+                        isCorrectHighlight 
                           ? "border-primary bg-primary/5 shadow-sm" 
                           : isSelected && !isRevealed 
-                              ? "border-foreground bg-bento-item shadow-md" 
-                              : "border-border bg-bento-panel hover:border-foreground/20 hover:bg-bento-item", 
-                          isRevealed && !isCorrectHighlight ? "opacity-30 grayscale" : ""
+                            ? "border-foreground bg-bento-item shadow-md" 
+                            : "border-border bg-bento-panel hover:border-foreground/20 hover:bg-bento-item", 
+                        isRevealed && !isCorrectHighlight ? "opacity-30 grayscale" : ""
                       )}
-                      >
+                    >
                       <div className={cn(
-                          "flex-shrink-0 w-5 h-5 rounded-[8px] flex items-center justify-center text-[9px] font-black border ", 
-                          isCorrectHighlight || (isSelected && !isRevealed) 
+                        "flex-shrink-0 w-5 h-5 rounded-[8px] flex items-center justify-center text-[9px] font-black border ", 
+                        isCorrectHighlight || (isSelected && !isRevealed) 
                           ? "bg-primary text-primary-foreground border-primary" 
                           : "border-border bg-bento-item text-muted-foreground/40 group-hover:border-foreground/30"
                       )}>
-                          {key}
+                        {key}
                       </div>
                       <div className="flex-1 text-[11px] font-bold leading-tight tracking-tight text-foreground/80">
                         <MarkdownBlock content={String(val)} />
                       </div>
-                      </button>
+                    </button>
                   );
-                  })}
+                })}
               </div>
-              )}
+            )}
 
-              {/* Fill In Blank */}
-              
-               {currentQ.type === 'order' && (
+            {/* Order */}
+            {currentQ.type === 'order' && (
               <div className="space-y-1.5 max-w-2xl mx-auto">
-              {(userAnswers[currentQ.id] || currentQ.steps || []).map((step: string, i: number) => {
+                {(userAnswers[currentQ.id] || currentQ.steps || []).map((step: string, i: number) => {
                   const list = userAnswers[currentQ.id] || currentQ.steps || [];
                   const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
                   const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
                   const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
                   return (
-                      <div key={i} className={cn(
-                          "group flex items-center gap-2 p-2 border rounded-[8px] ",
-                          isCorrect 
-                            ? "border-foreground bg-bento-item" 
-                            : "border-border bg-bento-panel hover:border-foreground/20"
-                      )}>
-                          <div className="flex flex-col gap-1 border-r border-border/10 pr-2">
-                              <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] p-0.5 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▲</button>
-                              <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] p-0.5 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▼</button>
-                          </div>
-                          <div className="text-xs font-bold tracking-tight text-foreground/80 pl-1">{step}</div>
+                    <div key={i} className={cn(
+                      "group flex items-center gap-2 p-2 border rounded-[8px] ",
+                      isCorrect 
+                        ? "border-foreground bg-bento-item" 
+                        : "border-border bg-bento-panel hover:border-foreground/20"
+                    )}>
+                      <div className="flex flex-col gap-1 border-r border-border/10 pr-2">
+                        <button disabled={isRevealed || i===0} onClick={moveUp} className="text-[10px] p-0.5 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▲</button>
+                        <button disabled={isRevealed || i===list.length-1} onClick={moveDown} className="text-[10px] p-0.5 opacity-20 hover:opacity-100 hover:text-foreground  disabled:opacity-5">▼</button>
                       </div>
+                      <div className="text-xs font-bold tracking-tight text-foreground/80 pl-1">{step}</div>
+                    </div>
                   )
-              })}
+                })}
               </div>
-              )}
+            )}
 
-              {currentQ.type === 'matching' && currentQ.pairs && (
+            {/* Matching */}
+            {currentQ.type === 'matching' && currentQ.pairs && (
               <div className="space-y-3 max-w-3xl mx-auto">
-              {currentQ.pairs.map((pair: any, i: number) => {
+                {currentQ.pairs.map((pair: any, i: number) => {
                   const rights = currentQ.pairs.map((p: any) => p.right).sort();
                   const selected = (userAnswers[currentQ.id] || {})[pair.left] || "";
                   const isCorrect = isRevealed && selected === pair.right;
                   return (
-                      <div key={i} className={cn(
-                          "flex items-center gap-2 p-1.5 border rounded-[8px] ",
-                          isCorrect ? "border-foreground bg-bento-item" : "border-border/40 bg-muted/5"
-                      )}>
-                          <div className="flex-1 font-black uppercase tracking-widest text-[8px] text-muted-foreground/60">{pair.left}</div>
-                          <div className="flex-1">
-                              <select 
-                                disabled={isRevealed} 
-                                value={selected} 
-                                onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} 
-                                className="w-full px-3 py-2 bg-bento-item border border-border rounded-[8px] outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest appearance-none cursor-pointer hover:border-border/40"
-                              >
-                                  <option value="">Select Match...</option>
-                                  {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
-                              </select>
-                          </div>
-                          {isRevealed && !isCorrect && (
-                            <div className="flex-1">
-                                <div className="text-[8px] font-black uppercase text-foreground/40 mb-1">Correct Match</div>
-                                <div className="text-[10px] font-black uppercase tracking-widest text-foreground">{pair.right}</div>
-                            </div>
-                          )}
+                    <div key={i} className={cn(
+                      "flex items-center gap-2 p-1.5 border rounded-[8px] ",
+                      isCorrect ? "border-foreground bg-bento-item" : "border-border/40 bg-muted/5"
+                    )}>
+                      <div className="flex-1 font-black uppercase tracking-widest text-[8px] text-muted-foreground/60">{pair.left}</div>
+                      <div className="flex-1">
+                        <select 
+                          disabled={isRevealed} 
+                          value={selected} 
+                          onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} 
+                          className="w-full px-3 py-2 bg-bento-item border border-border rounded-[8px] outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest appearance-none cursor-pointer hover:border-border/40"
+                        >
+                          <option value="">Select Match...</option>
+                          {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
+                        </select>
                       </div>
+                      {isRevealed && !isCorrect && (
+                        <div className="flex-1">
+                          <div className="text-[8px] font-black uppercase text-foreground/40 mb-1">Correct Match</div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-foreground">{pair.right}</div>
+                        </div>
+                      )}
+                    </div>
                   )
-              })}
+                })}
               </div>
-              )}
+            )}
 
-              {currentQ.type === 'fill_in' && (
-                <div className="p-3 bg-bento-item border border-border rounded-[8px] leading-relaxed text-xs font-medium tracking-tight text-foreground/70 shadow-inner">
-                  {renderFillInBlanks()}
-                </div>
-              )}
+            {/* Fill In Blank */}
+            {currentQ.type === 'fill_in' && (
+              <div className="p-3 bg-bento-item border border-border rounded-[8px] leading-relaxed text-xs font-medium tracking-tight text-foreground/70 shadow-inner">
+                {renderFillInBlanks()}
+              </div>
+            )}
 
-              {/* Writing / Scenario / Code / Debug / Synthesis / Find Error */}
-              {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type)) && (
+            {/* Writing / Scenario / Code / Debug / Synthesis / Find Error */}
+            {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type)) && (
               <div className="space-y-3">
-                   {(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode) && (
+                {(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode) && (
                   <div className="p-2 bg-bento-item border border-border rounded-[8px] shadow-inner">
-                      <MarkdownBlock 
-                        content={
-                          ((['debug', 'code', 'trace', 'find_error'].includes(currentQ.type)) && !(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "").includes('```')) 
-                            ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || ""}\n\`\`\``
-                            : (currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "")
-                        } 
-                      />
+                    <MarkdownBlock 
+                      content={
+                        ((['debug', 'code', 'trace', 'find_error'].includes(currentQ.type)) && !(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "").includes('```')) 
+                          ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || ""}\n\`\`\``
+                          : (currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "")
+                      } 
+                    />
                   </div>
-                  )}
-                   <textarea
-                      disabled={isRevealed}
-                      value={userAnswers[currentQ.id] || ''}
-                      onChange={(e) => handleSelectAnswer(e.target.value)}
-                      placeholder=""
-                      className="w-full min-h-[70px] p-3 bg-bento-item border border-border rounded-[8px] focus:outline-none focus:border-primary text-[12px] font-medium tracking-tight text-foreground resize-y shadow-md"
-                  />
+                )}
+                <textarea
+                  disabled={isRevealed}
+                  value={userAnswers[currentQ.id] || ''}
+                  onChange={(e) => handleSelectAnswer(e.target.value)}
+                  placeholder=""
+                  className="w-full min-h-[70px] p-3 bg-bento-item border border-border rounded-[8px] focus:outline-none focus:border-primary text-[12px] font-medium tracking-tight text-foreground resize-y shadow-md"
+                />
               </div>
-              )}
+            )}
 
-              {!isRevealed ? (
+            {!isRevealed ? (
               <div className="pt-2 space-y-3">
-                   <div className="flex flex-col gap-2 p-3 border border-border rounded-[8px] bg-bento-panel">
-                     <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-center">Confidence Wager</div>
-                     <div className="flex gap-2">
-                       {[1, 2, 3, 4, 5].map(val => (
-                         <button
-                           key={val}
-                           onClick={() => setConfidenceWager(val)}
-                           className={cn(
-                             "flex-1 py-1.5 rounded-[8px] text-[10px] font-bold border transition-none",
-                             confidenceWager === val ? "bg-primary text-primary-foreground border-primary" : "bg-bento-item border-border text-muted-foreground hover:border-foreground/30 hover:bg-bento-item/80"
-                           )}
-                         >
-                           {val}
-                         </button>
-                       ))}
-                     </div>
-                   </div>
-                   <Button 
-                   onClick={checkAnswer} 
-                   disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0) || !confidenceWager}
-
-                   className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] "
-                   >
-                   Verify Understanding
-                   </Button>
+                <div className="flex flex-col gap-2 p-3 border border-border rounded-[8px] bg-bento-panel">
+                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-center">Confidence Wager</div>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(val => (
+                      <button
+                        key={val}
+                        onClick={() => session.setConfidenceWager(String(currentQ.id), val)}
+                        className={cn(
+                          "flex-1 py-1.5 rounded-[8px] text-[10px] font-bold border transition-none",
+                          confidenceWager === val ? "bg-primary text-primary-foreground border-primary" : "bg-bento-item border-border text-muted-foreground hover:border-foreground/30 hover:bg-bento-item/80"
+                        )}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button 
+                  onClick={checkAnswer} 
+                  disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0) || !confidenceWager}
+                  className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] "
+                >
+                  Verify Understanding
+                </Button>
               </div>
-              ) : (
-                <div className="mt-2 space-y-2">
+            ) : (
+              <div className="mt-2 space-y-2">
                 <div className="p-4 border border-border bg-bento-item rounded-[8px] space-y-3 shadow-xl shadow-foreground/5">
                   <div className="flex items-center gap-2 text-foreground/80 font-black uppercase text-[10px] tracking-[0.2em]">
                     <div className="w-4 h-4 rounded-[8px] bg-foreground/10 flex items-center justify-center">
@@ -436,7 +454,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                           : String(currentQ.answer)}
                     </div>
                   </div>
- 
+  
                   <div className="space-y-1 pt-2 border-t border-border">
                     <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Explanation</div>
                     <div className="text-xs font-medium leading-relaxed text-foreground/80">
@@ -481,7 +499,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                               <input 
                                 type="checkbox" 
                                 checked={keywordChecks[kw] || false} 
-                                onChange={(e) => setKeywordChecks({...keywordChecks, [kw]: e.target.checked})} 
+                                onChange={(e) => session.setKeywordCheck(kw, e.target.checked)} 
                                 className="w-4 h-4 shrink-0 appearance-none border border-border bg-bento-card rounded-[8px] checked:bg-foreground/10 checked:border-border/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-border/20"
                               />
                               <span className={cn("text-xs font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[9px] uppercase tracking-widest text-foreground opacity-40 ml-2">(Found in your answer)</span>}</span>
@@ -493,57 +511,57 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                   )}
                 </div>
               </div>
-                      )}
-              
-              <div className="flex gap-3">
-                {isRevealed && (
-                  <Button 
-                    onClick={handleExplainMore}
-                    variant="outline"
-                    className="h-9 px-3 border border-border bg-bento-item hover:border-foreground/40 text-foreground/80 hover:text-foreground text-[10px] font-black uppercase tracking-wider rounded-[8px] flex items-center justify-center gap-1.5 transition-colors"
-                    title="Explain more about this question"
-                  >
-                    <BookOpen size={12} />
-                    <span>Explain</span>
+            )}
+            
+            <div className="flex gap-3">
+              {isRevealed && (
+                <Button 
+                  onClick={handleExplainMore}
+                  variant="outline"
+                  className="h-9 px-3 border border-border bg-bento-item hover:border-foreground/40 text-foreground/80 hover:text-foreground text-[10px] font-black uppercase tracking-wider rounded-[8px] flex items-center justify-center gap-1.5 transition-colors"
+                  title="Explain more about this question"
+                >
+                  <BookOpen size={12} />
+                  <span>Explain</span>
+                </Button>
+              )}
+              {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type || 'writing') ? (
+                <>
+                  <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-none">
+                    Wrong
                   </Button>
-                )}
-                      {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type || 'writing') ? (
-                          <>
-                              <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-none">
-                                  Wrong
-                              </Button>
-                              <Button 
-                                onClick={() => handleSelfGrade(true)} 
-                                disabled={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
-                                className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-none"
-                                title={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
-                              >
-                                  Correct
-                              </Button>
-                          </>
-                      ) : (
-                          currentIdx < questions.length - 1 ? (
-                            <Button 
-                              onClick={nextQuestion}
-                              variant="outline"
-                              className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px] border-border bg-bento-item hover:bg-bento-item/80"
-                            >
-                              <span>Next Question</span>
-                              <ArrowRight size={14} className="ml-2" />
-                            </Button>
-                          ) : (
-                            <Button 
-                              onClick={finishQuiz}
-                              className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px] "
-                            >
-                              <span>Finish & View Score</span>
-                            </Button>
-                          )
-                      )}
-                  </div>
-              </div>
+                  <Button 
+                    onClick={() => handleSelfGrade(true)} 
+                    disabled={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
+                    className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-none"
+                    title={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
+                  >
+                    Correct
+                  </Button>
+                </>
+              ) : (
+                currentIdx < questions.length - 1 ? (
+                  <Button 
+                    onClick={nextQuestion}
+                    variant="outline"
+                    className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px] border-border bg-bento-item hover:bg-bento-item/80"
+                  >
+                    <span>Next Question</span>
+                    <ArrowRight size={14} className="ml-2" />
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={nextQuestion}
+                    className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px] "
+                  >
+                    <span>Finish & View Score</span>
+                  </Button>
+                )
+              )}
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
       {explainOpen && explainQuestion && (() => {
         const rawAns = userAnswers[explainQuestion.id];

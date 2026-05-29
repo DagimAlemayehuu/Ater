@@ -12,7 +12,7 @@ Ater is a local-first application built as a polyglot monorepo. It operates full
 - **Obsidian Intelligence**: A high-fidelity reasoning engine and vault explorer.
     - **Local RAG & ML**: Native Rust Tauri backend migration with 100% native ML inference and LanceDB vector store.
     - **Vault Explorer**: Hierarchical folder navigation with a professional single-pane Markdown reader.
-    - **Ater Architect**: Fully automated multi-batch knowledge ingestion (Oracle v32.0).
+    - **Ater Architect**: Fully automated multi-batch knowledge ingestion (Oracle v33.0).
 - **Oracle Context Briefing**: Pre-processing via `MetaScannerAgent` for global document briefing and keyword extraction to eliminate context amnesia.
 - **Monochrome High-Fidelity UI**: A professional, high-contrast aesthetic across all modules.
 
@@ -51,6 +51,11 @@ Ater is a local-first application built as a polyglot monorepo. It operates full
 - Database access and hardware bindings are protected by Row Level Security (RLS).
 
 ## Changelog
+
+### 2026-05-28 — Ater v33.0 "LLM Optimization & Spaced Repetition"
+- **2B LLM Engine Optimization**: Tuned local note-generation loops for lightweight offline execution using optimized 2B parameter models.
+- **Spaced-Repetition Sync**: Built bidirectional synchronization of active recall history between Obsidian markdown vault logs and Tauri client store.
+- **Hostile Senior Persona**: Enforced strict pedagogical accuracy and domain locking parameters across the Ater authoring engine.
 
 ### 2026-05-20 — Ater v32.0 "Oracle Architecture"
 - **Oracle Context Briefing**: Integrated `MetaScannerAgent` for global-scale document pre-analysis and primary discipline anchoring.

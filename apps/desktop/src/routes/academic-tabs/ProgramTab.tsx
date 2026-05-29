@@ -9,12 +9,37 @@ import type { TabProps } from './types'
 const INTERNAL_YEAR_KEYS = ['id', 'title', 'path', 'last_synced', 'links', 'created_time', 'last_edited_time']
 const INTERNAL_SEM_KEYS  = ['id', 'title', 'path', 'last_synced', 'links', 'created_time', 'last_edited_time', 'Year', 'year']
 
-export default function ProgramTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, onRefresh }: TabProps) {
+export default function ProgramTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, onRefresh, initialSelectedId, onClearSelection }: TabProps) {
   const [selectedYearId, setSelectedYearId]     = useState<string | null>(null)
   const [selectedSemId,  setSelectedSemId]      = useState<string | null>(null)
   const [showSetup,      setShowSetup]          = useState(false)
   const [addingSem,      setAddingSem]          = useState(false)
   const [addingCourse,   setAddingCourse]       = useState(false)
+
+  // Sync external navigation
+  React.useEffect(() => {
+    if (initialSelectedId) {
+      const semestersList = data.semesters || []
+      const yearsList = data.years || []
+      const isSem = semestersList.some(s => s.id === initialSelectedId)
+      if (isSem) {
+        setSelectedSemId(initialSelectedId)
+        const semItem = semestersList.find(s => s.id === initialSelectedId)
+        const parentYearTitle = semItem ? stripWL(getVal(semItem, 'Year', 'year')) : ''
+        const parentYear = yearsList.find(y => String(y.title || '').toLowerCase().trim() === parentYearTitle.toLowerCase().trim())
+        if (parentYear) {
+          setSelectedYearId(parentYear.id)
+        }
+      } else {
+        const isYear = yearsList.some(y => y.id === initialSelectedId)
+        if (isYear) {
+          setSelectedYearId(initialSelectedId)
+          setSelectedSemId(null)
+        }
+      }
+      if (onClearSelection) onClearSelection()
+    }
+  }, [initialSelectedId, data.semesters, data.years, onClearSelection])
 
   const years     = data.years     || []
   const semesters = data.semesters || []

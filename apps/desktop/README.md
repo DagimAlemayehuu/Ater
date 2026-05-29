@@ -6,7 +6,7 @@ The primary user-facing desktop application for Ater, built with Tauri v2 and Re
 
 - **Native Rust Core**: Incorporates Tauri v2 native filesystem operations, secure state storage, native ML inference, and a highly efficient local **LanceDB** vector store.
 - **Python sidecar**: Utilizes a FastAPI sidecar (`apps/api`) running locally to orchestrate Google Gemini model APIs and sync Notion databases.
-- **Cognitive Anchoring (v32.0)**: Employs an Oracle architecture with deep document pre-analysis (`MetaScannerAgent`) for context preservation during RAG operations.
+- **Cognitive Anchoring (v33.0)**: Employs an Oracle architecture with deep document pre-analysis (`MetaScannerAgent`) for context preservation during RAG operations.
 
 ## Hubs
 

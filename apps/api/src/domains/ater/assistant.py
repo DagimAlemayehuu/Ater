@@ -231,7 +231,10 @@ class RenderUIInput(BaseModel):
     caption: Optional[str] = Field(default=None, description="Short optional caption/header shown above the block.")
 
 class GetVaultStatsInput(BaseModel):
-    pass  # No params needed
+    category: Optional[str] = Field(
+        default=None,
+        description="Filter to get count only for a specific category (e.g., 'atomic_notes', 'hubs', 'pdfs', 'courses', 'exams', 'assignments', 'semesters', 'years', 'total_notes'). If provided, the tool returns a simple text statement of the count instead of rendering the dashboard grid UI."
+    )
 
 class ListHubsInput(BaseModel):
     pass  # No params needed
@@ -609,25 +612,134 @@ class AterAssistant:
         except Exception as e:
             return f"Failed to delete: {e}"
 
-    def get_vault_stats(self) -> str:
+    def get_vault_stats(self, category: Optional[str] = None) -> str:
         if not self.vault_path:
             return "Error: Vault path not configured."
         root = Path(self.vault_path)
-        total_notes = 0
-        for file in root.rglob("*.md"):
-            if any(p.startswith(".") for p in file.parts) or ".trash" in file.parts:
-                continue
-            total_notes += 1
+        database_dir = root / "database"
         
+        total_notes = 0
+        atomic_notes = 0
+        hubs_count = 0
+        courses_count = 0
+        exams_count = 0
+        assignments_count = 0
+        semesters_count = 0
+        years_count = 0
+        pdf_count = 0
+        
+        # Traverse vault
         try:
-            service = AterService(self.secrets)
-            hub_count = len(service.list_planner_hubs())
-        except Exception:
-            hub_count = 0
+            for file in root.rglob("*"):
+                if any(p.startswith(".") for p in file.parts) or ".trash" in file.parts:
+                    continue
+                if file.is_file():
+                    ext = file.suffix.lower()
+                    if ext == ".pdf":
+                        pdf_count += 1
+                    elif ext == ".md":
+                        rel_parts = [p.lower() for p in file.relative_to(root).parts]
+                        if "database" in rel_parts:
+                            if database_dir.exists() and file.is_relative_to(database_dir) and file.parent.parent == database_dir:
+                                category_folder = file.parent.name.lower()
+                                if category_folder == "courses":
+                                    courses_count += 1
+                                    total_notes += 1
+                                elif category_folder == "study planner":
+                                    hubs_count += 1
+                                    total_notes += 1
+                                elif category_folder == "exams":
+                                    exams_count += 1
+                                    total_notes += 1
+                                elif category_folder == "assignments":
+                                    assignments_count += 1
+                                    total_notes += 1
+                                elif category_folder == "semesters":
+                                    semesters_count += 1
+                                    total_notes += 1
+                                elif category_folder == "years":
+                                    years_count += 1
+                                    total_notes += 1
+                        else:
+                            is_atomic = False
+                            if "notes" in rel_parts:
+                                is_atomic = True
+                            else:
+                                try:
+                                    post = frontmatter.loads(file.read_text(encoding="utf-8"))
+                                    t = str(post.metadata.get("type") or "").lower()
+                                    if "atomic" in t:
+                                        is_atomic = True
+                                except Exception:
+                                    pass
+                            
+                            if is_atomic:
+                                atomic_notes += 1
+                            total_notes += 1
+        except Exception as e:
+            logger.error(f"Error compiling vault stats: {e}")
+
+        # Traverse inbox for PDFs
+        inbox_pdf_count = 0
+        if self.secrets.inbox_path:
+            try:
+                inbox_dir = Path(self.secrets.inbox_path)
+                if inbox_dir.exists() and inbox_dir.is_dir():
+                    for file in inbox_dir.rglob("*.pdf"):
+                        if not any(p.startswith(".") for p in file.parts):
+                            inbox_pdf_count += 1
+            except Exception:
+                pass
+
+        if category:
+            cat = category.lower().strip()
+            stats_dict = {
+                "atomic_notes": atomic_notes,
+                "atomic note": atomic_notes,
+                "atomicnotes": atomic_notes,
+                "atomic": atomic_notes,
+                "hubs": hubs_count,
+                "hub": hubs_count,
+                "study planner": hubs_count,
+                "study_planner": hubs_count,
+                "pdfs": pdf_count + inbox_pdf_count,
+                "pdf": pdf_count + inbox_pdf_count,
+                "courses": courses_count,
+                "course": courses_count,
+                "exams": exams_count,
+                "exam": exams_count,
+                "assignments": assignments_count,
+                "assignment": assignments_count,
+                "semesters": semesters_count,
+                "semester": semesters_count,
+                "years": years_count,
+                "year": years_count,
+                "total_notes": total_notes,
+                "total note": total_notes,
+                "total": total_notes,
+            }
+            val = None
+            matched_key = None
+            for key, count in stats_dict.items():
+                if cat == key or cat.replace("_", " ") == key or cat.replace(" ", "_") == key:
+                    val = count
+                    matched_key = key
+                    break
+            
+            if val is not None:
+                report_key = matched_key.replace(" ", "_")
+                return f"{report_key}: {val}"
 
         return self.render_ui("stats", {
-            "total_notes": total_notes,
-            "hub_count": hub_count,
+            "atomic_notes": atomic_notes,
+            "hubs": hubs_count,
+            "pdfs": pdf_count + inbox_pdf_count,
+            "courses": courses_count,
+            "exams": exams_count,
+            "assignments": assignments_count,
+            "semesters": semesters_count,
+            "years": years_count,
+            "total_notes": total_notes
         }, caption="Vault Intelligence Statistics")
 
     def get_program_info(self) -> str:
@@ -1523,7 +1635,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
         elif "database/assignments/" in normalized_path:
             return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/academic?tab=ASSIGNMENTS&id={item_id}'})}"
         elif "practice" in normalized_path:
-            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/practice?id={item_id}'})}"
+            return f"ACTION:{json.dumps({'action': 'navigate', 'route': f'/academic?tab=PRACTICE&id={item_id}'})}"
 
         from urllib.parse import quote
         encoded = quote(note_path)
@@ -1748,7 +1860,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 description="Delete a markdown note from the vault.",
                 args_schema=DeleteNoteInput),
             StructuredTool.from_function(name="get_vault_stats", func=self.get_vault_stats,
-                description="Get vault statistics: total note count, hub count, hub names.",
+                description="Get vault statistics. Pass category (e.g. 'atomic_notes') to get a plain text count instead of rendering the stats dashboard UI.",
                 args_schema=GetVaultStatsInput),
             StructuredTool.from_function(name="get_hubs", func=self.list_hubs,
                 description="List all study hubs in the vault with their note counts. Returns rendered UI cards automatically.",
@@ -1818,12 +1930,11 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
             StructuredTool.from_function(name="navigate_to_route", func=self.navigate_to_route,
                 description=(
                     "Navigate the app to a specific page. Use EXACT routes: "
-                    "'/agents?tab=ater' (Oracle AI chat — this page), "
-                    "'/agents?tab=pipeline' (ingestion pipeline), "
-                    "'/obsidian' (vault/note viewer), "
-                    "'/academic?tab=COURSES', '/academic?tab=EXAMS', '/academic?tab=ASSIGNMENTS', "
-                    "'/academic?tab=PLANNER', '/academic?tab=PROGRAM', '/academic?tab=CALENDAR', "
-                    "'/practice' (SRS practice), '/settings'. "
+                    "'/agents?tab=ater' (Oracle AI chat), '/agents?tab=pipeline' (ingestion pipeline), "
+                    "'/obsidian' (vault viewer), '/settings'. "
+                    "To open a specific dashboard tab, use '/academic?tab=COURSES|EXAMS|ASSIGNMENTS|PLANNER|PROGRAM|CALENDAR|PRACTICE'. "
+                    "To open a specific entity (course, exam, assignment, planner hub, program year/semester, or practice setup for a hub) in the dashboard, append '&id=<entity_id>'. "
+                    "E.g. '/academic?tab=COURSES&id=OOP With Java' or '/academic?tab=PRACTICE&id=cs_201_hub'. "
                     "NEVER use '/oracle' — it does not exist."
                 ),
                 args_schema=NavigateToRouteInput),
