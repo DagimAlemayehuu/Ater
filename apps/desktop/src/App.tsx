@@ -6,12 +6,12 @@ import { ThemeProvider } from '@/context/theme-provider'
 import { NavigationProvider } from '@/context/navigation-provider'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 
-const ObsidianVault = lazy(() => import('@/routes/obsidian'))
-const Settings = lazy(() => import('@/routes/settings'))
-const Practice = lazy(() => import('@/routes/practice'))
-const AcademicDashboard = lazy(() => import('@/routes/academic'))
-const Agents = lazy(() => import('@/routes/agents'))
-const Onboarding = lazy(() => import('@/routes/onboarding'))
+import ObsidianVault from '@/routes/obsidian'
+import Settings from '@/routes/settings'
+import Practice from '@/routes/practice'
+import AcademicDashboard from '@/routes/academic'
+import Agents from '@/routes/agents'
+import Onboarding from '@/routes/onboarding'
 
 import { HeaderProvider } from '@/context/header-context'
 import { Toaster } from '@/components/ui/sonner'

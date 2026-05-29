@@ -35,6 +35,10 @@ vi.mock('@tauri-apps/api/core', () => ({
   }),
 }));
 
+vi.mock('@tauri-apps/api/app', () => ({
+  getVersion: vi.fn().mockResolvedValue('0.8.4'),
+}));
+
 vi.mock('@tauri-apps/plugin-shell', () => ({
   Command: vi.fn(),
 }));

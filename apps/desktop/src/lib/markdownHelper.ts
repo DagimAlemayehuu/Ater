@@ -138,7 +138,7 @@ export function toggleChecklistLink(
   isChecked: boolean
 ): { content: string; updated: boolean } {
   const targetNoteFile = targetOrLabel
-    .split('/')
+    .split(/[/\\]/)
     .pop()
     ?.replace(/\.md$/i, '')
     .replace(/_/g, ' ')
@@ -162,7 +162,7 @@ export function toggleChecklistLink(
 
     while ((match = wikilinkRegex.exec(remainder)) !== null) {
       const dest = match[1].trim();
-      const destBase = dest.split('/').pop()?.replace(/_/g, ' ').toLowerCase().trim() || '';
+      const destBase = dest.split(/[/\\]/).pop()?.replace(/_/g, ' ').toLowerCase().trim() || '';
       if (destBase === targetNoteFile) {
         containsTarget = true;
         break;

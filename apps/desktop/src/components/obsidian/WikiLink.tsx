@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 export const WikiLink = ({ dest, alias, onNavigate, className }: { dest: string, alias: string, onNavigate: (page: string) => void, className?: string }) => {
     // Clean up the alias to remove underscores and paths if it's the same as dest
-    const displayAlias = alias.replace(/_/g, ' ').split('/').pop() || alias;
+    const displayAlias = alias.replace(/_/g, ' ').split(/[/\\]/).pop() || alias;
 
     return (
         <button

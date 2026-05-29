@@ -173,7 +173,7 @@ export const NoteProperties = React.memo(({
           {links.map((link, i) => {
             const clean = link.replace(/[\[\]]/g, '').split('|')[0].trim()
             if (!clean) return null
-            const label = link.replace(/[\[\]]/g, '').split('|')[1] || clean.split('/').pop()
+            const label = link.replace(/[\[\]]/g, '').split('|')[1] || clean.split(/[/\\]/).pop()
             return (
               <button 
                 key={i}

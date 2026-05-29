@@ -29,7 +29,7 @@ export function parseHubTree(content: string): NavNode[] {
     const wm = wikilinkRe.exec(text)
     const target = wm ? wm[1].trim() : null
     const label = wm
-      ? (wm[2] || wm[1]).trim().split('/').pop() || wm[1]
+      ? (wm[2] || wm[1]).trim().split(/[/\\]/).pop() || wm[1]
       : text.replace(/\[x\]|\[ \]/ig, '').replace(/\*\*/g, '').trim()
 
     const isChecked = typeof text === 'string' && text.toLowerCase().startsWith('[x]')
@@ -66,7 +66,7 @@ export const HubConnectionsNav = React.memo(({
   onToggleCheckbox, 
   searchQuery
 }: HubConnectionsNavProps) => {
-  const activeNoteName = typeof activePath === 'string' ? activePath.split('/').pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || '' : ''
+  const activeNoteName = typeof activePath === 'string' ? activePath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || '' : ''
   
   const tree = useMemo(() => {
     const baseTree = parseHubTree(content);
@@ -117,7 +117,7 @@ export const HubConnectionsNav = React.memo(({
   };
 
   function renderNode(node: NavNode, idx: number): React.ReactNode {
-    const active = (typeof node.target === 'string' ? node.target.split('/').pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() : '') === activeNoteName;
+    const active = (typeof node.target === 'string' ? node.target.split(/[/\\]/).pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() : '') === activeNoteName;
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedNodes.has(node.label);
 

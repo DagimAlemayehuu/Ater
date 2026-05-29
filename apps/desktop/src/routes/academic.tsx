@@ -324,7 +324,7 @@ export default function AcademicDashboard() {
       title: h.type === 'practice' 
         ? `Recall: ${h.score}/${h.totalQuestions}` 
         : h.type === 'note_focus' 
-          ? `Note: ${h.notePath?.split('/').pop()?.replace('.md', '') || 'Focus'}`
+          ? `Note: ${h.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || 'Focus'}`
           : `Session: ${h.hub || 'Focus'}`
     })),
     // API History (Persistent)
@@ -337,14 +337,14 @@ export default function AcademicDashboard() {
     })),
     ...(apiStudyHistory?.telemetry || []).map(t => ({
       id: t.id,
-      title: `Read: ${t.note_path?.split('/').pop()?.replace('.md', '') || 'Note'}`,
+      title: `Read: ${t.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || 'Note'}`,
       _type: 'Note Visit',
       _date: t.timestamp || new Date().toISOString(),
       duration: t.duration_seconds
     })),
     ...(apiStudyHistory?.practice || []).map(p => ({
       id: p.id,
-      title: `Recall: ${p.note_path?.split('/').pop()?.replace('.md', '') || p.hub_id || 'Quiz'}`,
+      title: `Recall: ${p.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub_id || 'Quiz'}`,
       _type: 'Practice',
       _date: p.timestamp,
       isCorrect: p.is_correct

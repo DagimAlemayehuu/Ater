@@ -104,8 +104,8 @@ def select_dynamic_question_types(note_title: str, modality: str, source_snippet
     code_words = ["def ", "class ", "function ", "fn ", "let ", "const ", "var ", "return ", "struct ", "import ", "lambda", "print("]
     has_code = any(w in (source_snippet or "") for w in code_words) or any(w in title_lower for w in ["code", "program", "algor", "function", "variable", "object", "pointer"])
     
-    # 2. Math/LaTeX/Number detection heuristic
-    has_math = "$" in (source_snippet or "") or any(char.isdigit() for char in snippet_lower) or any(w in title_lower for w in ["math", "formula", "equation", "deriv", "calculat", "matrix", "rate", "probab", "statist", "cost", "price", "elasticity"])
+    # 2. Math/LaTeX/Number detection heuristic (removed char.isdigit loop to avoid false alarms on page/year numbers)
+    has_math = "$" in (source_snippet or "") or any(w in title_lower for w in ["math", "formula", "equation", "deriv", "calculat", "matrix", "rate", "probab", "statist", "cost", "price", "elasticity"]) or any(op in (source_snippet or "") for op in [" = ", " + ", " - ", " * ", " / "])
 
     # Initialize base scores for each of the 13 types available in the practice tab
     scores = {
@@ -130,10 +130,18 @@ def select_dynamic_question_types(note_title: str, modality: str, source_snippet
     allowed_modes = domain_config.get("question_modes", [])
     if allowed_modes:
         allowed_set = set(allowed_modes) | {"mcq", "true_false", "writing"}
-        if modality == "Quantitative" or has_math:
+        # Only add calculation/data_analysis if explicitly supported by the domain config or under quantitative modality with active math
+        if (modality == "Quantitative" and has_math) or "calculation" in allowed_modes:
             allowed_set.add("calculation")
+        if (modality == "Quantitative" and has_math) or "data_analysis" in allowed_modes:
             allowed_set.add("data_analysis")
-        if has_code or modality == "Procedural":
+        
+        is_cs_domain = (
+            mode.startswith("CS-") or
+            any(w in mode.lower() for w in ["software", "systems", "networking", "cybersecurity", "web", "database", "ai", "db", "arch", "testing"]) or
+            any(w in title_lower for w in ["python", "java", "code", "program", "algor", "software", "computer"])
+        )
+        if is_cs_domain and (has_code or modality == "Procedural"):
             allowed_set.update(["code", "debug", "trace"])
             
         for t in list(scores.keys()):
@@ -2858,13 +2866,14 @@ EXECUTION: Generate the session now. Follow the distribution strictly."""
         sniped_batches = []
         next_id = 1
         
-        # NEW PASS 1: COMPLETE ATOMIC NOTES (Note + Probes)
-        for note in all_atomic_titles:
-            sniped_batches.append({"id": next_id, "notes": [note], "type": "atomic"})
+        # Group ALL atomic notes into a single parallel execution batch
+        if all_atomic_titles:
+            sniped_batches.append({"id": next_id, "notes": all_atomic_titles, "type": "atomic"})
             next_id += 1
         
-        for note in [n["title"] for n in structured_plan["possible_questions"]]:
-            sniped_batches.append({"id": next_id, "notes": [note], "type": "pq"})
+        all_pq_titles = [n["title"] for n in structured_plan["possible_questions"]]
+        if all_pq_titles:
+            sniped_batches.append({"id": next_id, "notes": all_pq_titles, "type": "pq"})
             next_id += 1
             
         # PASS 3: HUB (Source of Truth)
@@ -3226,329 +3235,330 @@ generated: true"""
                     nonlocal deployment_results
                     local_results = []
                     
+                    # Smart pacing semaphore based on token limits to prevent Groq free-tier 429 stalls
+                    max_batch_concurrency = 2
+                    if self.governor.max_tpm > 50000:
+                        max_batch_concurrency = 4
+                    if self.governor.max_tpm > 100000:
+                        max_batch_concurrency = 6
+                    
+                    sem = asyncio.Semaphore(max_batch_concurrency)
+                    
                     if b_type == "atomic":
-                        current_note_title = b_notes[0] if b_notes else ""
-                        
-                        # ── IDEMPOTENCY CHECK (v32.1 Singularity) ──
-                        # Compute target path and check if it already exists
-                        target_path = self.vm.get_note_path({"title": current_note_title, "type": "Atomic Note"}, session_metadata=session["metadata"])
-                        if target_path.exists():
-                            print(f"[Ater Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
-                            if current_note_title not in session.get("processed_notes", []):
-                                session.setdefault("processed_notes", []).append(current_note_title)
-                            return True
+                        async def process_single_atomic(current_note_title):
+                            nonlocal local_results
+                            if not current_note_title:
+                                return True
 
-                        # --- NEW AGENT-BASED ATOMIC GENERATION WITH VALIDATION LOOP ---
-                        note_schema_dict = next((n for n in session["metadata"].get("atomic_notes", []) if n["title"] == current_note_title), None)
-                        
-                        is_synthesis = False
-                        if note_schema_dict:
-                            is_synthesis = (note_schema_dict.get("type") == "Synthesis Note") or (note_schema_dict.get("title", "").endswith("_Synthesis"))
-                        else:
-                            is_synthesis = current_note_title.endswith("_Synthesis")
-
-                        if is_synthesis:
-                            self.set_status(session_id, f"Compiling Synthesis: [[{current_note_title}]]...")
-                            temp_llm = self._build_model(
-                                provider=self.secrets.ai_provider,
-                                model_name=self.secrets.ai_model,
-                                api_key=self.secrets.ai_key,
-                                temperature=0.0,
-                                top_p=0.9,
-                                timeout=ATER_TIMEOUT,
-                                request_timeout=ATER_TIMEOUT,
-                                max_retries=0,
-                                max_tokens=4096,
-                            ) if self.secrets.ai_key else self.llm
-                            temp_llm_creative = self._build_model(
-                                provider=self.secrets.ai_provider,
-                                model_name=self.secrets.ai_model,
-                                api_key=self.secrets.ai_key,
-                                temperature=0.3,
-                                top_p=0.9,
-                                timeout=ATER_TIMEOUT,
-                                request_timeout=ATER_TIMEOUT,
-                                max_retries=0,
-                                max_tokens=4096,
-                            ) if self.secrets.ai_key else self.llm_creative
-
-                            final_markdown = await self.compile_synthesis_note(
-                                session_id=session_id,
-                                note_schema_dict=note_schema_dict,
-                                current_note_title=current_note_title,
-                                plan_obj=plan_obj,
-                                session_path=session.get("path", ""),
-                                temp_llm=temp_llm,
-                                temp_llm_creative=temp_llm_creative,
-                                all_note_titles=all_note_titles
-                            )
-                            local_results = self.deployer.deploy_atomic_notes(
-                                session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
-                            )
-                            if current_note_title not in session.get("processed_notes", []):
-                                session.setdefault("processed_notes", []).append(current_note_title)
-                            
-                            self._persist_session(session_id, session)
-                            return True
-
-                        if not note_schema_dict:
-                            note_schema = AtomicNoteSchema(title=current_note_title, description="Generated concept", source_context="")
-                        else:
-                            note_schema = AtomicNoteSchema(**note_schema_dict)
-
-                        # Clean OCR noise prior to processing
-                        healer = LogicHealer(canonical_titles=set(all_note_titles))
-                        if note_schema.source_context:
-                            note_schema.source_context = healer.clean_ocr_noise(note_schema.source_context)
-
-
-                        modality = getattr(note_schema, 'concept_modality', 'Qualitative/Definitional')
-                        domain = get_persona(note_schema.mode, modality)
-                        source_snippet = self._extract_source_snippet(
-                            note_schema.source_context or "No context", 
-                            note_schema.title, 
-                            0,
-                            used_examples=session.get("used_examples", [])
-                        )
-                        note_data = {
-                            "title": note_schema.title,
-                            "course": course,
-                            "unit": unit_num,
-                            "semester": semester,
-                            "mode": note_schema.mode,
-                            "date": datetime.now().strftime("%Y-%m-%d"),
-                            "prerequisites": note_schema.prerequisites,
-                            "source_pages": note_schema.source_pages,
-                            "h1_title": domain.get("h1", "The Core Logic Explained"),
-                            "h2_title": domain.get("h2", "The Textbook Translation"),
-                            "artifact_title": domain.get("artifact", "Source Artifact"),
-                            "artifact_type": domain.get("type", "Markdown Table"),
-                            "section_plan": build_dynamic_section_plan(domain, modality),
-                            "hub": f"[[{plan_obj.hub_note.title}]]",
-                            "source": self._get_source_link(plan_obj, session.get("path", ""))
-                        }
-                        
-                        generation_attempts = 0
-                        last_candidate_markdown = None
-                        max_generation_attempts = 3
-                        
-                        while True:
-                            generation_attempts += 1
-                            current_temp = 0.0
-                            current_topp = 0.9
-                                
-                            phase_prefix = f"(Attempt {generation_attempts}, Temp={current_temp:.2f})" if generation_attempts > 1 else ""
-                            
-                            if generation_attempts > max_generation_attempts:
-                                # Keep weak models deterministic: after bounded retries, use the
-                                # source-grounded compiler instead of increasing randomness.
-                                logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
-                                self.set_status(session_id, f"⚠️ Max attempts reached: Deploying fallback skeleton for [[{current_note_title}]]...")
-                                
-                                skeleton_body = build_skeleton_note(note_schema, source_snippet, domain, all_titles=all_note_titles)
-                                metadata = {
-                                    "title": note_schema.title,
-                                    "course": course,
-                                    "unit": str(unit_num),
-                                    "semester": semester,
-                                    "mode": note_schema.mode,
-                                    "type": "Atomic Note",
-                                    "hub": f"[[{plan_obj.hub_note.title}]]",
-                                    "source": self._get_source_link(plan_obj, session.get("path", "")),
-                                    "date": datetime.now().strftime("%Y-%m-%d"),
-                                    "prerequisites": note_schema.prerequisites,
-                                    "source_pages": note_schema.source_pages,
-                                    "generated": True,
-                                    "skeleton_fallback": True
-                                }
-                                yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
-                                final_markdown = f"---\n{yaml_frontmatter}---\n{skeleton_body}"
-                                
-                                local_results = self.deployer.deploy_atomic_notes(
-                                    session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
-                                )
+                            # ── IDEMPOTENCY CHECK (v32.1 Singularity) ──
+                            # Compute target path and check if it already exists
+                            target_path = self.vm.get_note_path({"title": current_note_title, "type": "Atomic Note"}, session_metadata=session["metadata"])
+                            if target_path.exists():
+                                print(f"[Ater Service] Idempotency Hit: [[{current_note_title}]] already exists. Skipping.")
                                 if current_note_title not in session.get("processed_notes", []):
                                     session.setdefault("processed_notes", []).append(current_note_title)
-                                self._persist_session(session_id, session)
-                                break
-                            
-                            try:
-                                # Dynamic LLMs: one precise for structures, one creative for prose/explanations
+                                return True
+
+                            # --- NEW AGENT-BASED ATOMIC GENERATION WITH VALIDATION LOOP ---
+                            note_schema_dict = next((n for n in session["metadata"].get("atomic_notes", []) if n["title"] == current_note_title), None)
+
+                            is_synthesis = False
+                            if note_schema_dict:
+                                is_synthesis = (note_schema_dict.get("type") == "Synthesis Note") or (note_schema_dict.get("title", "").endswith("_Synthesis"))
+                            else:
+                                is_synthesis = current_note_title.endswith("_Synthesis")
+
+                            if is_synthesis:
+                                self.set_status(session_id, f"Compiling Synthesis: [[{current_note_title}]]...")
                                 temp_llm = self._build_model(
                                     provider=self.secrets.ai_provider,
                                     model_name=self.secrets.ai_model,
                                     api_key=self.secrets.ai_key,
-                                    temperature=current_temp,
-                                    top_p=current_topp,
+                                    temperature=0.0,
+                                    top_p=0.9,
                                     timeout=ATER_TIMEOUT,
                                     request_timeout=ATER_TIMEOUT,
                                     max_retries=0,
                                     max_tokens=4096,
                                 ) if self.secrets.ai_key else self.llm
-                                
                                 temp_llm_creative = self._build_model(
                                     provider=self.secrets.ai_provider,
                                     model_name=self.secrets.ai_model,
                                     api_key=self.secrets.ai_key,
-                                    temperature=max(0.3, current_temp), # minimum 0.3 creative floor
-                                    top_p=current_topp,
+                                    temperature=0.3,
+                                    top_p=0.9,
                                     timeout=ATER_TIMEOUT,
                                     request_timeout=ATER_TIMEOUT,
                                     max_retries=0,
                                     max_tokens=4096,
-                                    presence_penalty=0.1,
-                                    frequency_penalty=0.1,
                                 ) if self.secrets.ai_key else self.llm_creative
-                                
-                                theory_agent = TheoryAgent(temp_llm_creative, domain)
-                                practitioner_agent = PractitionerAgent(temp_llm, domain)
 
-                                # ── EXOSKELETON ASSEMBLER v29.0 (HYDRA) ──
-                                
-                                note_data.update({
-                                    "h1_title": domain.get("h1", "The Core Logic Explained"),
-                                    "h2_title": domain.get("h2", "The Textbook Translation"),
-                                    "artifact_title": domain.get("artifact", "Source Artifact"),
-                                    "artifact_type": domain.get("type", "Markdown Table"),
-                                    "section_plan": build_dynamic_section_plan(domain, modality),
-                                })
-
-                                # 1. Micro-Theory Pass
-                                self.set_status(session_id, f"{phase_prefix} Theory: [[{current_note_title}]]...")
-                                await self.governor.get_permit(expected_tokens=4000)
-                                
-                                # THIN CONTEXT: Limit concept list to immediate prerequisites + unit neighbors
-                                prereqs = note_schema.prerequisites or []
-                                neighbors = all_note_titles[:15] # Just a sample of the unit's concepts
-                                thin_concepts = ", ".join([f"[[{t}]]" for t in set(prereqs + neighbors)])
-
-                                # Extract top sentences from source with Stateful Entropy
-                                source_snippet = self._extract_source_snippet(
-                                    note_schema.source_context or "No context", 
-                                    note_schema.title, 
-                                    0,
-                                    used_examples=session.get("used_examples", [])
+                                final_markdown = await self.compile_synthesis_note(
+                                    session_id=session_id,
+                                    note_schema_dict=note_schema_dict,
+                                    current_note_title=current_note_title,
+                                    plan_obj=plan_obj,
+                                    session_path=session.get("path", ""),
+                                    temp_llm=temp_llm,
+                                    temp_llm_creative=temp_llm_creative,
+                                    all_note_titles=all_note_titles
                                 )
-
-                                theory_parts = await theory_agent.generate_micro(
-                                    note_schema, 
-                                    source_snippet, 
-                                    thin_concepts,
-                                    used_scenarios=session.get("used_scenarios", []),
-                                    academic_level=plan_obj.academic_level,
-                                    course_title=plan_obj.course_title,
-                                    max_tokens=6000
+                                local_res = self.deployer.deploy_atomic_notes(
+                                    session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
                                 )
-                                # Initialize healer early to clean theory parts before passing to practitioner
-                                healer = LogicHealer(canonical_titles=set(all_note_titles))
-                                if "mental_model" in theory_parts:
-                                    theory_parts["mental_model"] = healer.heal_all(theory_parts["mental_model"], exclude_title=current_note_title)
-                                if "core_logic" in theory_parts:
-                                    theory_parts["core_logic"] = healer.heal_all(theory_parts["core_logic"], exclude_title=current_note_title)
-                                if "formal_model" in theory_parts:
-                                    theory_parts["formal_model"] = healer.heal_all(theory_parts["formal_model"], exclude_title=current_note_title)
+                                local_results.extend(local_res)
+                                if current_note_title not in session.get("processed_notes", []):
+                                    session.setdefault("processed_notes", []).append(current_note_title)
 
-                                # Pre-render Length Gates (Phase 3.2)
-                                if len(theory_parts.get("mental_model", "")) < 80:
-                                    raise ValueError(f"Analogy section 'mental_model' failed length gate (<80 chars) for {current_note_title}")
-                                if len(theory_parts.get("core_logic", "")) < 30:
-                                    raise ValueError(f"Core breakdown section 'core_logic' failed length gate (<30 chars) for {current_note_title}")
+                                self._persist_session(session_id, session)
+                                return True
 
-                                note_data.update(theory_parts)
-                                
-                                # Track example/scenario to prevent reuse
-                                if source_snippet and len(source_snippet) > 50:
-                                    session["used_examples"].append(source_snippet[:200])
-                                if "mental_model" in theory_parts:
-                                    # Extract first 3 words of analogy as a 'scenario signature'
-                                    words = re.findall(r'\w+', theory_parts["mental_model"].lower())
-                                    if len(words) > 3:
-                                        session["used_scenarios"].append(" ".join(words[:3]))
-                                
-                                # 2. Micro-Execution (The Systems Breaker)
-                                self.set_status(session_id, f"{phase_prefix} Execution: [[{current_note_title}]]...")
-                                await self.governor.get_permit(expected_tokens=3000)
-                                prac_parts = await practitioner_agent.generate_micro(
-                                    note_schema.title, 
-                                    note_data.get("core_logic", ""), 
-                                    primary_language, 
-                                    note_schema.mode,
-                                    source_text=source_snippet,  # v33.0: source-grounded artifact
-                                    academic_level=plan_obj.academic_level,
-                                    course_title=plan_obj.course_title,
-                                    max_tokens=8000,
-                                    plain_english=note_data.get("mental_model", "")
-                                )
-                                healer = LogicHealer(canonical_titles=set(all_note_titles))
-                                if "formal_model" in prac_parts:
-                                    prac_parts["formal_model"] = healer.heal_all(prac_parts["formal_model"], exclude_title=current_note_title)
-                                note_data.update(prac_parts)
-                                note_data["dynamic3_content"] = prac_parts.get("limitations", "")
-                                # 3. Micro-Question Pass (Dynamic Assessment)
-                                # v33.0: Compressed context — saves ~8k tokens per note
-                                self.set_status(session_id, f"{phase_prefix} Assessment: [[{current_note_title}]]...")
+                            if not note_schema_dict:
+                                note_schema = AtomicNoteSchema(title=current_note_title, description="Generated concept", source_context="")
+                            else:
+                                note_schema = AtomicNoteSchema(**note_schema_dict)
 
-                                q_agent = QuestionAgent(temp_llm, domain)
-                                _concept_label = current_note_title.replace('_', ' ')
-                                q_context = (
-                                    f"⚠️ DOMAIN LOCK: You MUST ONLY test the concept '{_concept_label}'. "
-                                    f"Do NOT generate questions about aggregate demand, monetary policy, interest rates, "
-                                    f"or ANY concept not explicitly present in the SOURCE ANCHOR below.\n\n"
-                                    f"CONCEPT: {_concept_label}\n"
-                                    f"MENTAL MODEL: {note_data.get('mental_model', '')[:250]}\n"
-                                    f"CORE LOGIC: {note_data.get('core_logic', '')[:400]}\n"
-                                    f"SOURCE ANCHOR (ONLY test vocabulary from here): {source_snippet[:500]}"
-                                )
-                                prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
-                                
-                                # Determine dynamic count and types of questions (2 to 4)
-                                note_modality = note_schema_dict.get("concept_modality", "Qualitative/Definitional") if note_schema_dict else "Qualitative/Definitional"
-                                prereq_len = len(note_schema.prerequisites or [])
-                                q_count = determine_dynamic_question_count(
-                                    note_schema.title, note_modality, source_snippet, prereq_len
-                                )
-                                q_modes = select_dynamic_question_types(
-                                    note_schema.title, note_modality, source_snippet, q_count, mode=note_schema.mode
-                                )
+                            # Clean OCR noise prior to processing
+                            healer = LogicHealer(canonical_titles=set(all_note_titles))
+                            if note_schema.source_context:
+                                note_schema.source_context = healer.clean_ocr_noise(note_schema.source_context)
 
-                                async def generate_candidate():
-                                    await self.governor.get_permit(expected_tokens=2500)
-                                    try:
-                                        res = await q_agent.generate(
-                                            note_schema=note_schema, 
-                                            source_text=q_context, 
-                                            mechanics="Focus on multi-step causal tracing and artifact verification.",
-                                            academic_level=plan_obj.academic_level,
-                                            count=q_count,
-                                            prof_domain=prof_domain,
-                                            q_type=q_modes
-                                        )
-                                        return res
-                                    except Exception as e:
-                                        logger.warning(f"[Ater Service] Quiz generation candidate failed: {e}")
-                                        return []
 
-                                # Fire 1 concurrent call instead of 5 to save massive API quota
-                                tasks = [generate_candidate() for _ in range(1)]
-                                candidates = await asyncio.gather(*tasks)
+                            modality = getattr(note_schema, 'concept_modality', 'Qualitative/Definitional')
+                            domain = get_persona(note_schema.mode, modality)
+                            source_snippet = self._extract_source_snippet(
+                                note_schema.source_context or "No context", 
+                                note_schema.title, 
+                                0,
+                                used_examples=session.get("used_examples", [])
+                            )
+                            note_data = {
+                                "title": note_schema.title,
+                                "course": course,
+                                "unit": unit_num,
+                                "semester": semester,
+                                "mode": note_schema.mode,
+                                "date": datetime.now().strftime("%Y-%m-%d"),
+                                "prerequisites": note_schema.prerequisites,
+                                "source_pages": note_schema.source_pages,
+                                "h1_title": domain.get("h1", "The Core Logic Explained"),
+                                "h2_title": domain.get("h2", "The Textbook Translation"),
+                                "artifact_title": domain.get("artifact", "Source Artifact"),
+                                "artifact_type": domain.get("type", "Markdown Table"),
+                                "section_plan": build_dynamic_section_plan(domain, modality),
+                                "hub": f"[[{plan_obj.hub_note.title}]]",
+                                "source": self._get_source_link(plan_obj, session.get("path", ""))
+                            }
 
-                                best_candidate = None
-                                best_score = -1.0
-                                for cand in candidates:
-                                    if not cand:
-                                        continue
-                                    cand_score = self.rate_candidate_quiz(cand, note_schema.title, note_schema.source_context)
-                                    if cand_score > best_score:
-                                        best_score = cand_score
-                                        best_candidate = cand
+                            generation_attempts = 0
+                            last_candidate_markdown = None
+                            max_generation_attempts = 3
 
-                                # Score threshold retry
-                                if best_score < 50.0:
-                                    logger.warning(f"[Ater Service] Best quiz score {best_score} is below threshold 50. Initiating rapid retry sequence.")
-                                    retry_tasks = [generate_candidate() for _ in range(1)]
-                                    retry_candidates = await asyncio.gather(*retry_tasks)
-                                    
-                                    for cand in retry_candidates:
+                            while True:
+                                generation_attempts += 1
+                                current_temp = 0.0
+                                current_topp = 0.9
+
+                                phase_prefix = f"(Attempt {generation_attempts}, Temp={current_temp:.2f})" if generation_attempts > 1 else ""
+
+                                if generation_attempts > max_generation_attempts:
+                                    # Keep weak models deterministic: after bounded retries, use the
+                                    # source-grounded compiler instead of increasing randomness.
+                                    logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
+                                    self.set_status(session_id, f"⚠️ Max attempts reached: Deploying fallback skeleton for [[{current_note_title}]]...")
+
+                                    skeleton_body = build_skeleton_note(note_schema, source_snippet, domain, all_titles=all_note_titles)
+                                    metadata = {
+                                        "title": note_schema.title,
+                                        "tags": ["atomic-note", str(note_schema.mode).lower(), str(course).lower().replace(" ", "-")],
+                                        "course": course,
+                                        "unit": str(unit_num),
+                                        "semester": semester,
+                                        "mode": note_schema.mode,
+                                        "type": "Atomic Note",
+                                        "hub": f"[[{plan_obj.hub_note.title}]]",
+                                        "source": self._get_source_link(plan_obj, session.get("path", "")),
+                                        "date": datetime.now().strftime("%Y-%m-%d"),
+                                        "prerequisites": note_schema.prerequisites,
+                                        "source_pages": note_schema.source_pages,
+                                        "generated": True,
+                                        "skeleton_fallback": True
+                                    }
+                                    yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
+                                    final_markdown = f"---\n{yaml_frontmatter}---\n{skeleton_body}"
+
+                                    local_res = self.deployer.deploy_atomic_notes(
+                                        session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
+                                    )
+                                    local_results.extend(local_res)
+                                    if current_note_title not in session.get("processed_notes", []):
+                                        session.setdefault("processed_notes", []).append(current_note_title)
+                                    self._persist_session(session_id, session)
+                                    break
+
+                                try:
+                                    # Dynamic LLMs: one precise for structures, one creative for prose/explanations
+                                    temp_llm = self._build_model(
+                                        provider=self.secrets.ai_provider,
+                                        model_name=self.secrets.ai_model,
+                                        api_key=self.secrets.ai_key,
+                                        temperature=current_temp,
+                                        top_p=current_topp,
+                                        timeout=ATER_TIMEOUT,
+                                        request_timeout=ATER_TIMEOUT,
+                                        max_retries=0,
+                                        max_tokens=4096,
+                                    ) if self.secrets.ai_key else self.llm
+
+                                    temp_llm_creative = self._build_model(
+                                        provider=self.secrets.ai_provider,
+                                        model_name=self.secrets.ai_model,
+                                        api_key=self.secrets.ai_key,
+                                        temperature=max(0.3, current_temp), # minimum 0.3 creative floor
+                                        top_p=current_topp,
+                                        timeout=ATER_TIMEOUT,
+                                        request_timeout=ATER_TIMEOUT,
+                                        max_retries=0,
+                                        max_tokens=4096,
+                                        presence_penalty=0.1,
+                                        frequency_penalty=0.1,
+                                    ) if self.secrets.ai_key else self.llm_creative
+
+                                    theory_agent = TheoryAgent(temp_llm_creative, domain)
+                                    practitioner_agent = PractitionerAgent(temp_llm, domain)
+
+                                    # ── EXOSKELETON ASSEMBLER v29.0 (HYDRA) ──
+
+                                    note_data.update({
+                                        "h1_title": domain.get("h1", "The Core Logic Explained"),
+                                        "h2_title": domain.get("h2", "The Textbook Translation"),
+                                        "artifact_title": domain.get("artifact", "Source Artifact"),
+                                        "artifact_type": domain.get("type", "Markdown Table"),
+                                        "section_plan": build_dynamic_section_plan(domain, modality),
+                                    })
+
+                                    # 1. Micro-Theory Pass
+                                    self.set_status(session_id, f"{phase_prefix} Theory: [[{current_note_title}]]...")
+                                    await self.governor.get_permit(expected_tokens=4000)
+
+                                    # THIN CONTEXT: Limit concept list to immediate prerequisites + unit neighbors
+                                    prereqs = note_schema.prerequisites or []
+                                    neighbors = all_note_titles[:15] # Just a sample of the unit's concepts
+                                    thin_concepts = ", ".join([f"[[{t}]]" for t in set(prereqs + neighbors)])
+
+                                    # Extract top sentences from source with Stateful Entropy
+                                    source_snippet = self._extract_source_snippet(
+                                        note_schema.source_context or "No context", 
+                                        note_schema.title, 
+                                        0,
+                                        used_examples=session.get("used_examples", [])
+                                    )
+
+                                    theory_parts = await theory_agent.generate_micro(
+                                        note_schema, 
+                                        source_snippet, 
+                                        thin_concepts,
+                                        used_scenarios=session.get("used_scenarios", []),
+                                        academic_level=plan_obj.academic_level,
+                                        course_title=plan_obj.course_title,
+                                        max_tokens=6000
+                                    )
+                                    # Initialize healer early to clean theory parts before passing to practitioner
+                                    healer = LogicHealer(canonical_titles=set(all_note_titles))
+                                    if "mental_model" in theory_parts:
+                                        theory_parts["mental_model"] = healer.heal_all(theory_parts["mental_model"], exclude_title=current_note_title)
+                                    if "core_logic" in theory_parts:
+                                        theory_parts["core_logic"] = healer.heal_all(theory_parts["core_logic"], exclude_title=current_note_title)
+                                    if "formal_model" in theory_parts:
+                                        theory_parts["formal_model"] = healer.heal_all(theory_parts["formal_model"], exclude_title=current_note_title)
+
+                                    # Pre-render Length Gates (Phase 3.2)
+                                    if len(theory_parts.get("mental_model", "")) < 80:
+                                        raise ValueError(f"Analogy section 'mental_model' failed length gate (<80 chars) for {current_note_title}")
+                                    if len(theory_parts.get("core_logic", "")) < 30:
+                                        raise ValueError(f"Core breakdown section 'core_logic' failed length gate (<30 chars) for {current_note_title}")
+
+                                    note_data.update(theory_parts)
+
+                                    # Track example/scenario to prevent reuse
+                                    if source_snippet and len(source_snippet) > 50:
+                                        session["used_examples"].append(source_snippet[:200])
+                                    if "mental_model" in theory_parts:
+                                        # Extract first 3 words of analogy as a 'scenario signature'
+                                        words = re.findall(r'\w+', theory_parts["mental_model"].lower())
+                                        if len(words) > 3:
+                                            session["used_scenarios"].append(" ".join(words[:3]))
+
+                                    # 2. Micro-Execution (The Systems Breaker)
+                                    self.set_status(session_id, f"{phase_prefix} Execution: [[{current_note_title}]]...")
+                                    await self.governor.get_permit(expected_tokens=3000)
+                                    prac_parts = await practitioner_agent.generate_micro(
+                                        note_schema.title, 
+                                        note_data.get("core_logic", ""), 
+                                        primary_language, 
+                                        note_schema.mode,
+                                        source_text=source_snippet,  # v33.0: source-grounded artifact
+                                        academic_level=plan_obj.academic_level,
+                                        course_title=plan_obj.course_title,
+                                        max_tokens=8000,
+                                        plain_english=note_data.get("mental_model", "")
+                                    )
+                                    healer = LogicHealer(canonical_titles=set(all_note_titles))
+                                    if "formal_model" in prac_parts:
+                                        prac_parts["formal_model"] = healer.heal_all(prac_parts["formal_model"], exclude_title=current_note_title)
+                                    note_data.update(prac_parts)
+                                    note_data["dynamic3_content"] = prac_parts.get("limitations", "")
+                                    # 3. Micro-Question Pass (Dynamic Assessment)
+                                    # v33.0: Compressed context — saves ~8k tokens per note
+                                    self.set_status(session_id, f"{phase_prefix} Assessment: [[{current_note_title}]]...")
+
+                                    q_agent = QuestionAgent(temp_llm, domain)
+                                    _concept_label = current_note_title.replace('_', ' ')
+                                    q_context = (
+                                        f"⚠️ DOMAIN LOCK: You MUST ONLY test the concept '{_concept_label}'. "
+                                        f"Do NOT generate questions about aggregate demand, monetary policy, interest rates, "
+                                        f"or ANY concept not explicitly present in the SOURCE ANCHOR below.\n\n"
+                                        f"CONCEPT: {_concept_label}\n"
+                                        f"MENTAL MODEL: {note_data.get('mental_model', '')[:250]}\n"
+                                        f"CORE LOGIC: {note_data.get('core_logic', '')[:400]}\n"
+                                        f"SOURCE ANCHOR (ONLY test vocabulary from here): {source_snippet[:500]}"
+                                    )
+                                    prof_domain = get_professional_domain(note_schema.title, mode=note_schema.mode)
+
+                                    # Determine dynamic count and types of questions (2 to 4)
+                                    note_modality = note_schema_dict.get("concept_modality", "Qualitative/Definitional") if note_schema_dict else "Qualitative/Definitional"
+                                    prereq_len = len(note_schema.prerequisites or [])
+                                    q_count = determine_dynamic_question_count(
+                                        note_schema.title, note_modality, source_snippet, prereq_len
+                                    )
+                                    q_modes = select_dynamic_question_types(
+                                        note_schema.title, note_modality, source_snippet, q_count, mode=note_schema.mode
+                                    )
+
+                                    async def generate_candidate():
+                                        await self.governor.get_permit(expected_tokens=2500)
+                                        try:
+                                            res = await q_agent.generate(
+                                                note_schema=note_schema, 
+                                                source_text=q_context, 
+                                                mechanics="Focus on multi-step causal tracing and artifact verification.",
+                                                academic_level=plan_obj.academic_level,
+                                                count=q_count,
+                                                prof_domain=prof_domain,
+                                                q_type=q_modes
+                                            )
+                                            return res
+                                        except Exception as e:
+                                            logger.warning(f"[Ater Service] Quiz generation candidate failed: {e}")
+                                            return []
+
+                                    # Fire 1 concurrent call instead of 5 to save massive API quota
+                                    tasks = [generate_candidate() for _ in range(1)]
+                                    candidates = await asyncio.gather(*tasks)
+
+                                    best_candidate = None
+                                    best_score = -1.0
+                                    for cand in candidates:
                                         if not cand:
                                             continue
                                         cand_score = self.rate_candidate_quiz(cand, note_schema.title, note_schema.source_context)
@@ -3556,97 +3566,224 @@ generated: true"""
                                             best_score = cand_score
                                             best_candidate = cand
 
-                                # Fallback if retries exhaust or score under 40
-                                if not best_candidate or best_score < 40.0:
-                                    logger.warning(f"[Ater Service] Quiz score after retries ({best_score}) still below threshold. Deploying deterministic fallback quiz.")
-                                    clean_src = re.sub(r"\[PAGE\s+\d+\]", "", note_schema.source_context or "", flags=re.IGNORECASE)
-                                    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", clean_src) if len(s.strip()) > 25][:3]
-                                    
-                                    fallback_qs = []
-                                    for idx, sent in enumerate(sentences):
-                                        q_type = "writing" if idx % 2 == 0 else "mcq"
-                                        if q_type == "mcq":
+                                    # Score threshold retry
+                                    if best_score < 50.0:
+                                        logger.warning(f"[Ater Service] Best quiz score {best_score} is below threshold 50. Initiating rapid retry sequence.")
+                                        retry_tasks = [generate_candidate() for _ in range(1)]
+                                        retry_candidates = await asyncio.gather(*retry_tasks)
+
+                                        for cand in retry_candidates:
+                                            if not cand:
+                                                continue
+                                            cand_score = self.rate_candidate_quiz(cand, note_schema.title, note_schema.source_context)
+                                            if cand_score > best_score:
+                                                best_score = cand_score
+                                                best_candidate = cand
+
+                                    # Fallback if retries exhaust or score under 40
+                                    if not best_candidate or best_score < 40.0:
+                                        logger.warning(f"[Ater Service] Quiz score after retries ({best_score}) still below threshold. Deploying deterministic fallback quiz.")
+                                        clean_src = re.sub(r"\[PAGE\s+\d+\]", "", note_schema.source_context or "", flags=re.IGNORECASE)
+                                        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", clean_src) if len(s.strip()) > 25][:3]
+
+                                        fallback_qs = []
+                                        for idx, sent in enumerate(sentences):
+                                            q_type = "writing" if idx % 2 == 0 else "mcq"
+                                            if q_type == "mcq":
+                                                fallback_qs.append({
+                                                    "id": 100 + idx,
+                                                    "type": "mcq",
+                                                    "difficulty": "L1",
+                                                    "question": f"Based on the course materials, which of the following is true regarding '{_concept_label}'?",
+                                                    "options": {
+                                                        "A": sent,
+                                                        "B": f"It is completely unrelated to standard {note_schema.title.replace('_', ' ')} procedures.",
+                                                        "C": "It is only applicable in medical or clinical diagnostics.",
+                                                        "D": "It represents an unverified historical assumption."
+                                                    },
+                                                    "answer": "A",
+                                                    "explanation": f"The verified source text explicitly states: '{sent}'",
+                                                    "hints": ["Review the core textbook reading."],
+                                                    "required_keywords": []
+                                                })
+                                            else:
+                                                fallback_qs.append({
+                                                    "id": 100 + idx,
+                                                    "type": "writing",
+                                                    "difficulty": "L1",
+                                                    "question": f"Briefly explain the following aspect of '{_concept_label}' in your own words: '{sent[:60]}...'",
+                                                    "answer": sent,
+                                                    "explanation": f"The verified source text defines this as: '{sent}'",
+                                                    "hints": ["Recall the key text from the reading."],
+                                                    "required_keywords": [w.strip(".,;:?!") for w in sent.split() if len(w) > 5][:4]
+                                                })
+
+                                        while len(fallback_qs) < 3:
                                             fallback_qs.append({
-                                                "id": 100 + idx,
-                                                "type": "mcq",
-                                                "difficulty": "L1",
-                                                "question": f"Based on the course materials, which of the following is true regarding '{_concept_label}'?",
-                                                "options": {
-                                                    "A": sent,
-                                                    "B": f"It is completely unrelated to standard {note_schema.title.replace('_', ' ')} procedures.",
-                                                    "C": "It is only applicable in medical or clinical diagnostics.",
-                                                    "D": "It represents an unverified historical assumption."
-                                                },
-                                                "answer": "A",
-                                                "explanation": f"The verified source text explicitly states: '{sent}'",
-                                                "hints": ["Review the core textbook reading."],
-                                                "required_keywords": []
-                                            })
-                                        else:
-                                            fallback_qs.append({
-                                                "id": 100 + idx,
+                                                "id": 105,
                                                 "type": "writing",
                                                 "difficulty": "L1",
-                                                "question": f"Briefly explain the following aspect of '{_concept_label}' in your own words: '{sent[:60]}...'",
-                                                "answer": sent,
-                                                "explanation": f"The verified source text defines this as: '{sent}'",
-                                                "hints": ["Recall the key text from the reading."],
-                                                "required_keywords": [w.strip(".,;:?!") for w in sent.split() if len(w) > 5][:4]
+                                                "question": f"What is the primary function or definition of '{_concept_label}' according to the source context?",
+                                                "answer": f"According to the source, '{_concept_label}' is used to structure domain logic.",
+                                                "explanation": "Standard recall check.",
+                                                "hints": [],
+                                                "required_keywords": [word for word in _concept_label.split()]
                                             })
-                                            
-                                    while len(fallback_qs) < 3:
-                                        fallback_qs.append({
-                                            "id": 105,
-                                            "type": "writing",
-                                            "difficulty": "L1",
-                                            "question": f"What is the primary function or definition of '{_concept_label}' according to the source context?",
-                                            "answer": f"According to the source, '{_concept_label}' is used to structure domain logic.",
-                                            "explanation": "Standard recall check.",
-                                            "hints": [],
-                                            "required_keywords": [word for word in _concept_label.split()]
-                                        })
-                                    valid_qs = fallback_qs
-                                else:
-                                    valid_qs = best_candidate
+                                        valid_qs = fallback_qs
+                                    else:
+                                        valid_qs = best_candidate
 
-                                # ── CLOSED-LOOP: Attach explanation_page metadata ────────────
-                                # Each quiz question gets a reference to the source page so the UI
-                                # can link directly from a wrong answer back to the PDF page.
-                                source_pages = note_schema.source_pages or []
-                                if source_pages:
-                                    first_page = min((int(p) for p in source_pages if str(p).isdigit()), default=None)
-                                    if first_page:
-                                        for q in valid_qs:
-                                            if isinstance(q, dict) and "explanation_page" not in q:
-                                                q["explanation_page"] = first_page
-                                            if isinstance(q, dict) and "source_pages" not in q:
-                                                q["source_pages"] = sorted(set(int(p) for p in source_pages if str(p).isdigit()))
+                                    # ── CLOSED-LOOP: Attach explanation_page metadata ────────────
+                                    # Each quiz question gets a reference to the source page so the UI
+                                    # can link directly from a wrong answer back to the PDF page.
+                                    source_pages = note_schema.source_pages or []
+                                    if source_pages:
+                                        first_page = min((int(p) for p in source_pages if str(p).isdigit()), default=None)
+                                        if first_page:
+                                            for q in valid_qs:
+                                                if isinstance(q, dict) and "explanation_page" not in q:
+                                                    q["explanation_page"] = first_page
+                                                if isinstance(q, dict) and "source_pages" not in q:
+                                                    q["source_pages"] = sorted(set(int(p) for p in source_pages if str(p).isdigit()))
 
-                                note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
+                                    note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(valid_qs, indent=2) + "\n```"
 
-                                # 4. Deterministic Assembly & Self-Healing (v33.0)
-                                # misconceptions offloaded to AI Chat — not injected into note body
-                                healer = LogicHealer(canonical_titles=set(all_note_titles))
-                                body_content = render_atomic_note(note_data, healer=healer)
+                                    # 4. Deterministic Assembly & Self-Healing (v33.0)
+                                    # misconceptions offloaded to AI Chat — not injected into note body
+                                    healer = LogicHealer(canonical_titles=set(all_note_titles))
+                                    body_content = render_atomic_note(note_data, healer=healer)
 
-                                # 4.1 Code fence repair — auto-close unclosed fences before validation
-                                body_content = self.validator.repair_code_fences(body_content)
+                                    # 4.1 Code fence repair — auto-close unclosed fences before validation
+                                    body_content = self.validator.repair_code_fences(body_content)
 
-                                # 4.2 Section deduplication guard — catch Scarcity.md-class failures
-                                if self.validator.check_section_duplication(body_content):
-                                    logger.warning(f"[Ater Service] Section duplication detected in [{current_note_title}] — forcing regen")
-                                    self.set_status(session_id, f"⚠️ Content Dupe: Regenerating [[{current_note_title}]]...")
-                                    note_schema.source_context = (
-                                        "\n\nCRITICAL FIX REQUIRED: Your previous output had Section 2 (Core Logic walkthrough) "
-                                        "as an exact copy of Section 1 (Mental Model). This is a hard failure. "
-                                        "Section 2 MUST be a step-by-step mechanical breakdown — ENTIRELY different prose "
-                                        "from the plain English analogy in Section 1. Do NOT repeat the Mental Model.\n\n"
-                                    ) + (note_schema.source_context or "")
-                                    continue
-                                
-                                # Standardize metadata for YAML dumper
+                                    # 4.2 Section deduplication guard — catch Scarcity.md-class failures
+                                    if self.validator.check_section_duplication(body_content):
+                                        logger.warning(f"[Ater Service] Section duplication detected in [{current_note_title}] — forcing regen")
+                                        self.set_status(session_id, f"⚠️ Content Dupe: Regenerating [[{current_note_title}]]...")
+                                        note_schema.source_context = (
+                                            "\n\nCRITICAL FIX REQUIRED: Your previous output had Section 2 (Core Logic walkthrough) "
+                                            "as an exact copy of Section 1 (Mental Model). This is a hard failure. "
+                                            "Section 2 MUST be a step-by-step mechanical breakdown — ENTIRELY different prose "
+                                            "from the plain English analogy in Section 1. Do NOT repeat the Mental Model.\n\n"
+                                        ) + (note_schema.source_context or "")
+                                        continue
+
+                                    # Standardize metadata for YAML dumper
+                                    metadata = {
+                                        "title": note_data["title"],
+                                        "tags": ["atomic-note", str(note_data["mode"]).lower(), str(note_data["course"]).lower().replace(" ", "-")],
+                                        "course": note_data["course"],
+                                        "unit": str(note_data["unit"]),
+                                        "semester": note_data["semester"],
+                                        "mode": note_data["mode"],
+                                        "type": "Atomic Note",
+                                        "hub": note_data["hub"],
+                                        "source": note_data["source"],
+                                        "date": note_data["date"],
+                                        "prerequisites": note_data["prerequisites"],
+                                        "source_pages": note_data["source_pages"],
+                                        "generated": True
+                                    }
+                                    yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
+                                    final_markdown = f"---\n{yaml_frontmatter}---\n{body_content}"
+                                    last_candidate_markdown = final_markdown
+
+                                    # 5. Validation Check
+                                    try:
+                                        is_valid, validation_errors = self.validator.validate_structure(
+                                            final_markdown, 
+                                            course=note_data.get("course", ""), 
+                                            mode=note_data.get("mode", "")
+                                        )
+                                    except StructureValidationError as sve:
+                                        logger.warning(f"[AterService] Strict 3-Section Sandwich format violation for [[{current_note_title}]]: {sve}")
+                                        self.set_status(session_id, f"⚠️ Sandwich Violation: Regenerating [[{current_note_title}]]...")
+                                        note_schema.source_context = (
+                                            f"\n\nSYSTEM CONSTRAINT FAILURE: The previous generation violated the strict 3-Section Sandwich format: {sve}. "
+                                            "You MUST output exactly the 3-Section structure:\n"
+                                            "1. '# 1. The Intuitive Analogy' (containing a bolded BLUF and clear industry-specific analogy)\n"
+                                            "2. '# 2. The Core Execution' (containing domain-specific code, LaTeX, or tables)\n"
+                                            "3. '# 3. The Proving Grounds' (containing exactly the ```interactive-quiz block)\n"
+                                            "Do not output any other top-level headings!\n\n"
+                                        ) + (note_schema.source_context or "")
+                                        continue
+
+                                    if not is_valid:
+                                        error_msg = f"Validation failed for [[{current_note_title}]]: {', '.join(validation_errors)}"
+                                        logger.warning(f"[AterService] {error_msg}")
+                                        self.set_status(session_id, f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]...")
+                                        continue
+
+                                    # 5.1 Semantic Validation (Hydra) — tiered blocking
+                                    if self.verifier_agent:
+                                        self.set_status(session_id, f"{phase_prefix} Semantic Validation: [[{current_note_title}]]...")
+                                        await self.governor.get_permit(expected_tokens=2000)
+                                        v_res = await self.verifier_agent.verify(
+                                            note_schema.title, 
+                                            note_schema.mode, 
+                                            final_markdown, 
+                                            note_schema.source_context or "",
+                                            modality=modality
+                                        )
+                                        if not v_res["passed"]:
+                                            failures = v_res["failures"]
+                                            # ── TIERED BLOCKING (v33.1) ──────────────────────────────
+                                            # HARD failures (structural): block deployment, force regen
+                                            HARD_CHECKS = {"clean_output", "feynman_integrity"}
+                                            # SOFT failures (advisory): log warning, allow deployment
+                                            SOFT_CHECKS = {"unique_scenario"}
+
+                                            hard_failures = [f for f in failures if f.get("check") in HARD_CHECKS]
+                                            soft_failures = [f for f in failures if f.get("check") in SOFT_CHECKS]
+
+                                            if soft_failures:
+                                                soft_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in soft_failures])
+                                                logger.warning(f"[Ater Service] Advisory validation (non-blocking): {soft_diag}")
+
+                                            if hard_failures:
+                                                hard_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in hard_failures])
+                                                print(f"[Ater Service] Semantic Validation HARD FAIL: {hard_diag}")
+                                                self.set_status(session_id, f"⚠️ Semantic Healing: [[{current_note_title}]]...")
+                                                if hard_failures:
+                                                    note_schema.source_context = f"\n\nSYSTEM CONSTRAINT: The previous attempt FAILED because: {hard_diag}. Your output MUST NOT contain these issues. Fix instruction: {hard_failures[0]['fix_instruction']}\n\n" + (note_schema.source_context or "")
+                                                continue  # Only hard failures trigger regen
+
+                                    # 6. Deployment
+                                    local_res = self.deployer.deploy_atomic_notes(
+                                        session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
+                                    )
+                                    local_results.extend(local_res)
+                                    if current_note_title not in session.get("processed_notes", []):
+                                        session.setdefault("processed_notes", []).append(current_note_title)
+
+                                    # v33.2: Atomic State Persistence — save progress after every successful deployment
+                                    self._persist_session(session_id, session)
+                                    break # Success, exit generation loop
+
+                                except Exception as e:
+                                    err_str = str(e)
+                                    if "429" in err_str or "rate_limit" in err_str.lower():
+                                        m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_str)
+                                        if m:
+                                            mins = int(m.group(1)) if m.group(1) else 0
+                                            secs = float(m.group(2))
+                                            self.governor.report_error(wait_seconds=mins * 60 + secs + 2.0)
+                                        else:
+                                            self.governor.report_error()
+                                        raise e # Propagate up to confirm_plan
+                                    if generation_attempts >= max_generation_attempts:
+                                        logger.warning(f"[Ater Service] Max attempts/entropy reached for '{current_note_title}': {e}.")
+                                        break
+                                    await asyncio.sleep(5)
+
+                            # Best-effort fallback deployment to guarantee no notes are ever skipped
+                            if current_note_title not in session.get("processed_notes", []):
+                                logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
+
+                                skeleton_body = build_skeleton_note(note_schema, source_snippet, domain, all_titles=all_note_titles)
                                 metadata = {
                                     "title": note_data["title"],
+                                    "tags": ["atomic-note", str(note_data["mode"]).lower(), str(note_data["course"]).lower().replace(" ", "-")],
                                     "course": note_data["course"],
                                     "unit": str(note_data["unit"]),
                                     "semester": note_data["semester"],
@@ -3657,148 +3794,53 @@ generated: true"""
                                     "date": note_data["date"],
                                     "prerequisites": note_data["prerequisites"],
                                     "source_pages": note_data["source_pages"],
-                                    "generated": True
+                                    "generated": True,
+                                    "skeleton_fallback": True
                                 }
                                 yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
-                                final_markdown = f"---\n{yaml_frontmatter}---\n{body_content}"
-                                last_candidate_markdown = final_markdown
-                                
-                                # 5. Validation Check
-                                try:
-                                    is_valid, validation_errors = self.validator.validate_structure(
-                                        final_markdown, 
-                                        course=note_data.get("course", ""), 
-                                        mode=note_data.get("mode", "")
-                                    )
-                                except StructureValidationError as sve:
-                                    logger.warning(f"[AterService] Strict 3-Section Sandwich format violation for [[{current_note_title}]]: {sve}")
-                                    self.set_status(session_id, f"⚠️ Sandwich Violation: Regenerating [[{current_note_title}]]...")
-                                    note_schema.source_context = (
-                                        f"\n\nSYSTEM CONSTRAINT FAILURE: The previous generation violated the strict 3-Section Sandwich format: {sve}. "
-                                        "You MUST output exactly the 3-Section structure:\n"
-                                        "1. '# 1. The Intuitive Analogy' (containing a bolded BLUF and clear industry-specific analogy)\n"
-                                        "2. '# 2. The Core Execution' (containing domain-specific code, LaTeX, or tables)\n"
-                                        "3. '# 3. The Proving Grounds' (containing exactly the ```interactive-quiz block)\n"
-                                        "Do not output any other top-level headings!\n\n"
-                                    ) + (note_schema.source_context or "")
-                                    continue
-                                
-                                if not is_valid:
-                                    error_msg = f"Validation failed for [[{current_note_title}]]: {', '.join(validation_errors)}"
-                                    logger.warning(f"[AterService] {error_msg}")
-                                    self.set_status(session_id, f"⚠️ Healing Failed: Regenerating [[{current_note_title}]]...")
-                                    continue
+                                final_markdown = f"---\n{yaml_frontmatter}---\n{skeleton_body}"
 
-                                # 5.1 Semantic Validation (Hydra) — tiered blocking
-                                if self.verifier_agent:
-                                    self.set_status(session_id, f"{phase_prefix} Semantic Validation: [[{current_note_title}]]...")
-                                    await self.governor.get_permit(expected_tokens=2000)
-                                    v_res = await self.verifier_agent.verify(
-                                        note_schema.title, 
-                                        note_schema.mode, 
-                                        final_markdown, 
-                                        note_schema.source_context or "",
-                                        modality=modality
-                                    )
-                                    if not v_res["passed"]:
-                                        failures = v_res["failures"]
-                                        # ── TIERED BLOCKING (v33.1) ──────────────────────────────
-                                        # HARD failures (structural): block deployment, force regen
-                                        HARD_CHECKS = {"clean_output", "feynman_integrity"}
-                                        # SOFT failures (advisory): log warning, allow deployment
-                                        SOFT_CHECKS = {"unique_scenario"}
-                                        
-                                        hard_failures = [f for f in failures if f.get("check") in HARD_CHECKS]
-                                        soft_failures = [f for f in failures if f.get("check") in SOFT_CHECKS]
-                                        
-                                        if soft_failures:
-                                            soft_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in soft_failures])
-                                            logger.warning(f"[Ater Service] Advisory validation (non-blocking): {soft_diag}")
-                                        
-                                        if hard_failures:
-                                            hard_diag = "; ".join([f"{f['check']}: {f['issue']}" for f in hard_failures])
-                                            print(f"[Ater Service] Semantic Validation HARD FAIL: {hard_diag}")
-                                            self.set_status(session_id, f"⚠️ Semantic Healing: [[{current_note_title}]]...")
-                                            if hard_failures:
-                                                note_schema.source_context = f"\n\nSYSTEM CONSTRAINT: The previous attempt FAILED because: {hard_diag}. Your output MUST NOT contain these issues. Fix instruction: {hard_failures[0]['fix_instruction']}\n\n" + (note_schema.source_context or "")
-                                            continue  # Only hard failures trigger regen
-
-                                # 6. Deployment
-                                local_results = self.deployer.deploy_atomic_notes(
+                                local_res = self.deployer.deploy_atomic_notes(
                                     session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
                                 )
+                                local_results.extend(local_res)
                                 if current_note_title not in session.get("processed_notes", []):
                                     session.setdefault("processed_notes", []).append(current_note_title)
-                                
-                                # v33.2: Atomic State Persistence — save progress after every successful deployment
                                 self._persist_session(session_id, session)
-                                break # Success, exit generation loop
 
-                            except Exception as e:
-                                err_str = str(e)
-                                if "429" in err_str or "rate_limit" in err_str.lower():
-                                    m = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_str)
-                                    if m:
-                                        mins = int(m.group(1)) if m.group(1) else 0
-                                        secs = float(m.group(2))
-                                        self.governor.report_error(wait_seconds=mins * 60 + secs + 2.0)
-                                    else:
-                                        self.governor.report_error()
-                                    raise e # Propagate up to confirm_plan
-                                if generation_attempts >= max_generation_attempts:
-                                    logger.warning(f"[Ater Service] Max attempts/entropy reached for '{current_note_title}': {e}.")
-                                    break
-                                await asyncio.sleep(5)
-                        
-                        # Best-effort fallback deployment to guarantee no notes are ever skipped
-                        if current_note_title not in session.get("processed_notes", []):
-                            logger.warning(f"[Ater Service] Max attempts reached for '{current_note_title}'. Deploying deterministic skeleton fallback.")
-                            
-                            skeleton_body = build_skeleton_note(note_schema, source_snippet, domain, all_titles=all_note_titles)
-                            metadata = {
-                                "title": note_data["title"],
-                                "course": note_data["course"],
-                                "unit": str(note_data["unit"]),
-                                "semester": note_data["semester"],
-                                "mode": note_data["mode"],
-                                "type": "Atomic Note",
-                                "hub": note_data["hub"],
-                                "source": note_data["source"],
-                                "date": note_data["date"],
-                                "prerequisites": note_data["prerequisites"],
-                                "source_pages": note_data["source_pages"],
-                                "generated": True,
-                                "skeleton_fallback": True
-                            }
-                            yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
-                            final_markdown = f"---\n{yaml_frontmatter}---\n{skeleton_body}"
-                            
-                            local_results = self.deployer.deploy_atomic_notes(
-                                session_id, [current_note_title], [final_markdown], plan_obj, session.get("path", "")
-                            )
-                            if current_note_title not in session.get("processed_notes", []):
-                                session.setdefault("processed_notes", []).append(current_note_title)
-                            self._persist_session(session_id, session)
-                        
+
+                        async def paced_process(title):
+                            async with sem:
+                                return await process_single_atomic(title)
+
+                        tasks = [paced_process(title) for title in b_notes]
+                        await asyncio.gather(*tasks)
+                        return True
                     elif b_type == "pq":
-                        current_note_title = b_notes[0]
-                        note_schema_raw = next((n for n in session["metadata"].get("possible_questions", []) if n["title"] == current_note_title), None)
-                        if not note_schema_raw: raise ValueError(f"PQ {current_note_title} not found in plan.")
-                        
-                        from .schemas import NoteSchema
-                        note_schema = NoteSchema(**note_schema_raw)
-                        self.set_status(session_id, f"Synthesizing Master Question Bank: [[{current_note_title}]]...")
-                        
-                        all_note_probes = session.get("all_note_probes", {})
-                        pq_output = self._compile_pq_note(
-                            plan=plan_obj,
-                            note_schema=note_schema,
-                            note_content=NoteContent(markdown_body="Aggregated question bank.", search_keywords=[]),
-                            all_note_probes=all_note_probes,
-                            session_path=session.get("path", "")
-                        )
-                        local_results = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
+                        async def process_single_pq(current_note_title):
+                            nonlocal local_results
+                            note_schema_raw = next((n for n in session["metadata"].get("possible_questions", []) if n["title"] == current_note_title), None)
+                            if not note_schema_raw: raise ValueError(f"PQ {current_note_title} not found in plan.")
 
+                            from .schemas import NoteSchema
+                            note_schema = NoteSchema(**note_schema_raw)
+                            self.set_status(session_id, f"Synthesizing Master Question Bank: [[{current_note_title}]]...")
+
+                            all_note_probes = session.get("all_note_probes", {})
+                            pq_output = self._compile_pq_note(
+                                plan=plan_obj,
+                                note_schema=note_schema,
+                                note_content=NoteContent(markdown_body="Aggregated question bank.", search_keywords=[]),
+                                all_note_probes=all_note_probes,
+                                session_path=session.get("path", "")
+                            )
+                            local_res = self.deployer.deploy_atomic_notes(session_id, [current_note_title], [pq_output], plan_obj, session.get("path", ""))
+                            local_results.extend(local_res)
+
+
+                        tasks = [process_single_pq(title) for title in b_notes]
+                        await asyncio.gather(*tasks)
+                        return True
                     elif b_type == "hub":
                         self.set_status(session_id, "Compiling Unit Mastery Hub...")
                         ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
@@ -3860,7 +3902,7 @@ generated: true"""
                             
                             plan_order = [n.title for n in plan_obj.atomic_notes]
                             sync_hub_connections(
-                                self.vm.get_note_path({"title": canonical_hub_title, "type": "hub"}, session_metadata=session["metadata"]),
+                                self.vm.get_note_path({"title": plan_obj.hub_note.title, "type": "hub"}, session_metadata=session["metadata"]),
                                 unit_dir,
                                 plan_order=plan_order
                             )
@@ -3995,6 +4037,7 @@ generated: true"""
 
         metadata = {
             "title": note_schema.title,
+            "tags": ["possible-questions", str(plan.course).lower().replace(" ", "-")],
             "type": "Possible Questions",
             "course": plan.course,
             "semester": plan.semester,
@@ -4057,6 +4100,7 @@ generated: true"""
         
         metadata = {
             "title": plan.hub_note.title,
+            "tags": ["hub", str(plan.course).lower().replace(" ", "-")],
             "type": "Hub",
             "course": plan.course,
             "semester": plan.semester,

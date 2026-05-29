@@ -238,7 +238,16 @@ class VaultManager:
                 else:
                     cleaned[k] = self._strip_wikilink_quotes(v)
 
-        # LAYER 2: Custom Dumper — force double quotes for [[wikilink]] strings
+        class FlowList(list):
+            pass
+
+        # Wrap tags and source_pages in FlowList to force flow-style matching the audit regex
+        if "tags" in cleaned and isinstance(cleaned["tags"], list):
+            cleaned["tags"] = FlowList(cleaned["tags"])
+        if "source_pages" in cleaned and isinstance(cleaned["source_pages"], list):
+            cleaned["source_pages"] = FlowList(cleaned["source_pages"])
+
+        # LAYER 2: Custom Dumper — force double quotes for [[wikilink]] strings and flow style for tags/source_pages
         class ObsidianDumper(yaml.Dumper):
             pass
 
@@ -247,7 +256,11 @@ class VaultManager:
                 return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
             return dumper.represent_scalar('tag:yaml.org,2002:str', data)
 
+        def _flow_list_representer(dumper, data):
+            return dumper.represent_sequence('tag:yaml.org,2002:seq', data, flow_style=True)
+
         ObsidianDumper.add_representer(str, _str_representer)
+        ObsidianDumper.add_representer(FlowList, _flow_list_representer)
 
         raw = yaml.dump(
             cleaned,

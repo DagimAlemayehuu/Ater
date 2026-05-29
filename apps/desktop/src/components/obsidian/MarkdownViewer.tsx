@@ -337,7 +337,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                             const path = item.path || '';
                             const title = item.title || item._title || getMetaVal(item, 'title') || 'Untitled Note';
                             const cleanTitle = String(title).replace(/\.md$/, '').replace(/_/g, ' ');
-                            const folder = path.split('/').slice(0, -1).join('/') || 'Root';
+                            const folder = path.split(/[/\\]/).slice(0, -1).join('/') || 'Root';
                             return (
                                 <div 
                                     key={i} 

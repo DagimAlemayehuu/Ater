@@ -72,12 +72,8 @@ async def test_sandwich_pipeline_execution():
         prerequisites=[]
     )
     
-    # Setup mock LLM for TheoryAgent
-    # First call: generate_mental_model (returns plain analogy)
-    # Second call: generate_theory_core (returns <CORE_BREAKDOWN>)
     responses = [
-        "Imagine a playground where two friends balance a seesaw. One represents concept A, and the other represents concept B.",
-        "<CORE_PROSE>\nThis walkthrough explains how both concepts play their specific roles step by step.\n</CORE_PROSE>"
+        "<mental_model>Imagine a playground where two friends balance a seesaw. One represents concept A, and the other represents concept B.</mental_model>\n<core_logic>This walkthrough explains how both concepts play their specific roles step by step.</core_logic>"
     ]
     theory_llm = MockLLM(responses)
     theory_agent = TheoryAgent(theory_llm, mock_domain)

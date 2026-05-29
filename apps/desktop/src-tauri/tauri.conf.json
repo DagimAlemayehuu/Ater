@@ -42,8 +42,7 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "../../api/onnx_model",
-      "../../../Ater.md"
+      "../../api/onnx_model"
     ],
     "externalBin": [
       "binaries/ater-api"

@@ -161,4 +161,11 @@ def test_dynamic_proving_grounds_selectors():
     assert len(types_code) == 4
     assert "code" in types_code or "debug" in types_code
 
+    # 3. Test EDUCATION domain mode is allowed andGates CS question types properly
+    types_edu = select_dynamic_question_types("Inclusion Policy", "Qualitative/Definitional", "All students should participate.", 3, mode="EDUCATION")
+    assert len(types_edu) == 3
+    assert "code" not in types_edu
+    assert "debug" not in types_edu
+    assert "trace" not in types_edu
+
 

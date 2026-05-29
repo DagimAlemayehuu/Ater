@@ -1,12 +1,13 @@
 {
     "mcpServers": {
-        "context7": {
+        "stitch": {
             "command": "npx",
             "args": [
                 "-y",
-                "@upstash/context7-mcp",
-                "--api-key",
-                "YOUR_API_KEY"
+                "mcp-remote",
+                "https://stitch.googleapis.com/mcp",
+                "--header",
+                "X-Goog-Api-Key: <STITCH_API_KEY>"
             ]
         },
         "shadcn": {
@@ -16,9 +17,5 @@
                 "mcp"
             ]
         }
-        //other mcp servers
     }
 }
-
-// setup mcp server in  ~/.gemini\antigravity\mcp_config.json
-

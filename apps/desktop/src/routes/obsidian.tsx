@@ -47,6 +47,184 @@ const cleanTitle = (val: any): string => {
   return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
 }
 
+interface FileTreeItemProps {
+  node: FileNode
+  level: number
+  selectedPath: string | null
+  renamingPath: string | null
+  newItemName: string
+  creatingInPath: string | null
+  creatingType: 'file' | 'folder' | null
+  expandedFolders: Set<string>
+  dragOverPath: string | null
+  draggedPath: string | null
+  searchQuery: string
+  onToggleFolder: (path: string) => void
+  onSelectFile: (path: string) => void
+  onStartRename: (path: string, name: string) => void
+  onDelete: (path: string, isFolder: boolean) => void
+  onNewItem: (parentPath: string, type: 'file' | 'folder') => void
+  onRenameChange: (name: string) => void
+  onRenameSubmit: () => void
+  onRenameCancel: () => void
+  onCreateChange: (name: string) => void
+  onCreateSubmit: () => void
+  onCreateCancel: () => void
+  onDragStart: (e: React.DragEvent, path: string) => void
+  onDragOver: (e: React.DragEvent, path: string) => void
+  onDragLeave: (e: React.DragEvent, path: string) => void
+  onDrop: (e: React.DragEvent, targetPath: string | null) => void
+  onDragEnd: () => void
+  renderTree: (nodes: FileNode[], level: number) => React.ReactNode
+}
+
+const FileTreeItem = React.memo(({
+  node,
+  level,
+  selectedPath,
+  renamingPath,
+  newItemName,
+  creatingInPath,
+  creatingType,
+  expandedFolders,
+  dragOverPath,
+  draggedPath,
+  searchQuery,
+  onToggleFolder,
+  onSelectFile,
+  onStartRename,
+  onDelete,
+  onNewItem,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
+  onCreateChange,
+  onCreateSubmit,
+  onCreateCancel,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  renderTree
+}: FileTreeItemProps) => {
+  const isExpanded = expandedFolders.has(node.path) || searchQuery !== ''
+  const isSelected = selectedPath === node.path
+  const isRenaming = renamingPath === node.path
+
+  return (
+    <div 
+     className="flex flex-col"
+     onDragOver={(e) => onDragOver(e, node.path)}
+     onDragLeave={(e) => onDragLeave(e, node.path)}
+     onDragEnd={onDragEnd}
+     onDrop={(e) => onDrop(e, node.path)}
+    >
+      <div 
+        draggable
+        onDragStart={(e) => onDragStart(e, node.path)}
+        onClick={() => node.isFolder ? onToggleFolder(node.path) : onSelectFile(node.path)}
+        className={cn(
+          "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
+          isSelected 
+            ? "bg-[#232326] text-foreground font-semibold shadow-sm" 
+            : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-foreground",
+          dragOverPath === node.path && "bg-[#232326]/50 ring-1 ring-[#242426] ring-inset",
+          draggedPath === node.path && "opacity-40 grayscale"
+        )}
+      >
+        <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+          {node.isFolder ? (
+            <ChevronRight className={cn("w-3 h-3 ", isExpanded ? "rotate-90" : "")} />
+          ) : null}
+        </div>
+        
+        {node.isFolder ? (
+          <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/60")} />
+        ) : (typeof node.path === 'string' && node.path.toLowerCase().endsWith('.pdf')) ? (
+          <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/50")} />
+        ) : (
+          <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/40")} />
+        )}
+        
+        {isRenaming ? (
+          <input
+            autoFocus
+            className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0 text-[12px] outline-none h-5"
+            value={newItemName}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onRenameSubmit()
+              if (e.key === 'Escape') onRenameCancel()
+            }}
+            onBlur={onRenameSubmit}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span className="truncate text-[12px] flex-1">
+            {node.name.replace('.md', '').replace('.pdf', '')}
+          </span>
+        )}
+
+        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0 ">
+          {node.isFolder && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onNewItem(node.path, 'file')
+              }}
+              className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
+              title="New file"
+            >
+              <Plus size={10} />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onStartRename(node.path, node.name)
+            }}
+            className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
+            title="Rename"
+          >
+            <Edit3 size={10} />
+          </button>
+          <button
+            onClick={(e) => onDelete(node.path, node.isFolder)}
+            className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-[8px] "
+            title="Delete"
+          >
+            <Trash2 size={10} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+      {node.isFolder && isExpanded && (
+        <div className="pl-3.5 border-l border-border/10 ml-[9px]">
+          {creatingInPath === node.path && creatingType && (
+            <div className="flex items-center gap-1.5 py-1 px-2">
+              <div className="w-4 h-4 shrink-0" />
+              {creatingType === 'folder' ? <Folder size={12} className="text-muted-foreground/60" /> : <FileText size={12} className="text-muted-foreground/40" />}
+              <input
+                autoFocus
+                className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0 text-[12px] outline-none h-5"
+                placeholder={`New ${creatingType}...`}
+                value={newItemName}
+                onChange={(e) => onCreateChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onCreateSubmit()
+                  if (e.key === 'Escape') onCreateCancel()
+                }}
+                onBlur={onCreateSubmit}
+              />
+            </div>
+          )}
+          {node.children && renderTree(node.children, level + 1)}
+        </div>
+      )}
+    </div>
+  )
+});
+
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
@@ -498,7 +676,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
  
  if (topologies) {
-  const pageName = typeof loadedPath === 'string' ? loadedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '' : ''
+  const pageName = typeof loadedPath === 'string' ? loadedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '' : ''
   if (pageName) {
   const escapedPageName = pageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const regex = new RegExp(`(\\[\\[${escapedPageName}(?:\\|[^\\]]*)?\\]\\])`, 'gi')
@@ -544,7 +722,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   
   const isCurrentAHub = (typeof selectedPath === 'string' && selectedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub';
   if (!cleanHubName && isCurrentAHub) {
-  cleanHubName = typeof selectedPath === 'string' ? selectedPath.split('/').pop()?.replace('.md', '') || '' : '';
+  cleanHubName = typeof selectedPath === 'string' ? selectedPath.split(/[/\\]/).pop()?.replace('.md', '') || '' : '';
  }
 
   if (cleanHubName) {
@@ -645,7 +823,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   
   // Sync 'read' to Hub checkbox (bi-directional)
   if (name.toLowerCase() === 'read') {
-  const label = selectedPath.split('/').pop()?.replace('.md', '') ?? '';
+  const label = selectedPath.split(/[/\\]/).pop()?.replace('.md', '') ?? '';
   await handleToggleCheckbox(label, !!value, selectedPath, true);
 }
 } catch (err) {
@@ -696,7 +874,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
       }
       
       // Expand parent folders
-      const parts = initPath.split('/')
+      const parts = initPath.split(/[/\\]/)
       const toExpand: string[] = []
       let current = ''
       parts.slice(0, -1).forEach(part => {
@@ -842,7 +1020,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
 const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
     const norm = String(path).toLowerCase();
-    const cleanItemName = path.split('/').pop()?.replace('.md', '') || '';
+    const cleanItemName = path.split(/[/\\]/).pop()?.replace('.md', '') || '';
     if (norm.includes('database/courses/')) {
       navigate(`/academic?tab=COURSES&id=${encodeURIComponent(cleanItemName)}`);
       return;
@@ -874,8 +1052,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
           cleanSource = noteSource;
         }
         cleanSource = cleanSource.replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim();
-        const cleanSourceBase = cleanSource.split('/').pop()?.toLowerCase();
-        const pathBase = path.split('/').pop()?.toLowerCase();
+        const cleanSourceBase = cleanSource.split(/[/\\]/).pop()?.toLowerCase();
+        const pathBase = path.split(/[/\\]/).pop()?.toLowerCase();
         if (cleanSourceBase && pathBase && (cleanSourceBase === pathBase || path.toLowerCase().includes(cleanSource.toLowerCase()))) {
           sourceMatches = true;
         }
@@ -1071,7 +1249,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
           newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
         }
         
-        const initialContent = `---\ntitle: ${pageName.split('/').pop()?.replace('.md', '')}\nread: false\n---\n\n# ${pageName.split('/').pop()?.replace('.md', '')}\n`;
+        const initialContent = `---\ntitle: ${pageName.split(/[/\\]/).pop()?.replace('.md', '')}\nread: false\n---\n\n# ${pageName.split(/[/\\]/).pop()?.replace('.md', '')}\n`;
         
         await sidecarApi.createObsidianFile(newPath, initialContent);
         await fetchFiles(); 
@@ -1138,7 +1316,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     })
     const groups: Record<string, any[]> = {}
     pdfFiles.forEach(file => {
-      const parts = file.path.split('/')
+      const parts = file.path.split(/[/\\]/)
       const folder = parts.length > 1 ? parts[parts.length - 2] : 'Root'
       if (!groups[folder]) groups[folder] = []
       groups[folder].push(file)
@@ -1283,7 +1461,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  const root: FileNode[] = []
  
  files.forEach(file => {
- const parts = file.path.split('/').filter(p => p.length > 0)
+ const parts = file.path.split(/[/\\]/).filter(p => p.length > 0)
  let currentLevel = root
  
  parts.forEach((part: string, index: number) => {
@@ -1392,7 +1570,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
    }
   }
 
-  const fileName = sourcePath.split('/').pop()
+  const fileName = sourcePath.split(/[/\\]/).pop()
   if (!fileName) return
   
   const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName
@@ -1407,7 +1585,6 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   try {
    await sidecarApi.moveObsidianItem(sourcePath, newPath)
    await fetchFiles()
-   if (selectedPath === sourcePath) setSelectedPath(newPath)
   } catch (err: any) {
    console.error("Move failed:", err)
    toast.error(`Move failed: ${err.message}`)
@@ -1416,194 +1593,127 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   }
  }
 
- const renderTree = (nodes: FileNode[], level = 0) => {
-  const result = nodes
-  .filter(node => matchesSearch(node, searchQuery))
-  .map(node => {
-   const isExpanded = expandedFolders.has(node.path) || (searchQuery !== '' && matchesSearch(node, searchQuery))
-   const isSelected = selectedPath === node.path
-   const isRenaming = renamingPath === node.path
-   
-   return (
-    <div 
-     key={node.path} 
-     className="flex flex-col"
-     onDragOver={(e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      e.dataTransfer.dropEffect = 'move'
-      
-      if (dragOverPath !== node.path) {
-       setDragOverPath(node.path)
-       
-       // VS Code Style Auto-expand
-       if (expandTimerRef.current) clearTimeout(expandTimerRef.current)
-       if (node.isFolder && !expandedFolders.has(node.path)) {
-        expandTimerRef.current = setTimeout(() => {
-         setExpandedFolders(prev => new Set(prev).add(node.path))
-        }, 700)
-       }
-      }
-     }}
-     onDragLeave={(e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      if (dragOverPath === node.path) {
-       setDragOverPath(null)
-       if (expandTimerRef.current) {
-        clearTimeout(expandTimerRef.current)
-        expandTimerRef.current = null
-       }
-      }
-     }}
-     onDragEnd={() => {
-      setDraggedPath(null)
-      setDragOverPath(null)
-      if (expandTimerRef.current) {
-       clearTimeout(expandTimerRef.current)
-       expandTimerRef.current = null
-      }
-     }}
-     onDrop={(e) => handleDrop(e, node.path)}
-    >
- <div 
- draggable
- onDragStart={(e) => {
- setDraggedPath(node.path)
- e.dataTransfer.setData('text/plain', node.path)
- e.dataTransfer.effectAllowed = 'move'
- // Ensure drag preview looks good
- e.dataTransfer.setDragImage(e.currentTarget, 10, 10)
-}}
- onClick={() => node.isFolder ? toggleFolder(node.path) : selectFile(node.path)}
- className={cn(
-    "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
-    isSelected 
-     ? "bg-[#232326] text-foreground font-semibold shadow-sm" 
-     : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-foreground",
-    dragOverPath === node.path && "bg-[#232326]/50 ring-1 ring-[#242426] ring-inset",
-    draggedPath === node.path && "opacity-40 grayscale"
-   )}
- >
- <div className="w-4 h-4 shrink-0 flex items-center justify-center">
- {node.isFolder ? (
- <ChevronRight className={cn("w-3 h-3 ", isExpanded ? "rotate-90" : "")} />
- ) : null}
- </div>
- 
- {node.isFolder ? (
- <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/60")} />
- ) : (typeof node.path === 'string' && node.path.toLowerCase().endsWith('.pdf')) ? (
- <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/50")} />
- ) : (
- <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/40")} />
- )}
- 
- {isRenaming ? (
- <input
- autoFocus
- className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0 text-[12px] outline-none h-5"
- value={newItemName}
- onChange={(e) => setNewItemName(e.target.value)}
- onKeyDown={(e) => {
- if (e.key === 'Enter') handleRenameItem()
- if (e.key === 'Escape') setRenamingPath(null)
-}}
- onBlur={handleRenameItem}
- onClick={(e) => e.stopPropagation()}
- />
- ) : (
- <span className="truncate text-[12px] flex-1">
- {node.name.replace('.md', '').replace('.pdf', '')}
- </span>
- )}
+ const renderTree = useCallback((nodes: FileNode[], level = 0) => {
+  const result = nodes.map(node => (
+    <FileTreeItem
+      key={node.path}
+      node={node}
+      level={level}
+      selectedPath={selectedPath}
+      renamingPath={renamingPath}
+      newItemName={newItemName}
+      creatingInPath={creatingInPath}
+      creatingType={creatingType}
+      expandedFolders={expandedFolders}
+      dragOverPath={dragOverPath}
+      draggedPath={draggedPath}
+      searchQuery={searchQuery}
+      onToggleFolder={toggleFolder}
+      onSelectFile={selectFile}
+      onStartRename={(path, name) => {
+        setRenamingPath(path);
+        setNewItemName(name);
+      }}
+      onDelete={handleDeleteItem}
+      onNewItem={(path, type) => {
+        setCreatingInPath(path);
+        setCreatingType(type);
+        setNewItemName('');
+        if (!expandedFolders.has(path)) toggleFolder(path);
+      }}
+      onRenameChange={setNewItemName}
+      onRenameSubmit={handleRenameItem}
+      onRenameCancel={() => setRenamingPath(null)}
+      onCreateChange={setNewItemName}
+      onCreateSubmit={handleCreateItem}
+      onCreateCancel={() => {
+        setCreatingInPath(null);
+        setCreatingType(null);
+      }}
+      onDragStart={(e, path) => {
+        setDraggedPath(path);
+        e.dataTransfer.setData('text/plain', path);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setDragImage(e.currentTarget, 10, 10);
+      }}
+      onDragOver={(e, path) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverPath !== path) {
+          setDragOverPath(path);
+          if (expandTimerRef.current) clearTimeout(expandTimerRef.current);
+          const targetNode = files.find(f => f.path === path);
+          if (targetNode?.is_dir && !expandedFolders.has(path)) {
+            expandTimerRef.current = setTimeout(() => {
+              setExpandedFolders(prev => new Set(prev).add(path));
+            }, 700);
+          }
+        }
+      }}
+      onDragLeave={(e, path) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dragOverPath === path) {
+          setDragOverPath(null);
+          if (expandTimerRef.current) {
+            clearTimeout(expandTimerRef.current);
+            expandTimerRef.current = null;
+          }
+        }
+      }}
+      onDrop={handleDrop}
+      onDragEnd={() => {
+        setDraggedPath(null);
+        setDragOverPath(null);
+        if (expandTimerRef.current) {
+          clearTimeout(expandTimerRef.current);
+          expandTimerRef.current = null;
+        }
+      }}
+      renderTree={renderTree}
+    />
+  ));
 
- <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0 ">
- {node.isFolder && (
- <button
- onClick={(e) => {
- e.stopPropagation()
- setCreatingInPath(node.path)
- setCreatingType('file')
- setNewItemName('')
- if (!isExpanded) toggleFolder(node.path)
-}}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
- title="New file"
- >
- <Plus size={10} />
- </button>
- )}
- <button
- onClick={(e) => {
- e.stopPropagation()
- setRenamingPath(node.path)
- setNewItemName(node.name)
-}}
- className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
- title="Rename"
- >
- <Edit3 size={10} />
- </button>
- <button
- onClick={(e) => handleDeleteItem(node.path, node.isFolder)}
- className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-[8px] "
- title="Delete"
- >
- <Trash2 size={10} strokeWidth={2.5} />
- </button>
- </div>
- </div>
- {node.isFolder && isExpanded && (
- <div className="pl-3.5 border-l border-border/10 ml-[9px]">
- {creatingInPath === node.path && (
- <div className="flex items-center gap-1.5 py-1 px-2">
- <div className="w-4 h-4 shrink-0" />
- {creatingType === 'folder' ? <Folder size={12} className="text-muted-foreground/60" /> : <FileText size={12} className="text-muted-foreground/40" />}
- <input
- autoFocus
- className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0 text-[12px] outline-none h-5"
- placeholder={`New ${creatingType}...`}
- value={newItemName}
- onChange={(e) => setNewItemName(e.target.value)}
- onKeyDown={(e) => {
- if (e.key === 'Enter') handleCreateItem()
- if (e.key === 'Escape') {setCreatingInPath(null); setCreatingType(null);}
-}}
- onBlur={handleCreateItem}
- />
- </div>
- )}
- {node.children && renderTree(node.children, level + 1)}
- </div>
- )}
- </div>
- )
-})
+  if (level === 0 && creatingInPath === null && creatingType) {
+    result.unshift(
+      <div key="new-item-root" className="flex items-center gap-2 py-1.5 px-6">
+        {creatingType === 'folder' ? <Folder size={14} className="text-muted-foreground" /> : <FileText size={14} className="text-muted-foreground" />}
+        <input
+          autoFocus
+          className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0.5 text-[13px] outline-none"
+          placeholder={`New ${creatingType}...`}
+          value={newItemName}
+          onChange={(e) => setNewItemName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleCreateItem()
+            if (e.key === 'Escape') {setCreatingInPath(null); setCreatingType(null);}
+          }}
+          onBlur={handleCreateItem}
+        />
+      </div>
+    );
+  }
 
- // Root level creation
- if (level === 0 && creatingInPath === null && creatingType) {
- result.unshift(
- <div key="new-item-root" className="flex items-center gap-2 py-1.5 px-6">
- {creatingType === 'folder' ? <Folder size={14} className="text-muted-foreground" /> : <FileText size={14} className="text-muted-foreground" />}
- <input
- autoFocus
- className="flex-1 bg-background border border-primary rounded-[8px] px-1 py-0.5 text-[13px] outline-none"
- placeholder={`New ${creatingType}...`}
- value={newItemName}
- onChange={(e) => setNewItemName(e.target.value)}
- onKeyDown={(e) => {
- if (e.key === 'Enter') handleCreateItem()
- if (e.key === 'Escape') {setCreatingInPath(null); setCreatingType(null);}
-}}
- onBlur={handleCreateItem}
- />
- </div>
- )
-}
-
- return result
-}
+  return result;
+}, [
+  selectedPath,
+  renamingPath,
+  newItemName,
+  creatingInPath,
+  creatingType,
+  expandedFolders,
+  dragOverPath,
+  draggedPath,
+  searchQuery,
+  toggleFolder,
+  selectFile,
+  handleDeleteItem,
+  handleRenameItem,
+  handleCreateItem,
+  handleDrop,
+  files
+]);
 
   return (
   <div className="flex flex-row h-full w-full select-none bg-transparent gap-3 overflow-hidden font-sans relative">
@@ -1859,7 +1969,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? (
               <div className="editor-content px-2 mx-auto max-w-[95%] w-full">
                 <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
-                  {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split('/').pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
+                  {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
                 </h1>
 
                 {/* Metadata Pills */}
@@ -1928,7 +2038,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   onNavigate={handleWikiLinkClick}
                   onFinish={async () => {
                     if (selectedPath) {
-                      const label = selectedPath.split('/').pop()?.replace('.md', '') ?? '';
+                      const label = selectedPath.split(/[/\\]/).pop()?.replace('.md', '') ?? '';
                       await handleToggleCheckbox(label, true, selectedPath);
                     }
                   }}
@@ -1950,7 +2060,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   <PdfViewer 
                     ref={pdfRef}
                     path={selectedPath} 
-                    title={selectedPath.split('/').pop() || ''} 
+                    title={selectedPath.split(/[/\\]/).pop() || ''} 
                     initialPage={selectedPage} 
                     filterPages={selectedFilteredPages}
                     onStateChange={handlePdfStateChange}
@@ -2006,7 +2116,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
           {(() => {
             const hubName = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.HUB || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course
             if (!hubName) return null
-            const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split('/').pop() : ''
+            const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split(/[/\\]/).pop() : ''
             return (
               <div className="p-4 pb-1 shrink-0">
                 <div className="text-[11px] text-[#a1a1aa] uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>

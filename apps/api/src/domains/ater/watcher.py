@@ -36,12 +36,56 @@ class InboxHandler(FileSystemEventHandler):
         self.logger = watcher_logger
 
     def on_created(self, event):
+        if event.is_directory:
+            return
+        src_path = Path(event.src_path)
+        if "ater_queue.db" in src_path.name or src_path.name.startswith('.'):
+            return
         self._handle_event(event)
 
+    def on_deleted(self, event):
+        if event.is_directory:
+            return
+        src_path = Path(event.src_path)
+        if "ater_queue.db" in src_path.name or src_path.name.startswith('.'):
+            return
+        self.logger.info(f"File deleted from Inbox: {src_path.name}. Removing from queue.")
+        self.manager._mark_done(str(src_path.absolute()))
+
     def on_moved(self, event):
-        self._handle_event(event, is_move=True)
+        if event.is_directory:
+            return
+        src_path = Path(event.src_path)
+        dest_path = Path(event.dest_path)
+        
+        if "ater_queue.db" in src_path.name or "ater_queue.db" in dest_path.name or src_path.name.startswith('.'):
+            return
+        
+        # Always remove the old source from the queue
+        self.manager._mark_done(str(src_path.absolute()))
+        
+        try:
+            inbox_dir = self.manager.inbox_path.resolve()
+            abs_dest = dest_path.resolve()
+            is_inside = False
+            try:
+                is_inside = abs_dest.is_relative_to(inbox_dir)
+            except AttributeError:
+                is_inside = str(abs_dest).replace("\\", "/").lower().startswith(str(inbox_dir).replace("\\", "/").lower())
+                
+            if is_inside:
+                self._handle_event(event, is_move=True)
+            else:
+                self.logger.info(f"File moved out of Inbox: {src_path.name}")
+        except Exception as e:
+            self.logger.warning(f"Error checking destination path for move: {e}")
 
     def on_modified(self, event):
+        if event.is_directory:
+            return
+        src_path = Path(event.src_path)
+        if "ater_queue.db" in src_path.name or src_path.name.startswith('.'):
+            return
         self._handle_event(event)
 
     def _handle_event(self, event, is_move=False):
@@ -49,6 +93,9 @@ class InboxHandler(FileSystemEventHandler):
             return
         
         src_path = Path(event.dest_path) if is_move else Path(event.src_path)
+        if "ater_queue.db" in src_path.name or src_path.name.startswith('.'):
+            return
+        
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
         # Absolute check to prevent re-processing generated files
@@ -122,7 +169,12 @@ class AterQueueManager:
 
     def _init_db(self):
         """Initializes the database schema and handles migrations."""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except sqlite3.OperationalError:
+            pass
         
         # Core Queue Table
         conn.execute("""
@@ -143,7 +195,19 @@ class AterQueueManager:
         
         # Telemetry tables
         conn.execute("CREATE TABLE IF NOT EXISTS practice_log (id TEXT PRIMARY KEY, note_id TEXT, question_type TEXT, is_correct BOOLEAN, time_taken_seconds INTEGER, timestamp TEXT)")
-        conn.execute("CREATE TABLE IF NOT EXISTS note_srs (note_id TEXT PRIMARY KEY, review_count INTEGER DEFAULT 0, consecutive_correct INTEGER DEFAULT 0, easiness_factor REAL DEFAULT 2.5, interval_days INTEGER DEFAULT 0, next_review_date TEXT)")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS note_srs (
+                note_id TEXT PRIMARY KEY, 
+                review_count INTEGER DEFAULT 0, 
+                consecutive_correct INTEGER DEFAULT 0, 
+                stability REAL DEFAULT 0.0, 
+                difficulty REAL DEFAULT 0.0, 
+                reps INTEGER DEFAULT 0,
+                easiness_factor REAL DEFAULT 2.5, 
+                interval_days INTEGER DEFAULT 0, 
+                next_review_date TEXT
+            )
+        """)
         conn.execute("CREATE TABLE IF NOT EXISTS study_telemetry (id TEXT PRIMARY KEY, note_path TEXT, duration_seconds INTEGER, timestamp TEXT)")
         conn.execute("CREATE TABLE IF NOT EXISTS study_sessions (id TEXT PRIMARY KEY, hub_id TEXT, duration_seconds INTEGER, timestamp TEXT, mode TEXT)")
 
@@ -155,8 +219,18 @@ class AterQueueManager:
 
         if version < 1:
             watcher_logger.info("[Migration] Upgrading schema to v1...")
-            # We already have the v1 tables created above (CREATE TABLE IF NOT EXISTS)
             cursor.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '1')")
+            conn.commit()
+
+        if version < 2:
+            watcher_logger.info("[Migration] Upgrading schema to v2: Adding FSRS parameters to note_srs...")
+            try:
+                cursor.execute("ALTER TABLE note_srs ADD COLUMN stability REAL DEFAULT 0.0")
+                cursor.execute("ALTER TABLE note_srs ADD COLUMN difficulty REAL DEFAULT 0.0")
+                cursor.execute("ALTER TABLE note_srs ADD COLUMN reps INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass
+            cursor.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '2')")
             conn.commit()
 
         conn.close()
@@ -166,14 +240,24 @@ class AterQueueManager:
         if not Path(self.db_path).exists() or Path(self.db_path).stat().st_size == 0:
             self._init_db()
             
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except sqlite3.OperationalError:
+            pass
         # Verify table exists to be completely bulletproof
         try:
             conn.execute("SELECT 1 FROM queue LIMIT 1")
         except sqlite3.OperationalError:
             conn.close()
             self._init_db()
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            try:
+                conn.execute("PRAGMA journal_mode=WAL;")
+                conn.execute("PRAGMA synchronous=NORMAL;")
+            except sqlite3.OperationalError:
+                pass
             
         return conn
 
@@ -360,12 +444,13 @@ class AterQueueManager:
                 finally:
                     conn.close()
 
-                for (file_path_str,) in pending:
-                    if file_path_str not in self.active_tasks:
-                        task = asyncio.create_task(self.process_file(file_path_str))
-                        self.active_tasks[file_path_str] = task
-                        watcher_logger.info(f"Spawned parallel worker for {Path(file_path_str).name}")
-
+                # Process strictly one PDF/document at a time in the background worker
+                if not self.active_tasks and pending:
+                    file_path_str = pending[0][0]
+                    task = asyncio.create_task(self.process_file(file_path_str))
+                    self.active_tasks[file_path_str] = task
+                    watcher_logger.info(f"Spawned sequential worker for {Path(file_path_str).name}")
+                
                 self.status = "processing" if self.active_tasks else "idle"
                 await asyncio.sleep(5)
 
@@ -408,6 +493,12 @@ class AterQueueManager:
                 conn.close()
             
             watcher_logger.info(f"Worker started for {path.name}")
+            
+            # Clear previous file state to prevent leaks in UI during detection/planning
+            self.planned_batches = []
+            self.total_batches = 0
+            self.current_batch = 0
+            self.processed_notes = []
             
             # Check for checkpoint
             session_id, temp_batch, total, curriculum = self._get_checkpoint(file_path_str)
@@ -595,8 +686,10 @@ class AterQueueManager:
         # In Hyperdrive mode, current_batch stays 0 until all notes complete.
         # Derive a live "notes done" count from processed_notes for the progress bar.
         displayed_batch = self.current_batch
+        displayed_total = self.total_batches
         if self.planned_batches and len(self.processed_notes) > displayed_batch:
             displayed_batch = len(self.processed_notes)
+            displayed_total = total_notes_count
 
         return {
             "status": self.status,
@@ -604,7 +697,7 @@ class AterQueueManager:
             "active_files": active_files,
             "current_file": current_file,
             "current_batch": displayed_batch,
-            "total_batches": self.total_batches,
+            "total_batches": displayed_total,
             "planned_batches": self.planned_batches,
             "total_notes_count": total_notes_count,
             "last_action": display_action,

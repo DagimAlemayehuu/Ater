@@ -35,7 +35,7 @@ const EVENT_COLORS: Record<string, { bg: string; border: string; text: string; d
 };
 
 const getEventColor = (type: string) => EVENT_COLORS[type] || EVENT_COLORS['Note Visit'];
-const cleanTitle = (title: string) => title.replace(/\.(md|pdf)$/, '').split('/').pop() || title;
+const cleanTitle = (title: string) => title.replace(/\.(md|pdf)$/, '').split(/[/\\]/).pop() || title;
 
 const safeParseDate = (dateStr: any): Date | null => {
   if (!dateStr) return null;

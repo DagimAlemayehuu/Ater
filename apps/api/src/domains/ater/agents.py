@@ -112,6 +112,7 @@ FEYNMAN_MAPPINGS = {
     "LAW-CASE": {"h1": "The Common Sense Behind the Rule", "h2": "The Legal Precedent & Jargon"},
     "PHILOSOPHY": {"h1": "The Core Argument in Plain English", "h2": "The Formal Logic & Counter-Arguments"},
     "HIST-CATALYST": {"h1": "The Human Story Behind the Event", "h2": "The Historical Analysis & Impact"},
+    "EDUCATION": {"h1": "How Participation Works", "h2": "The Inclusion Rules"},
 }
 
 def apply_feynman_consistency(target_matrix: dict):
@@ -542,6 +543,63 @@ DYNAMIC_DOMAIN_MATRIX = {
             "l3_law": "L3 MUST predict a philosophical shift based on societal changes.",
             "prohibited_anti_patterns": "Ignoring the chronological evolution of ideas."
         }
+    },
+    "EDUCATION": {
+        "Quantitative": {
+            "persona": "Educational Statistician",
+            "h1": "How Participation Works",
+            "h2": "The Inclusion Rules",
+            "artifact": "Inclusion Metrics Data Table",
+            "walkthrough": "Participation Ratio Calculation",
+            "type": "Markdown Table",
+            "sanity_check": "Focus on enrollment rates, parity indices, or resource distribution. All calculations must be grounded in source text parameters.",
+            "l3_law": "L3 MUST be a calculation of a parity index (e.g. GPI) or allocation ratio.",
+            "prohibited_anti_patterns": "Avoid general pedagogical discussions. Do not use code. Focus purely on calculations/data tables."
+        },
+        "Qualitative/Definitional": {
+            "persona": "Inclusive Pedagogue",
+            "h1": "How Participation Works",
+            "h2": "The Inclusion Rules",
+            "artifact": "Inclusion Framework Matrix",
+            "walkthrough": "Policy Application Scenario",
+            "type": "Markdown Table",
+            "sanity_check": "Stay inside education, inclusion, accessibility, stakeholders, classroom/community participation, and source-defined roles. Do not use medicine or physics unless explicitly present in the source.",
+            "l3_law": "L3 MUST be an applied inclusion scenario where the learner identifies who is excluded, why, and what source-grounded action fixes it.",
+            "prohibited_anti_patterns": "STRICTLY FORBIDDEN from using mathematical formulas or quantitative data."
+        },
+        "Procedural": {
+            "persona": "Special Education Coordinator",
+            "h1": "How Participation Works",
+            "h2": "The Inclusion Rules",
+            "artifact": "IEP/Inclusion Action Pipeline",
+            "walkthrough": "Accommodation Step Sequence",
+            "type": "Basic Mermaid flowchart (graph TD)",
+            "sanity_check": "Focus on the step-by-step procedure of implementing accommodations, diagnostic routing, or classroom interventions.",
+            "l3_law": "L3 MUST identify a critical process failure or missing accommodation step in a classroom flow.",
+            "prohibited_anti_patterns": "Abstract educational philosophy without a concrete procedural flowchart."
+        },
+        "Comparative": {
+            "persona": "Comparative Educator",
+            "h1": "How Participation Works",
+            "h2": "The Inclusion Rules",
+            "artifact": "Educational Paradigm Matrix",
+            "walkthrough": "Model Contrast Analysis",
+            "type": "Markdown Table",
+            "sanity_check": "Compare distinct educational paradigms, integration vs. inclusion, or different stakeholder responsibilities.",
+            "l3_law": "L3 MUST contrast two educational approaches and select the optimal one for a specific student profile.",
+            "prohibited_anti_patterns": "Describing a single model without direct, side-by-side contrast."
+        },
+        "Causal/Historical": {
+            "persona": "History of Education Scholar",
+            "h1": "How Participation Works",
+            "h2": "The Inclusion Rules",
+            "artifact": "Inclusion Legislation Timeline",
+            "walkthrough": "Policy Evolution Narrative",
+            "type": "Basic Mermaid flowchart (graph LR)",
+            "sanity_check": "Focus on the causal timeline of key international frameworks (e.g., Salamanca, UN CRDP) or historical shifts in inclusion models.",
+            "l3_law": "L3 MUST trace how a historical paradigm shift directly informs a modern classroom rule.",
+            "prohibited_anti_patterns": "Non-chronological history or listing events without causal links."
+        }
     }
 }
 
@@ -937,7 +995,7 @@ UNIVERSAL_MODALITY_MATRIX = {
     "Qualitative/Definitional": {
         "persona_suffix": "Feynman Educator and Conceptual Analyst",
         "h1": "How It Works",
-        "h2": "Definition & Boundary Conditions",
+        "h2": "Key Details",
         "artifact": "Concept Mapping Table",
         "type": "Markdown Table",
         "sanity_check": "Focus on the 'Why' and the conceptual foundations. Avoid complex math.",
@@ -946,8 +1004,8 @@ UNIVERSAL_MODALITY_MATRIX = {
     },
     "Procedural": {
         "persona_suffix": "Systems and Process Engineer",
-        "h1": "Process & Pipeline Flow",
-        "h2": "Operational Steps",
+        "h1": "How the Process Works",
+        "h2": "Process Details",
         "artifact": "Execution Flowchart",
         "type": "Basic Mermaid flowchart (graph TD)",
         "sanity_check": "Focus on the logical sequence of operations, transitions, and step execution.",
@@ -956,8 +1014,8 @@ UNIVERSAL_MODALITY_MATRIX = {
     },
     "Comparative": {
         "persona_suffix": "Structural Analyst and Comparative Expert",
-        "h1": "Concept Analysis & Contrast",
-        "h2": "Trade-offs & Comparisons",
+        "h1": "How the Concepts Compare",
+        "h2": "Comparison Details",
         "artifact": "Feature Parity Matrix",
         "type": "Markdown Table (comparing/contrasting at least 2 distinct concepts)",
         "sanity_check": "Ensure a direct contrast is maintained between concepts. Avoid describing them in isolation.",
@@ -966,8 +1024,8 @@ UNIVERSAL_MODALITY_MATRIX = {
     },
     "Causal/Historical": {
         "persona_suffix": "Causal Analyst and Lineage Expert",
-        "h1": "Causal & Chronological Progression",
-        "h2": "Evolutionary Chain & Timelines",
+        "h1": "How the Story Unfolds",
+        "h2": "Causal Details",
         "artifact": "Causal Timeline Flowchart",
         "type": "Basic Mermaid flowchart (graph LR)",
         "sanity_check": "Focus on cascading events over time and cause-and-effect transitions.",
@@ -1336,42 +1394,9 @@ class TheoryAgent:
         )
 
     async def generate_mental_model(self, note_schema, source_text: str, academic_level: str, used_scenarios: list = None) -> str:
-        """
-        The 'Analogy Specialist' pass. 
-        Focus: Simple mental model, perfect core idea, industry-specific.
-        SOURCE-GROUNDED: Uses only the injected source text.
-        """
+        """Fallback compatibility signature."""
         title_readable = note_schema.title.replace("_", " ")
-        persona = self.domain.get("persona", "Subject Matter Expert")
-        
-        sys_prompt = f"""You are a world-class Pedagogue and Expert in {persona}.
-Your ONLY job is to create ONE perfect, vivid analogy for {title_readable} based strictly on the source text.
-
-S-TIER ANALOGY LAWS:
-1. STRUCTURAL DIVERSITY: Use a mechanism specific to your field. 
-   - If SOCIAL/POLITICAL: Use architectural (foundations, load-bearing walls), biological (enzymes, ecosystems), or logistical (supply chains, sorting hubs).
-   - If TECHNICAL/SCIENCE: Use circuits, chemical catalysts, or distributed networks.
-   - Prohibited: Gears, clockwork, community centers, coffee shops, burger stands.
-2. GROUNDING: The analogy MUST map ≥2 structural components of the concept from the source.
-3. COGNITIVE SIMPLICITY & DE-COMPLEXIFYING: A smart 12-year-old must understand it in one read. Keep it extremely simple, concrete, and grounded in physical objects (like phones, water pipes, kitchen tools, lego bricks) rather than abstract jargon. Keep it extremely intuitive for maximum retention.
-
-SOURCE TEXT:
-{source_text[:1200]}
-
-OUTPUT: Exactly 2-3 sentences of a vivid, non-gear analogy. Start the story directly."""
-
-        for attempt in range(2):
-            try:
-                await governor.get_permit(expected_tokens=600)
-                res = await self.llm.ainvoke([("system", sys_prompt), ("human", f"Generate the perfect S-Tier mental model for {title_readable}.")])
-                candidate = res.content.strip()
-                if self._has_forbidden_medical_drift(candidate, source_text):
-                    return self._fallback_mental_model(title_readable, source_text)
-                return candidate
-            except Exception as e:
-                if attempt == 1:
-                    return self._fallback_mental_model(title_readable, source_text)
-                await asyncio.sleep(governor._rpm_wait_seconds(time.time()) or 1)
+        return self._fallback_mental_model(title_readable, source_text)
 
     @staticmethod
     def _extract_xml(tag: str, text: str) -> str:
@@ -1396,55 +1421,64 @@ OUTPUT: Exactly 2-3 sentences of a vivid, non-gear analogy. Start the story dire
 
     async def generate_theory_core(self, note_schema, source_text: str, all_concepts: str, academic_level: str) -> Dict[str, str]:
         """
-        The 'Deep Feynman' pass — v33.0 SOURCE-INJECTION MODEL.
-        Optimized to focus entirely on core logic prose.
+        The unified 'Deep Feynman' pass.
+        Runs exactly ONE highly optimized 2B-safe XML-tagged LLM call.
         """
         title_readable = note_schema.title.replace("_", " ")
-        domain_h1 = self.domain.get("h1", "The Core Logic Explained")
-
-        # --- PASS 0: Mental Model (Analogy) ---
-        plain_english = await self.generate_mental_model(note_schema, source_text, academic_level)
-        if not plain_english or len(plain_english.strip()) < 30:
-            plain_english = f"[{title_readable}] acts as a fundamental structural mechanism within its domain, dictating how related components interact and defining the boundaries of what is possible in the system."
-
-        # --- PASS A: Theory Core (Core Breakdown) ---
         persona = self.domain.get("persona", "Master Teacher")
         sanity_check = self.domain.get("sanity_check", "")
-        domain_rules_block = f"\n\nDOMAIN RULES — apply these as hard constraints ({persona}):\n{sanity_check}" if sanity_check else ""
+        
+        domain_rules = f"DOMAIN RULES — apply these as hard constraints:\n{sanity_check}" if sanity_check else ""
+        sys_prompt = f"""You are a world-class Pedagogue and Expert in {persona}.
+Your task is to explain "{title_readable}" based ONLY on the source text.
 
-        sys_prompt_a = f"""You are an expert {persona}. Your task is to explain "{title_readable}" based ONLY on the source text.
+Your output must consist of exactly two XML blocks:
+1. <mental_model>
+Vivid, field-specific real-world analogy. Explain using concrete physical mechanisms that a 12-year-old can see, touch, or visualize. Ground this in relatable physical objects (e.g. water pipes, phone networks, lego bricks, mailboxes). Map at least two structural components of the concept from the source text. Keep it 2-3 sentences. Do NOT use abstract clichés (coffee shops, lemonade stands, pizza, burger stands, clockwork, gears).
+</mental_model>
 
-LAWS:
-1. CONTINUOUS PROSE: No bullet points. No lists.
-2. RAW OUTPUT: Do not use markdown headers or wikilinks.
-3. STRUCTURE:
-   - Paragraph 1: Define "{title_readable}" exactly as the source does.
-   - Paragraph 2: Explain the underlying mechanism or logic step-by-step.
-   - Paragraph 3: Explain the real-world significance or consequence.
-4. JARGON-FREE SIMPLICITY: Explain everything in ultra-clear, simple, and direct language. Avoid unnecessary academic jargon. Assume the reader is a beginner who knows nothing about the subject. De-complexify the explanations so they are incredibly easy to understand, reducing reading time and maximizing retention.
+2. <core_logic>
+3-5 sentences of continuous plain English explaining WHAT the concept is, WHY it exists, and HOW it operates step-by-step.
+Assume the reader is a smart 12-year-old (ELIF12). Explain using extremely clear, active-voice prose. Avoid dry academic jargon or passive definitions.
+No bullet points. No lists. No markdown headers.
+</core_logic>
 
-SOURCE TEXT:
+===SOURCE TEXT===
 {source_text[:2500]}
+===END SOURCE TEXT===
 
-OUTPUT: Exactly 3 paragraphs of high-fidelity prose inside <CORE_PROSE> tags."""
+{domain_rules}
 
+OUTPUT SPECIFICATION: Output ONLY the two XML blocks <mental_model> and <core_logic>. Do not output any markdown headers, introductory text, or other wrappers."""
+
+        plain_english = ""
         detailed_breakdown = ""
 
-        # Execute Pass A
+        # Execute unified Pass
         for attempt in range(2):
             try:
-                await governor.get_permit(expected_tokens=1000)
-                res_a = await self.llm.ainvoke([
-                    ("system", sys_prompt_a),
-                    ("human", f"Generate CORE_PROSE for: {title_readable}")
+                await governor.get_permit(expected_tokens=1500)
+                res = await self.llm.ainvoke([
+                    ("system", sys_prompt),
+                    ("human", f"Generate XML nodes for: {title_readable}")
                 ])
-                detailed_breakdown = TheoryAgent._extract_xml("CORE_PROSE", res_a.content)
-                if detailed_breakdown and len(detailed_breakdown.strip()) >= 30:
+                content = res.content.strip()
+                
+                plain_english = TheoryAgent._extract_xml("mental_model", content)
+                detailed_breakdown = TheoryAgent._extract_xml("core_logic", content)
+                
+                if plain_english and detailed_breakdown and len(detailed_breakdown.strip()) >= 30:
                     break
-            except Exception:
-                if attempt == 1: raise ValueError("CORE_PROSE failed.")
+            except Exception as e:
+                print(f"[TheoryAgent] Unified pass attempt {attempt+1} failed: {e}")
+                if attempt == 1: 
+                    raise ValueError("Theory core XML generation failed.")
                 await asyncio.sleep(2)
 
+        # Fallback values if XML parsing failed
+        if not plain_english or self._has_forbidden_medical_drift(plain_english, source_text):
+            plain_english = self._fallback_mental_model(title_readable, source_text)
+            
         if not detailed_breakdown:
             clean_source = re.sub(r"\[PAGE\s+\d+\]|\[ARCHITECT SOURCE HINT\]", "", source_text or "", flags=re.IGNORECASE)
             sentences = [
@@ -1507,101 +1541,106 @@ class PractitionerAgent:
         artifact_type_hint: str = "",
     ) -> Dict[str, Any]:
         """
-        Structured structured-output pass.
-        Combines:
-        1. Academic/formal prose description (formal_model).
-        2. Markdown Table / Mermaid / LaTeX Artifact.
-        3. 3 Limitations Bullet Points.
-        All compiled into a single Pydantic-enforced response.
-        NO quiz questions are generated by PractitionerAgent anymore.
+        Specialized lightweight XML prompt pass.
+        Returns:
+        1. <formal_model>: Continuous textbook prose.
+        2. <artifact_data>: Simple transitions (A -> B) or key-value properties.
+        3. <limitations>: Core edge cases.
+        All compiled programmatically afterwards.
         """
         title_readable = note_title.replace("_", " ")
         artifact_type = artifact_type_hint or "Markdown Table"
         
-        sys_prompt = f"""You are an Expert Systems Breaker, Technical Engineer, and Formal Analyst in {persona}.
-Generate a formal textbook explanation, high-fidelity pedagogical artifact, and exactly 3 specific failure states for "{title_readable}".
+        sanity_check_law = f"SANITY CHECK LAW — enforce strictly:\n{sanity_check}" if sanity_check else ""
+        sys_prompt = f"""You are an Expert Technical Engineer and Formal Analyst in {persona}.
+Your task is to generate the formal explanation and the raw data representing the pedagogical artifact for "{title_readable}" based strictly on the source text.
 
-===SOURCE TEXT (use this for all data/values/technical definitions)===
-{source_text}
+Your output must consist of exactly three XML blocks:
+1. <formal_model>
+Generate 3-5 sentences of continuous formal prose, academic definitions, and constraints. Keep it precise, rigorous, and easy to grasp for beginners. Avoid repeat phrasing from the theory body. Do NOT use bullet points or lists.
+</formal_model>
+
+2. <artifact_data>
+MANDATORY: Generate raw structured data for the concept. You are STRICTLY FORBIDDEN from leaving this block empty. Every single note MUST have an artifact representation.
+- If a process, state flow, algorithm, or protocol, list node transitions using arrows:
+  [Node Name] -> [Node Name]
+  [Node Name] -> [Node Name]
+- If a curve, matrix, ledger, comparison, or properties list, output properties as simple key-value lines. Provide the actual category on the left, and the actual text detail on the right. Do NOT use literal placeholders like "Property Name", "Key", "Value", or "Actual Property Name" (e.g. write "Definition: [the actual concept definition]"):
+  Key Aspect: Specific Detail from text
+  Key Aspect: Specific Detail from text
+- If mathematical derivation, list formula equations:
+  Formula 1: [Plain LaTeX equation]
+  Formula 2: [Plain LaTeX equation]
+Never leave this empty. Always represent the core structural mechanics of "{title_readable}" visually/structurally.
+</artifact_data>
+
+3. <limitations>
+Exactly 3 bullet points, each describing a specific, source-grounded failure state or edge case for "{title_readable}".
+Format: **Label**: Explanation.
+</limitations>
+
+===SOURCE TEXT===
+{source_text[:2000]}
 ===END SOURCE TEXT===
 
-===CORE THEORY===
-{theory_body}
-===END CORE THEORY===
+{sanity_check_law}
 
-===MENTAL MODEL / ANALOGY (frame your failure states around this analogy if appropriate to ensure a unified theme)===
-{plain_english}
-===END MENTAL MODEL / ANALOGY===
+OUTPUT SPECIFICATION: Output ONLY the three XML blocks <formal_model>, <artifact_data>, and <limitations>. Do not output any introductory or wrapper text."""
 
-SANITY CHECK LAW:
-{sanity_check}
+        formal_model = ""
+        artifact_data = ""
+        limitations = ""
 
-LAWS FOR FORMAL TEXTBOOK EXPLANATION (formal_model):
-- Generate exactly 3-5 sentences of continuous formal prose, academic definitions, constraints, boundary conditions.
-- Keep the explanation very clean, simple, and easy to grasp for beginners.
-- LINGUISTIC DIVERSITY: Do NOT repeat words or phrases from the "CORE THEORY" section provided above. Phrasing MUST be distinct and more academic.
-- Keep the tone academic, precise, and rigorous.
-- Bullet points or lists are strictly forbidden. Use continuous prose only.
-- Ground this strictly in the source text. Do not introduce outside concepts.
-
-LAWS FOR PEDAGOGICAL ARTIFACT (artifact_content):
-1. SOURCE GROUNDING: All numbers, labels, and values in the artifact MUST come from the SOURCE TEXT.
-2. ARTIFACT TYPE: Generate a {artifact_type} — this is domain-mandated.
-3. VISUAL GROUNDING: Ground the concept visually. For tables/diagrams, ensure they trace a concrete example step-by-step (e.g. input -> output) so a beginner can immediately grasp how it functions. Avoid abstract or overly sparse tables.
-4. worked example: If Quantitative/Calculative, the artifact MUST show a worked numerical example from the source.
-5. SYNTAX LAW: Mermaid must be in its own ```mermaid block. NEVER wrap in table pipes.
-6. LATEX LAW: For math domains, use block LaTeX ($$...$$) for equations.
-7. SIZE LAW: Keep the artifact compact — max 12 rows for tables, max 8 nodes for Mermaid.
-8. SEMANTIC LOCK: The artifact and failure states MUST strictly align with the CORE THEORY and SOURCE TEXT. Do not introduce any new terminology.
-9. DOMAIN QUARANTINE: Do NOT introduce medicine, hospitals, patients, diagnostics, drugs, finance, aerospace, physics, or engineering unless those ideas appear explicitly in the SOURCE TEXT.
-10. BRIDGE LAW (MANDATORY): Immediately after the table, LaTeX, or Mermaid block, you MUST provide 2-3 sentences of "Bridge" text. If the artifact is a Mermaid diagram, include a Notation Legend explaining what the shapes, nodes, and arrows represent. If a table or formula, include a reading guide explaining how to interpret the rows/equations.
-
-LAWS FOR LIMITATIONS (limitations):
-- Exactly 3 bullet points, each describing a specific, source-grounded failure state or edge case for "{title_readable}".
-- Format: **Label**: Explanation.
-- Preamble or other text is prohibited. Return only the requested fields in the JSON schema."""
-
-        structured_llm = self.llm.with_structured_output(StructuredArtifactsResponse)
-        
         for attempt in range(2):
             try:
-                await governor.get_permit(expected_tokens=3000)
-                res = await structured_llm.ainvoke([
+                await governor.get_permit(expected_tokens=1500)
+                res = await self.llm.ainvoke([
                     ("system", sys_prompt),
-                    ("human", f"Generate formal textbook model, structured artifacts and limitations for {note_title}.")
+                    ("human", f"Generate XML nodes for: {note_title}")
                 ])
+                content = res.content.strip()
                 
-                return {
-                    "formal_model": res.formal_model,
-                    "artifact_title": self.domain.get("artifact", "Technical Artifact"),
-                    "artifact_content": res.artifact_content,
-                    "limitations": res.limitations
-                }
+                formal_model = TheoryAgent._extract_xml("formal_model", content)
+                artifact_data = TheoryAgent._extract_xml("artifact_data", content)
+                limitations = TheoryAgent._extract_xml("limitations", content)
+                
+                if formal_model and limitations:
+                    break
             except Exception as e:
-                print(f"[PractitionerAgent] Structured pass attempt {attempt+1} failed: {e}")
-                # FALLBACK: If attempt 1 fails, try one more time using a raw string and regex extraction 
-                # to bypass Groq's flaky tool_use_failed (400) errors.
-                if attempt == 0:
-                    try:
-                        print("[PractitionerAgent] Attempting Raw JSON recovery pass...")
-                        raw_prompt = sys_prompt + "\n\nCRITICAL: You MUST return a JSON object inside <ARTIFACT_JSON> tags with keys: 'formal_model', 'artifact_content', 'limitations'."
-                        await governor.get_permit(expected_tokens=3000)
-                        raw_res = await self.llm.ainvoke([("system", raw_prompt)])
-                        json_str = TheoryAgent._extract_xml("ARTIFACT_JSON", raw_res.content)
-                        if json_str:
-                            data = json.loads(json_str)
-                            return {
-                                "formal_model": data.get("formal_model", ""),
-                                "artifact_title": self.domain.get("artifact", "Technical Artifact"),
-                                "artifact_content": data.get("artifact_content", ""),
-                                "limitations": data.get("limitations", "")
-                            }
-                    except Exception as raw_e:
-                        print(f"[PractitionerAgent] Raw JSON recovery failed: {raw_e}")
-
+                print(f"[PractitionerAgent] Structured XML pass attempt {attempt+1} failed: {e}")
                 if attempt == 1:
                     raise RuntimeError(f"PractitionerAgent.generate_structured_artifacts exhausted retries: {e}")
                 await asyncio.sleep(2)
+
+        # programmatically compile artifact_content from artifact_data
+        from .compilers import compile_mermaid, compile_table, compile_latex
+        compiled_artifact = ""
+        
+        if artifact_data.strip():
+            if "mermaid" in artifact_type.lower() or "flowchart" in artifact_type.lower() or "diagram" in artifact_type.lower() or "->" in artifact_data:
+                compiled_artifact = compile_mermaid(artifact_data)
+            elif "latex" in artifact_type.lower() or "formula" in artifact_type.lower() or "$$" in artifact_data:
+                compiled_artifact = compile_latex(artifact_data)
+            else:
+                compiled_artifact = compile_table(artifact_data)
+
+        # Fallback values if parsing failed or artifact is empty/optional
+        if not formal_model:
+            formal_model = f"In formal terms, {title_readable} is defined and bounded by the academic parameters detailed in the source texts."
+            
+        if not limitations:
+            limitations = (
+                f"**Scope Boundary**: {title_readable} should only be interpreted through the source excerpt for this note.\n"
+                f"**Common Miss**: A student may memorize the name without explaining how the source says it works.\n"
+                f"**Check Point**: If an example cannot be tied back to the listed source pages, it should be treated as outside this atomic note."
+            )
+
+        return {
+            "formal_model": formal_model,
+            "artifact_title": self.domain.get("artifact", "Source Artifact"),
+            "artifact_content": compiled_artifact,
+            "limitations": limitations
+        }
 
     async def generate_micro(self, note_title: str, theory_body: str, primary_language: str, mode: str = "", source_text: str = "", academic_level: str = "Unknown", course_title: str = "Unknown", max_tokens: int = 8000, plain_english: str = "") -> Dict[str, Any]:
         persona = self.domain.get("persona", "Senior Expert")
@@ -1641,8 +1680,8 @@ LAWS FOR LIMITATIONS (limitations):
                 f"| {source_fact[:160] or title_readable} | The source detail the explanation must stay attached to. |"
             )
             limitations = (
-                f"**Scope Boundary**: {title_readable} should only be interpreted through the source excerpt for this note. "
-                f"**Common Miss**: A student may memorize the name without explaining how the source says it works. "
+                f"**Scope Boundary**: {title_readable} should only be interpreted through the source excerpt for this note.\n"
+                f"**Common Miss**: A student may memorize the name without explaining how the source says it works.\n"
                 f"**Check Point**: If an example cannot be tied back to the listed source pages, it should be treated as outside this atomic note."
             )
             formal_model = f"In formal terms, {title_readable} is defined and bounded by the academic parameters detailed in the source texts."
@@ -1731,6 +1770,25 @@ Rules:
 - Example: "required_keywords": ["percentage change", "quantity demanded", "inelastic"]
 """
 
+        mode = getattr(note_schema, "mode", "ACADEMIC-GENERAL")
+        is_cs = mode.startswith("CS-") or any(w in mode.lower() for w in ["software", "systems", "networking", "cybersecurity", "web", "database", "ai", "db", "arch", "testing"])
+        is_econ = "ECON" in mode or "economics" in mode.lower()
+        is_math = mode.startswith("MATH-") or any(w in mode.lower() for w in ["calculus", "algebra", "discrete", "pure", "applied", "stats", "statist", "crypto"])
+        
+        domain_constraints = ""
+        if not is_cs:
+            domain_constraints += "\n- This is a non-CS domain. You are STRICTLY FORBIDDEN from writing computer programming code (Python, Java, C++, etc.), using code snippets, variables, loops, classes, functions, database queries, or IT/software engineering contexts in the questions, answers, or content."
+        if not is_econ:
+            domain_constraints += "\n- This is a non-business/non-economics domain. You are STRICTLY FORBIDDEN from using corporate sales, marketing, companies, stocks, profits, revenue, or commercial product launch scenarios."
+        if not is_math:
+            domain_constraints += "\n- This is a non-math domain. You are STRICTLY FORBIDDEN from using math formulas, equations, derivatives, integrals, or LaTeX blocks in the questions or options. Explain relationships in plain text instead."
+
+        sanity_check = self.domain.get("sanity_check", "")
+        l3_law = self.domain.get("l3_law", "")
+        
+        sanity_check_prompt = f"\n12. DOMAIN SANITY CHECK: {sanity_check}" if sanity_check else ""
+        l3_law_prompt = f"\n13. L3 DIFFICULTY LAW: {l3_law}" if l3_law else ""
+
         sys_prompt = f"""You are a hostile examiner. Prove the student doesn't actually understand "{title_readable}".
 Generate EXACTLY {count} question(s).
 {q_type_str}
@@ -1777,7 +1835,7 @@ LAWS (non-negotiable):
 8. LEAKAGE GUARD: For 'scenario', 'writing', 'trace', and 'debug' types: The 'answer' field MUST BE A DETAILED TEXTUAL EXPLANATION (minimum 2 sentences). NEVER use a single letter (A, B, C, D) as the answer for these types. Single letters are ONLY for 'mcq'.
 9. DISTRACTOR PLAUSIBILITY: For MCQ questions, all distractors (incorrect options) must be highly plausible, logical, and representative of common student misconceptions or subtle errors when applying the concept.
 10. COGNITIVE DEPTH: Choose questions that target specific operational logic, execution sequences, mathematical relationships, or corner cases that test actual memory of the details of the concept, not vague generalizations.
-11. FORMAT INTEGRITY: Ensure the keys and structure of each question type match the schema exactly (e.g., 'textWithBlanks' for fill_in, 'pairs' for matching, 'steps' & 'answer' for order).
+11. FORMAT INTEGRITY: Ensure the keys and structure of each question type match the schema exactly (e.g., 'textWithBlanks' for fill_in, 'pairs' for matching, 'steps' & 'answer' for order).{domain_constraints}{sanity_check_prompt}{l3_law_prompt}
 {mcq_extra}
 {keyword_extra}
 
@@ -2017,9 +2075,10 @@ class HubAgent:
     async def generate_hub(self, unit_title: str, descriptions: List[str], current_hub_text: str) -> str:
         sys_prompt = (
             "You are the Ater Curriculum Architect. Synthesize a unified Hub overview.\n"
-            "SYNTHESIS GAP PROTOCOL: If you detect multiple notes on the same core topic but with different modalities "
-            "(e.g., a 'Quantitative' note and a 'Qualitative' note on the same law), you MUST include a specific "
-            "'Integrated Synthesis' paragraph that bridges the math and the philosophy of that topic.\n\n"
+            "SYNTHESIS GAP PROTOCOL: ONLY if you detect BOTH quantitative/mathematical notes and qualitative/philosophical "
+            "notes on the same topic, you should include a specific 'Integrated Synthesis' paragraph that bridges "
+            "the math and the philosophy of that topic. If all notes are qualitative, do NOT invent or reference any math, "
+            "formulas, or quantitative models.\n\n"
             "Given the descriptions of the atomic notes in this unit, write a 3-paragraph executive summary "
             "of how these concepts interlock to form the larger system. Focus on the core pedagogical narrative.\n\n"
             "Output ONLY the text of the overview. Do not include markdown headers or greetings."

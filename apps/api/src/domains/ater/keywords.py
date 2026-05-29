@@ -246,12 +246,13 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         for p in note.get("source_pages", []):
             if str(p).isdigit():
                 all_pages.add(int(p))
-    # Formula for sweet spot: smoother scaling curve across short/medium/long documents to find the absolute sweet spot.
+                
+    # Sovereign Sweet Spot: 4 to 15 notes per unit
     total_pages = len(all_pages)
     if total_pages > 0:
-        dynamic_cap = max(3, min(30, int(total_pages * 0.8) + 3))
+        dynamic_cap = max(4, min(15, int(total_pages * 0.3) + 4))
     else:
-        dynamic_cap = 10
+        dynamic_cap = 8
     
     MAX_NOTES = dynamic_cap
     if len(result) > MAX_NOTES:
@@ -268,9 +269,58 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             return (page_coverage * 3.0) + context_depth + (centrality * 2.0)
 
         result.sort(key=_concept_score, reverse=True)
-        dropped = len(result) - MAX_NOTES
-        result = result[:MAX_NOTES]
-        print(f"[reduce_concepts] Budget cap: kept top {MAX_NOTES}, dropped {dropped} low-coverage concepts.")
+        kept_notes = result[:MAX_NOTES]
+        dropped_notes = result[MAX_NOTES:]
+        
+        # Merge dropped concepts into kept concepts to preserve coverage!
+        kept_titles = {n["title"] for n in kept_notes}
+        for d_note in dropped_notes:
+            d_title = d_note["title"]
+            d_desc = d_note.get("description", "").strip()
+            if not d_desc:
+                continue
+            
+            # Find the best matching kept note to absorb this term.
+            # Strategy: 1. A kept note that lists this dropped note as a prerequisite,
+            #           2. A kept note that shares the same source pages.
+            absorber = None
+            
+            # Check 1: Prerequisite relationship
+            for k_note in kept_notes:
+                k_prereqs = [p.replace("[[", "").replace("]]", "") for p in (k_note.get("prerequisites") or [])]
+                if d_title in k_prereqs:
+                    absorber = k_note
+                    break
+            
+            # Check 2: Shared page overlap
+            if not absorber:
+                d_pages = set(d_note.get("source_pages") or [])
+                best_overlap = 0
+                for k_note in kept_notes:
+                    k_pages = set(k_note.get("source_pages") or [])
+                    overlap = len(d_pages.intersection(k_pages))
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        absorber = k_note
+            
+            # Fallback Check 3: Absorb in the first kept note
+            if not absorber and kept_notes:
+                absorber = kept_notes[0]
+                
+            if absorber:
+                # Inject subconcept definition directly into source context of absorber
+                prefix = absorber.get("source_context", "").strip()
+                subconcept_text = f"\n\n[SUBCONCEPT DEFINITION] {d_title}: {d_desc}"
+                absorber["source_context"] = prefix + subconcept_text
+                
+                # Union the pages
+                seen = set(absorber.get("source_pages") or [])
+                for p in d_note.get("source_pages", []):
+                    if p not in seen:
+                        absorber.setdefault("source_pages", []).append(p)
+                        
+        result = kept_notes
+        print(f"[reduce_concepts] Budget cap: kept top {MAX_NOTES}, consolidated {len(dropped_notes)} secondary concepts.")
 
     return result
 

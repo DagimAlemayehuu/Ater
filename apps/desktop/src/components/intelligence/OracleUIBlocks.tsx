@@ -128,7 +128,7 @@ export const GenerationStepper = ({ payload }: { payload: any }) => {
         }
     };
 
-    const fileName = file_path.split('/').pop() || 'File';
+    const fileName = file_path.split(/[/\\]/).pop() || 'File';
 
     return (
         <div className="p-6 border border-border bg-background my-4 rounded-[12px] shadow-sm">
@@ -765,7 +765,7 @@ export const StudyHistoryBlock = ({ payload }: { payload: any }) => {
 
     const getNoteTitle = (pathOrId: string) => {
         if (!pathOrId) return 'General Study';
-        const parts = pathOrId.split('/');
+        const parts = pathOrId.split(/[/\\]/);
         const filename = parts[parts.length - 1];
         return filename.replace(/\.md$/, '').replace(/[_-]/g, ' ');
     };

@@ -33,7 +33,7 @@ export function AppHeader() {
     if (entryPath.startsWith('/obsidian') || entryPath.startsWith('/note/') || entry.type === 'file') {
       module = 'Knowledge Base'
       if (entry.type === 'file') {
-        const parts = entryPath.split('/')
+        const parts = entryPath.split(/[/\\]/)
         const fileName = parts[parts.length - 1]
         subPath = fileName.replace(/\.(md|pdf)$/, '').replace(/_/g, ' ')
       }

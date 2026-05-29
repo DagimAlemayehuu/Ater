@@ -38,4 +38,5 @@ def fix_all_notes(unit_dir_path):
     print("Done.")
 
 if __name__ == "__main__":
-    fix_all_notes("/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault/Notes/Winter 2026/Economics/1_Basics_Of_Economics")
+    path = sys.argv[1] if len(sys.argv) > 1 else "/Users/dabodestroyer/code/Antigravity/Ater/Obsidian_Vault/Notes/Winter 2026/Economics/1_Basics_Of_Economics"
+    fix_all_notes(path)

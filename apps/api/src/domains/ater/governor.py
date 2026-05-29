@@ -5,6 +5,7 @@ import json
 import hashlib
 from pathlib import Path
 from collections import deque
+from typing import Any
 from src.domains.ai.provider_profiles import get_provider_profile
 
 class DailyLimitExceededException(Exception):
@@ -38,7 +39,7 @@ class TokenGovernor:
         
         # 60-second sliding windows
         self.request_window: deque = deque()   # request timestamps
-        self.token_window: deque = deque()     # (timestamp, tokens) tuples
+        self.token_window: deque = deque()     # list of dicts: {'ts': float, 'expected': int, 'actual': Optional[int], 'id': str}
 
         # Dynamic concurrency
         self.active_slots = 0
@@ -56,6 +57,15 @@ class TokenGovernor:
         self._current_quota_key = "default"
         self._all_keys = []  # List of all available keys in the pool
         self._active_key = "" # The actual key string currently in use
+
+    def _get_db_conn(self):
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except sqlite3.OperationalError:
+            pass
+        return conn
 
     def configure(
         self,
@@ -160,7 +170,7 @@ class TokenGovernor:
 
         cutoff_24h = time.time() - (24 * 3600)
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 cursor = conn.cursor()
                 for k in keys:
                     quota_key = self._quota_key_for(k)
@@ -233,7 +243,7 @@ class TokenGovernor:
         """Returns daily usage stats for the currently active key."""
         cutoff_24h = time.time() - (24 * 3600)
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     'SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?',
@@ -272,7 +282,7 @@ class TokenGovernor:
         cutoff = time.time() - (d * 24 * 3600)
         
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 cursor = conn.cursor()
                 
                 # Total usage
@@ -337,7 +347,7 @@ class TokenGovernor:
         cutoff = time.time() - (d * 24 * 3600)
         
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     'SELECT api_key_hash, SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? GROUP BY api_key_hash',
@@ -353,7 +363,7 @@ class TokenGovernor:
             return []
 
     def _init_db(self):
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS usage (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -381,8 +391,13 @@ class TokenGovernor:
         cutoff = now - 60.0
         while self.request_window and self.request_window[0] < cutoff:
             self.request_window.popleft()
-        while self.token_window and self.token_window[0][0] < cutoff:
-            self.token_window.popleft()
+        while self.token_window:
+            first = self.token_window[0]
+            first_ts = first["ts"] if isinstance(first, dict) else first[0]
+            if first_ts < cutoff:
+                self.token_window.popleft()
+            else:
+                break
 
     def _tpm_wait_seconds(self, expected_tokens: int, now: float) -> float:
         """
@@ -391,18 +406,35 @@ class TokenGovernor:
         Returns 0.0 if budget is already available.
         """
         tpm_limit = self.max_tpm * self.safety_margin
-        tpm_used = sum(t for _, t in self.token_window)
+        
+        tpm_used = 0
+        for entry in self.token_window:
+            if isinstance(entry, dict):
+                tpm_used += entry["actual"] if entry["actual"] is not None else entry["expected"]
+            else:
+                tpm_used += entry[1]
+
         if tpm_used + expected_tokens <= tpm_limit:
             return 0.0
+            
         # Walk oldest → newest, accumulate freed tokens
         freed = 0
-        for ts, tok in self.token_window:
+        for entry in self.token_window:
+            if isinstance(entry, dict):
+                tok = entry["actual"] if entry["actual"] is not None else entry["expected"]
+                ts = entry["ts"]
+            else:
+                tok = entry[1]
+                ts = entry[0]
             freed += tok
             if tpm_used - freed + expected_tokens <= tpm_limit:
                 return max(0.0, (ts + 60.0) - now + 0.05)  # +50ms buffer
+                
         # Entire window must expire
         if self.token_window:
-            return max(0.0, (self.token_window[0][0] + 60.0) - now + 0.05)
+            first = self.token_window[0]
+            first_ts = first["ts"] if isinstance(first, dict) else first[0]
+            return max(0.0, (first_ts + 60.0) - now + 0.05)
         return 0.0
 
     def _rpm_wait_seconds(self, now: float) -> float:
@@ -421,7 +453,7 @@ class TokenGovernor:
         """Synchronous check of daily limits against SQLite DB for the current API key."""
         cutoff_24h = time.time() - (24 * 3600)
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT SUM(tokens), SUM(requests) FROM usage WHERE timestamp >= ? AND quota_key = ?', (cutoff_24h, self._current_quota_key))
                 row = cursor.fetchone()
@@ -458,21 +490,25 @@ class TokenGovernor:
             
             raise DailyLimitExceededException(err_msg)
 
+        wait = 0.0
+        req_id = None
+        
         async with self._lock:
-            while True:
-                now = time.time()
+            now = time.time()
 
-                # Hard cooldown — triggered by external 429 detection
-                if now < self.cooldown_until:
-                    wait_remaining = self.cooldown_until - now
-                    self.last_throttle_event = f"Cooling down ({wait_remaining:.1f}s)..."
-                    print(f"[Governor] ⏳ Cooldown active. Waiting {wait_remaining:.1f}s...")
-                    await asyncio.sleep(wait_remaining + 0.1)
-                    continue
-
+            # Hard cooldown — triggered by external 429 detection
+            if now < self.cooldown_until:
+                wait_remaining = self.cooldown_until - now
+                self.last_throttle_event = f"Cooling down ({wait_remaining:.1f}s)..."
+                print(f"[Governor] ⏳ Cooldown active. Waiting {wait_remaining:.1f}s...")
+                wait = wait_remaining + 0.1
+            else:
                 self._clear_old_windows(now)
 
-                tpm_used = sum(t for _, t in self.token_window)
+                tpm_used = sum(
+                    (e["actual"] if e["actual"] is not None else e["expected"]) if isinstance(e, dict) else e[1]
+                    for e in self.token_window
+                )
                 rpm_used = len(self.request_window)
 
                 tpm_ratio = tpm_used / (self.max_tpm * self.safety_margin)
@@ -497,11 +533,17 @@ class TokenGovernor:
                     # ✅ Permit granted
                     self.last_throttle_event = None
                     self.request_window.append(now)
-                    self.token_window.append((now, expected_tokens))
+                    req_id = f"req_{now}_{hash(now)}"
+                    self.token_window.append({
+                        "ts": now,
+                        "expected": expected_tokens,
+                        "actual": None,
+                        "id": req_id
+                    })
                     # We no longer aggressively debit the SQLite database with expected tokens here.
                     # This prevents 'ghost tokens' from accumulating during retries or crashes.
                     # The actual token count will be written to SQLite by the Langchain Callback Handler upon completion.
-                    return True
+                    return req_id
 
                 self.last_throttle_event = (
                     f"Pacing {wait:.1f}s "
@@ -509,7 +551,11 @@ class TokenGovernor:
                 )
                 print(f"[Governor] ⏱  Precise wait {wait:.1f}s "
                       f"(TPM: {int(tpm_used)}/{self.max_tpm})")
-                await asyncio.sleep(wait)
+
+        # Sleep OUTSIDE the lock
+        await asyncio.sleep(wait)
+        # Recursively re-evaluate permit (safe and fair)
+        return await self.get_permit(expected_tokens, expected_requests)
 
     async def acquire_slot(self):
         """Event-driven slot acquisition — no 0.5s polling spin."""
@@ -530,7 +576,7 @@ class TokenGovernor:
 
     def _record_usage_db_sync(self, tokens: int, requests: int):
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 conn.execute(
                     'INSERT INTO usage (timestamp, tokens, requests, api_key_hash, quota_key) VALUES (?, ?, ?, ?, ?)',
                     (time.time(), tokens, requests, self._current_key_hash, self._current_quota_key)
@@ -547,22 +593,38 @@ class TokenGovernor:
         except RuntimeError:
             self._record_usage_db_sync(tokens, requests)
 
-    def record_actual_usage(self, estimated_tokens: int, actual_tokens: int) -> None:
+    def record_actual_usage(self, request_id_or_estimated: Any, actual_tokens: int) -> None:
         """
         Corrects the usage accounting after a real LLM response with known token counts.
-        Patches the last entry in the in-memory sliding window for pacing.
+        Patches the entry in the in-memory sliding window for pacing.
         Since TrackingCallbackHandler already records the exact actual tokens to SQLite upon completion,
         we do not persist any delta to SQLite here to avoid double-counting.
         """
         if actual_tokens <= 0:
             return
-        delta = actual_tokens - estimated_tokens
-        if delta == 0:
-            return
-        # Patch the in-memory window: pop the last estimate and push the corrected value
-        if self.token_window:
-            ts, last_est = self.token_window.pop()
-            self.token_window.append((ts, max(0, last_est + delta)))
+            
+        if isinstance(request_id_or_estimated, str):
+            # Precision ID-based matching
+            for entry in self.token_window:
+                if isinstance(entry, dict) and entry.get("id") == request_id_or_estimated:
+                    entry["actual"] = actual_tokens
+                    break
+        else:
+            # Fallback to LIFO patching for legacy backward-compatibility
+            estimated_tokens = int(request_id_or_estimated or 0)
+            delta = actual_tokens - estimated_tokens
+            if delta == 0:
+                return
+            if self.token_window:
+                last_entry = self.token_window[-1]
+                if isinstance(last_entry, dict):
+                    last_entry["actual"] = actual_tokens
+                else:
+                    try:
+                        ts, last_est = self.token_window.pop()
+                        self.token_window.append((ts, max(0, last_est + delta)))
+                    except Exception:
+                        pass
 
     def get_reset_wait_seconds(self) -> float:
         """
@@ -571,7 +633,7 @@ class TokenGovernor:
         """
         cutoff_24h = time.time() - (24 * 3600)
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_db_conn() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     'SELECT MIN(timestamp) FROM usage WHERE timestamp >= ? AND api_key_hash = ?',
@@ -594,7 +656,12 @@ class TokenGovernor:
         # Inject moderate token/request penalty
         for _ in range(3):
             self.request_window.append(now)
-        self.token_window.append((now, int(self.max_tpm * 0.50)))
+        self.token_window.append({
+            "ts": now,
+            "expected": int(self.max_tpm * 0.50),
+            "actual": None,
+            "id": f"err_{now}"
+        })
         print(f"[Governor] 💥 429 received. Dropping to {self.min_concurrency} worker. "
               f"Hard cooldown for {wait_seconds}s...")
         self._slot_event.set()  # Wake blocked workers so they re-evaluate
@@ -607,7 +674,15 @@ class TokenGovernor:
     def current_tpm(self) -> int:
         now = time.time()
         cutoff = now - 60.0
-        return sum(t for ts, t in self.token_window if ts >= cutoff)
+        tpm = 0
+        for entry in self.token_window:
+            if isinstance(entry, dict):
+                if entry["ts"] >= cutoff:
+                    tpm += entry["actual"] if entry["actual"] is not None else entry["expected"]
+            else:
+                if entry[0] >= cutoff:
+                    tpm += entry[1]
+        return tpm
 
     @property
     def current_rpm(self) -> int:

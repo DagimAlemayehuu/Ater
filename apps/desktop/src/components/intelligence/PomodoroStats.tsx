@@ -41,7 +41,7 @@ export default function PomodoroStats() {
     // Note focus breakdown
     const noteTime: Record<string, number> = {};
     notes.forEach(n => {
-      const name = n.notePath?.split('/').pop()?.replace('.md', '') || 'Unknown';
+      const name = n.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || 'Unknown';
       noteTime[name] = (noteTime[name] || 0) + (n.duration || 0);
     });
     const noteData = Object.entries(noteTime)
@@ -50,7 +50,7 @@ export default function PomodoroStats() {
 
     // Practice scores
     const practiceData = practices.map(p => ({
-      name: p.notePath?.split('/').pop()?.replace('.md', '') || 'Quiz',
+      name: p.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || 'Quiz',
       score: p.score && p.totalQuestions ? (p.score / p.totalQuestions) * 100 : 0,
       date: new Date(p.timestamp).toLocaleDateString()
     })).slice(-20);
@@ -223,7 +223,7 @@ export default function PomodoroStats() {
                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Recent Note Sessions</div>
                  {stats.notes.slice(-10).reverse().map((n, i) => (
                    <div key={i} className="flex items-center justify-between p-4 bg-[#232326] border border-[#242426] rounded-[8px]">
-                     <span className="text-[10px] font-black uppercase truncate pr-4">{n.notePath?.split('/').pop()?.replace('.md', '')}</span>
+                     <span className="text-[10px] font-black uppercase truncate pr-4">{n.notePath?.split(/[/\\]/).pop()?.replace('.md', '')}</span>
                      <span className="text-[10px] font-bold tabular-nums opacity-60">{Math.round(n.duration || 0)}m</span>
                    </div>
                  ))}
@@ -264,7 +264,7 @@ export default function PomodoroStats() {
                  {stats.practices.slice(-10).reverse().map((p, i) => (
                    <div key={i} className="flex items-center justify-between p-4 bg-[#232326] border border-[#242426] rounded-[8px]">
                      <div className="flex flex-col">
-                       <span className="text-[10px] font-black uppercase truncate">{p.notePath?.split('/').pop()?.replace('.md', '') || p.hub}</span>
+                       <span className="text-[10px] font-black uppercase truncate">{p.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub}</span>
                        <span className="text-[8px] font-bold opacity-30">{new Date(p.timestamp).toLocaleDateString()}</span>
                      </div>
                      <span className={cn(
