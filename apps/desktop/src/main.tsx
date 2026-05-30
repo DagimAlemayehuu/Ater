@@ -12,7 +12,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         <div style={{ padding: '2rem', color: 'red', background: 'white', height: '100vh', overflow: 'auto' }}>
           <h2>Something went wrong.</h2>
           <pre>{this.state.error?.toString()}</pre>
-          <pre>{this.state.error?.stack}</pre>
+          {import.meta.env.DEV && <pre>{this.state.error?.stack}</pre>}
         </div>
       );
     }

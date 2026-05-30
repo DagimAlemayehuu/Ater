@@ -186,6 +186,16 @@ class ModelFactory:
         if base_url and provider in ["openai", "custom"]:
             config["base_url"] = base_url
 
+        # Handle max_tokens parameter standardization
+        if "max_tokens" in kwargs:
+            max_tok = kwargs.pop("max_tokens")
+            if provider == "google":
+                config["max_output_tokens"] = max_tok
+            elif provider == "anthropic":
+                config["max_tokens_to_sample"] = max_tok
+            else:
+                config["max_tokens"] = max_tok
+
         # Merge additional kwargs safely
         for k, v in kwargs.items():
             if k not in config:

@@ -1,7 +1,7 @@
 // Ater - Hybrid Cloud/Local Resilient Supabase Client
 // Seamlessly routes requests to your cloud Supabase database when online, falling back to local mock when offline.
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -40,7 +40,7 @@ const fallbackProfile = {
   locked_features: []
 }
 
-export const supabase: any = {
+export const supabase = {
   auth: {
     getUser: async () => {
       if (realSupabase) {
@@ -150,4 +150,4 @@ export const supabase: any = {
       }
     }
   }
-}
+} as unknown as SupabaseClient

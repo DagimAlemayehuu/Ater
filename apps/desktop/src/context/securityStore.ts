@@ -84,7 +84,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       // Handle RLS rejection (status code 403 or permission drops)
       if (error) {
         console.warn('[Security System] Remote configuration check failed (RLS blocking or network):', error)
-        if (error.status === 403 || error.code === '42501') {
+        if ((error as any).status === 403 || error.code === '42501') {
           // Permanently lock interface if banned
           set({ status: 'Bricked', lockedFeatures: [] })
         }
@@ -291,11 +291,11 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   },
 
   isFeatureLocked: (feature: string) => {
-    const { status, lockedFeatures } = get()
-    if (status === 'Bricked' || status === 'LeaseExpired' && feature === 'full-system-lockout') return true
+    const { status, lockedFeatures, creditBalance } = get()
+    if (status === 'Bricked' || (status === 'LeaseExpired' && feature === 'full-system-lockout')) return true
     
     // Master Mapping logic for robust hackproof lockout checks
-    const isAiLocked = lockedFeatures.some(f => ['ai_locked', 'ai-features', 'ai-ingestion'].includes(f))
+    const isAiLocked = lockedFeatures.some(f => ['ai_locked', 'ai-features', 'ai-ingestion'].includes(f)) || creditBalance <= 0
     const isAcademicLocked = lockedFeatures.some(f => ['academic_locked', 'academic-dashboard', 'interactive_quiz'].includes(f))
     const isExplorerLocked = lockedFeatures.some(f => ['explorer_locked', 'explorer-lockout', 'file_ingestion', 'vector_search'].includes(f))
 

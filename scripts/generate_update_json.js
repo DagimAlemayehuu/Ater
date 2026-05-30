@@ -5,8 +5,8 @@ const path = require('path');
 // It searches the downloaded artifacts for the cryptographic signature files (.sig)
 // and maps them to their respective platform download URLs in the Ater_Releases repo.
 
-const ORG = 'DagimAlemayehuu';
-const REPO = 'Ater_Releases';
+const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY || 'DagimAlemayehuu/Ater_Releases';
+const [ORG, REPO] = GITHUB_REPOSITORY.split('/');
 const VERSION = process.argv[2] || '0.1.0';
 
 const platforms = {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { check, Update } from '@tauri-apps/plugin-updater';
 import { Loader2, X, Sparkles, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,21 +59,16 @@ function renderReleaseNotes(body: string) {
 }
 
 export function UpdateChecker() {
-  const [updateAvailable, setUpdateAvailable] = useState<any>(null);
+  const [updateAvailable, setUpdateAvailable] = useState<Update | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [visible, setVisible] = useState(false);
 
+  // Listen for manually-dispatched update events (e.g. from debug/testing)
   useEffect(() => {
     const handleShowDialog = (e: Event) => {
       const customEvent = e as CustomEvent;
-      
-      // Simplify descriptions inside the mock update payload if it matches our simulated update
       const payload = customEvent.detail;
-      if (payload && payload.version === '0.9.0') {
-        payload.body = '### What\'s New in v0.9.0\n\n#### Features\n- **Smart Assistant:** New AI tools that help you learn better.\n- **Faster Processing:** Much faster note scanning and indexing.\n- **Clean Layout:** Simpler designs for folders and vaults.\n\n#### Fixes\n- Fixed duplicate links bug\n- Fixed app lockups when closing the window';
-      }
-      
-      console.log('[Updater] Opening update toast notification:', payload);
+      console.log('[Updater] Opening update notification:', payload);
       toast.dismiss();
       setUpdateAvailable(payload);
       setTimeout(() => setVisible(true), 50);
@@ -83,6 +79,29 @@ export function UpdateChecker() {
     return () => {
       window.removeEventListener('show-update-dialog', handleShowDialog);
     };
+  }, []);
+
+  // Actual update check — runs 8s after app startup to avoid blocking initialization
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const update = await check();
+        if (update?.available) {
+          console.log('[Updater] New version available:', update.version);
+          window.dispatchEvent(
+            new CustomEvent('show-update-dialog', { detail: update })
+          );
+        } else {
+          console.log('[Updater] App is up to date.');
+        }
+      } catch (error: any) {
+        // Non-critical — update checks can fail silently (offline, GitHub down, etc.)
+        console.warn('[Updater] Check failed (non-critical):', error?.message ?? error);
+      }
+    };
+
+    const timer = setTimeout(checkForUpdates, 8000);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleClose = () => {
@@ -101,9 +120,8 @@ export function UpdateChecker() {
       await relaunch();
     } catch (error: any) {
       console.error('[Updater] Failed to update:', error);
-      toast.error('Could not install update: ' + error.message);
+      toast.error('Could not install update: ' + error.message + '. Please check your connection and try again.');
       setIsUpdating(false);
-      handleClose();
     }
   };
 

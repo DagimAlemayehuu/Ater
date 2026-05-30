@@ -11,6 +11,9 @@ import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
 
 async function isDemoActive(): Promise<boolean> {
+    if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
+        return true; // Force demo mode in standard web previews/captures
+    }
     try {
         const store = await getAppStore()
         return (await store.get<boolean>('isDemoMode')) ?? false
@@ -155,6 +158,18 @@ export const sidecarApi = {
     },
 
     listVaultDatabases: async () => {
+        if (await isDemoActive()) {
+            return {
+                databases: [
+                    { id: 'years', name: 'Years', type: 'obsidian', schema: {} },
+                    { id: 'semesters', name: 'Semesters', type: 'obsidian', schema: {} },
+                    { id: 'courses', name: 'Courses', type: 'obsidian', schema: {} },
+                    { id: 'study_sessions', name: 'Study Planner', type: 'obsidian', schema: {} },
+                    { id: 'exams', name: 'Exams', type: 'obsidian', schema: {} },
+                    { id: 'assignments', name: 'Assignments', type: 'obsidian', schema: {} }
+                ]
+            }
+        }
         try {
             return await invoke<any>('list_vault_databases')
         } catch (err) {
@@ -349,6 +364,20 @@ export const sidecarApi = {
     },
 
     getVaultGraph: async () => {
+        if (await isDemoActive()) {
+            return {
+                nodes: [
+                    { id: 'Notes/Binary_Search.md', label: 'Binary Search', group: 1 },
+                    { id: 'Notes/Time_Complexity.md', label: 'Time Complexity', group: 1 },
+                    { id: 'CS_201_Algorithms_&_Data_Structures_Hub', label: 'Algorithms Hub', group: 2 }
+                ],
+                links: [
+                    { source: 'Notes/Binary_Search.md', target: 'Notes/Time_Complexity.md' },
+                    { source: 'Notes/Binary_Search.md', target: 'CS_201_Algorithms_&_Data_Structures_Hub' },
+                    { source: 'Notes/Time_Complexity.md', target: 'CS_201_Algorithms_&_Data_Structures_Hub' }
+                ]
+            }
+        }
         try {
             return await invoke<any>('get_vault_graph')
         } catch (err) {

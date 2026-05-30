@@ -58,7 +58,7 @@ function AuthContent() {
       }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session) {
         setUser(session.user);
         fetchUserStatus(session.user.email!, session.user);
@@ -67,7 +67,7 @@ function AuthContent() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session) {
         setUser(session.user);
         fetchUserStatus(session.user.email!, session.user);

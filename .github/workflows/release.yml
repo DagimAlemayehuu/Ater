@@ -5,23 +5,56 @@ on:
     tags:
       - 'v*'
 
+env:
+  RELEASE_REPOSITORY: "DagimAlemayehuu/Ater_Releases"
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Tag matches all version files
+        run: |
+          CONF_VERSION=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          TAG_VERSION=${{ github.ref_name }}
+          TAG_VERSION=${TAG_VERSION#v}
+          
+          if [ "$CONF_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Version mismatch! tauri.conf.json ($CONF_VERSION) vs tag ($TAG_VERSION)"
+            exit 1
+          fi
+          
+          CARGO_VERSION=$(grep '^version' apps/desktop/src-tauri/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/' | tr -d ' ')
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Version mismatch! Cargo.toml ($CARGO_VERSION) vs tag ($TAG_VERSION)"
+            exit 1
+          fi
+          
+          PKG_VERSION=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Version mismatch! package.json ($PKG_VERSION) vs tag ($TAG_VERSION)"
+            exit 1
+          fi
+          
+          echo "✅ All version files match tag $TAG_VERSION"
+
       - name: Create Draft Release
         uses: actions/github-script@v7
+        env:
+          RELEASE_REPOSITORY: ${{ env.RELEASE_REPOSITORY }}
         with:
           github-token: ${{ secrets.RELEASE_PAT }}
           script: |
             const tag = context.ref.replace('refs/tags/', '');
+            const [owner, repo] = process.env.RELEASE_REPOSITORY.split('/');
             try {
               const { data: release } = await github.rest.repos.createRelease({
-                owner: 'DagimAlemayehuu',
-                repo: 'Ater_Releases',
+                owner: owner,
+                repo: repo,
                 tag_name: tag,
                 name: `Ater ${tag}`,
-                body: `Official release for Ater ${tag}.`,
+                body: `## Ater ${tag}\n\n**System Requirements**\n- macOS: Apple Silicon (M1/M2/M3) — Intel Macs not supported\n- Windows: x64\n\nOfficial release for Ater ${tag}.`,
                 draft: true
               });
               console.log(`Created release: ${release.html_url}`);
@@ -29,8 +62,8 @@ jobs:
               if (error.status !== 422) throw error;
               // getReleaseByTag returns 404 for draft releases. List releases to safely find an existing draft.
               const { data: releases } = await github.rest.repos.listReleases({
-                owner: 'DagimAlemayehuu',
-                repo: 'Ater_Releases'
+                owner: owner,
+                repo: repo
               });
               const release = releases.find(r => r.tag_name === tag);
               if (release) {
@@ -175,9 +208,9 @@ jobs:
             DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1 || echo "")
             if [ -f "$DMG_PATH" ]; then
               echo "Uploading DMG: $DMG_PATH"
-              gh release upload "$TAG" "$DMG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "$DMG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
               cp "$DMG_PATH" "Ater-${{ matrix.arch }}.dmg"
-              gh release upload "$TAG" "Ater-${{ matrix.arch }}.dmg" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "Ater-${{ matrix.arch }}.dmg" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
 
             TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/ -name "*.app.tar.gz" | head -n 1 || echo "")
@@ -186,12 +219,12 @@ jobs:
               VERSION_TAR="Ater_${TAG#v}_${{ matrix.arch }}.app.tar.gz"
               cp "$TAR_PATH" "$VERSION_TAR"
               echo "Uploading versioned TAR: $VERSION_TAR"
-              gh release upload "$TAG" "$VERSION_TAR" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "$VERSION_TAR" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
             
             SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
             if [ -f "$SIG_PATH" ]; then
-              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "$SIG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
           fi
 
@@ -199,9 +232,9 @@ jobs:
             EXE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.exe" | head -n 1 || echo "")
             if [ -f "$EXE_PATH" ]; then
               echo "Uploading EXE: $EXE_PATH"
-              gh release upload "$TAG" "$EXE_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "$EXE_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
               cp "$EXE_PATH" "Ater_setup.exe"
-              gh release upload "$TAG" "Ater_setup.exe" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "Ater_setup.exe" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
 
             ZIP_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.zip" | head -n 1 || echo "")
@@ -210,12 +243,12 @@ jobs:
               VERSION_ZIP="Ater_${TAG#v}_x64-setup.nsis.zip"
               cp "$ZIP_PATH" "$VERSION_ZIP"
               echo "Uploading versioned ZIP: $VERSION_ZIP"
-              gh release upload "$TAG" "$VERSION_ZIP" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "$VERSION_ZIP" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
 
             SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.zip.sig" | head -n 1 || echo "")
             if [ -f "$SIG_PATH" ]; then
-              gh release upload "$TAG" "$SIG_PATH" --repo DagimAlemayehuu/Ater_Releases --clobber
+              gh release upload "$TAG" "$SIG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
           fi
 
@@ -236,7 +269,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           gh release edit "$TAG" \
-            --repo DagimAlemayehuu/Ater_Releases \
+            --repo "${{ env.RELEASE_REPOSITORY }}" \
             --draft=false
 
   generate-updater-json:
@@ -253,6 +286,8 @@ jobs:
           path: artifacts
 
       - name: Generate update.json
+        env:
+          GITHUB_REPOSITORY: ${{ env.RELEASE_REPOSITORY }}
         run: |
           VERSION=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
           node scripts/generate_update_json.js $VERSION
@@ -262,6 +297,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           token: ${{ secrets.RELEASE_PAT }}
-          repository: DagimAlemayehuu/Ater_Releases
+          repository: ${{ env.RELEASE_REPOSITORY }}
           tag_name: ${{ github.ref_name }}
           files: update.json

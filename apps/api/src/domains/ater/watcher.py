@@ -536,7 +536,12 @@ class AterQueueManager:
                 else:
                     # Session missing from disk? Re-plan.
                     watcher_logger.warning(f"Session {session_id} not found on disk. Re-planning {path.name}...")
-                    self._mark_done(file_path_str) # Reset state
+                    conn = self._get_conn()
+                    try:
+                        conn.execute("UPDATE queue SET status = 'pending', session_id = NULL, current_batch = 0, total_batches = 0, curriculum = NULL WHERE file_path = ?", (file_path_str,))
+                        conn.commit()
+                    finally:
+                        conn.close()
                     return await self.process_file(file_path_str)
             
             # 3. Deployment Loop (Hyperdrive)

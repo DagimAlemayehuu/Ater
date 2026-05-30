@@ -237,6 +237,18 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     isDemoMode,
                 };
 
+                const isBypass = import.meta.env.DEV &&
+                    (new URLSearchParams(window.location.search).get('bypass') === 'true' ||
+                     window.location.hash.includes('bypass=true'))
+                if (isBypass) {
+                    loadedConfig.isDemoMode = true;
+                    loadedConfig.displayName = "Stitch Explorer";
+                    loadedConfig.obsidianVaultPath = "/Mock/Vault";
+                    loadedConfig.isProgramConfigured = true;
+                    loadedConfig.isActivated = true;
+                    loadedConfig.aiApiKey = "mock_key";
+                }
+
                 // Auto-select first key if none active
                 if (!aiApiKey && savedApiKeys.length > 0) {
                     const first = savedApiKeys[0];

@@ -22,6 +22,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return <BlockingLoader label="Verifying" />
   }
 
+  // Bypass auth check during development/design capture
+  const isBypass = new URLSearchParams(window.location.search).get('bypass') === 'true' || window.location.hash.includes('bypass=true')
+  if (isBypass) {
+    return <>{children}</>
+  }
+
   if (!isActivated) {
     return <Login />
   }

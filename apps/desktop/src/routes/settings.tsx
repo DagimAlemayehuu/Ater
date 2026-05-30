@@ -135,25 +135,7 @@ export default function Settings() {
         console.error('[Settings Updater] Failed to check version manifest directly:', fetchErr)
       }
       
-      if (errMsg.includes('platforms') || errMsg.includes('fallback')) {
-        toast.info('Target platforms are empty on GitHub. Running simulator...')
-        await new Promise(r => setTimeout(r, 1200))
-        setUpdateStatus('available')
-        window.dispatchEvent(new CustomEvent('show-update-dialog', {
-          detail: {
-            version: '0.9.0',
-            currentVersion: currentVersion,
-            body: '### Ater v0.9.0 - Oracle Pedagogy Overhaul\n\n#### Features\n- **Oracle Architecture:** Context-aware pedagogical "Oracle" with MetaScanner pre-analysis.\n- **Singularity Protocol:** Massive parallel ingestion batching & dynamic token throttling.\n- **High-Density Monochrome UI:** Refined minimalist layout, nested vaults Explorer, and active learning footer.\n\n#### Bug Fixes\n- Hardened against duplicate wiki-link creation\n- Resolved intermittent LanceDB lock-out states on application restart',
-            downloadAndInstall: async () => {
-              console.log('[Updater Simulation] Downloading and installing update...');
-              await new Promise((resolve) => setTimeout(resolve, 2000));
-              console.log('[Updater Simulation] Install complete. Relaunching...');
-            }
-          }
-        }))
-      } else {
-        toast.error('Failed to check for updates: ' + errMsg)
-      }
+      toast.error('Failed to check for updates: ' + errMsg)
     } finally {
       setIsCheckingUpdate(false)
     }

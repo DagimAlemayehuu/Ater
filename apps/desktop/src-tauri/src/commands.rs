@@ -2793,6 +2793,8 @@ const ED25519_PUBLIC_KEY: [u8; 32] = [
 ];
 
 fn verify_ed25519_signature(message: &[u8], signature_hex: &str) -> Result<(), String> {
+    // In debug builds only: accept the zero-signature mock used in development and offline testing.
+    // In release builds this block is compiled out entirely — all signatures must be real Ed25519.
     #[cfg(debug_assertions)]
     if signature_hex == "00".repeat(64) || signature_hex == "mock_signature" {
         return Ok(());

@@ -147,3 +147,37 @@ jobs:
             apps/admin/playwright-report/
             apps/landing-page/playwright-report/
           retention-days: 7
+
+  check-rust-windows:
+    name: Desktop (Rust / cargo check) - Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create dummy sidecar binary (required by Tauri build system)
+        run: |
+          mkdir -p apps/desktop/src-tauri/binaries
+          New-Item -Path "apps/desktop/src-tauri/binaries/ater-api-x86_64-pc-windows-msvc.exe" -ItemType File -Force
+        shell: pwsh
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Run cargo check
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

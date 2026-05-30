@@ -215,3 +215,164 @@ Generate the mini-lesson now."""
         return {"lesson": res.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/explain")
+async def ater_explain(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates a detailed explanation of the selection, page, or note context."""
+    ai_key = secrets.ai_key
+    if not ai_key:
+        raise HTTPException(status_code=400, detail="AI API Key missing")
+
+    provider = secrets.ai_provider or "google"
+    model = secrets.ai_model or "gemini-2.0-flash"
+
+    selection = payload.get("selection", "")
+    selection_context = payload.get("selection_context", "")
+    page = payload.get("page")
+    note_title = payload.get("note_title", "")
+    path = payload.get("path", "")
+
+    context_str = ""
+    if selection:
+        context_str += f"Selection: \"{selection}\"\n"
+    if selection_context:
+        context_str += f"Selection context: \"{selection_context}\"\n"
+    if page:
+        context_str += f"Page: {page}\n"
+    if note_title:
+        context_str += f"Document Title: {note_title}\n"
+    if path:
+        context_str += f"Document Path: {path}\n"
+
+    try:
+        llm = ModelFactory.get_model(
+            provider=provider,
+            model_name=model,
+            api_key=ai_key,
+            temperature=0.7,
+            max_tokens=2000
+        )
+
+        sys_prompt = """You are Ater's Socratic Tutor, an elite AI educator and subject-matter expert.
+Your goal is to explain the provided selection or document context in a comprehensive, engaging, and thorough manner.
+
+Instructions:
+1. Explain the core mechanism or concept clearly in professional, elegant Markdown.
+2. Provide a vivid, field-specific real-world analogy to anchor the explanation. Avoid dry clichés (e.g. coffee shops).
+3. Discuss the key implications or why this concept is important.
+4. Keep the formatting beautiful with clear headers, bold text, and bullet points. Use LaTeX block formulas if mathematical concepts are involved."""
+
+        human_prompt = f"""Document Context:
+{context_str}
+
+Please generate the explanation now."""
+
+        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        return {"answer": res.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/chat")
+async def ater_chat(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Holds a Socratic follow-up conversation about the document context."""
+    ai_key = secrets.ai_key
+    if not ai_key:
+        raise HTTPException(status_code=400, detail="AI API Key missing")
+
+    provider = secrets.ai_provider or "google"
+    model = secrets.ai_model or "gemini-2.0-flash"
+
+    messages = payload.get("messages", [])
+    selection = payload.get("selection", "")
+    selection_context = payload.get("selection_context", "")
+    page = payload.get("page")
+    note_title = payload.get("note_title", "")
+
+    context_str = ""
+    if selection:
+        context_str += f"Selection: \"{selection}\"\n"
+    if selection_context:
+        context_str += f"Selection context: \"{selection_context}\"\n"
+    if page:
+        context_str += f"Page: {page}\n"
+    if note_title:
+        context_str += f"Document Title: {note_title}\n"
+
+    try:
+        llm = ModelFactory.get_model(
+            provider=provider,
+            model_name=model,
+            api_key=ai_key,
+            temperature=0.7,
+            max_tokens=2000
+        )
+
+        sys_prompt = f"""You are Ater's Socratic Tutor. You are holding a follow-up conversation with the student about the following document context:
+{context_str}
+
+Guide the student using Socratic dialogue. Help them think deeply, ask guiding questions, check their understanding, and explain complex parts thoroughly but in a highly accessible way. Keep your formatting elegant using Markdown."""
+
+        formatted_messages = [("system", sys_prompt)]
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            formatted_messages.append((role, content))
+
+        res = await llm.ainvoke(formatted_messages)
+        return {"answer": res.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/quick-questions")
+async def ater_quick_questions(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates 3 quick conceptual questions based on document context."""
+    ai_key = secrets.ai_key
+    if not ai_key:
+        raise HTTPException(status_code=400, detail="AI API Key missing")
+
+    provider = secrets.ai_provider or "google"
+    model = secrets.ai_model or "gemini-2.0-flash"
+
+    selection = payload.get("selection", "")
+    selection_context = payload.get("selection_context", "")
+    page = payload.get("page")
+    note_title = payload.get("note_title", "")
+
+    context_str = ""
+    if selection:
+        context_str += f"Selection: \"{selection}\"\n"
+    if selection_context:
+        context_str += f"Selection context: \"{selection_context}\"\n"
+    if page:
+        context_str += f"Page: {page}\n"
+    if note_title:
+        context_str += f"Document Title: {note_title}\n"
+
+    try:
+        llm = ModelFactory.get_model(
+            provider=provider,
+            model_name=model,
+            api_key=ai_key,
+            temperature=0.7,
+            max_tokens=2000
+        )
+
+        sys_prompt = f"""You are Ater's Socratic Tutor. Based on the following document context, generate exactly 3 quick conceptual questions that a student can answer to verify their understanding:
+{context_str}
+
+Provide the questions in a clean, readable Markdown format with bold question numbers, and include short guidance or hints for each question."""
+
+        res = await llm.ainvoke([("system", sys_prompt), ("human", "Generate the quick questions now.")])
+        return {"answer": res.content, "questions": res.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

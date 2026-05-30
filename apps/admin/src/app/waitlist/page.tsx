@@ -89,7 +89,7 @@ export default function WaitlistManager() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "waiting_list" },
-        (payload) => {
+        (payload: any) => {
           if (payload.eventType === "INSERT") {
             setEntries((prev) => [payload.new as Entry, ...prev]);
           } else if (payload.eventType === "UPDATE") {
