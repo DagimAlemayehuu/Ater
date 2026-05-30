@@ -116,38 +116,107 @@ export const supabase = {
     }
   },
   from: (table: string) => {
-    if (realSupabase) {
-      return realSupabase.from(table)
-    }
-    return {
-      select: (columns: string = '*') => {
-        return {
-          eq: (field: string, value: any) => {
-            return {
-              single: async () => {
-                return { data: fallbackProfile, error: null }
-              },
-              maybeSingle: async () => {
-                return { data: fallbackProfile, error: null }
-              }
-            }
-          }
-        }
+    let query: any = realSupabase ? realSupabase.from(table) : null;
+
+    const builder = {
+      _filters: [] as Array<(item: any) => boolean>,
+      _orderBy: null as { col: string; ascending: boolean } | null,
+      _limit: null as number | null,
+      _single: false,
+
+      select: function(columns: string = '*', options?: any) {
+        if (query) query = query.select(columns, options);
+        return this;
       },
-      update: (values: any) => {
+      eq: function(col: string, val: any) {
+        if (query) query = query.eq(col, val);
+        this._filters.push((item: any) => item[col] === val);
+        return this;
+      },
+      gte: function(col: string, val: any) {
+        if (query) query = query.gte(col, val);
+        this._filters.push((item: any) => item[col] >= val);
+        return this;
+      },
+      order: function(col: string, opt?: any) {
+        if (query) query = query.order(col, opt);
+        this._orderBy = { col, ascending: opt?.ascending ?? false };
+        return this;
+      },
+      limit: function(limitNum: number) {
+        if (query) query = query.limit(limitNum);
+        this._limit = limitNum;
+        return this;
+      },
+      single: function() {
+        if (query) query = query.single();
+        this._single = true;
+        return this;
+      },
+      maybeSingle: function() {
+        if (query) query = query.maybeSingle();
+        this._single = true;
+        return this;
+      },
+      update: function(values: any) {
+        if (query) query = query.update(values);
         return {
-          eq: (field: string, value: any) => {
+          eq: (col: string, val: any) => {
+            if (query) query = query.eq(col, val);
             return {
-              single: async () => {
-                return { data: null, error: null }
-              },
-              maybeSingle: async () => {
-                return { data: null, error: null }
+              then: (cb: any) => {
+                if (!realSupabase) return Promise.resolve(cb({ data: null, error: null }));
+                return query.then(cb);
               }
-            }
+            };
+          },
+          then: (cb: any) => {
+            if (!realSupabase) return Promise.resolve(cb({ data: null, error: null }));
+            return query.then(cb);
           }
-        }
+        };
+      },
+      upsert: function(values: any) {
+        if (query) query = query.upsert(values);
+        return {
+          then: (cb: any) => {
+            if (!realSupabase) return Promise.resolve(cb({ data: null, error: null }));
+            return query.then(cb);
+          }
+        };
+      },
+      insert: function(values: any) {
+        if (query) query = query.insert(values);
+        return {
+          then: (cb: any) => {
+            if (!realSupabase) return Promise.resolve(cb({ data: null, error: null }));
+            return query.then(cb);
+          }
+        };
+      },
+      then: function(cb: any) {
+        const executeQuery = async () => {
+          if (!realSupabase) {
+            // Apply filters
+            let filteredData = [fallbackProfile];
+            for (const filterFn of this._filters) {
+              filteredData = filteredData.filter(filterFn);
+            }
+
+            if (this._single) {
+              const singleItem = filteredData.length > 0 ? filteredData[0] : null;
+              return { data: singleItem, error: singleItem ? null : { code: 'PGRST116' } };
+            }
+
+            return { data: filteredData, error: null };
+          }
+
+          // Fallback to real Supabase
+          return query;
+        };
+        return executeQuery().then(cb);
       }
-    }
+    };
+    return builder;
   }
 } as unknown as SupabaseClient
