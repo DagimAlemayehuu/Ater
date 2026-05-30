@@ -143,13 +143,13 @@ test.describe('Onboarding', () => {
   });
 
   test('should reach onboarding when activated but not configured', async ({ page }) => {
-    await page.goto('/onboarding');
+    await page.goto('/#/onboarding');
     // Step 1 of onboarding should be visible
-    await expect(page.getByText('DEFINE YOUR PROFILE')).toBeVisible();
+    await expect(page.getByText('Define Your Profile')).toBeVisible();
   });
 
   test('should advance through name entry in step 1', async ({ page }) => {
-    await page.goto('/onboarding');
+    await page.goto('/#/onboarding');
     const nameInput = page.locator('input[type="text"]').first();
     await expect(nameInput).toBeVisible();
     await nameInput.fill('Dagim');
@@ -247,20 +247,20 @@ test.describe('Navigation', () => {
   });
 
   test('should not 404 on /obsidian route', async ({ page }) => {
-    await page.goto('/obsidian');
+    await page.goto('/#/obsidian');
     // In a SPA, 404 means a blank page or an error boundary, not an HTTP 404
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should not 404 on /agents route', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto('/#/agents');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('should not 404 on /academic-dashboard route', async ({ page }) => {
-    await page.goto('/academic-dashboard');
+    await page.goto('/#/academic');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('body')).toBeVisible();
   });
@@ -305,7 +305,7 @@ test.describe('Online/Offline & Sidecar Resiliency', () => {
       await route.abort('failed');
     });
 
-    await page.goto('/settings');
+    await page.goto('/#/settings');
     await page.waitForLoadState('domcontentloaded');
     
     // Verify that the UI remains interactive and doesn't white-screen
