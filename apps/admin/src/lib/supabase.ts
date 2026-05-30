@@ -167,134 +167,155 @@ if (typeof window !== 'undefined') {
   };
 }
 
-// Custom Mock Supabase Client Proxy
-const mockSupabase: any = {
-  channel: () => ({
-    on: function() { return this; },
-    subscribe: () => ({})
-  }),
-  removeChannel: () => {},
-  
-  from: (table: string) => {
-    return {
-      select: (columns: string, options?: any) => {
-        const execute = async () => {
-          if (checkBypass()) {
-            if (table === 'profiles') {
-              if (options?.count) {
-                return { data: null, count: MOCK_PROFILES.length, error: null };
-              }
-              return { data: MOCK_PROFILES, error: null };
-            }
-            if (table === 'waiting_list') {
-              if (options?.count) {
-                return { data: null, count: MOCK_WAITLIST.filter(w => w.status === 'pending').length, error: null };
-              }
-              return { data: MOCK_WAITLIST, error: null };
-            }
-            if (table === 'app_settings') {
-              return { data: MOCK_SETTINGS, error: null };
-            }
-            if (table === 'usage_logs') {
-              return { data: MOCK_USAGE_LOGS, error: null };
-            }
-            if (table === 'credit_ledger') {
-              const mockLedger = [
-                { amount: -240, created_at: new Date().toISOString(), feature_slug: 'oracle-chat' },
-                { amount: -580, created_at: new Date().toISOString(), feature_slug: 'file-ingestion' },
-                { amount: -600, created_at: new Date().toISOString(), feature_slug: 'spaced-recall' }
-              ];
-              return { data: mockLedger, error: null };
-            }
-          }
-          
-          // Fallback to real supabase calls if not bypassed
-          return realSupabase.from(table).select(columns, options);
-        };
-        
-        return {
-          order: (col: string, opt?: any) => {
-            const executeOrder = async () => {
-              if (checkBypass()) {
-                const res = await execute();
-                if (res.data) {
-                  return {
-                    data: [...res.data].sort((a: any, b: any) => {
-                      const valA = a[col];
-                      const valB = b[col];
-                      if (opt?.ascending) return valA > valB ? 1 : -1;
-                      return valA < valB ? 1 : -1;
-                    }),
-                    error: null
-                  };
-                }
-                return res;
-              }
-              return realSupabase.from(table).select(columns, options).order(col, opt);
-            };
-            
-            return {
-              limit: (limitNum: number) => {
-                return {
-                  then: (cb: any) => executeOrder().then(res => {
-                    if (res.data) res.data = res.data.slice(0, limitNum);
-                    return cb(res);
-                  })
-                };
-              },
-              then: (cb: any) => executeOrder().then(cb)
-            };
-          },
-          eq: (col: string, val: any) => {
-            const executeEq = async () => {
-              if (checkBypass()) {
-                const res = await execute();
-                if (res.data) {
-                  return { data: res.data.filter((item: any) => item[col] === val), error: null };
-                }
-                return res;
-              }
-              return realSupabase.from(table).select(columns, options).eq(col, val);
-            };
-            
-            return {
-              single: () => {
-                return {
-                  then: (cb: any) => executeEq().then(res => {
-                    const singleData = res.data && res.data.length > 0 ? res.data[0] : null;
-                    return cb({ data: singleData, error: singleData ? null : { code: 'PGRST116' } });
-                  })
-                };
-              },
-              then: (cb: any) => executeEq().then(cb)
-            };
-          },
-          gte: (col: string, val: any) => {
-            return {
-              order: (c: string, o?: any) => {
-                return {
-                  then: (cb: any) => execute().then(cb)
-                };
-              },
-              then: (cb: any) => execute().then(cb)
-            };
-          },
-          then: (cb: any) => execute().then(cb)
-        };
-      },
-      update: (values: any) => ({
-        eq: (col: string, val: any) => ({
-          then: (cb: any) => cb({ error: null })
-        })
-      }),
-      upsert: (values: any) => ({
-        then: (cb: any) => cb({ error: null })
-      }),
-      insert: (values: any) => ({
-        then: (cb: any) => cb({ error: null })
-      })
-    };
-  }
-};
+// Custom Hybrid Supabase Client Proxy
+const hybridSupabase = new Proxy(realSupabase, {
+  get(target, prop, receiver) {
+    if (checkBypass()) {
+      if (prop === 'channel') {
+        return () => ({
+          on: function() { return this; },
+          subscribe: () => ({})
+        });
+      }
+      if (prop === 'removeChannel') {
+        return () => {};
+      }
+      if (prop === 'from') {
+        return (table: string) => {
+          let query: any = realSupabase.from(table);
 
-export const supabase = typeof window !== 'undefined' ? mockSupabase : realSupabase;
+          const builder = {
+            _filters: [] as Array<(item: any) => boolean>,
+            _orderBy: null as { col: string; ascending: boolean } | null,
+            _limit: null as number | null,
+            _single: false,
+
+            select: function(columns: string = '*', options?: any) {
+              query = query.select(columns, options);
+              return this;
+            },
+            eq: function(col: string, val: any) {
+              query = query.eq(col, val);
+              this._filters.push((item: any) => item[col] === val);
+              return this;
+            },
+            gte: function(col: string, val: any) {
+              query = query.gte(col, val);
+              this._filters.push((item: any) => item[col] >= val);
+              return this;
+            },
+            order: function(col: string, opt?: any) {
+              query = query.order(col, opt);
+              this._orderBy = { col, ascending: opt?.ascending ?? false };
+              return this;
+            },
+            limit: function(limitNum: number) {
+              query = query.limit(limitNum);
+              this._limit = limitNum;
+              return this;
+            },
+            single: function() {
+              query = query.single();
+              this._single = true;
+              return this;
+            },
+            maybeSingle: function() {
+              query = query.maybeSingle();
+              this._single = true;
+              return this;
+            },
+            update: function(values: any) {
+              query = query.update(values);
+              return {
+                eq: (col: string, val: any) => {
+                  query = query.eq(col, val);
+                  return {
+                    then: (cb: any) => {
+                      return Promise.resolve(cb({ error: null }));
+                    }
+                  };
+                },
+                then: (cb: any) => {
+                  return Promise.resolve(cb({ error: null }));
+                }
+              };
+            },
+            upsert: function(values: any) {
+              query = query.upsert(values);
+              return {
+                then: (cb: any) => {
+                  return Promise.resolve(cb({ error: null }));
+                }
+              };
+            },
+            insert: function(values: any) {
+              query = query.insert(values);
+              return {
+                then: (cb: any) => {
+                  return Promise.resolve(cb({ error: null }));
+                }
+              };
+            },
+            then: function(cb: any) {
+              const executeQuery = async () => {
+                let data: any[] = [];
+                if (table === 'profiles') {
+                  data = MOCK_PROFILES;
+                } else if (table === 'waiting_list') {
+                  data = MOCK_WAITLIST;
+                } else if (table === 'app_settings') {
+                  data = MOCK_SETTINGS;
+                } else if (table === 'usage_logs') {
+                  data = MOCK_USAGE_LOGS;
+                } else if (table === 'credit_ledger') {
+                  data = [
+                    { amount: -240, created_at: new Date().toISOString(), feature_slug: 'oracle-chat' },
+                    { amount: -580, created_at: new Date().toISOString(), feature_slug: 'file-ingestion' },
+                    { amount: -600, created_at: new Date().toISOString(), feature_slug: 'spaced-recall' }
+                  ];
+                }
+
+                // Apply filters
+                let filteredData = [...data];
+                for (const filterFn of this._filters) {
+                  filteredData = filteredData.filter(filterFn);
+                }
+
+                // Apply ordering
+                if (this._orderBy) {
+                  const { col, ascending } = this._orderBy;
+                  filteredData.sort((a, b) => {
+                    const valA = a[col];
+                    const valB = b[col];
+                    if (ascending) return valA > valB ? 1 : -1;
+                    return valA < valB ? 1 : -1;
+                  });
+                }
+
+                // Apply limit
+                if (this._limit !== null) {
+                  filteredData = filteredData.slice(0, this._limit);
+                }
+
+                if (this._single) {
+                  const singleItem = filteredData.length > 0 ? filteredData[0] : null;
+                  return { data: singleItem, error: singleItem ? null : { code: 'PGRST116' } };
+                }
+
+                return { data: filteredData, error: null };
+              };
+              return executeQuery().then(cb);
+            }
+          };
+          return builder;
+        };
+      }
+    }
+
+    // Default to realSupabase
+    const val = Reflect.get(target, prop, receiver);
+    return typeof val === 'function' ? val.bind(target) : val;
+  }
+});
+
+export const supabase = hybridSupabase;

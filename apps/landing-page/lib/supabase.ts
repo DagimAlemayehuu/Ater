@@ -20,64 +20,82 @@ const getSimulatedStatus = () => {
   return params.get('status') === 'approved' ? 'approved' : 'pending';
 };
 
-const mockSupabase: any = {
-  auth: {
-    getSession: async () => {
-      if (checkBypass()) {
-        const mockUser = {
-          id: 'usr_mock_1',
-          email: 'alice.vance@mit.edu',
-          user_metadata: { full_name: 'Alice Vance' }
-        };
-        return { data: { session: { user: mockUser } }, error: null };
-      }
-      return realSupabase.auth.getSession();
-    },
-    onAuthStateChange: (cb: any) => {
-      if (checkBypass()) {
-        const mockUser = {
-          id: 'usr_mock_1',
-          email: 'alice.vance@mit.edu',
-          user_metadata: { full_name: 'Alice Vance' }
-        };
-        // Trigger callback with mock session immediately
-        setTimeout(() => {
-          cb('SIGNED_IN', { user: mockUser });
-        }, 10);
-        return { data: { subscription: { unsubscribe: () => {} } } };
-      }
-      return realSupabase.auth.onAuthStateChange(cb);
-    },
-    signOut: async () => {
-      return { error: null };
-    }
-  },
-  
-  from: (table: string) => {
-    if (checkBypass() && table === 'waiting_list') {
-      return {
-        select: (cols: string) => ({
-          eq: (col: string, val: any) => ({
-            maybeSingle: async () => {
-              const status = getSimulatedStatus();
-              return {
-                data: {
-                  id: 'wl_mock_1',
-                  email: val,
-                  full_name: 'Alice Vance',
-                  status: status,
-                  created_at: new Date().toISOString(),
-                  activation_code: status === 'approved' ? 'ATER-XJ9K4P2L' : null
-                },
-                error: null
+// Custom Hybrid Supabase Client Proxy
+const hybridSupabase = new Proxy(realSupabase, {
+  get(target, prop, receiver) {
+    if (prop === 'auth') {
+      const realAuth = target.auth;
+      return new Proxy(realAuth, {
+        get(authTarget, authProp, authReceiver) {
+          if (checkBypass()) {
+            if (authProp === 'getSession') {
+              return async () => {
+                const mockUser = {
+                  id: 'usr_mock_1',
+                  email: 'alice.vance@mit.edu',
+                  user_metadata: { full_name: 'Alice Vance' }
+                };
+                return { data: { session: { user: mockUser } }, error: null };
               };
             }
-          })
-        })
+            if (authProp === 'onAuthStateChange') {
+              return (cb: any) => {
+                const mockUser = {
+                  id: 'usr_mock_1',
+                  email: 'alice.vance@mit.edu',
+                  user_metadata: { full_name: 'Alice Vance' }
+                };
+                setTimeout(() => {
+                  cb('SIGNED_IN', { user: mockUser });
+                }, 10);
+                return { data: { subscription: { unsubscribe: () => {} } } };
+              };
+            }
+            if (authProp === 'signOut') {
+              return async () => {
+                return { error: null };
+              };
+            }
+          }
+          // Default: forward to real auth
+          const val = Reflect.get(authTarget, authProp, authReceiver);
+          return typeof val === 'function' ? val.bind(authTarget) : val;
+        }
+      });
+    }
+
+    if (prop === 'from') {
+      return (table: string) => {
+        if (checkBypass() && table === 'waiting_list') {
+          return {
+            select: (cols: string = '*') => ({
+              eq: (col: string, val: any) => ({
+                maybeSingle: async () => {
+                  const status = getSimulatedStatus();
+                  return {
+                    data: {
+                      id: 'wl_mock_1',
+                      email: val,
+                      full_name: 'Alice Vance',
+                      status: status,
+                      created_at: new Date().toISOString(),
+                      activation_code: status === 'approved' ? 'ATER-XJ9K4P2L' : null
+                    },
+                    error: null
+                  };
+                }
+              })
+            })
+          };
+        }
+        return target.from(table);
       };
     }
-    return realSupabase.from(table);
-  }
-};
 
-export const supabase = typeof window !== 'undefined' ? mockSupabase : realSupabase;
+    // Default: forward to real client
+    const val = Reflect.get(target, prop, receiver);
+    return typeof val === 'function' ? val.bind(target) : val;
+  }
+});
+
+export const supabase = hybridSupabase;

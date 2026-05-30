@@ -59,6 +59,7 @@ export function MacbookMockup({
                 src={lightSrc}
                 alt={`${alt} (Light Mode)`}
                 fill
+                unoptimized
                 className="object-cover object-top"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 priority={priority}
@@ -77,6 +78,7 @@ export function MacbookMockup({
                 src={darkSrc}
                 alt={`${alt} (Dark Mode)`}
                 fill
+                unoptimized
                 className="object-cover object-top"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 priority={priority}
@@ -150,6 +152,7 @@ export function MacbookLidMockup({
               src={lightSrc}
               alt={`${alt} (Light Mode)`}
               fill
+              unoptimized
               className="object-cover object-top"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
               priority={priority}
@@ -168,6 +171,7 @@ export function MacbookLidMockup({
               src={darkSrc}
               alt={`${alt} (Dark Mode)`}
               fill
+              unoptimized
               className="object-cover object-top"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
               priority={priority}
