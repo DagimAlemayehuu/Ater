@@ -278,11 +278,13 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
       // Update Zustand in-memory state directly from hydrated Rust state
       const newState = await invoke<{ status: LockStatus; locked_features: string[] }>('get_security_state')
-      set({
-        status: newState.status,
-        lockedFeatures: newState.locked_features,
-        lastChecked: new Date()
-      })
+      if (newState) {
+        set({
+          status: newState.status,
+          lockedFeatures: newState.locked_features,
+          lastChecked: new Date()
+        })
+      }
     } catch (err) {
       console.error('[Security System] Background lease sync failed:', err)
     }

@@ -92,10 +92,12 @@ export const supabase: any = {
     return realSupabase ? realSupabase.getChannels() : []
   },
   channel: (name: string) => {
-    return realSupabase ? realSupabase.channel(name) : {
-      on: () => ({ subscribe: () => {} }),
+    if (realSupabase) return realSupabase.channel(name)
+    const mockChannel: any = {
+      on: () => mockChannel,
       subscribe: () => {}
     }
+    return mockChannel
   },
   removeChannel: (channel: any) => {
     if (realSupabase) realSupabase.removeChannel(channel)

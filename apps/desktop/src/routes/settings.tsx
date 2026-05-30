@@ -391,7 +391,7 @@ export default function Settings() {
       try {
         await navigator.clipboard.writeText(logPath);
         toast.success(`System logs exported successfully & path copied to clipboard:\n${logPath}`);
-      } catch (clipErr) {
+      } catch {
         toast.success(`System logs exported and saved to:\n${logPath}`);
       }
     } catch (err: any) {

@@ -4,7 +4,6 @@ import Settings from '../routes/settings';
 import { ConfigProvider } from '../lib/ConfigContext';
 import { HeaderProvider } from '../context/header-context';
 import { MemoryRouter } from 'react-router-dom';
-import { sidecarApi } from '../lib/sidecarApi';
 
 // Mock sidecarApi
 vi.mock('../lib/sidecarApi', () => ({

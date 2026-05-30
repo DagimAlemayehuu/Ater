@@ -645,7 +645,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      <div className="p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-6">
      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
      <div className="w-full h-64">
-     <ResponsiveContainer width="100%" height="100%">
+     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
      <LineChart data={validPractices.slice(-10).map((p, i) => ({name: i + 1, score: parseInt(p.score) || 0}))}>
      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.1)" />
      <XAxis dataKey="name" hide />

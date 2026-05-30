@@ -58,3 +58,12 @@ vi.mock('@tauri-apps/plugin-store', () => {
   };
 });
 
+// Mock Recharts ResponsiveContainer to prevent width/height 0 warnings in JSDOM
+vi.mock('recharts', async (importOriginal) => {
+  const original = await importOriginal<any>();
+  return {
+    ...original,
+    ResponsiveContainer: ({ children }: any) => children,
+  };
+});
+
