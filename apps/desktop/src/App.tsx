@@ -53,10 +53,10 @@ function SecurityBlocker() {
   const isBypass = import.meta.env.DEV &&
     (new URLSearchParams(window.location.search).get('bypass') === 'true' ||
      window.location.hash.includes('bypass=true'))
-  if (isBypass) return null;
-  if (!config?.isActivated) return null;
 
   useEffect(() => {
+    if (isBypass) return
+    if (!config?.isActivated) return
     if (status === 'Active' || status === 'FeatureLocked') return
 
     import('@tauri-apps/api/core').then(core => {
@@ -73,7 +73,7 @@ function SecurityBlocker() {
       window.addEventListener('keydown', handleKeyDown, true)
       return () => window.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [status])
+  }, [status, isBypass, config?.isActivated])
 
   const handleRetry = async () => {
     setIsRetrying(true)
@@ -81,6 +81,8 @@ function SecurityBlocker() {
     setIsRetrying(false)
   }
 
+  if (isBypass) return null;
+  if (!config?.isActivated) return null;
   if (status === 'Active' || status === 'FeatureLocked') return null
 
   // 1. Expired lease offline: subtle, top-anchored layout bar, leaving workspace active.

@@ -36,7 +36,7 @@ const fallbackProfile = {
   is_approved: true,
   is_configured: true,
   machine_id: '',
-  credit_balance: 100,
+  credit_balance: 20,
   locked_features: []
 }
 

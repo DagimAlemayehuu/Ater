@@ -10,6 +10,7 @@ interface PageGuardProps {
 export function PageGuard({ featureSlug, children }: PageGuardProps) {
   const isFeatureLocked = useSecurityStore(state => state.isFeatureLocked)
   const checkOnlineLockout = useSecurityStore(state => state.checkOnlineLockout)
+  const creditBalance = useSecurityStore(state => state.creditBalance)
   const [isSyncing, setIsSyncing] = useState(false)
 
   const isBypass = import.meta.env.DEV &&
@@ -50,7 +51,10 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
       let title = "Module Restricted"
       let description = "Access to this interface domain has been restricted by administration."
 
-      if (featureSlug === 'ai-ingestion' || featureSlug === 'oracle-chat' || featureSlug === 'ai-features' || featureSlug === 'ai_locked') {
+      if (creditBalance <= 0) {
+        title = "You're out of credits"
+        description = "You have run out of credits. Please purchase more credits on your dashboard to continue using AI tools."
+      } else if (featureSlug === 'ai-ingestion' || featureSlug === 'oracle-chat' || featureSlug === 'ai-features' || featureSlug === 'ai_locked') {
         title = "AI Features Restricted"
         description = "Your access to artificial intelligence processing models and local sidecar reasoning has been temporarily locked by the controller."
       }

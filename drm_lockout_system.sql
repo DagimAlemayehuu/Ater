@@ -58,7 +58,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS trg_check_hardware_blacklist ON public.profiles;
 CREATE TRIGGER trg_check_hardware_blacklist

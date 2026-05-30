@@ -29,6 +29,32 @@ function ControllerContent() {
     areaPath: "M 0 28 L 100 28 L 100 30 L 0 30 Z"
   })
   const [chartLabels, setChartLabels] = useState<string[]>([])
+  const [bypassMode, setBypassMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search)
+      const hasBypass = searchParams.get('bypass') === 'true' || window.location.hash.includes('bypass=true')
+      setBypassMode(hasBypass)
+    }
+  }, [])
+
+  const handleBypassToggle = () => {
+    const nextVal = !bypassMode
+    setBypassMode(nextVal)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      if (nextVal) {
+        url.searchParams.set('bypass', 'true')
+      } else {
+        url.searchParams.delete('bypass')
+      }
+      window.history.replaceState({}, '', url.toString())
+      window.location.reload()
+    }
+  }
 
   // Sync tab from URL query params
   useEffect(() => {
@@ -176,14 +202,31 @@ function ControllerContent() {
               System overview and user stats
             </p>
           </div>
-          <button 
-            onClick={fetchSummaryMetrics}
-            disabled={isLoading}
-            className="flex items-center gap-2 border border-border/40 bg-bento-card hover:bg-bento-item text-muted-foreground hover:text-foreground px-4 py-2 rounded-[8px] text-[9px] uppercase tracking-widest transition-all cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`size-3 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Syncing...' : 'Sync'}
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Local Bypass Toggle (rendered in dev/localhost) */}
+            {(mounted && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) && (
+              <button
+                onClick={handleBypassToggle}
+                className={`flex items-center gap-2 border px-4 py-2 rounded-[8px] text-[9px] uppercase tracking-widest transition-all cursor-pointer ${
+                  bypassMode
+                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-200 hover:bg-amber-500/20'
+                    : 'border-border/40 bg-bento-card text-muted-foreground hover:text-foreground hover:bg-bento-item'
+                }`}
+              >
+                <span className={`size-2 rounded-full ${bypassMode ? 'bg-amber-500 animate-pulse' : 'bg-muted-foreground'}`} />
+                {bypassMode ? 'RLS Bypassed (Mock)' : 'RLS Enforced (Supabase)'}
+              </button>
+            )}
+
+            <button 
+              onClick={fetchSummaryMetrics}
+              disabled={isLoading}
+              className="flex items-center gap-2 border border-border/40 bg-bento-card hover:bg-bento-item text-muted-foreground hover:text-foreground px-4 py-2 rounded-[8px] text-[9px] uppercase tracking-widest transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Syncing...' : 'Sync'}
+            </button>
+          </div>
         </div>
 
         {/* Telemetry Summary Stats */}

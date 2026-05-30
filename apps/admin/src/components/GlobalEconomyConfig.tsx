@@ -11,6 +11,41 @@ type ConfigRow = {
   updated_at: string
 }
 
+const FEATURE_DESCRIPTIONS: Record<string, { title: string; desc: string }> = {
+  'explain-features': {
+    title: 'Explain with AI',
+    desc: 'Billed when selecting text, PDFs, or questions for detailed main agent explanations.'
+  },
+  'generate-practice': {
+    title: 'Practice Recall Generation',
+    desc: 'Billed when dynamically generating personalized interactive quizzes and recall cards.'
+  },
+  'ater_generation': {
+    title: 'Note Generation Pipeline',
+    desc: 'Billed when processing hubs, raw outlines, or compiling academic progress sheets.'
+  },
+  'edc-features': {
+    title: 'EDC Tracing Console',
+    desc: 'Billed when using Explain-Debug-Code tracing for complex code engineering notes.'
+  },
+  'oracle-chat': {
+    title: 'Oracle RAG Assistant',
+    desc: 'Billed per streaming chat message exchange with the central Knowledge RAG Oracle.'
+  },
+  'ai-ingestion': {
+    title: 'Document Vector Ingestion',
+    desc: 'Billed per document uploaded and split into local vector embeddings.'
+  },
+  'ai-features': {
+    title: 'AI Interface Access',
+    desc: 'General access lease for executing baseline semantic modeling features.'
+  },
+  'ai_locked': {
+    title: 'Legacy AI Lockout',
+    desc: 'Governance status flag for standard AI processing pipelines.'
+  }
+}
+
 export function GlobalEconomyConfig() {
   const [configs, setConfigs] = useState<ConfigRow[]>([])
   const [circuitBreaker, setCircuitBreaker] = useState<boolean>(false)
@@ -20,6 +55,46 @@ export function GlobalEconomyConfig() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [allAiCost, setAllAiCost] = useState<number>(0)
   const [updatingAllAi, setUpdatingAllAi] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+
+  async function seedDefaultRules() {
+    setSeeding(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    try {
+      const defaults = [
+        { slug: 'explain-features', credit_cost: 1 },
+        { slug: 'generate-practice', credit_cost: 1 },
+        { slug: 'ater_generation', credit_cost: 5 },
+        { slug: 'edc-features', credit_cost: 1 },
+        { slug: 'oracle-chat', credit_cost: 2 },
+        { slug: 'ai-ingestion', credit_cost: 1 },
+        { slug: 'ai-features', credit_cost: 1 },
+        { slug: 'ai_locked', credit_cost: 1 },
+        { slug: 'circuit-breaker', credit_cost: 0 }
+      ]
+
+      const { error } = await supabase
+        .from('system_config')
+        .upsert(defaults, { onConflict: 'slug' })
+
+      if (!error) {
+        setSuccessMessage('Default system pricing rules initialized successfully!')
+        fetchConfigs()
+      } else {
+        if (error.message?.includes('violates row-level security')) {
+          setErrorMessage('Security Alert: Your profile is not configured as an Admin in the remote Supabase database. Try appending "?bypass=true" to the URL path to bypass RLS in full interactive mockup mode!')
+        } else {
+          setErrorMessage(error.message)
+        }
+      }
+    } catch (e: unknown) {
+      console.error('[Economy Config] Seeding failed:', e)
+      setErrorMessage('Failed to initialize database pricing rules.')
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   // Clear messages
   useEffect(() => {
@@ -68,28 +143,43 @@ export function GlobalEconomyConfig() {
     fetchConfigs()
   }, [])
 
-  // Apply cost adjustment for a single feature row
-  async function applyPriceChange(slug: string) {
-    const cost = inputCosts[slug]
-    if (cost === undefined || cost < 0) return
+  // Apply cost adjustment for ALL feature rows together
+  const [savingAll, setSavingAll] = useState(false)
+
+  async function applyPriceChangeAll() {
+    setSavingAll(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
     try {
-      const { error } = await supabase
-        .from('system_config')
-        .update({ 
-          credit_cost: cost,
-          updated_at: new Date().toISOString()
-        })
-        .eq('slug', slug)
-      
-      if (!error) {
-        setSuccessMessage(`Pricing updated for ${slug.toUpperCase()} to ${cost} credits`)
+      const promises = configs.map(c => {
+        const cost = inputCosts[c.slug]
+        return supabase
+          .from('system_config')
+          .update({ 
+            credit_cost: cost !== undefined ? cost : c.credit_cost,
+            updated_at: new Date().toISOString()
+          })
+          .eq('slug', c.slug)
+      })
+
+      const results = await Promise.all(promises)
+      const failed = results.find(r => r.error)
+
+      if (!failed) {
+        setSuccessMessage('Successfully updated all pricing rules in system cost matrix!')
         fetchConfigs()
       } else {
-        setErrorMessage(error.message)
+        if (failed.error?.message?.includes('violates row-level security')) {
+          setErrorMessage('Security Alert: Your profile is not configured as an Admin in the remote Supabase database. Try appending "?bypass=true" to the URL path to bypass RLS in full interactive mockup mode!')
+        } else {
+          setErrorMessage(failed.error?.message || 'Failed to update some pricing rules.')
+        }
       }
     } catch (e: unknown) {
-      console.error('[Economy Config] Failed to adjust pricing:', e)
-      setErrorMessage('Failed to adjust pricing rules.')
+      console.error('[Economy Config] Batch pricing save failed:', e)
+      setErrorMessage('Failed to save unified pricing cost matrix.')
+    } finally {
+      setSavingAll(false)
     }
   }
 
@@ -98,7 +188,7 @@ export function GlobalEconomyConfig() {
     setErrorMessage(null)
     setSuccessMessage(null)
     try {
-      const aiSlugs = ['ai-ingestion', 'oracle-chat', 'ai-features', 'ai_locked']
+      const aiSlugs = ['ai-ingestion', 'oracle-chat', 'ai-features', 'ai_locked', 'explain-features', 'generate-practice', 'ater_generation', 'edc-features']
       
       const promises = aiSlugs.map(slug => 
         supabase
@@ -117,7 +207,11 @@ export function GlobalEconomyConfig() {
         setSuccessMessage(`Pricing updated for all AI features to ${allAiCost} credits`)
         fetchConfigs()
       } else {
-        setErrorMessage(failed.error?.message || 'Failed to update some AI feature costs.')
+        if (failed.error?.message?.includes('violates row-level security')) {
+          setErrorMessage('Security Alert: Your profile is not configured as an Admin in the remote Supabase database. Try appending "?bypass=true" to the URL path to bypass RLS in full interactive mockup mode!')
+        } else {
+          setErrorMessage(failed.error?.message || 'Failed to update some AI feature costs.')
+        }
       }
     } catch (e: unknown) {
       console.error('[Economy Config] Failed to batch adjust pricing:', e)
@@ -143,7 +237,11 @@ export function GlobalEconomyConfig() {
         setCircuitBreaker(nextState)
         setSuccessMessage(`Gateway status: ${nextState ? 'Disconnected' : 'Active'}`)
       } else {
-        setErrorMessage(error.message)
+        if (error.message?.includes('violates row-level security')) {
+          setErrorMessage('Security Alert: Your profile is not configured as an Admin in the remote Supabase database. Try appending "?bypass=true" to the URL path to bypass RLS in full interactive mockup mode!')
+        } else {
+          setErrorMessage(error.message)
+        }
       }
     } catch (e: unknown) {
       console.error('[Economy Config] Failed to toggle circuit breaker:', e)
@@ -152,7 +250,7 @@ export function GlobalEconomyConfig() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-[10px] max-w-4xl relative select-none">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-[10px] max-w-6xl relative select-none">
       {/* Toast notifications */}
       {(successMessage || errorMessage) && (
         <div className={cn(
@@ -253,39 +351,66 @@ export function GlobalEconomyConfig() {
               Loading...
             </div>
           ) : configs.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground text-[8px] uppercase tracking-widest">
-              No pricing rules.
+            <div className="text-center py-12 px-6 flex flex-col items-center justify-center space-y-4">
+              <div className="size-10 rounded-full border border-border/40 bg-bento-bg flex items-center justify-center text-muted-foreground text-[14px]">⚡</div>
+              <div className="space-y-1">
+                <p className="text-foreground text-[9px] font-black uppercase tracking-[0.2em]">Database Uninitialized</p>
+                <p className="text-muted-foreground text-[8px] uppercase tracking-widest leading-relaxed max-w-[280px] mx-auto">
+                  No pricing rules found in system_config. Initialize dynamic cost parameters below.
+                </p>
+              </div>
+              <button
+                onClick={seedDefaultRules}
+                disabled={seeding}
+                className="mt-2 border border-border bg-foreground text-background hover:bg-foreground/80 transition-all uppercase text-[8px] font-black tracking-widest px-4 py-2 rounded-[6px] cursor-pointer disabled:opacity-50"
+              >
+                {seeding ? 'Initializing...' : 'Initialize Default Rules'}
+              </button>
             </div>
           ) : (
-            configs.map(c => (
-              <div key={c.slug} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 first:pt-0 last:pb-0">
-                <div className="space-y-1">
-                  <div className="font-bold text-foreground text-[10px] uppercase tracking-wider">{c.slug.replace('_', ' ')}</div>
-                  <div className="text-[8px] text-muted-foreground uppercase tracking-widest">
-                    Updated: {new Date(c.updated_at).toLocaleDateString()}
+            configs.map(c => {
+              const meta = FEATURE_DESCRIPTIONS[c.slug] || {
+                title: c.slug.replace(/[-_]/g, ' '),
+                desc: 'Integrated system transaction rule cost mapping.'
+              }
+              return (
+                <div key={c.slug} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 first:pt-0">
+                  <div className="space-y-1 max-w-[70%] text-left">
+                    <div className="font-bold text-foreground text-[10px] uppercase tracking-wider">{meta.title}</div>
+                    <div className="text-[8px] text-muted-foreground uppercase tracking-widest leading-normal">{meta.desc}</div>
+                    <div className="text-[7px] text-muted-foreground/60 uppercase tracking-widest pt-1">
+                      slug: {c.slug} | Updated: {new Date(c.updated_at).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 w-full sm:w-auto items-center shrink-0">
+                    <input
+                      type="number"
+                      min="0"
+                      value={inputCosts[c.slug] ?? 0}
+                      onChange={e => setInputCosts({ 
+                        ...inputCosts, 
+                        [c.slug]: Math.max(0, parseInt(e.target.value) || 0) 
+                      })}
+                      className="w-20 bg-bento-bg border border-border/40 text-foreground text-[11px] px-3 py-1.5 rounded-[6px] focus:border-border/80 outline-none font-mono"
+                    />
+                    <span className="text-[8px] text-muted-foreground uppercase tracking-widest font-black shrink-0">credits</span>
                   </div>
                 </div>
-
-                <div className="flex gap-2 w-full sm:w-auto items-center">
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputCosts[c.slug] ?? 0}
-                    onChange={e => setInputCosts({ 
-                      ...inputCosts, 
-                      [c.slug]: Math.max(0, parseInt(e.target.value) || 0) 
-                    })}
-                    className="w-20 bg-bento-bg border border-border/40 text-foreground text-[11px] px-3 py-1.5 rounded-[6px] focus:border-border/80 outline-none"
-                  />
+              )
+            }).concat(
+              configs.length > 0 ? [
+                <div key="save-all" className="pt-6 mt-4 border-t border-border/20 flex justify-end">
                   <button
-                    onClick={() => applyPriceChange(c.slug)}
-                    className="border border-border/40 bg-bento-card hover:bg-bento-item text-[8px] font-black uppercase tracking-widest px-3 py-2 rounded-[6px] transition-colors cursor-pointer text-foreground"
+                    onClick={applyPriceChangeAll}
+                    disabled={savingAll}
+                    className="border border-border bg-foreground text-background hover:bg-foreground/80 transition-all uppercase text-[8px] font-black tracking-widest px-5 py-3 rounded-[6px] cursor-pointer disabled:opacity-50 flex items-center gap-2"
                   >
-                    Save
+                    {savingAll ? 'Saving cost matrix...' : 'Save All Pricing Rules'}
                   </button>
                 </div>
-              </div>
-            ))
+              ] : []
+            )
           )}
         </div>
       </div>

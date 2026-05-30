@@ -9,6 +9,52 @@ import { getAppStore } from '@/lib/store'
 import { invoke } from '@tauri-apps/api/core'
 import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
+import { realSupabase } from '@/lib/supabase'
+
+function enforceFeatureLock(featureSlug: string) {
+    if (useSecurityStore.getState().isFeatureLocked(featureSlug)) {
+        throw new Error(`ACCESS_DENIED: Module [${featureSlug}] is locked in read-only mode by administration.`);
+    }
+}
+
+async function deductCredits(featureSlug: string) {
+    if (await isDemoActive()) {
+        const balance = useSecurityStore.getState().creditBalance;
+        if (balance <= 0) {
+            throw new Error('OUT_OF_CREDITS');
+        }
+        useSecurityStore.getState().setSecurityState({ creditBalance: Math.max(0, balance - 1) });
+        return;
+    }
+
+    if (realSupabase) {
+        const { data: userData } = await realSupabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) {
+            throw new Error("ACCESS_DENIED: User is not authenticated. Please login again.");
+        }
+
+        const { data: newBalance, error } = await realSupabase.rpc('deduct_user_credits', {
+            target_user_id: user.id,
+            target_feature_slug: featureSlug
+        });
+
+        if (error) {
+            console.error(`[Billing] Failed to deduct credits for ${featureSlug}:`, error);
+            if (error.code === 'P0004' || error.message?.includes('Insufficient credit')) {
+                throw new Error('OUT_OF_CREDITS');
+            }
+            if (error.code === 'C0001' || error.message?.includes('temporarily disabled')) {
+                throw new Error('CIRCUIT_BREAKER');
+            }
+            throw new Error(error.message || 'Billing transaction failed.');
+        }
+
+        if (typeof newBalance === 'number') {
+            useSecurityStore.getState().setSecurityState({ creditBalance: newBalance });
+        }
+    }
+}
 
 async function isDemoActive(): Promise<boolean> {
     if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
@@ -436,6 +482,7 @@ export const sidecarApi = {
     },
     
     updateObsidianNote: async (path: string, content: string) => {
+        enforceFeatureLock('file_ingestion')
         try {
             return await invoke<any>('update_obsidian_note', { path, content })
         } catch (err) {
@@ -445,6 +492,7 @@ export const sidecarApi = {
     },
 
     deleteObsidianItem: async (path: string) => {
+        enforceFeatureLock('file_ingestion')
         try {
             return await invoke<any>('delete_obsidian_item', { path })
         } catch (err) {
@@ -454,6 +502,7 @@ export const sidecarApi = {
     },
 
     createObsidianFile: async (path: string, content: string = '', overwrite: boolean = false) => {
+        enforceFeatureLock('file_ingestion')
         try {
             return await invoke<any>('create_obsidian_file', { path, content, overwrite })
         } catch (err) {
@@ -463,6 +512,7 @@ export const sidecarApi = {
     },
 
     createObsidianFolder: async (path: string) => {
+        enforceFeatureLock('file_ingestion')
         try {
             return await invoke<any>('create_obsidian_folder', { path })
         } catch (err) {
@@ -472,6 +522,7 @@ export const sidecarApi = {
     },
 
     moveObsidianItem: async (oldPath: string, newPath: string) => {
+        enforceFeatureLock('file_ingestion')
         try {
             return await invoke<any>('move_obsidian_item', { oldPath, newPath })
         } catch (err) {
@@ -487,6 +538,8 @@ export const sidecarApi = {
     },
 
     aterProcess: async (payload: { file_path?: string; text?: string; target_hub_id?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('ater_generation')
         try {
             return await invoke<any>('ater_process', { payload })
         } catch (err) {
@@ -494,8 +547,10 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     aterGeneratePlan: async (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('ater_generation')
         try {
             return await invoke<any>('ater_generate_plan', { payload })
         } catch (err) {
@@ -503,8 +558,10 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     aterConfirm: async (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('ater_generation')
         try {
             return await invoke<any>('ater_confirm', { payload })
         } catch (err) {
@@ -624,6 +681,7 @@ export const sidecarApi = {
     },
     
     generatePractice: async (hubId: string, config: any) => {
+        await deductCredits('generate-practice')
         if (await isDemoActive()) {
             return {
                 quiz_path: 'mock_quiz.json',
@@ -786,6 +844,8 @@ export const sidecarApi = {
     },
 
     explainPdfSelection: async (payload: { path: string, selection: string, page?: number, note_mode?: string, note_title?: string, note_course?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
                 explanation: "Logarithmic scaling (O(log N)) halves search boundaries at each iteration, resulting in exceptionally fast target retrieval compared to linear O(N) array traversals."
@@ -798,8 +858,10 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     generateQuickQuestions: async (payload: { path: string, selection: string, page?: number }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
         try {
             return await invoke<any>('generate_quick_questions', { payload })
         } catch (err) {
@@ -807,7 +869,7 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     aterExplain: async (payload: {
         path: string,
         selection: string,
@@ -820,6 +882,8 @@ export const sidecarApi = {
         source_kind?: 'markdown' | 'pdf',
         selection_context?: string,
     }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
                 explanation: "This mock note details Binary Search, an algorithm that halves the search space at each logical decision point. It terminates in O(log N) operations once the bounds converge."
@@ -832,7 +896,7 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     aterChat: async (payload: {
         path: string,
         selection: string,
@@ -845,6 +909,8 @@ export const sidecarApi = {
         note_title?: string,
         note_course?: string,
     }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
         try {
             return await invoke<any>('ater_chat', { payload })
         } catch (err) {
@@ -852,7 +918,7 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     oracleChat: async (payload: {
         history: { role: string; content: string }[],
         rag_context?: string,
@@ -863,6 +929,8 @@ export const sidecarApi = {
             recent_notes?: string[];
         }
     }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('oracle-chat')
         try {
             return await invoke<any>('ater_oracle_chat', { payload })
         } catch (err) {
@@ -924,17 +992,58 @@ export const sidecarApi = {
             if (useSecurityStore.getState().isFeatureLocked('oracle-chat')) {
                 throw new Error("ACCESS_DENIED: Module [oracle-chat] restricted by controller.");
             }
-            const port = await invoke<number>('get_sidecar_port');
+
             const store = await getAppStore();
-            
+            const aiApiKey = await store.get<string>('aiApiKey');
+
+            // 1. Hybrid Billing Routing: If user has NOT set their own custom API key, route through central corporate Edge function.
+            // This charges the user's Supabase profile credits atomically.
+            if (!aiApiKey && realSupabase) {
+                console.info('[Security RAG] Client API key missing. Invoking central billing gateway Edge Function...');
+                
+                const { data: sessionData } = await realSupabase.auth.getSession();
+                const token = sessionData?.session?.access_token;
+                
+                if (!token) {
+                    throw new Error("ACCESS_DENIED: User is not authenticated in cloud database. Please reconnect.");
+                }
+
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                const edgeUrl = `${supabaseUrl}/functions/v1/execute-ai-action`;
+                
+                const response = await fetch(edgeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        feature_slug: 'oracle-chat',
+                        prompt: payload.history[payload.history.length - 1]?.content || ''
+                    })
+                });
+
+                if (!response.ok) {
+                    const errPayload = await response.json().catch(() => ({}));
+                    throw new Error(errPayload.error || errPayload.details || `Billing Gateway rejected transaction with status ${response.status}`);
+                }
+
+                // Deduct credit in Zustand local state immediately on success
+                const balance = useSecurityStore.getState().creditBalance;
+                useSecurityStore.getState().setSecurityState({ creditBalance: Math.max(0, balance - 2) });
+
+                return response;
+            }
+
+            // 2. Direct Self-Billed Sidecar Mode
+            await deductCredits('oracle-chat');
+            const port = await invoke<number>('get_sidecar_port');
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
             };
             
             const aiProvider = await store.get<string>('aiProvider');
             if (aiProvider) headers['X-AI-Provider'] = aiProvider;
-            
-            const aiApiKey = await store.get<string>('aiApiKey');
             if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
             
             const aiModel = await store.get<string>('aiModel');
@@ -994,6 +1103,7 @@ export const sidecarApi = {
     },
 
     logNoteVisit: async (notePath: string, durationSeconds: number) => {
+        enforceFeatureLock('interactive_quiz')
         try {
             return await invoke<any>('log_note_visit', { notePath, durationSeconds })
         } catch (err) {
@@ -1003,6 +1113,7 @@ export const sidecarApi = {
     },
     
     logStudySession: async (hubId: string, durationSeconds: number, mode: string = 'focus') => {
+        enforceFeatureLock('interactive_quiz')
         try {
             return await invoke<any>('log_study_session', { hubId, durationSeconds, mode })
         } catch (err) {
@@ -1012,6 +1123,7 @@ export const sidecarApi = {
     },
 
     logPracticeResult: async (hubId: string, score: number, total: number, notePath?: string) => {
+        enforceFeatureLock('interactive_quiz')
         try {
             return await invoke<any>('log_practice_result', { hubId, score, total, notePath })
         } catch (err) {
@@ -1069,6 +1181,7 @@ export const sidecarApi = {
     },
 
     srsReview: async (notePath: string, rating: number) => {
+        enforceFeatureLock('interactive_quiz')
         try {
             return await invoke<any>('srs_review', { notePath, rating })
         } catch (err) {
@@ -1136,6 +1249,7 @@ export const sidecarApi = {
     },
 
     vaultUploadText: async (hubId: string, sourceName: string, sourceText: string) => {
+        enforceFeatureLock('file_ingestion')
         try {
             return await invoke<any>('vault_upload_text', { hubId, sourceName, sourceText })
         } catch (err) {
@@ -1143,8 +1257,11 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     vaultGenerate: async (vaultPaths: string[], mode: string, hubId: string) => {
+        enforceFeatureLock('ai-features')
+        enforceFeatureLock('file_ingestion')
+        await deductCredits('ater_generation')
         try {
             return await invoke<any>('vault_generate', { vaultPaths, mode, hubId })
         } catch (err) {
@@ -1152,8 +1269,9 @@ export const sidecarApi = {
             throw err
         }
     },
-
+ 
     vaultUploadFile: async (hubId: string, file: File) => {
+        enforceFeatureLock('file_ingestion')
         try {
             const filePath = (file as any).path || '';
             if (!filePath) {
@@ -1167,16 +1285,16 @@ export const sidecarApi = {
             });
         } catch (err) {
             console.error('[Tauri Native RAG] vaultUploadFile failed:', err);
-            throw err;
+            throw err
         }
     },
-
+ 
     request: async (method: string, path: string, _body?: any): Promise<any> => {
         // This generic HTTP proxy is not implemented in the native Tauri architecture.
         // All API calls must use the specific typed commands above.
         throw new Error(`sidecarApi.request() is not supported in native mode. Use the specific command for '${method} ${path}'.`)
     },
-
+ 
     getConfig: async () => {
         const store = await getAppStore()
         return {
@@ -1187,8 +1305,10 @@ export const sidecarApi = {
             aiModel: (await store.get<string>('aiModel')) || 'gemini-2.0-flash',
         }
     },
-
+ 
     explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string; userAnswer?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
                 explanation: "The selected answer is correct. Logarithmic O(log N) runtime scaling is achieved by cutting the search space in half at each discrete logical step. In contrast, linear algorithms verify elements sequentially."

@@ -23,7 +23,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   lockedFeatures: [],
   isChecking: false,
   lastChecked: null,
-  creditBalance: 0,
+  creditBalance: 20,
   setSecurityState: (state) => set(state),
 
   initializeSecurity: async () => {
@@ -129,9 +129,9 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
                   set({ status: 'Bricked', lockedFeatures: locked_features || [] })
                 } else {
                   useSecurityStore.getState().setSecurityState({ 
-                    status: 'Active',
+                    status: (locked_features || []).length > 0 ? 'FeatureLocked' : 'Active',
                     lockedFeatures: locked_features || [],
-                    creditBalance: credit_balance ?? 0
+                    creditBalance: credit_balance ?? 20
                   });
                 }
               }
@@ -161,67 +161,27 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
         }
       }
 
-      // Set credit balance from profile
-      set({ creditBalance: profile.credit_balance ?? 0 })
+      // 2. Synchronize Zustand state directly from cloud profile first to immediately reflect admin configurations
+      set({ creditBalance: profile.credit_balance ?? 20 })
 
       const isFullSystemLocked = (profile.locked_features || []).includes('full_system_locked');
+      const isBricked = profile.account_status === 'suspended' || 
+                        profile.account_status === 'banned' || 
+                        profile.is_approved === false || 
+                        profile.waitlist_status === 'revoked' || 
+                        isFullSystemLocked;
 
-      // If banned, suspended or full-system locked, lock immediately without signature verification
-      if (profile.account_status === 'suspended' || profile.account_status === 'banned' || profile.is_approved === false || profile.waitlist_status === 'revoked' || isFullSystemLocked) {
+      if (isBricked) {
         set({ status: 'Bricked', lockedFeatures: profile.locked_features || [] })
-        let machineId = 'unknown-device'
-        try {
-          machineId = await Promise.race([
-            invoke<string>('get_machine_id'),
-            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
-          ])
-        } catch (err) {
-          console.warn('[Security System] Failed to resolve device footprint during lockout, using fallback:', err)
-        }
-
-        // Securely request a signed brick lease from the Edge Function so Rust can verify it in Release builds
-        let signatureObtained = false
-        if (supabase.functions && typeof supabase.functions.invoke === 'function') {
-          try {
-            const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('generate-security-lease', {
-              body: {
-                userId: user.id,
-                machineIdHash: machineId,
-                accountStatus: profile.account_status,
-                lockedFeatures: profile.locked_features || []
-              }
-            })
-
-            if (!edgeErr && edgeData) {
-              const { lease_json, signature_hex } = edgeData
-              await invoke('process_security_heartbeat', {
-                leaseJson: lease_json,
-                signatureHex: signature_hex
-              })
-              signatureObtained = true
-            }
-          } catch (e) {
-            console.warn('[Security System] Failed to get signed brick lease from Edge Function:', e)
-          }
-        }
-
-        // Only fallback to dummy signature if edge function is unreachable (works in debug, fails in release but UI is already bricked)
-        if (!signatureObtained) {
-          await invoke('process_security_heartbeat', {
-            leaseJson: JSON.stringify({
-              user_id: user.id,
-              machine_id_hash: machineId,
-              expiration: new Date(Date.now() + 86400 * 1000).toISOString(),
-              locked_features: profile.locked_features || [],
-              account_status: profile.account_status
-            }),
-            signatureHex: "00".repeat(64) // dummy signature - will force brick state locally in debug mode
-          }).catch(() => {})
-        }
-        return
+      } else {
+        set({
+          status: (profile.locked_features || []).length > 0 ? 'FeatureLocked' : 'Active',
+          lockedFeatures: profile.locked_features || [],
+          lastChecked: new Date()
+        })
       }
 
-      // 3. Request signed Ed25519 lease from the Edge Function
+      // 3. Sync state with native Rust layer (Tauri offline DRM system)
       let machineId = 'unknown-device'
       try {
         machineId = await Promise.race([
@@ -229,12 +189,13 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
           new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
         ])
       } catch (err) {
-        console.warn('[Security System] Failed to resolve device footprint, falling back to random UUID:', err)
+        console.warn('[Security System] Failed to resolve device footprint, using fallback:', err)
         machineId = crypto.randomUUID()
       }
+
       let leaseApplied = false
 
-      // Call Supabase Edge function (checking support on mock client too)
+      // Try invoking the cloud edge function to get a cryptographic signature
       if (supabase.functions && typeof supabase.functions.invoke === 'function') {
         try {
           const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('generate-security-lease', {
@@ -248,7 +209,6 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
           if (!edgeErr && edgeData) {
             const { lease_json, signature_hex } = edgeData
-            // Pass cryptographic token to native Rust layer
             await invoke('process_security_heartbeat', {
               leaseJson: lease_json,
               signatureHex: signature_hex
@@ -256,34 +216,41 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
             leaseApplied = true
           }
         } catch (e) {
-          console.warn('[Security System] Edge function invoke errored:', e)
+          console.warn('[Security System] Cloud Edge function invoke failed or signature verification failed in Rust:', e)
         }
       }
 
-      // Fallback: Local mock signed lease for development / offline testing runs
+      // If cloud edge function is unreachable or signature failed, try applying a local mock signed lease in Rust (valid in debug mode, caught gracefully in release mode)
       if (!leaseApplied) {
-        console.info('[Security System] Generating local mock signed lease footprint...')
         const mockLease = {
           user_id: user.id,
           machine_id_hash: machineId,
-          expiration: new Date(Date.now() + 86400 * 1000 * 365).toISOString(), // 1 year mock lease duration
+          expiration: new Date(Date.now() + 86400 * 1000 * 365).toISOString(),
           locked_features: profile.locked_features || [],
           account_status: profile.account_status || 'active'
         }
-        await invoke('process_security_heartbeat', {
-          leaseJson: JSON.stringify(mockLease),
-          signatureHex: "00".repeat(64) // accepted under debug_assertions in Rust core
-        })
+        try {
+          await invoke('process_security_heartbeat', {
+            leaseJson: JSON.stringify(mockLease),
+            signatureHex: "00".repeat(64)
+          })
+        } catch (rustErr) {
+          console.warn('[Security System] Rust core rejected local mock lease signature (expected in Release builds):', rustErr)
+        }
       }
 
-      // Update Zustand in-memory state directly from hydrated Rust state
-      const newState = await invoke<{ status: LockStatus; locked_features: string[] }>('get_security_state')
-      if (newState) {
-        set({
-          status: newState.status,
-          lockedFeatures: newState.locked_features,
-          lastChecked: new Date()
-        })
+      // Update Zustand in-memory state directly from hydrated Rust state if successfully updated in Rust
+      try {
+        const newState = await invoke<{ status: LockStatus; locked_features: string[] }>('get_security_state')
+        if (newState) {
+          set({
+            status: newState.status,
+            lockedFeatures: newState.locked_features,
+            lastChecked: new Date()
+          })
+        }
+      } catch (err) {
+        console.warn('[Security System] Failed to sync from Rust state:', err)
       }
     } catch (err) {
       console.error('[Security System] Background lease sync failed:', err)

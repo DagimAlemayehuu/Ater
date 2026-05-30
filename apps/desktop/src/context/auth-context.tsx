@@ -32,9 +32,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    setLoading(false)
+    // Set optimistic state first
     setStatus('approved')
     setProfile({ full_name: config.displayName || config.activationEmail.split('@')[0] })
+    setLoading(false)
+
+    // Dynamic Zero-Trust check: verify cloud status silently on startup if online
+    if (navigator.onLine && realSupabase) {
+      try {
+        const { data: authData } = await realSupabase.auth.getUser()
+        if (authData?.user) {
+          const { data: profileData } = await realSupabase
+            .from('profiles')
+            .select('full_name, waitlist_status, is_approved, account_status')
+            .eq('id', authData.user.id)
+            .single()
+
+          if (profileData) {
+            const isBricked = profileData.account_status === 'suspended' || 
+                              profileData.account_status === 'banned' || 
+                              profileData.is_approved === false || 
+                              profileData.waitlist_status === 'revoked';
+            
+            if (isBricked) {
+              console.warn('[DRM] Zero-Trust background check failed. Clearance revoked.');
+              await saveConfig({
+                isActivated: false,
+                activationEmail: '',
+                activationCode: '',
+                isProgramConfigured: false,
+                displayName: ''
+              })
+              setStatus(null)
+              setProfile(null)
+              window.location.hash = '#/onboarding'
+              window.location.reload()
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[DRM] Failed to run startup background clearance check:', err)
+      }
+    }
   }
 
   useEffect(() => {
