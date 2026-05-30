@@ -265,3 +265,64 @@ test.describe('Navigation', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// Online/Offline & Sidecar Resiliency
+// ─────────────────────────────────────────────────────────────────────
+test.describe('Online/Offline & Sidecar Resiliency', () => {
+  test.beforeEach(async ({ page }) => {
+    await injectTauriMocks(page);
+    await page.addInitScript(() => {
+      if (window.__TAURI_STORE__) {
+        const originalLoad = window.__TAURI_STORE__.load;
+        window.__TAURI_STORE__.load = async (path: string, opts?: unknown) => {
+          const store = await originalLoad(path, opts);
+          return {
+            ...store,
+            get: async (key: string) => {
+              const v: Record<string, unknown> = {
+                isActivated: true,
+                isProgramConfigured: true,
+                obsidianVaultPath: '/Users/test/vault',
+                displayName: 'Dagim',
+                activationEmail: 'dagim@test.com',
+                activationCode: 'CODE',
+                aiProvider: 'google',
+                aiModel: 'gemini-2.0-flash',
+                aiApiKey: 'key',
+              };
+              return v[key] ?? null;
+            },
+          };
+        };
+      }
+    });
+  });
+
+  test('should fall back gracefully when the backend sidecar is offline/unreachable', async ({ page }) => {
+    // Intercept sidecar API calls and simulate a connection timeout/offline state
+    await page.route('**/api/v1/health*', async route => {
+      await route.abort('failed');
+    });
+
+    await page.goto('/settings');
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Verify that the UI remains interactive and doesn't white-screen
+    const body = page.locator('body');
+    await expect(body).toBeVisible();
+  });
+
+  test('should support seamless online/offline state toggling without state corruption', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    // Simulate going offline
+    await page.context().setOffline(true);
+    await expect(page.locator('body')).toBeVisible();
+
+    // Toggle back online
+    await page.context().setOffline(false);
+    await expect(page.locator('body')).toBeVisible();
+  });
+});

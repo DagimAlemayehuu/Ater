@@ -93,6 +93,13 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 }
 
+const sanitizeSvg = (rawSvg: string): string => {
+  return rawSvg
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*(['"])(.*?)\1/gi, '')
+    .replace(/href\s*=\s*(['"])javascript:(.*?)\1/gi, '');
+};
+
 export const MermaidWrapper = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
@@ -148,11 +155,11 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
   <div className="my-6 flex justify-center">
       <div 
           className="max-w-[85%] w-fit bg-[#1a1a1c] p-4 rounded-[8px] border border-[#242426] overflow-hidden [&>svg]:h-auto [&>svg]:w-full" 
-          dangerouslySetInnerHTML={{ __html: svg }} 
+          dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }} 
       />
   </div>
   );
-  }
+}
 interface MarkdownViewerProps {
     content: string
     onNavigate: (pageName: string) => void
