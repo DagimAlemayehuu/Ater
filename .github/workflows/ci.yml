@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Set up uv
-        uses: astral-sh/setup-uv-action@v2
+        uses: astral-sh/setup-uv@v5
       - name: Run Pytest Suite
         run: cd apps/api && uv run python -m pytest tests/ -v --tb=short
 
