@@ -8,6 +8,7 @@ import {usePomodoroStore} from '@/lib/pomodoroStore'
 import {TokenTracker} from '@/components/intelligence/TokenTracker'
 import * as Tabs from '@radix-ui/react-tabs'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
@@ -612,6 +613,7 @@ export default function Settings() {
                 <button
                   onClick={async () => {
                     try {
+                      await supabase.auth.signOut();
                       await saveConfig({ isActivated: false, activationEmail: '', activationCode: '' });
                       window.location.reload();
                     } catch (e) { console.error(e); }
