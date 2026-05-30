@@ -44,6 +44,7 @@ export default function App() {
 }
 
 function SecurityBlocker() {
+  const { config } = useConfig()
   const status = useSecurityStore(state => state.status)
   const checkSecurity = useSecurityStore(state => state.checkOnlineLockout)
   const [isRetrying, setIsRetrying] = useState(false)
@@ -53,6 +54,7 @@ function SecurityBlocker() {
     (new URLSearchParams(window.location.search).get('bypass') === 'true' ||
      window.location.hash.includes('bypass=true'))
   if (isBypass) return null;
+  if (!config?.isActivated) return null;
 
   useEffect(() => {
     if (status === 'Active' || status === 'FeatureLocked') return
