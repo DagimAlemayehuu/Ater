@@ -97,10 +97,11 @@ DECLARE
 BEGIN
   -- Zero-trust call validation: standard users can only deduct their own credits.
   -- Bypassed for Admin profiles or service_role connections.
-  IF (auth.uid() IS NOT NULL AND target_user_id <> auth.uid()) AND NOT EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = auth.uid() AND role = 'Admin'
-  ) AND auth.role() <> 'service_role' THEN
+  IF (auth.uid() IS NULL AND auth.role() <> 'service_role') OR 
+     (auth.uid() IS NOT NULL AND target_user_id <> auth.uid() AND NOT EXISTS (
+       SELECT 1 FROM public.profiles 
+       WHERE id = auth.uid() AND role = 'Admin'
+     ) AND auth.role() <> 'service_role') THEN
     RAISE EXCEPTION 'Action restricted: Unauthorized credit operations.' USING ERRCODE = 'P0001';
   END IF;
 

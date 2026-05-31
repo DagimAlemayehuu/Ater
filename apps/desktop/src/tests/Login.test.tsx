@@ -42,14 +42,14 @@ describe('Login Component', () => {
 
     // Submit invalid password
     fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: '12' } }); // < 4 chars
+    fireEvent.change(passwordInput, { target: { value: '12345' } }); // < 6 chars
     fireEvent.change(codeInput, { target: { value: 'ABCDEF' } });
 
     fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Verification Failure/i)).toBeInTheDocument();
-      expect(screen.getByText(/Password must be at least 4 characters long/i)).toBeInTheDocument();
+      expect(screen.getByText(/Password must be at least 6 characters long/i)).toBeInTheDocument();
     });
   });
 });

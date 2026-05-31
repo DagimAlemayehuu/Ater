@@ -6,8 +6,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock_key';
 // Initialize the real supabase client as base fallback
 const realSupabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Check if we should activate the mock bypass layer
+// Check if we should activate the mock bypass layer (disabled completely in production builds)
 const checkBypass = () => {
+  if (process.env.NODE_ENV === 'production') return false;
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).get('bypass') === 'true' || 
          window.location.hash.includes('bypass=true');

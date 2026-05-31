@@ -959,6 +959,7 @@ pub async fn update_obsidian_note(
     content: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "file_ingestion");
     let full_path = resolve_path_robust(&path, &app_handle)?;
     
     if let Some(parent) = full_path.parent() {
@@ -994,6 +995,7 @@ pub async fn delete_obsidian_item(
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "file_ingestion");
     let full_path = resolve_path_robust(&path, &app_handle)?;
     
     if full_path.is_dir() {
@@ -1026,6 +1028,7 @@ pub async fn create_obsidian_file(
     overwrite: bool,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "file_ingestion");
     let full_path = resolve_path_robust(&path, &app_handle)?;
     
     if full_path.exists() && !overwrite {
@@ -1062,9 +1065,11 @@ pub async fn create_obsidian_file(
 
 #[tauri::command]
 pub async fn create_obsidian_folder(
+    state: State<'_, AppState>,
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "file_ingestion");
     let full_path = resolve_path_robust(&path, &app_handle)?;
     
     std::fs::create_dir_all(&full_path)
@@ -1083,6 +1088,7 @@ pub async fn move_obsidian_item(
     new_path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "file_ingestion");
     let old_full = resolve_path_robust(&old_path, &app_handle)?;
     let new_full = resolve_path_robust(&new_path, &app_handle)?;
     

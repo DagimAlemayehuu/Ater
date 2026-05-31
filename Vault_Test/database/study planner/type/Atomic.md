@@ -1,4 +1,0 @@
----
-title: Atomic
----
-# Atomic

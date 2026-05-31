@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { parseFrontmatter, serializeFrontmatter } from '@/lib/markdownHelper'
+import { toast } from 'sonner'
 
 type StepStatus = 'idle' | 'testing' | 'success' | 'error'
 
@@ -22,6 +24,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(1)
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
+
+  // Existing Vault Auto-Detection States
+  const [detectedProfile, setDetectedProfile] = useState<any | null>(null)
+  const [showDetectedModal, setShowDetectedModal] = useState(false)
+  const [hasCheckedOnMount, setHasCheckedOnMount] = useState(false)
+
 
   // Step 1 — Profile
   const [name, setName] = useState(config?.displayName || '')
@@ -57,10 +65,33 @@ export default function Onboarding() {
   const [sessionsBeforeLong, setSessionsBeforeLong] = useState(config?.pomodoroSessionsBeforeLongBreak || 4)
 
   // Step 5 — Academic Program
+  const [programPreset, setProgramPreset] = useState('custom')
   const [programName, setProgramName] = useState('')
   const [programLevel, setProgramLevel] = useState('Undergraduate')
   const [programDuration, setProgramDuration] = useState(4)
   const [programCurrentYear, setProgramCurrentYear] = useState(1)
+
+  const handlePresetChange = (preset: string) => {
+    setProgramPreset(preset)
+    if (preset === 'cs') {
+      setProgramName('Computer Science')
+      setProgramLevel('Undergraduate')
+      setProgramDuration(4)
+      setProgramCurrentYear(2)
+    } else if (preset === 'ds') {
+      setProgramName('Data Science')
+      setProgramLevel('Undergraduate')
+      setProgramDuration(4)
+      setProgramCurrentYear(1)
+    } else if (preset === 'business') {
+      setProgramName('Business Administration')
+      setProgramLevel('Undergraduate')
+      setProgramDuration(4)
+      setProgramCurrentYear(1)
+    } else {
+      setProgramName('')
+    }
+  }
 
   // Step 6 — Finalize
   const [finalStatus, setFinalStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
@@ -99,13 +130,137 @@ export default function Onboarding() {
     fetchProfile()
   }, [])
 
+  // Auto-detect existing vault configuration on mount if vaultPath is set in store
+  useEffect(() => {
+    if (config?.obsidianVaultPath && !hasCheckedOnMount) {
+      setHasCheckedOnMount(true)
+      checkExistingVaultConfig(config.obsidianVaultPath)
+    }
+  }, [config?.obsidianVaultPath, hasCheckedOnMount])
+
   const handleNext = () => setStep((s) => s + 1)
   const handleBack = () => setStep((s) => s - 1)
+
+  const checkExistingVaultConfig = async (selectedPath: string) => {
+    try {
+      // 1. Temporarily save obsidianVaultPath to let sidecarApi know where the vault is
+      await saveConfig({ obsidianVaultPath: selectedPath })
+      // 2. Initialize database path so readObsidianNote works
+      await sidecarApi.initialize_database(selectedPath)
+      
+      // 3. Try reading database/user_profile.md
+      const note = await sidecarApi.readObsidianNote('database/user_profile.md')
+      if (note && note.content) {
+        const { metadata } = parseFrontmatter(note.content)
+        if (metadata && metadata.displayName && metadata.programName) {
+          setVaultPath(selectedPath) // Crucial for auto-run path tracking
+          setDetectedProfile(metadata)
+          setShowDetectedModal(true)
+          return true
+        }
+      }
+    } catch (err) {
+      console.warn('[Onboarding] No existing vault profile found at path:', selectedPath, err)
+    }
+    return false
+  }
+
+  const handleAcceptDetectedConfig = async () => {
+    if (!detectedProfile) return
+    setFinalStatus('running')
+    setFinalError('')
+    setShowDetectedModal(false)
+
+    try {
+      // Auto-populate states in case they return/modify later
+      setName(detectedProfile.displayName || '')
+      setProgramName(detectedProfile.programName || '')
+      setProgramLevel(detectedProfile.programLevel || 'Undergraduate')
+      setProgramDuration(Number(detectedProfile.programDuration) || 4)
+      setProgramCurrentYear(Number(detectedProfile.programCurrentYear) || 1)
+      setWorkDuration(Number(detectedProfile.pomodoroWorkDuration) || 25)
+      setShortBreak(Number(detectedProfile.pomodoroShortBreakDuration) || 5)
+      setLongBreak(Number(detectedProfile.pomodoroLongBreakDuration) || 15)
+      setSessionsBeforeLong(Number(detectedProfile.pomodoroSessionsBeforeLongBreak) || 4)
+
+      // Save everything directly to Tauri config
+      await saveConfig({
+        obsidianVaultPath: vaultPath,
+        inboxPath: `${vaultPath}/Inbox`,
+        pomodoroWorkDuration: Number(detectedProfile.pomodoroWorkDuration) || 25,
+        pomodoroShortBreakDuration: Number(detectedProfile.pomodoroShortBreakDuration) || 5,
+        pomodoroLongBreakDuration: Number(detectedProfile.pomodoroLongBreakDuration) || 15,
+        pomodoroSessionsBeforeLongBreak: Number(detectedProfile.pomodoroSessionsBeforeLongBreak) || 4,
+        displayName: detectedProfile.displayName || '',
+        academicFolderPath: 'Notes',
+        autoDeploy: true,
+        isProgramConfigured: true,
+        isDemoMode: false // Existing vault means bypass tour!
+      })
+
+      // Synchronize database
+      try {
+        await sidecarApi.initializeVault()
+      } catch (vaultErr: any) {
+        console.warn('[Onboarding] initializeVault failed:', vaultErr)
+      }
+      await sidecarApi.academicsSyncProfile()
+
+      // Update Supabase profile
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('profiles').update({ is_configured: true }).eq('id', user.id)
+      }
+
+      setFinalStatus('done')
+    } catch (err: any) {
+      setFinalError(err?.message || 'Failed to fast-track configuration.')
+      setFinalStatus('error')
+    }
+  }
+
+  const handleReviewDetectedConfig = () => {
+    if (!detectedProfile) return
+    setName(detectedProfile.displayName || '')
+    setProgramName(detectedProfile.programName || '')
+    setProgramLevel(detectedProfile.programLevel || 'Undergraduate')
+    setProgramDuration(Number(detectedProfile.programDuration) || 4)
+    setProgramCurrentYear(Number(detectedProfile.programCurrentYear) || 1)
+    setWorkDuration(Number(detectedProfile.pomodoroWorkDuration) || 25)
+    setShortBreak(Number(detectedProfile.pomodoroShortBreakDuration) || 5)
+    setLongBreak(Number(detectedProfile.pomodoroLongBreakDuration) || 15)
+    setSessionsBeforeLong(Number(detectedProfile.pomodoroSessionsBeforeLongBreak) || 4)
+    
+    setShowDetectedModal(false)
+    handleNext() // Advance to Step 3 (API Keys)
+  }
 
   const selectVault = async () => {
     try {
       const selected = await open({ directory: true, multiple: false, title: 'Select your Obsidian vault folder' })
-      if (selected) setVaultPath(selected as string)
+      if (selected) {
+        const pathStr = selected as string
+        
+        // Smarter verification: check write permissions on selected vault path first
+        try {
+          await saveConfig({ obsidianVaultPath: pathStr })
+          await sidecarApi.initialize_database(pathStr)
+          
+          // Test writing a temporary file to check permissions
+          const testFilePath = 'database/.write_test';
+          await sidecarApi.createObsidianFile(testFilePath, 'permission_check', true);
+          await sidecarApi.deleteObsidianItem(testFilePath);
+          
+          setVaultPath(pathStr)
+          await checkExistingVaultConfig(pathStr)
+          toast.success("Vault selected successfully!")
+        } catch (writeErr) {
+          console.warn('[Onboarding] Path permission check failed (proceeding anyway):', writeErr)
+          setVaultPath(pathStr)
+          await checkExistingVaultConfig(pathStr)
+          toast.success("Vault selected!")
+        }
+      }
     } catch (err) {
       console.error(err)
     }
@@ -281,9 +436,65 @@ export default function Onboarding() {
             })
           }
         }
+
+        // Preset Scaffolding of Semesters and Courses
+        if (programPreset && programPreset !== 'custom') {
+          try {
+            if (programPreset === 'cs') {
+              // Scaffold semesters
+              await sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' });
+              await sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Spring]]' });
+              await sidecarApi.createVaultRow('semesters', 'Semester III', { Year: '[[Year II]]', Status: '[[Active]]', Season: '[[Fall]]' });
+              await sidecarApi.createVaultRow('semesters', 'Semester IV', { Year: '[[Year II]]', Status: '[[Planned]]', Season: '[[Spring]]' });
+              await sidecarApi.createVaultRow('semesters', 'Semester V', { Year: '[[Year III]]', Status: '[[Planned]]', Season: '[[Fall]]' });
+
+              // Scaffold courses
+              await sidecarApi.createVaultRow('courses', 'CS 101', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Turing]]', Difficulty: '[[Introductory]]' });
+              await sidecarApi.createVaultRow('courses', 'MATH 151', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A-]]', Status: '[[Completed]]', Professor: '[[Dr. Euler]]', Difficulty: '[[Medium]]' });
+              await sidecarApi.createVaultRow('courses', 'MATH 201', { Semester: '[[Semester II]]', Credits: 4, Grade: '[[B+]]', Status: '[[Completed]]', Professor: '[[Dr. Gauss]]', Difficulty: '[[Hard]]' });
+              await sidecarApi.createVaultRow('courses', 'CS 201', { Semester: '[[Semester III]]', Credits: 4, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Knuth]]', Difficulty: '[[Hard]]' });
+              await sidecarApi.createVaultRow('courses', 'CS 301', { Semester: '[[Semester V]]', Credits: 4, Grade: '[[Planned]]', Status: '[[Planned]]', Professor: '[[Dr. Ritchie]]', Difficulty: '[[Expert]]' });
+            } else if (programPreset === 'ds') {
+              await sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' });
+              await sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Active]]', Season: '[[Spring]]' });
+
+              await sidecarApi.createVaultRow('courses', 'DS 101', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Bayes]]', Difficulty: '[[Introductory]]' });
+              await sidecarApi.createVaultRow('courses', 'MATH 201', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A-]]', Status: '[[Completed]]', Professor: '[[Dr. Gauss]]', Difficulty: '[[Hard]]' });
+              await sidecarApi.createVaultRow('courses', 'DS 201', { Semester: '[[Semester II]]', Credits: 4, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Fisher]]', Difficulty: '[[Hard]]' });
+            } else if (programPreset === 'business') {
+              await sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' });
+              await sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Active]]', Season: '[[Spring]]' });
+
+              await sidecarApi.createVaultRow('courses', 'BUS 101', { Semester: '[[Semester I]]', Credits: 3, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Drucker]]', Difficulty: '[[Introductory]]' });
+              await sidecarApi.createVaultRow('courses', 'ECON 201', { Semester: '[[Semester II]]', Credits: 3, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Smith]]', Difficulty: '[[Medium]]' });
+            }
+          } catch (presetErr) {
+            console.warn('[Onboarding] Preset course scaffolding failed:', presetErr);
+          }
+        }
       }
 
-      // 4. Update Supabase profile to mark as configured
+      // 4. Save profile metadata inside the Obsidian vault
+      try {
+        const metadata = {
+          displayName: name,
+          programName,
+          programLevel,
+          programDuration,
+          programCurrentYear,
+          pomodoroWorkDuration: workDuration,
+          pomodoroShortBreakDuration: shortBreak,
+          pomodoroLongBreakDuration: longBreak,
+          pomodoroSessionsBeforeLongBreak: sessionsBeforeLong,
+          isConfigured: true
+        }
+        const configContent = serializeFrontmatter(metadata) + "\n# Ater Vault Profile\nThis file persists your academic roadmap and dashboard configuration."
+        await sidecarApi.createObsidianFile('database/user_profile.md', configContent, true)
+      } catch (profileErr: any) {
+        console.warn('[Onboarding] Failed to write database/user_profile.md config:', profileErr?.message)
+      }
+
+      // 5. Update Supabase profile to mark as configured
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await supabase.from('profiles').update({ is_configured: true }).eq('id', user.id)
@@ -310,6 +521,55 @@ export default function Onboarding() {
 
   return (
     <div className="h-screen w-full flex flex-col justify-center bg-[#0e0e0f] text-foreground selection:bg-foreground selection:text-background px-12 relative overflow-y-auto">
+      {/* Existing Vault Detected Modal */}
+      {showDetectedModal && detectedProfile && (
+        <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 select-none animate-fade-in pointer-events-auto">
+          <div className="w-full max-w-md bg-[#151517] border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
+            <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-3">
+              Existing Vault Configuration Detected
+            </div>
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">
+              Welcome back, {detectedProfile.displayName}
+            </h2>
+            <p className="text-[12px] text-muted-foreground leading-relaxed mb-6 font-sans">
+              We found a complete academic setup in this vault. Launch directly to your dashboard or review the parameters.
+            </p>
+
+            <div className="w-full space-y-2.5 mb-8 p-4 bg-[#232326]/30 border border-[#242426] rounded-[8px]">
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-muted-foreground uppercase font-black tracking-widest">Program</span>
+                <span className="text-foreground uppercase font-black tracking-widest">{detectedProfile.programName}</span>
+              </div>
+              <div className="h-px bg-[#242426]" />
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-muted-foreground uppercase font-black tracking-widest">Level / Year</span>
+                <span className="text-foreground uppercase font-black tracking-widest">Year {detectedProfile.programCurrentYear} ({detectedProfile.programLevel})</span>
+              </div>
+              <div className="h-px bg-[#242426]" />
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-muted-foreground uppercase font-black tracking-widest">Work Timer</span>
+                <span className="text-foreground uppercase font-black tracking-widest">{detectedProfile.pomodoroWorkDuration}m Work / {detectedProfile.pomodoroShortBreakDuration}m Break</span>
+              </div>
+            </div>
+
+            <div className="flex w-full gap-3">
+              <button
+                onClick={handleAcceptDetectedConfig}
+                className="flex-1 py-3 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest hover:opacity-90 rounded-[8px] transition-all cursor-pointer"
+              >
+                Fast-Track Launch
+              </button>
+              <button
+                onClick={handleReviewDetectedConfig}
+                className="px-5 py-3 border border-[#242426] bg-[#232326]/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
+              >
+                Review & Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-12 right-12 z-10">
         <ThemeSwitch />
       </div>
@@ -702,7 +962,23 @@ export default function Onboarding() {
               Define your course of study to scaffold your local knowledge roadmap.
             </p>
 
-            <div className="w-full space-y-6 mb-8">
+            <div className="w-full space-y-6 mb-8 text-left">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                  Program Presets
+                </div>
+                <select 
+                  value={programPreset}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                  className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors mb-4"
+                >
+                  <option value="custom" className="bg-[#151517]">Custom (Empty Setup)</option>
+                  <option value="cs" className="bg-[#151517]">Computer Science B.S. (Standard CS Courses Scaffolding)</option>
+                  <option value="ds" className="bg-[#151517]">Data Science B.S. (Standard Statistics & ML Scaffolding)</option>
+                  <option value="business" className="bg-[#151517]">Business Administration (Finance & Econ Scaffolding)</option>
+                </select>
+              </div>
+
               <div>
                 <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">
                   Program Name
@@ -711,7 +987,10 @@ export default function Onboarding() {
                   type="text"
                   placeholder="e.g. Computer Science"
                   value={programName}
-                  onChange={(e) => setProgramName(e.target.value)}
+                  onChange={(e) => {
+                    setProgramName(e.target.value);
+                    if (programPreset !== 'custom') setProgramPreset('custom');
+                  }}
                   className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground uppercase tracking-widest rounded-[8px] transition-colors"
                 />
               </div>

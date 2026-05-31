@@ -133,9 +133,12 @@ function AppRoutes() {
                 <Routes>
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="*" element={
-                    (!isConfigured && import.meta.env.DEV !== true &&
-                      new URLSearchParams(window.location.search).get('bypass') !== 'true' &&
-                      !window.location.hash.includes('bypass=true')) ? (
+                    (!isConfigured && 
+                      !(import.meta.env.DEV && (
+                        new URLSearchParams(window.location.search).get('bypass') === 'true' ||
+                        window.location.hash.includes('bypass=true')
+                      ))
+                    ) ? (
                       <Navigate to="/onboarding" replace />
                     ) : (
                       <AuthenticatedLayout>

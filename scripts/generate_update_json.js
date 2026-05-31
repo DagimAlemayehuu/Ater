@@ -11,13 +11,15 @@ const VERSION = process.argv[2] || '0.1.0';
 
 const platforms = {
   'darwin-aarch64': {
-    // macOS Silicon signature pattern - be more lenient with case and naming
-    sigPattern: /aarch64\.app\.tar\.gz\.sig$|Ater\.app\.tar\.gz\.sig$/i,
+    artifactDirName: 'signatures-macos-aarch64',
+    sigPattern: /\.sig$/i,
+    fallbackPattern: /aarch64\.app\.tar\.gz\.sig$|Ater\.app\.tar\.gz\.sig$/i,
     urlName: `Ater_${VERSION}_aarch64.app.tar.gz`
   },
   'windows-x86_64': {
-    // Windows x64 signature pattern
-    sigPattern: /x64-setup\.nsis\.zip\.sig$|x64\.nsis\.zip\.sig$|Ater\.zip\.sig$/i,
+    artifactDirName: 'signatures-windows-x86_64',
+    sigPattern: /\.sig$/i,
+    fallbackPattern: /x64-setup\.nsis\.zip\.sig$|x64\.nsis\.zip\.sig$|Ater\.zip\.sig$/i,
     urlName: `Ater_${VERSION}_x64-setup.nsis.zip`
   }
 };
@@ -67,21 +69,25 @@ console.log(`Scanning for signature files in: ${artifactsDir}`);
 logDirectory(artifactsDir);
 
 Object.keys(platforms).forEach(platformKey => {
-  const { sigPattern, urlName } = platforms[platformKey];
+  const { artifactDirName, sigPattern, fallbackPattern, urlName } = platforms[platformKey];
   
-  // Attempt to locate the signature file in the artifacts directory
-  const sigFilePath = findFile(artifactsDir, sigPattern);
+  // 1. First search inside the dedicated downloaded artifact subfolder
+  const specificDir = path.join(artifactsDir, artifactDirName);
+  let sigFilePath = findFile(specificDir, sigPattern);
+  
+  // 2. If not found in the dedicated folder, search the general artifacts directory using fallback pattern
+  if (!sigFilePath) {
+    console.log(`ℹ️ Did not find signature file in dedicated ${artifactDirName} folder. Searching general artifacts folder...`);
+    sigFilePath = findFile(artifactsDir, fallbackPattern);
+  }
+  
   let signature = '';
 
   if (sigFilePath) {
     console.log(`✅ Found signature file for ${platformKey} at: ${sigFilePath}`);
     signature = fs.readFileSync(sigFilePath, 'utf-8').trim();
-    
-    // If the signature file contains multiple lines (e.g. minisign output), 
-    // we only want the actual signature part if it's not a single line.
-    // However, Tauri's .sig files are usually just the base64 signature.
   } else {
-    console.warn(`⚠️ Warning: Missing updater signature for ${platformKey}. Expected a file matching ${sigPattern}.`);
+    console.warn(`⚠️ Warning: Missing updater signature for ${platformKey}. Checked both ${specificDir} and fallback matching ${fallbackPattern}.`);
     // Instead of throwing, we'll log it. If we have NO platforms, the update.json will just be empty for platforms.
     // This allows the CI to finish even if one platform fails, though we want both.
     return;

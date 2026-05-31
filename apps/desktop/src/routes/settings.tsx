@@ -69,6 +69,7 @@ export default function Settings() {
   
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [selectedVaultKeyId, setSelectedVaultKeyId] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'none' | 'clear_config' | 'clear_history' | 'factory_reset'>('none')
   
   // Local state for edits
   const [aiEdit, setAiEdit] = useState({provider: '', key: '', model: '', baseUrl: '', maxTpm: '', maxRpm: '', maxTpd: '', maxRpd: '', maxConcurrency: ''})
@@ -283,7 +284,11 @@ export default function Settings() {
     setEditingKey(null)
   }
 
-  const handleClearConfig = async () => {
+  const handleClearConfig = async (bypassConfirm = false) => {
+    if (bypassConfirm !== true) {
+      setConfirmAction('clear_config')
+      return
+    }
     await saveConfig({
       obsidianVaultPath: '',
       aiProvider: 'google',
@@ -297,7 +302,11 @@ export default function Settings() {
     window.location.reload()
   }
 
-  const handleResetTrackedData = async () => {
+  const handleResetTrackedData = async (bypassConfirm = false) => {
+    if (bypassConfirm !== true) {
+      setConfirmAction('clear_history')
+      return
+    }
     try {
       const res = await sidecarApi.clearStudyHistory();
       if (res.success) {
@@ -309,7 +318,11 @@ export default function Settings() {
     }
   }
 
-  const handleFactoryReset = async () => {
+  const handleFactoryReset = async (bypassConfirm = false) => {
+    if (bypassConfirm !== true) {
+      setConfirmAction('factory_reset')
+      return
+    }
     try {
       toast.info('Factory reset in progress...');
       const res = await sidecarApi.factoryReset();
@@ -632,19 +645,19 @@ export default function Settings() {
               <CardHeader title="Danger Zone" description="Warning: These actions cannot be undone." />
               <CardContent className="flex gap-4">
                 <button
-                  onClick={handleClearConfig}
+                  onClick={() => handleClearConfig()}
                   className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
                 >
                   Reset All Settings
                 </button>
                 <button
-                  onClick={handleResetTrackedData}
+                  onClick={() => handleResetTrackedData()}
                   className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
                 >
                   Clear Study History
                 </button>
                 <button
-                  onClick={handleFactoryReset}
+                  onClick={() => handleFactoryReset()}
                   className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-foreground text-background border border-foreground hover:bg-foreground/90 rounded-[8px] transition-all"
                 >
                   Delete Everything & Reset App
@@ -1152,6 +1165,56 @@ export default function Settings() {
           </div>
         </div>
       </Tabs.Root>
+
+      {/* Danger Zone Action Confirmation Modal */}
+      {confirmAction !== 'none' && (
+        <div className="fixed inset-0 z-[9999] bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in pointer-events-auto select-none">
+          <div className="w-full max-w-md bg-[#151517] border border-destructive/30 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
+            <div className="text-[9px] font-black uppercase tracking-widest text-destructive mb-3">
+              Confirm Destructive Action
+            </div>
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">
+              {confirmAction === 'clear_config' && 'Reset All Settings'}
+              {confirmAction === 'clear_history' && 'Clear Study History'}
+              {confirmAction === 'factory_reset' && 'Full Factory Reset'}
+            </h2>
+            <p className="text-[12px] text-muted-foreground leading-relaxed mb-6 font-sans">
+              {confirmAction === 'clear_config' &&
+                'This will wipe all active configurations from the local application database. Your selected Obsidian vault folder path, saved API Keys, custom Pomodoro focus timers, academic program preferences, and display name will be permanently cleared. Note: The raw markdown files inside your vault folder will remain untouched.'}
+              {confirmAction === 'clear_history' &&
+                'This will permanently delete all logged study metrics from your local analytics engine. Your completed Pomodoro focus duration minutes, FSRS spaced-repetition card review history logs, and exam confidence levels will be wiped. This action cannot be reversed.'}
+              {confirmAction === 'factory_reset' &&
+                'This is a complete nuclear option. It will wipe all local study logs, clear your active system configurations, purge generated academic roadmap rows inside the vault, deactivate your Waitlist clearance code, and relaunch Ater from scratch. Proceed with extreme caution.'}
+            </p>
+
+            <div className="w-full p-4 bg-destructive/10 border border-destructive/20 rounded-[8px] mb-8 text-[11px] font-bold text-destructive flex items-center gap-2">
+              <span className="shrink-0 uppercase bg-destructive text-background text-[9px] px-1 py-0.5 rounded font-black tracking-widest">Warning</span>
+              <span>This action is destructive and cannot be undone.</span>
+            </div>
+
+            <div className="flex w-full gap-3">
+              <button
+                onClick={async () => {
+                  const act = confirmAction;
+                  setConfirmAction('none');
+                  if (act === 'clear_config') await handleClearConfig(true);
+                  if (act === 'clear_history') await handleResetTrackedData(true);
+                  if (act === 'factory_reset') await handleFactoryReset(true);
+                }}
+                className="flex-1 py-3 bg-destructive text-destructive-foreground text-[10px] font-black uppercase tracking-widest hover:opacity-90 rounded-[8px] transition-all cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+              <button
+                onClick={() => setConfirmAction('none')}
+                className="px-5 py-3 border border-[#242426] bg-[#232326]/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

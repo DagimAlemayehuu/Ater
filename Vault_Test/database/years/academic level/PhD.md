@@ -1,4 +1,0 @@
----
-title: PhD
----
-# PhD

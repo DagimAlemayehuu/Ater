@@ -92,11 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const cleanCode = code.trim().toUpperCase();
 
       // Basic format validations
-      if (!cleanEmail.includes('@') || cleanEmail.length < 5) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail) || cleanEmail.length < 5) {
         throw new Error('Please enter a valid email address.')
       }
-      if (password.length < 4) {
-        throw new Error('Password must be at least 4 characters long.')
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters long.')
       }
       if (cleanCode.length < 6) {
         throw new Error('Invalid activation code. Code must be at least 6 characters.')

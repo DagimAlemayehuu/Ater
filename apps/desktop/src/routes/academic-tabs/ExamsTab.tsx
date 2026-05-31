@@ -228,6 +228,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
             className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
+          data-tour="exam-add"
           className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
           <Plus size={10} /> Add
         </button>

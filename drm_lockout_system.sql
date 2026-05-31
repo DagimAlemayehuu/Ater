@@ -28,18 +28,8 @@ DROP POLICY IF EXISTS "Admins have full control on blacklist" ON public.hardware
 CREATE POLICY "Admins have full control on blacklist"
 ON public.hardware_blacklist FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'Admin'
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'Admin'
-  )
-);
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
 
 -- 4. Trigger to enforce Hardware Blacklist check
 -- We check both raw machine_id matches or SHA-256 matches.

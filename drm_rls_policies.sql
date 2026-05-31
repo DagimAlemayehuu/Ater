@@ -18,24 +18,26 @@ ON public.profiles FOR UPDATE
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
 
+-- Helper function to verify admin role without inducing RLS recursion.
+-- Executed under SECURITY DEFINER to bypass RLS evaluation.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'Admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- 4. ADMIN: Full Control
 -- Admins can override hardware locks and revoke access immediately.
 DROP POLICY IF EXISTS "Admins have full control" ON public.profiles;
 CREATE POLICY "Admins have full control" 
 ON public.profiles FOR ALL 
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = auth.uid() AND role = 'Admin'
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = auth.uid() AND role = 'Admin'
-  )
-);
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
 
 -- 5. Database Trigger for Profile State-Transition Verification (Zero-Trust Guard)
 CREATE OR REPLACE FUNCTION verify_profile_state_transitions()
@@ -49,20 +51,14 @@ BEGIN
       NEW.credit_balance IS DISTINCT FROM OLD.credit_balance) THEN
     
     -- Allow the update if the user has Admin role in the database OR if it is service_role
-    IF NOT EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role = 'Admin'
-    ) AND auth.role() <> 'service_role' THEN
+    IF NOT public.is_admin() AND auth.role() <> 'service_role' THEN
       RAISE EXCEPTION 'Action restricted: Unauthorized modification of administrative columns.' USING ERRCODE = 'P0001';
     END IF;
   END IF;
 
   -- Rule: machine_id is a permanent hardware lock once set, it cannot be modified
   IF (OLD.machine_id IS NOT NULL AND NEW.machine_id IS DISTINCT FROM OLD.machine_id) THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role = 'Admin'
-    ) AND auth.role() <> 'service_role' THEN
+    IF NOT public.is_admin() AND auth.role() <> 'service_role' THEN
       RAISE EXCEPTION 'Action restricted: Machine binding is permanent and cannot be modified.' USING ERRCODE = 'P0002';
     END IF;
   END IF;
@@ -87,3 +83,28 @@ BEGIN
   WHERE id = target_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7. RLS Policies for waiting_list Table
+-- Protects user signup details and activation codes from unauthenticated exposure.
+ALTER TABLE public.waiting_list ENABLE ROW LEVEL SECURITY;
+
+-- Rule A: Anyone (including anonymous users) can submit a waitlist entry (Insert)
+DROP POLICY IF EXISTS "Anyone can join waitlist" ON public.waiting_list;
+CREATE POLICY "Anyone can join waitlist"
+ON public.waiting_list FOR INSERT
+WITH CHECK (true);
+
+-- Rule B: Users can view their own waitlist entry by email matching
+DROP POLICY IF EXISTS "Users can view own waitlist entry" ON public.waiting_list;
+CREATE POLICY "Users can view own waitlist entry"
+ON public.waiting_list FOR SELECT
+TO authenticated, anon
+USING (auth.jwt() ->> 'email' = email);
+
+-- Rule C: Admins have full access to view, update, or delete all waitlist records
+DROP POLICY IF EXISTS "Admins have full control on waitlist" ON public.waiting_list;
+CREATE POLICY "Admins have full control on waitlist"
+ON public.waiting_list FOR ALL
+TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());

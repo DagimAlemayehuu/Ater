@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Ater",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "identifier": "com.dagim.ater",
   "build": {
     "frontendDist": "../dist",
@@ -31,6 +31,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "macOS": {
       "infoPlist": "Info.plist"
     },
