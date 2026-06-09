@@ -78,7 +78,7 @@ apps/desktop/src-tauri/ater-api-*
 # Large PDFs, screenshots, and local scripts
 Test/**/*.pdf
 *.png
-scripts/
+/scripts/
 
 # Antigravity Session Symlinks
 .active_artifacts
