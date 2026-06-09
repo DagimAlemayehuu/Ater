@@ -1,7 +1,7 @@
 {
   "name": "@ater/desktop",
   "private": true,
-  "version": "0.8.7",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port 1420",
@@ -12,6 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "verify:sidecars": "node scripts/verify-sidecar-binaries.mjs",
+    "verify:sidecars:all": "node scripts/verify-sidecar-binaries.mjs --all-release-targets",
     "tauri:dev": "pnpm tauri dev",
     "tauri:build": "pnpm tauri build"
   },

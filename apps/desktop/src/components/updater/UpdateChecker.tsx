@@ -62,6 +62,7 @@ export function UpdateChecker() {
   const [updateAvailable, setUpdateAvailable] = useState<Update | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [hasFailed, setHasFailed] = useState(false);
 
   // Listen for manually-dispatched update events (e.g. from debug/testing)
   useEffect(() => {
@@ -71,6 +72,7 @@ export function UpdateChecker() {
       console.log('[Updater] Opening update notification:', payload);
       toast.dismiss();
       setUpdateAvailable(payload);
+      setHasFailed(false);
       setTimeout(() => setVisible(true), 50);
     };
 
@@ -113,6 +115,7 @@ export function UpdateChecker() {
     if (!updateAvailable) return;
     
     setIsUpdating(true);
+    setHasFailed(false);
     try {
       console.log('[Updater] Downloading update...');
       await updateAvailable.downloadAndInstall();
@@ -122,6 +125,7 @@ export function UpdateChecker() {
       console.error('[Updater] Failed to update:', error);
       toast.error('Could not install update: ' + error.message + '. Please check your connection and try again.');
       setIsUpdating(false);
+      setHasFailed(true);
     }
   };
 
@@ -185,7 +189,7 @@ export function UpdateChecker() {
               Installing...
             </>
           ) : (
-            'Update Now'
+            hasFailed ? 'Retry Update' : 'Update Now'
           )}
         </button>
       </div>

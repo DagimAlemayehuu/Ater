@@ -10,6 +10,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
 import { realSupabase } from '@/lib/supabase'
+import { toVaultRelativePath } from '@/lib/vaultPath'
 
 function enforceFeatureLock(featureSlug: string) {
     if (useSecurityStore.getState().isFeatureLocked(featureSlug)) {
@@ -74,6 +75,12 @@ let syncTotal = 0
 let syncStatus = 'idle'
 
 const optionsCache = new Map<string, any>()
+
+async function normalizeVaultIpcPath(path: string): Promise<string> {
+    const store = await getAppStore()
+    const vaultPath = (await store.get<string>('obsidianVaultPath')) || ''
+    return toVaultRelativePath(path, vaultPath)
+}
 
 async function ensureDbInitialized(): Promise<void> {
     if (isInitialized) return
@@ -464,8 +471,9 @@ export const sidecarApi = {
     },
     
     readObsidianNote: async (path: string) => {
+        const ipcPath = await normalizeVaultIpcPath(path)
         if (await isDemoActive()) {
-            const cleanPath = path.replace(/\\/g, '/');
+            const cleanPath = ipcPath.replace(/\\/g, '/');
             if (cleanPath.endsWith('Binary_Search.md')) {
                 return { metadata: { title: 'Binary_Search', course: 'CS 201: Algorithms & Data Structures', semester: 'Semester III', unit: "1" }, content: mockDemo.MOCK_NOTE_BINARY_SEARCH };
             }
@@ -474,7 +482,7 @@ export const sidecarApi = {
             }
         }
         try {
-            return await invoke<any>('read_obsidian_note', { path })
+            return await invoke<any>('read_obsidian_note', { path: ipcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] readObsidianNote failed:', err)
             return { metadata: {}, content: '' }
@@ -483,8 +491,9 @@ export const sidecarApi = {
     
     updateObsidianNote: async (path: string, content: string) => {
         enforceFeatureLock('file_ingestion')
+        const ipcPath = await normalizeVaultIpcPath(path)
         try {
-            return await invoke<any>('update_obsidian_note', { path, content })
+            return await invoke<any>('update_obsidian_note', { path: ipcPath, content })
         } catch (err) {
             console.error('[Tauri Native RAG] updateObsidianNote failed:', err)
             throw err
@@ -493,8 +502,9 @@ export const sidecarApi = {
 
     deleteObsidianItem: async (path: string) => {
         enforceFeatureLock('file_ingestion')
+        const ipcPath = await normalizeVaultIpcPath(path)
         try {
-            return await invoke<any>('delete_obsidian_item', { path })
+            return await invoke<any>('delete_obsidian_item', { path: ipcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] deleteObsidianItem failed:', err)
             throw err
@@ -503,8 +513,9 @@ export const sidecarApi = {
 
     createObsidianFile: async (path: string, content: string = '', overwrite: boolean = false) => {
         enforceFeatureLock('file_ingestion')
+        const ipcPath = await normalizeVaultIpcPath(path)
         try {
-            return await invoke<any>('create_obsidian_file', { path, content, overwrite })
+            return await invoke<any>('create_obsidian_file', { path: ipcPath, content, overwrite })
         } catch (err) {
             console.error('[Tauri Native RAG] createObsidianFile failed:', err)
             throw err
@@ -513,8 +524,9 @@ export const sidecarApi = {
 
     createObsidianFolder: async (path: string) => {
         enforceFeatureLock('file_ingestion')
+        const ipcPath = await normalizeVaultIpcPath(path)
         try {
-            return await invoke<any>('create_obsidian_folder', { path })
+            return await invoke<any>('create_obsidian_folder', { path: ipcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] createObsidianFolder failed:', err)
             throw err
@@ -523,8 +535,10 @@ export const sidecarApi = {
 
     moveObsidianItem: async (oldPath: string, newPath: string) => {
         enforceFeatureLock('file_ingestion')
+        const oldIpcPath = await normalizeVaultIpcPath(oldPath)
+        const newIpcPath = await normalizeVaultIpcPath(newPath)
         try {
-            return await invoke<any>('move_obsidian_item', { oldPath, newPath })
+            return await invoke<any>('move_obsidian_item', { oldPath: oldIpcPath, newPath: newIpcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] moveObsidianItem failed:', err)
             throw err
@@ -576,6 +590,15 @@ export const sidecarApi = {
         } catch (err) {
             console.error('[Tauri Native RAG] aterWatcherToggle failed:', err)
             return null  // Non-critical: watcher failure must not surface as a settings save error
+        }
+    },
+
+    updateVaultPath: async (newVaultPath: string) => {
+        try {
+            return await invoke<void>('update_vault_path', { newVaultPath })
+        } catch (err) {
+            console.error('[Tauri Native RAG] updateVaultPath failed:', err)
+            throw err
         }
     },
 

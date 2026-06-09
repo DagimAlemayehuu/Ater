@@ -1,11 +1,13 @@
-use std::sync::Arc;
-use std::path::Path;
-use lancedb::{connect, Connection, Table};
-use lancedb::query::{QueryBase, ExecutableQuery};
-use arrow_array::{RecordBatch, StringArray, Float32Array, FixedSizeListArray, ArrayRef, RecordBatchIterator};
+use arrow_array::{
+    ArrayRef, FixedSizeListArray, Float32Array, RecordBatch, RecordBatchIterator, StringArray,
+};
 use arrow_schema::{DataType, Field, Schema};
 use futures::TryStreamExt;
-use serde::{Serialize, Deserialize};
+use lancedb::query::{ExecutableQuery, QueryBase};
+use lancedb::{connect, Connection, Table};
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
@@ -39,14 +41,15 @@ impl VectorDB {
     /// Initializes a LanceDB instance in the given persistent directory,
     /// and gets or creates the default vault table.
     pub async fn init(persist_dir: &Path) -> Result<Self, String> {
-        let path_str = persist_dir.to_str()
+        let path_str = persist_dir
+            .to_str()
             .ok_or_else(|| "Invalid persistence directory path".to_string())?;
-        
+
         let conn = connect(path_str)
             .execute()
             .await
             .map_err(|e| format!("Failed to connect to LanceDB: {}", e))?;
-        
+
         let db = Self {
             connection: conn,
             table_name: "ater_vault".to_string(),
@@ -54,7 +57,7 @@ impl VectorDB {
 
         // Create the table if it doesn't exist
         db.ensure_table_exists().await?;
-        
+
         Ok(db)
     }
 
@@ -67,38 +70,43 @@ impl VectorDB {
             Field::new("filename", DataType::Utf8, false),
             Field::new("folder", DataType::Utf8, false),
             Field::new("metadata", DataType::Utf8, true),
-            Field::new("vector", DataType::FixedSizeList(
-                Arc::new(Field::new("item", DataType::Float32, true)),
-                384,
-            ), false),
+            Field::new(
+                "vector",
+                DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 384),
+                false,
+            ),
         ]))
     }
 
     /// Checks if the table exists, and creates it with the correct schema if it doesn't.
     async fn ensure_table_exists(&self) -> Result<(), String> {
-        let tables = self.connection.table_names()
+        let tables = self
+            .connection
+            .table_names()
             .execute()
             .await
             .map_err(|e| format!("Failed to list tables: {}", e))?;
-        
+
         if !tables.contains(&self.table_name) {
             // Create an empty record batch with our schema to initialize the table
             let schema = Self::get_schema();
             let empty_batch = RecordBatch::new_empty(schema.clone());
             let reader = RecordBatchIterator::new(vec![Ok(empty_batch)].into_iter(), schema);
-            
-            self.connection.create_table(&self.table_name, Box::new(reader))
+
+            self.connection
+                .create_table(&self.table_name, Box::new(reader))
                 .execute()
                 .await
                 .map_err(|e| format!("Failed to create table '{}': {}", self.table_name, e))?;
         }
-        
+
         Ok(())
     }
 
     /// Retrieves the table handle.
     async fn get_table(&self) -> Result<Table, String> {
-        self.connection.open_table(&self.table_name)
+        self.connection
+            .open_table(&self.table_name)
             .execute()
             .await
             .map_err(|e| format!("Failed to open table '{}': {}", self.table_name, e))
@@ -123,7 +131,10 @@ impl VectorDB {
 
         for doc in docs {
             if doc.vector.len() != 384 {
-                return Err(format!("Vector dimension mismatch: expected 384, got {}", doc.vector.len()));
+                return Err(format!(
+                    "Vector dimension mismatch: expected 384, got {}",
+                    doc.vector.len()
+                ));
             }
             ids.push(doc.id);
             contents.push(doc.content);
@@ -158,12 +169,14 @@ impl VectorDB {
                 Arc::new(metadatas_array),
                 Arc::new(vector_array),
             ],
-        ).map_err(|e| format!("Failed to create RecordBatch: {}", e))?;
+        )
+        .map_err(|e| format!("Failed to create RecordBatch: {}", e))?;
 
         let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);
 
         let table = self.get_table().await?;
-        table.add(Box::new(reader))
+        table
+            .add(Box::new(reader))
             .execute()
             .await
             .map_err(|e| format!("Failed to add documents to LanceDB: {}", e))?;
@@ -172,15 +185,24 @@ impl VectorDB {
     }
 
     /// Queries the vector store for nearest neighbors.
-    pub async fn query(&self, query_vector: Vec<f32>, n_results: usize, where_clause: Option<&str>) -> Result<Vec<SearchResult>, String> {
+    pub async fn query(
+        &self,
+        query_vector: Vec<f32>,
+        n_results: usize,
+        where_clause: Option<&str>,
+    ) -> Result<Vec<SearchResult>, String> {
         if query_vector.len() != 384 {
-            return Err(format!("Query vector dimension mismatch: expected 384, got {}", query_vector.len()));
+            return Err(format!(
+                "Query vector dimension mismatch: expected 384, got {}",
+                query_vector.len()
+            ));
         }
 
         let table = self.get_table().await?;
         let builder = table.query();
-        
-        let mut q_builder = builder.nearest_to(query_vector)
+
+        let mut q_builder = builder
+            .nearest_to(query_vector)
             .map_err(|e| format!("Query nearest_to failed: {}", e))?
             .limit(n_results);
 
@@ -188,11 +210,13 @@ impl VectorDB {
             q_builder = q_builder.only_if(clause);
         }
 
-        let stream = q_builder.execute()
+        let stream = q_builder
+            .execute()
             .await
             .map_err(|e| format!("Failed to execute query: {}", e))?;
 
-        let batches: Vec<RecordBatch> = stream.try_collect()
+        let batches: Vec<RecordBatch> = stream
+            .try_collect()
             .await
             .map_err(|e| format!("Failed to collect query result stream: {}", e))?;
 
@@ -204,43 +228,50 @@ impl VectorDB {
                 continue;
             }
 
-            let ids_col = batch.column_by_name("id")
+            let ids_col = batch
+                .column_by_name("id")
                 .ok_or_else(|| "id column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| "Failed to downcast id column".to_string())?;
 
-            let content_col = batch.column_by_name("content")
+            let content_col = batch
+                .column_by_name("content")
                 .ok_or_else(|| "content column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| "Failed to downcast content column".to_string())?;
 
-            let source_col = batch.column_by_name("source")
+            let source_col = batch
+                .column_by_name("source")
                 .ok_or_else(|| "source column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| "Failed to downcast source column".to_string())?;
 
-            let filename_col = batch.column_by_name("filename")
+            let filename_col = batch
+                .column_by_name("filename")
                 .ok_or_else(|| "filename column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| "Failed to downcast filename column".to_string())?;
 
-            let folder_col = batch.column_by_name("folder")
+            let folder_col = batch
+                .column_by_name("folder")
                 .ok_or_else(|| "folder column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| "Failed to downcast folder column".to_string())?;
 
-            let metadata_col = batch.column_by_name("metadata")
+            let metadata_col = batch
+                .column_by_name("metadata")
                 .ok_or_else(|| "metadata column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| "Failed to downcast metadata column".to_string())?;
 
-            let distance_col = batch.column_by_name("_distance")
+            let distance_col = batch
+                .column_by_name("_distance")
                 .ok_or_else(|| "_distance column not found in results".to_string())?
                 .as_any()
                 .downcast_ref::<Float32Array>()
@@ -265,7 +296,8 @@ impl VectorDB {
     /// Deletes all documents matching a SQL filter predicate (e.g. source = 'file_path').
     pub async fn delete_documents(&self, filter: &str) -> Result<(), String> {
         let table = self.get_table().await?;
-        table.delete(filter)
+        table
+            .delete(filter)
             .await
             .map_err(|e| format!("Failed to delete documents: {}", e))?;
         Ok(())
@@ -301,21 +333,37 @@ mod tests {
             vector: dummy_vector.clone(),
         };
 
-        db.add_documents(vec![doc]).await.expect("Failed to add document");
+        db.add_documents(vec![doc])
+            .await
+            .expect("Failed to add document");
 
         // 3. Search for the inserted vector
         let search_results = db.query(dummy_vector, 5, None).await.expect("Query failed");
-        assert!(!search_results.is_empty(), "Search results should not be empty");
+        assert!(
+            !search_results.is_empty(),
+            "Search results should not be empty"
+        );
         assert_eq!(search_results[0].id, "test_doc_1");
-        assert_eq!(search_results[0].content, "This is a native Rust vector database test.");
+        assert_eq!(
+            search_results[0].content,
+            "This is a native Rust vector database test."
+        );
 
         // 4. Delete the document
-        db.delete_documents("source = '/path/to/test.md'").await.expect("Delete failed");
+        db.delete_documents("source = '/path/to/test.md'")
+            .await
+            .expect("Delete failed");
 
         // 5. Verify deletion
         let dummy_vector_2 = vec![0.5f32; 384];
-        let search_results_after_delete = db.query(dummy_vector_2, 5, None).await.expect("Query failed");
-        assert!(search_results_after_delete.is_empty(), "Search results should be empty after deletion");
+        let search_results_after_delete = db
+            .query(dummy_vector_2, 5, None)
+            .await
+            .expect("Query failed");
+        assert!(
+            search_results_after_delete.is_empty(),
+            "Search results should be empty after deletion"
+        );
 
         // Clean up
         let _ = std::fs::remove_dir_all(&temp_dir);

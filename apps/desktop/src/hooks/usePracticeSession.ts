@@ -42,6 +42,8 @@ export function usePracticeSession() {
   
   // Timing references
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
   const questionStartTimeRef = useRef<number>(Date.now());
   const practiceStartTimeRef = useRef<number>(Date.now());
   const configRef = useRef<PracticeSessionConfig>({});
@@ -71,6 +73,21 @@ export function usePracticeSession() {
   }, [srsCardsCache, unlockedNotes]);
 
   const isFeynmanLocked = checkIsFeynmanLocked(currentQuestion);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (autoAdvanceTimeoutRef.current) {
+        clearTimeout(autoAdvanceTimeoutRef.current);
+        autoAdvanceTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Initialize and load session context
   const startSession = useCallback(async (
@@ -232,6 +249,7 @@ export function usePracticeSession() {
 
   const nextQuestion = useCallback(async (latestGrade?: boolean) => {
     if (!currentQuestion) return;
+    if (!isMountedRef.current) return;
     const isCorrect = latestGrade !== undefined ? latestGrade : scores[currentQuestion.id] === true;
 
     // Log telemetry attempt
@@ -368,6 +386,10 @@ export function usePracticeSession() {
     setFeynmanError(null);
     setGlobalTimeLeft(null);
     setQuestionTimeLeft(null);
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
+    }
   }, []);
 
   // Timer runner Effect
@@ -418,8 +440,14 @@ export function usePracticeSession() {
             }
 
             // Move to next question after display buffer
-            setTimeout(() => {
-              nextQuestion(false);
+            if (autoAdvanceTimeoutRef.current) {
+              clearTimeout(autoAdvanceTimeoutRef.current);
+            }
+            autoAdvanceTimeoutRef.current = setTimeout(() => {
+              if (isMountedRef.current) {
+                nextQuestion(false);
+              }
+              autoAdvanceTimeoutRef.current = null;
             }, 1500);
           }
           return 0;

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/markdownHelper'
 import { toast } from 'sonner'
+import { normalizeVaultPath, vaultChildPath } from '@/lib/vaultPath'
 
 type StepStatus = 'idle' | 'testing' | 'success' | 'error'
 
@@ -142,18 +143,18 @@ export default function Onboarding() {
   const handleBack = () => setStep((s) => s - 1)
 
   const checkExistingVaultConfig = async (selectedPath: string) => {
+    const normalizedPath = normalizeVaultPath(selectedPath)
     try {
       // 1. Temporarily save obsidianVaultPath to let sidecarApi know where the vault is
-      await saveConfig({ obsidianVaultPath: selectedPath })
-      // 2. Initialize database path so readObsidianNote works
-      await sidecarApi.initialize_database(selectedPath)
+      await sidecarApi.updateVaultPath(normalizedPath)
+      await saveConfig({ obsidianVaultPath: normalizedPath, inboxPath: vaultChildPath(normalizedPath, 'Inbox') })
       
       // 3. Try reading database/user_profile.md
       const note = await sidecarApi.readObsidianNote('database/user_profile.md')
       if (note && note.content) {
         const { metadata } = parseFrontmatter(note.content)
         if (metadata && metadata.displayName && metadata.programName) {
-          setVaultPath(selectedPath) // Crucial for auto-run path tracking
+          setVaultPath(normalizedPath) // Crucial for auto-run path tracking
           setDetectedProfile(metadata)
           setShowDetectedModal(true)
           return true
@@ -186,7 +187,7 @@ export default function Onboarding() {
       // Save everything directly to Tauri config
       await saveConfig({
         obsidianVaultPath: vaultPath,
-        inboxPath: `${vaultPath}/Inbox`,
+        inboxPath: vaultChildPath(vaultPath, 'Inbox'),
         pomodoroWorkDuration: Number(detectedProfile.pomodoroWorkDuration) || 25,
         pomodoroShortBreakDuration: Number(detectedProfile.pomodoroShortBreakDuration) || 5,
         pomodoroLongBreakDuration: Number(detectedProfile.pomodoroLongBreakDuration) || 15,
@@ -203,6 +204,7 @@ export default function Onboarding() {
         await sidecarApi.initializeVault()
       } catch (vaultErr: any) {
         console.warn('[Onboarding] initializeVault failed:', vaultErr)
+        throw new Error(vaultErr?.message || 'Ater cannot scaffold the selected vault folder.')
       }
       await sidecarApi.academicsSyncProfile()
 
@@ -239,12 +241,12 @@ export default function Onboarding() {
     try {
       const selected = await open({ directory: true, multiple: false, title: 'Select your Obsidian vault folder' })
       if (selected) {
-        const pathStr = selected as string
+        const pathStr = normalizeVaultPath(selected as string)
         
         // Smarter verification: check write permissions on selected vault path first
         try {
-          await saveConfig({ obsidianVaultPath: pathStr })
-          await sidecarApi.initialize_database(pathStr)
+          await sidecarApi.updateVaultPath(pathStr)
+          await saveConfig({ obsidianVaultPath: pathStr, inboxPath: vaultChildPath(pathStr, 'Inbox') })
           
           // Test writing a temporary file to check permissions
           const testFilePath = 'database/.write_test';
@@ -254,11 +256,11 @@ export default function Onboarding() {
           setVaultPath(pathStr)
           await checkExistingVaultConfig(pathStr)
           toast.success("Vault selected successfully!")
-        } catch (writeErr) {
-          console.warn('[Onboarding] Path permission check failed (proceeding anyway):', writeErr)
-          setVaultPath(pathStr)
-          await checkExistingVaultConfig(pathStr)
-          toast.success("Vault selected!")
+        } catch (writeErr: any) {
+          console.warn('[Onboarding] Path permission check failed:', writeErr)
+          setVaultPath('')
+          await saveConfig({ obsidianVaultPath: '', inboxPath: '' })
+          toast.error(writeErr?.message || "Ater cannot write to that folder. Choose a user-writable vault location.")
         }
       }
     } catch (err) {
@@ -361,7 +363,7 @@ export default function Onboarding() {
       // 0. Save config options
       await saveConfig({
         obsidianVaultPath: vaultPath,
-        inboxPath: `${vaultPath}/Inbox`,
+        inboxPath: vaultChildPath(vaultPath, 'Inbox'),
         aiApiKey: activeKey,
         aiProvider: activeProvider,
         aiModel: activeModel,
@@ -387,7 +389,8 @@ export default function Onboarding() {
       try {
         await sidecarApi.initializeVault()
       } catch (vaultErr: any) {
-        console.warn('[Onboarding] initializeVault failed (non-fatal):', vaultErr?.message)
+        console.warn('[Onboarding] initializeVault failed:', vaultErr?.message)
+        throw new Error(vaultErr?.message || 'Ater cannot scaffold the selected vault folder.')
       }
 
       // 2. Sync academic profile to prepare databases

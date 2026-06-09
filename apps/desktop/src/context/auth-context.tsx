@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, realSupabase } from '@/lib/supabase'
 import { useConfig } from '@/lib/ConfigContext'
 import { sidecarApi } from '@/lib/sidecarApi'
+import { validateActivationMachineBinding } from '@/lib/activationMachineBinding'
 
 export type WaitlistStatus = 'pending' | 'approved' | 'rejected'
 
@@ -110,10 +111,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Live verification if real backend configuration exists
       if (realSupabase) {
+        const liveSupabase = realSupabase
         console.log('[DRM] Live backend active. Checking waitlist credentials...');
         
         // 1. Sign in to check email & password
-        const { data: authData, error: authError } = await realSupabase.auth.signInWithPassword({
+        const { data: authData, error: authError } = await liveSupabase.auth.signInWithPassword({
           email: cleanEmail,
           password: password,
         });
@@ -127,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 2. Fetch the user profile
-        const { data: profileData, error: profileError } = await realSupabase
+        const { data: profileData, error: profileError } = await liveSupabase
           .from('profiles')
           .select('full_name, waitlist_status, is_approved, activation_code, account_status, machine_id')
           .eq('id', authData.user.id)
@@ -156,30 +158,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 4. Validate and Bind Machine ID Hash
-        let machineId: string | null = null;
-        try {
-          const { invoke } = await import('@tauri-apps/api/core');
-          machineId = await invoke<string>('get_machine_id');
-        } catch (tauriError) {
-          console.warn('[DRM] Could not fetch machine ID hash:', tauriError);
-        }
-
-        if (profileData.machine_id && machineId && profileData.machine_id !== machineId) {
-          throw new Error('This activation key is already linked to another device. It cannot be used on multiple devices.');
-        }
-
-        if (!profileData.machine_id && machineId) {
-          console.log('[DRM] Binding activation key to this device...');
-          const { error: updateError } = await realSupabase
-            .from('profiles')
-            .update({ machine_id: machineId })
-            .eq('id', authData.user.id);
-          
-          if (updateError) {
-            console.error('[DRM] Failed to bind machine ID:', updateError);
-            throw new Error('Failed to bind activation key to this device. Please try again.');
+        await validateActivationMachineBinding({
+          profileMachineId: profileData.machine_id,
+          fetchMachineId: async () => {
+            const { invoke } = await import('@tauri-apps/api/core')
+            return invoke<string>('get_machine_id')
+          },
+          bindMachineId: async (machineId) => {
+            console.log('[DRM] Binding activation key to this device...')
+            const { error: updateError } = await liveSupabase
+              .from('profiles')
+              .update({ machine_id: machineId })
+              .eq('id', authData.user.id)
+            
+            if (updateError) {
+              console.error('[DRM] Failed to bind machine ID:', updateError)
+              throw new Error('Failed to bind activation key to this device. Please try again.')
+            }
           }
-        }
+        })
       }
 
       await saveConfig({ 

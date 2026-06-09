@@ -73,4 +73,24 @@ describe('Security Store - checkOnlineLockout', () => {
     // Verify it did proceed to fetch auth user
     expect(supabase.auth.getUser).toHaveBeenCalled();
   });
+
+  it('preserves local state when Supabase auth check is too slow', async () => {
+    vi.useFakeTimers();
+    const storeInstance = await getAppStore();
+    vi.mocked(storeInstance.get).mockImplementation(async (key: string) => {
+      if (key === 'isActivated') return true;
+      return null;
+    });
+    vi.mocked(supabase.auth.getUser).mockReturnValue(new Promise(() => {}) as any);
+    useSecurityStore.setState({ status: 'Active', lockedFeatures: [], isChecking: false });
+
+    const sync = useSecurityStore.getState().checkOnlineLockout().then(() => 'resolved');
+    await vi.advanceTimersByTimeAsync(1600);
+
+    const result = await Promise.race([sync, Promise.resolve('pending')]);
+    expect(result).toBe('resolved');
+    expect(useSecurityStore.getState().status).toBe('Active');
+    expect(window.location.reload).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });

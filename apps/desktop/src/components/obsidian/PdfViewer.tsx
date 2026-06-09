@@ -5,6 +5,7 @@ import { useTheme } from '@/context/theme-provider';
 import { ExplainSidebar } from './ExplainSidebar';
 import { invoke } from '@tauri-apps/api/core';
 import { PanelLoader } from '@/components/ui/loading-state';
+import { fetchSidecarJson } from '@/lib/sidecarHttp';
 
 interface PdfViewerProps {
     path: string;
@@ -186,12 +187,11 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                 const normalizedPath = path.replace(/\\/g, '/');
                 const url = `http://127.0.0.1:${sidecarPort}/api/obsidian/pdf-metadata/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}`;
                 const sidecarToken = await invoke<string>('get_sidecar_token');
-                const res = await fetch(url, {
+                const data = await fetchSidecarJson(url, {
                     headers: {
                         'X-Ater-Token': sidecarToken
                     }
                 });
-                const data = await res.json();
                 if (active && data.page_count) {
                     setPageCount(data.page_count);
                 }

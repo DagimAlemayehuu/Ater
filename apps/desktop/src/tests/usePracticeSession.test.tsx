@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePracticeSession } from '../hooks/usePracticeSession';
 import { sidecarApi } from '../lib/sidecarApi';
@@ -52,7 +52,12 @@ const mockQuestions: Question[] = [
 describe('usePracticeSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     (sidecarApi.srsCards as any).mockResolvedValue({ cards: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('initializes session correctly', async () => {
@@ -194,5 +199,28 @@ describe('usePracticeSession', () => {
 
     expect(result.current.isFeynmanLocked).toBe(false);
     expect(sidecarApi.srsFeynmanValidate).toHaveBeenCalledWith('note_1.md', 'This is a validated conceptual explanation.');
+  });
+
+  it('cancels delayed auto-advance work when the session unmounts', async () => {
+    vi.useFakeTimers();
+    const { result, unmount } = renderHook(() => usePracticeSession());
+
+    await act(async () => {
+      await result.current.startSession(mockQuestions, {
+        perQuestionTimeLimitSeconds: 1
+      }, 'note_1.md');
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    unmount();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+
+    expect(sidecarApi.logPracticeAttempt).not.toHaveBeenCalled();
   });
 });

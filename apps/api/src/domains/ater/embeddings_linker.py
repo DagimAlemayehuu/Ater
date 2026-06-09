@@ -32,6 +32,12 @@ class EmbeddingsLinker:
     def _get_model_paths(cls) -> Tuple[Path, Path]:
         """Resolves the directory path and model.onnx file path for the ONNX model."""
         import sys
+        env_model_dir = os.environ.get("ATER_ONNX_MODEL_DIR")
+        if env_model_dir:
+            model_dir = Path(env_model_dir).expanduser().resolve()
+            if model_dir.exists():
+                return model_dir, model_dir / "model.onnx"
+
         if getattr(sys, 'frozen', False):
             # In a PyInstaller bundle, resolve relative to the sidecar executable
             exe_path = Path(sys.executable)

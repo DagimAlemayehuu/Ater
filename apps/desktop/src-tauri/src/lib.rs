@@ -1,15 +1,15 @@
 // Ater - Tauri Application Core
 // Manages plugin registration and application lifecycle.
 
+pub mod commands;
 pub mod db;
 pub mod ml;
-pub mod commands;
 
+use sha2::Digest;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
 use tauri_plugin_shell::ShellExt;
-use sha2::Digest;
 
 #[cfg(target_family = "unix")]
 extern crate libc;
@@ -18,19 +18,23 @@ pub struct SidecarConfig {
     pub port: u16,
 }
 
-
-
 #[tauri::command]
 fn get_sidecar_port(state: State<'_, SidecarConfig>) -> u16 {
     state.port
 }
 
 fn generate_random_token() -> String {
-    use std::time::SystemTime;
     use sha2::Digest;
+    use std::time::SystemTime;
     let mut hasher = sha2::Sha256::new();
     hasher.update(machine_uid::get().unwrap_or_default().as_bytes());
-    hasher.update(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_nanos().to_le_bytes());
+    hasher.update(
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos()
+            .to_le_bytes(),
+    );
     format!("{:x}", hasher.finalize())
 }
 
@@ -89,12 +93,17 @@ fn load_or_create_device_salt() -> Vec<u8> {
     let salt: Vec<u8> = sha.finalize().to_vec();
 
     let _ = std::fs::write(&salt_path, &salt);
-    eprintln!("[Stronghold] Generated new per-device salt at {:?}", salt_path);
+    eprintln!(
+        "[Stronghold] Generated new per-device salt at {:?}",
+        salt_path
+    );
     salt
 }
 
 #[tauri::command]
 async fn export_logs(_app: tauri::AppHandle) -> Result<String, String> {
+    use std::io::{Read, Write};
+
     let log_dir = dirs::home_dir()
         .ok_or_else(|| "Could not find home directory".to_string())?
         .join(".ater")
@@ -104,39 +113,57 @@ async fn export_logs(_app: tauri::AppHandle) -> Result<String, String> {
         return Err("No logs found".to_string());
     }
 
-    let zip_path = std::env::temp_dir().join("ater_logs.zip");
-    
-    // Remove old zip if it exists to avoid Compress-Archive appending/failing
+    let cache_dir = _app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("Failed to get app cache directory: {}", e))?;
+
+    if !cache_dir.exists() {
+        std::fs::create_dir_all(&cache_dir)
+            .map_err(|e| format!("Failed to create app cache directory: {}", e))?;
+    }
+
+    let zip_path = cache_dir.join("ater_logs.zip");
+
+    // Remove old zip if it exists to avoid conflicts
     if zip_path.exists() {
         let _ = std::fs::remove_file(&zip_path);
     }
 
-    #[cfg(target_os = "windows")]
-    let status = std::process::Command::new("powershell")
-        .args(&[
-            "-NoProfile",
-            "-Command",
-            &format!(
-                "Compress-Archive -Path '{}/*' -DestinationPath '{}' -Force",
-                log_dir.to_string_lossy(),
-                zip_path.to_string_lossy()
-            ),
-        ])
-        .status()
-        .map_err(|e| format!("Failed to run Compress-Archive on Windows: {}", e))?;
+    let file = std::fs::File::create(&zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::FileOptions::<()>::default()
+        .compression_method(zip::CompressionMethod::Deflated);
 
-    #[cfg(not(target_os = "windows"))]
-    let status = std::process::Command::new("zip")
-        .arg("-r")
-        .arg(&zip_path)
-        .arg(".")
-        .current_dir(&log_dir)
-        .status()
-        .map_err(|e| format!("Failed to run zip: {}", e))?;
+    let walk_dir = std::fs::read_dir(&log_dir)
+        .map_err(|e| format!("Failed to read logs directory: {}", e))?;
 
-    if !status.success() {
-        return Err("Log export compression failed".to_string());
+    for entry in walk_dir {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+        if path.is_file() {
+            let name = path
+                .file_name()
+                .ok_or_else(|| "Invalid file name".to_string())?
+                .to_string_lossy()
+                .into_owned();
+
+            zip.start_file(name, options)
+                .map_err(|e| format!("Failed to start zip file entry: {}", e))?;
+
+            let mut f = std::fs::File::open(&path)
+                .map_err(|e| format!("Failed to open log file: {}", e))?;
+            let mut buffer = Vec::new();
+            f.read_to_end(&mut buffer)
+                .map_err(|e| format!("Failed to read log file: {}", e))?;
+            zip.write_all(&buffer)
+                .map_err(|e| format!("Failed to write to zip: {}", e))?;
+        }
     }
+
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize zip file: {}", e))?;
 
     Ok(zip_path.to_string_lossy().to_string())
 }
@@ -147,17 +174,18 @@ async fn check_remote_version() -> Result<String, String> {
         .connect_timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| e.to_string())?;
-    
-    let url = "https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/update.json";
+
+    let url =
+        "https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/update.json";
     let res = client.get(url).send().await.map_err(|e| e.to_string())?;
-    
+
     if res.status().is_success() {
         let json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
         if let Some(version) = json.get("version").and_then(|v| v.as_str()) {
             return Ok(version.to_string());
         }
     }
-    
+
     Err("Failed to read version from remote manifest".to_string())
 }
 
@@ -234,11 +262,15 @@ pub fn run() {
                 ml: std::sync::Mutex::new(None),
                 lock_status: std::sync::Mutex::new(commands::AppLockStatus::Active),
                 locked_features: std::sync::Mutex::new(Vec::new()),
-                sidecar_pid: std::sync::Mutex::new(None),
+                sidecar_pid: Arc::clone(&sidecar_pid),
                 sidecar_token: sidecar_token.clone(),
             });
             let mut port = 8765;
             let mut should_spawn = true;
+            let sidecar_model_dir = app.path().resource_dir()
+                .ok()
+                .map(|dir| dir.join("onnx_model"))
+                .filter(|dir| dir.join("model.onnx").exists() && dir.join("tokenizer.json").exists());
 
             // In debug mode, if 8765 is already in use, we assume an external 
             // sidecar (like the one from `pnpm run sidecar:dev`) is running.
@@ -388,12 +420,15 @@ pub fn run() {
 
                 match app.shell().sidecar("ater-api") {
                     Ok(sidecar) => {
-                        let sidecar = sidecar
+                        let mut sidecar = sidecar
                             .args(["--port", &port.to_string()])
                             .env("PYTHONUTF8", "1")
                             .env("PYTHONIOENCODING", "utf-8")
                             .env("ATER_PARENT_PID", &std::process::id().to_string())
                             .env("ATER_SIDECAR_TOKEN", &sidecar_token);
+                        if let Some(model_dir) = &sidecar_model_dir {
+                            sidecar = sidecar.env("ATER_ONNX_MODEL_DIR", model_dir.to_string_lossy().to_string());
+                        }
                         match sidecar.spawn() {
                             Ok((rx, child)) => {
                                 println!("[Sidecar] Spawned on port {} (PID: {})", port, child.pid());
@@ -546,6 +581,7 @@ pub fn run() {
             commands::process_security_heartbeat,
             commands::get_security_state,
             commands::load_cached_security_state,
+            commands::update_vault_path,
             commands::get_sidecar_token
         ])
         .run(tauri::generate_context!())

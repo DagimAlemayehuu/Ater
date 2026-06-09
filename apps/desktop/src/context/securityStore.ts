@@ -6,6 +6,17 @@ import { getAppStore } from '@/lib/store'
 
 export type LockStatus = 'Active' | 'FeatureLocked' | 'Bricked' | 'LeaseExpired'
 
+const REMOTE_DRM_TIMEOUT_MS = 1500
+
+function withTimeout<T>(operation: Promise<T>, label: string, timeoutMs = REMOTE_DRM_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timeout`)), timeoutMs)
+    })
+  ])
+}
+
 interface SecurityState {
   status: LockStatus
   lockedFeatures: string[]
@@ -70,16 +81,22 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       if (!isActivated) return
 
       // 1. Retrieve session user from Supabase client
-      const { data: authData } = await supabase.auth.getUser()
+      const { data: authData } = await withTimeout(
+        supabase.auth.getUser(),
+        'supabase.auth.getUser'
+      )
       const user = authData?.user
       if (!user) return
 
       // 1. Fetch profile from cloud db (optimistic poll-on-action gate)
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, account_status, locked_features, credit_balance, is_approved, waitlist_status')
-        .eq('id', user.id)
-        .maybeSingle()
+      const { data: profile, error } = await withTimeout(
+        supabase
+          .from('profiles')
+          .select('id, account_status, locked_features, credit_balance, is_approved, waitlist_status')
+          .eq('id', user.id)
+          .maybeSingle() as unknown as Promise<any>,
+        'supabase.profiles.maybeSingle'
+      )
 
       // Handle RLS rejection (status code 403 or permission drops)
       if (error) {
@@ -198,14 +215,17 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       // Try invoking the cloud edge function to get a cryptographic signature
       if (supabase.functions && typeof supabase.functions.invoke === 'function') {
         try {
-          const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('generate-security-lease', {
-            body: {
-              userId: user.id,
-              machineIdHash: machineId,
-              accountStatus: profile.account_status,
-              lockedFeatures: profile.locked_features || []
-            }
-          })
+          const { data: edgeData, error: edgeErr } = await withTimeout(
+            supabase.functions.invoke('generate-security-lease', {
+              body: {
+                userId: user.id,
+                machineIdHash: machineId,
+                accountStatus: profile.account_status,
+                lockedFeatures: profile.locked_features || []
+              }
+            }),
+            'supabase.functions.generate-security-lease'
+          )
 
           if (!edgeErr && edgeData) {
             const { lease_json, signature_hex } = edgeData
@@ -297,4 +317,3 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     return lockedFeatures.includes(feature)
   }
 }))
-

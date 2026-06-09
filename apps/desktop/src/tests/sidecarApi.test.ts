@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sidecarApi } from '../lib/sidecarApi';
 import { invoke } from '@tauri-apps/api/core';
+import { getAppStore } from '../lib/store';
 
 describe('sidecarApi - Native Tauri IPC Client', () => {
     beforeEach(() => {
@@ -73,6 +74,34 @@ describe('sidecarApi - Native Tauri IPC Client', () => {
         const logs = await sidecarApi.exportLogs();
         expect(invoke).toHaveBeenCalledWith('export_logs');
         expect(logs).toBe('log content');
+    });
+
+    it('normalizes absolute vault paths before reading notes over IPC', async () => {
+        const store = await getAppStore();
+        vi.mocked(store.get).mockImplementation(async (key: string) => {
+            if (key === 'obsidianVaultPath') return 'C:/Users/Ada/Vault';
+            if (key === 'isDemoMode') return false;
+            return undefined;
+        });
+        (invoke as any).mockResolvedValueOnce({ metadata: {}, content: 'body' });
+
+        await sidecarApi.readObsidianNote('C:\\Users\\Ada\\Vault\\Notes\\Topic.md');
+
+        expect(invoke).toHaveBeenCalledWith('read_obsidian_note', { path: 'Notes/Topic.md' });
+    });
+
+    it('normalizes absolute vault paths before updating notes over IPC', async () => {
+        const store = await getAppStore();
+        vi.mocked(store.get).mockImplementation(async (key: string) => {
+            if (key === 'obsidianVaultPath') return '/Users/ada/Vault';
+            if (key === 'isDemoMode') return false;
+            return undefined;
+        });
+        (invoke as any).mockResolvedValueOnce({ success: true });
+
+        await sidecarApi.updateObsidianNote('/Users/ada/Vault/Notes/Topic.md', 'body');
+
+        expect(invoke).toHaveBeenCalledWith('update_obsidian_note', { path: 'Notes/Topic.md', content: 'body' });
     });
 
     it('sidecarApi.request() should throw — not silently return {}', async () => {

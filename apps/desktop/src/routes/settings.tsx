@@ -111,7 +111,13 @@ export default function Settings() {
     
     try {
       const { check } = await import('@tauri-apps/plugin-updater')
-      const update = await check()
+      
+      const checkPromise = check()
+      const timeoutPromise = new Promise<any>((_, reject) =>
+        setTimeout(() => reject(new Error('Update check timed out')), 5000)
+      )
+      
+      const update = await Promise.race([checkPromise, timeoutPromise])
       
       if (update?.available) {
         setUpdateStatus('available')
@@ -253,6 +259,11 @@ export default function Settings() {
           pomodoroSessionsBeforeLongBreak: pomodoroEdit.sessions
         })
       } else if (editingKey === 'folder_settings') {
+        const pathChanged = vaultEdit.vaultPath !== (config?.obsidianVaultPath || '');
+        if (pathChanged) {
+          toast.info('Updating vault location and restarting backend services...');
+          await sidecarApi.updateVaultPath(vaultEdit.vaultPath);
+        }
         await saveConfig({
           obsidianVaultPath: vaultEdit.vaultPath,
           inboxPath: vaultEdit.inboxPath,

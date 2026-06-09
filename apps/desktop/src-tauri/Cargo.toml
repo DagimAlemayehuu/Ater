@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.8.7"
+version = "0.1.0"
 description = "Ater desktop application"
 authors = ["Dagim Alemayehu"]
 license = "Proprietary"
@@ -47,6 +47,7 @@ tokenizers = "0.23.1"
 ndarray = "0.17.2"
 reqwest = { version = "0.13.3", features = ["json", "multipart"] }
 percent-encoding = "2.3"
+zip = { version = "2.2.2", default-features = false, features = ["deflate"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

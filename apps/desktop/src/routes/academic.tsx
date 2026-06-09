@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react'
+import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
 import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity} from 'lucide-react'
 import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO, startOfDay} from 'date-fns'
@@ -23,10 +23,14 @@ import { BlockingLoader } from '@/components/ui/loading-state'
 
 export default function AcademicDashboard() {
   const { history: storeHistory } = usePomodoroStore()
-  const [data, setData] = useState<AcademicData | null>(null)
+ const [data, setData] = useState<AcademicData | null>(null)
   const [apiStudyHistory, setApiStudyHistory] = useState<{sessions: any[], telemetry: any[], practice?: any[]}>({sessions: [], telemetry: [], practice: []})
   const [loading, setLoading] = useState(true)
  const [databases, setDatabases] = useState<VaultDatabase[]>([])
+ const [, startDataTransition] = React.useTransition()
+ const isMountedRef = useRef(false)
+ const dataRequestIdRef = useRef(0)
+ const databaseRequestIdRef = useRef(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = (String(searchParams.get('tab') || 'PROGRAM').toUpperCase()) as AcademicTab
   const setActiveTab = (tab: AcademicTab | ((prev: AcademicTab) => AcademicTab)) => {
@@ -51,28 +55,45 @@ export default function AcademicDashboard() {
 
  // ── Data fetching ──────────────────────────────────────────────────────────
  const fetchData = useCallback(async () => {
+ const requestId = ++dataRequestIdRef.current
  try {
   const dashRes = await sidecarApi.academicsDashboard()
-  setData(dashRes as any)
-  setLoading(false)
+  if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
+  startDataTransition(() => {
+    setData(dashRes as any)
+    setLoading(false)
+  })
 
   sidecarApi.getStudyHistory()
-    .then(studyRes => setApiStudyHistory(studyRes || { sessions: [], telemetry: [], practice: [] }))
-    .catch(() => setApiStudyHistory({ sessions: [], telemetry: [], practice: [] }))
+    .then(studyRes => {
+      if (isMountedRef.current && requestId === dataRequestIdRef.current) {
+        setApiStudyHistory(studyRes || { sessions: [], telemetry: [], practice: [] })
+      }
+    })
+    .catch(() => {
+      if (isMountedRef.current && requestId === dataRequestIdRef.current) {
+        setApiStudyHistory({ sessions: [], telemetry: [], practice: [] })
+      }
+    })
  } catch {
+  if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
   toast.error('Could not connect to vault')
   setLoading(false)
  }
 }, [])
 
  const fetchDatabases = useCallback(async () => {
+ const requestId = ++databaseRequestIdRef.current
  try {
  const res = await sidecarApi.listVaultDatabases()
- setDatabases(res.databases || [])
+ if (isMountedRef.current && requestId === databaseRequestIdRef.current) {
+  startDataTransition(() => setDatabases(res.databases || []))
+ }
 } catch {}
 }, [])
 
   useEffect(() => {
+    isMountedRef.current = true
     fetchData()
     fetchDatabases()
 
@@ -84,6 +105,9 @@ export default function AcademicDashboard() {
     window.addEventListener('focus', handleFocus)
 
     return () => {
+      isMountedRef.current = false
+      dataRequestIdRef.current += 1
+      databaseRequestIdRef.current += 1
       window.removeEventListener('focus', handleFocus)
     }
   }, [fetchData, fetchDatabases])

@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Ater",
-  "version": "0.8.7",
+  "version": "0.1.0",
   "identifier": "com.dagim.ater",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm --filter @ater/desktop build"
+    "beforeBuildCommand": "pnpm --filter @ater/desktop verify:sidecars && pnpm --filter @ater/desktop build"
   },
   "app": {
     "windows": [

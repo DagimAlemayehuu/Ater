@@ -40,6 +40,18 @@ requires_model = pytest.mark.skipif(
     reason="ONNX model file not available in this environment"
 )
 
+def test_embeddings_linker_prefers_env_model_dir(monkeypatch, tmp_path):
+    model_dir = tmp_path / "onnx_model"
+    model_dir.mkdir()
+    (model_dir / "model.onnx").write_bytes(b"placeholder")
+
+    monkeypatch.setenv("ATER_ONNX_MODEL_DIR", str(model_dir))
+
+    resolved_dir, resolved_model = EmbeddingsLinker._get_model_paths()
+
+    assert resolved_dir == model_dir.resolve()
+    assert resolved_model == model_dir.resolve() / "model.onnx"
+
 def test_chunk_text_slicing():
     """Verify overlapping text slicing, clean boundary handling, and whitespace/junk pruning."""
     # Test simple slicing with overlap
