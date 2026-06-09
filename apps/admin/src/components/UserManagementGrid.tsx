@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { X, RefreshCw, Shield, User, Coins, ToggleLeft, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -37,6 +37,7 @@ export function UserManagementGrid() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLedgerLoading, setIsLedgerLoading] = useState(false)
   const [newCreditBalance, setNewCreditBalance] = useState<number>(0)
+  const prevUserIdRef = useRef<string | null>(null)
   const [newFeatureSlug, setNewFeatureSlug] = useState<string>('ai_locked')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -100,7 +101,12 @@ export function UserManagementGrid() {
   useEffect(() => {
     if (selectedUser) {
       fetchUserLedger(selectedUser.id)
-      setNewCreditBalance(selectedUser.credit_balance)
+      if (prevUserIdRef.current !== selectedUser.id) {
+        setNewCreditBalance(selectedUser.credit_balance)
+        prevUserIdRef.current = selectedUser.id
+      }
+    } else {
+      prevUserIdRef.current = null
     }
   }, [selectedUser])
 

@@ -939,15 +939,15 @@ export const FormCard = ({ payload, onSendMessage }: { payload: any; onSendMessa
     };
 
     return (
-        <form onSubmit={handleSubmit} className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#242426]/60">
+        <form onSubmit={handleSubmit} className="p-5 border border-border bg-bento-card my-4 rounded-[12px] shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60">
                 <div className="flex items-center gap-2">
                     <Database size={14} className="text-muted-foreground" />
                     <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">
                         {isEdit ? 'Edit' : 'Create'} {record_type.replace(/s$/, '')}
                     </span>
                 </div>
-                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-[#242426] bg-[#131314] text-muted-foreground">
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-border bg-background text-muted-foreground">
                     Form
                 </Badge>
             </div>
@@ -960,7 +960,7 @@ export const FormCard = ({ payload, onSendMessage }: { payload: any; onSendMessa
                         value={title} 
                         onChange={e => setTitle(e.target.value)} 
                         disabled={isEdit}
-                        className="w-full h-8 px-2 bg-[#131314] border border-[#242426] text-[11px] font-bold uppercase outline-none rounded-[8px] focus:border-foreground/40 disabled:opacity-50 text-foreground"
+                        className="w-full h-8 px-2 bg-background border border-border text-[11px] font-bold uppercase outline-none rounded-[8px] focus:border-foreground/40 disabled:opacity-50 text-foreground"
                         placeholder="Enter title..."
                     />
                 </div>
@@ -972,7 +972,7 @@ export const FormCard = ({ payload, onSendMessage }: { payload: any; onSendMessa
                             type="text" 
                             value={fields[key] || ''} 
                             onChange={e => handleInputChange(key, e.target.value)} 
-                            className="w-full h-8 px-2 bg-[#131314] border border-[#242426] text-[11px] font-bold outline-none rounded-[8px] focus:border-foreground/40 text-foreground"
+                            className="w-full h-8 px-2 bg-background border border-border text-[11px] font-bold outline-none rounded-[8px] focus:border-foreground/40 text-foreground"
                             placeholder={`Enter ${key}...`}
                         />
                     </div>
@@ -1008,7 +1008,7 @@ export const ConfirmActionBlock = ({ payload, onSendMessage }: { payload: any; o
     };
 
     return (
-        <div className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] select-none shadow-sm space-y-4">
+        <div className="p-5 border border-border bg-bento-card my-4 rounded-[12px] select-none shadow-sm space-y-4">
             <div className="flex items-center gap-2 text-destructive">
                 <span className="text-[12px] font-black uppercase tracking-[0.2em]">Danger Zone</span>
             </div>
@@ -1018,7 +1018,7 @@ export const ConfirmActionBlock = ({ payload, onSendMessage }: { payload: any; o
             <div className="flex gap-2 justify-end pt-2">
                 <Button 
                     variant="outline" 
-                    className="rounded-[12px] border-[#242426] bg-[#131314] hover:bg-[#1a1a1c] text-foreground text-[9px] font-black uppercase tracking-widest h-9"
+                    className="rounded-[12px] border-border bg-background hover:bg-bento-card text-foreground text-[9px] font-black uppercase tracking-widest h-9"
                     onClick={handleCancel}
                 >
                     Cancel
@@ -1040,16 +1040,16 @@ export const SummaryCard = ({ payload }: { payload: any }) => {
     const { title, is_hub, overview, key_takeaways = [], key_terms = [], weak_spots = [] } = payload;
     
     return (
-        <div className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] shadow-sm space-y-5 select-none text-foreground">
+        <div className="p-5 border border-border bg-bento-card my-4 rounded-[12px] shadow-sm space-y-5 select-none text-foreground">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#242426]/60">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60">
                 <div className="flex items-center gap-2">
                     {is_hub ? <Layers size={14} className="text-primary" /> : <FileText size={14} className="text-primary" />}
                     <span className="text-[11px] font-black uppercase tracking-[0.2em]">
                         {is_hub ? 'Hub Summary' : 'Atomic Note Summary'}
                     </span>
                 </div>
-                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-[#242426] bg-[#131314] text-muted-foreground px-2 py-0.5">
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-border bg-background text-muted-foreground px-2 py-0.5">
                     {is_hub ? 'HUB' : 'NOTE'}
                 </Badge>
             </div>
@@ -1081,7 +1081,7 @@ export const SummaryCard = ({ payload }: { payload: any }) => {
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Key Glossary</h4>
                     <div className="grid grid-cols-1 gap-2">
                         {key_terms.map((item: any, i: number) => (
-                            <div key={i} className="p-2.5 border border-[#242426] bg-[#131314] rounded-[8px]">
+                            <div key={i} className="p-2.5 border border-border bg-background rounded-[8px]">
                                 <span className="text-[10px] font-black uppercase tracking-wider block text-primary">{item.term}</span>
                                 <span className="text-[10px] font-medium text-muted-foreground/80 mt-1 block leading-relaxed">{item.definition}</span>
                             </div>
@@ -1176,13 +1176,13 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
     ];
 
     return (
-        <div className="p-5 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] shadow-sm space-y-4 select-none text-foreground">
-            <div className="flex items-center justify-between pb-3 border-b border-[#242426]/60">
+        <div className="p-5 border border-border bg-bento-card my-4 rounded-[12px] shadow-sm space-y-4 select-none text-foreground">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60">
                 <div className="flex items-center gap-2">
                     <Sparkles size={14} className="text-primary" />
                     <span className="text-[11px] font-black uppercase tracking-[0.2em]">Practice Setup</span>
                 </div>
-                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-[#242426] bg-[#131314] text-muted-foreground px-2">
+                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-border bg-background text-muted-foreground px-2">
                     {hubId.replace(/_/g, ' ')}
                 </Badge>
             </div>
@@ -1192,19 +1192,19 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Question Types</h4>
                 <div className="grid grid-cols-2 gap-2">
                     {qTypes.map(({ key, label }) => (
-                        <div key={key} className="flex items-center justify-between p-2 border border-[#242426] bg-[#131314] rounded-[8px]">
+                        <div key={key} className="flex items-center justify-between p-2 border border-border bg-background rounded-[8px]">
                             <span className="text-[10px] font-black uppercase tracking-wider leading-none">{label}</span>
                             <div className="flex items-center gap-1.5">
                                 <button 
                                     onClick={() => handleDecrement(key)}
-                                    className="size-5 border border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] active:scale-95 flex items-center justify-center text-[10px] font-black rounded-[4px] text-muted-foreground"
+                                    className="size-5 border border-border bg-bento-card hover:bg-bento-item active:scale-95 flex items-center justify-center text-[10px] font-black rounded-[4px] text-muted-foreground"
                                 >
                                     -
                                 </button>
                                 <span className="text-[10px] font-mono font-bold w-4 text-center">{dist[key] || 0}</span>
                                 <button 
                                     onClick={() => handleIncrement(key)}
-                                    className="size-5 border border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] active:scale-95 flex items-center justify-center text-[10px] font-black rounded-[4px] text-muted-foreground"
+                                    className="size-5 border border-border bg-bento-card hover:bg-bento-item active:scale-95 flex items-center justify-center text-[10px] font-black rounded-[4px] text-muted-foreground"
                                 >
                                     +
                                 </button>
@@ -1221,7 +1221,7 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
                     <select 
                         value={difficulty} 
                         onChange={(e) => setDifficulty(e.target.value)}
-                        className="w-full text-[10px] font-bold uppercase tracking-wider bg-[#131314] border border-[#242426] p-2 rounded-[8px] text-foreground focus:outline-none"
+                        className="w-full text-[10px] font-bold uppercase tracking-wider bg-background border border-border p-2 rounded-[8px] text-foreground focus:outline-none"
                     >
                         <option value="Mixed">Mixed</option>
                         <option value="Easy">Easy (L1)</option>
@@ -1234,7 +1234,7 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
                     <select 
                         value={gradingStrictness} 
                         onChange={(e) => setGradingStrictness(e.target.value)}
-                        className="w-full text-[10px] font-bold uppercase tracking-wider bg-[#131314] border border-[#242426] p-2 rounded-[8px] text-foreground focus:outline-none"
+                        className="w-full text-[10px] font-bold uppercase tracking-wider bg-background border border-border p-2 rounded-[8px] text-foreground focus:outline-none"
                     >
                         <option value="Lenient">Lenient</option>
                         <option value="Strict">Strict</option>
@@ -1243,7 +1243,7 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center justify-between p-2 border border-[#242426] bg-[#131314] rounded-[8px]">
+                <div className="flex items-center justify-between p-2 border border-border bg-background rounded-[8px]">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Trick Answers</span>
                     <input 
                         type="checkbox" 
@@ -1252,7 +1252,7 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
                         className="accent-primary size-3 rounded"
                     />
                 </div>
-                <div className="flex items-center justify-between p-2 border border-[#242426] bg-[#131314] rounded-[8px]">
+                <div className="flex items-center justify-between p-2 border border-border bg-background rounded-[8px]">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Prioritize Weak</span>
                     <input 
                         type="checkbox" 

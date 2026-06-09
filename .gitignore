@@ -1,8 +1,12 @@
 # Node
 node_modules/
+**/node_modules/
 dist/
+**/dist/
 .next/
+**/.next/
 .turbo/
+**/.turbo/
 
 # pnpm
 .pnpm-store/
@@ -53,16 +57,20 @@ build/
 apps/api/dist/
 apps/api/build/
 
-# Graphify
-graphify-out/cache/
-graphify-out/.graphify_python
-
 # Scratch
 scratch/
 
 # Ater Volatile
 Obsidian_Vault/5-Pdf Store/ater_queue.db
 apps/api/mock_inbox/
+Vault_Test/
+Obsidian_Vault/
+
+# Local Databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Tauri sidecar binaries
 apps/desktop/src-tauri/ater-api-*
@@ -71,3 +79,8 @@ apps/desktop/src-tauri/ater-api-*
 Test/**/*.pdf
 *.png
 scripts/
+
+# Antigravity Session Symlinks
+.active_artifacts
+.active_chat_history
+.all_sessions

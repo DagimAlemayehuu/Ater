@@ -6,7 +6,7 @@ This file serves as the definitive reference manual for your coding agent. At th
 
 ---
 
-## 🛠️ Unified Skill Categories
+## Unified Skill Categories
 
 ### 1. Spec-Driven Planning & Changes (OpenSpec)
 

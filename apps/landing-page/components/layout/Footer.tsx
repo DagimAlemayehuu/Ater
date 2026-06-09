@@ -54,8 +54,12 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 technical-label text-on-surface-variant text-[10px] border-t border-outline-variant pt-12">
           <span>© 2026 ATER</span>
           <div className="flex gap-12">
-            <span>PRIVACY</span>
-            <span>TERMS</span>
+            <Link href="/privacy" className="hover:text-on-surface transition-colors">
+              PRIVACY
+            </Link>
+            <Link href="/terms" className="hover:text-on-surface transition-colors">
+              TERMS
+            </Link>
           </div>
         </div>
       </div>

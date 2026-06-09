@@ -89,14 +89,14 @@ export default function PomodoroStats() {
   return (
     <div className="bg-bento-panel border border-border shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground font-sans">
       {/* Header */}
-      <div className="h-16 border-b border-[#242426] flex items-center justify-between px-8 bg-[#151517] shrink-0">
+      <div className="h-16 border-b border-border flex items-center justify-between px-8 bg-bento-panel shrink-0">
         <div className="flex items-center gap-6">
            <div className="flex items-center gap-2">
              <BarChart2 size={18} className="text-muted-foreground/40" />
              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Analytics Engine</span>
            </div>
            
-           <div className="flex items-center gap-1 bg-[#232326] p-1 rounded-[8px] border border-[#242426]">
+           <div className="flex items-center gap-1 bg-bento-item p-1 rounded-[8px] border border-border">
              {(['OVERALL', 'NOTES', 'PRACTICE'] as const).map(tab => (
                <button 
                  key={tab}
@@ -104,7 +104,7 @@ export default function PomodoroStats() {
                  className={cn(
                    "px-4 h-7 text-[9px] font-black uppercase tracking-widest rounded-[6px]",
                    activeTab === tab 
-                     ? "bg-[#151517] text-foreground shadow-sm border border-[#242426]/60" 
+                     ? "bg-bento-panel text-foreground shadow-sm border border-border/60" 
                      : "text-muted-foreground/40 hover:text-foreground"
                  )}
                >
@@ -115,7 +115,7 @@ export default function PomodoroStats() {
         </div>
 
         <div className="flex items-center gap-4">
-           <div className="flex items-center bg-[#232326] p-1 rounded-[8px] border border-[#242426]">
+           <div className="flex items-center bg-bento-item p-1 rounded-[8px] border border-border">
               {['D', 'W', 'M', 'Y'].map((f) => (
                 <button 
                   key={f}
@@ -123,7 +123,7 @@ export default function PomodoroStats() {
                   className={cn(
                     "px-4 h-7 text-[10px] font-bold rounded-[6px] transition-none uppercase tracking-widest",
                     timeFilter === f 
-                      ? "bg-[#151517] text-foreground shadow-sm border border-[#242426]/60" 
+                      ? "bg-bento-panel text-foreground shadow-sm border border-border/60" 
                       : "text-muted-foreground/60 hover:text-muted-foreground"
                   )}
                 >
@@ -131,7 +131,7 @@ export default function PomodoroStats() {
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowStats(false)} className="p-2 hover:bg-[#232326] rounded-[8px] border border-transparent hover:border-[#242426] transition-none">
+            <button onClick={() => setShowStats(false)} className="p-2 hover:bg-bento-item rounded-[8px] border border-transparent hover:border-border transition-none">
               <X size={20} className="text-muted-foreground/40" />
             </button>
         </div>
@@ -150,11 +150,11 @@ export default function PomodoroStats() {
               </div>
 
               <div className="grid grid-cols-2 gap-5">
-                <div className="bg-[#232326] border border-[#242426] rounded-[8px] p-6 flex flex-col gap-2">
+                <div className="bg-bento-item border border-border rounded-[8px] p-6 flex flex-col gap-2">
                   <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total Focused Time</div>
                   <div className="text-2xl font-bold text-foreground">{stats.totalMinutes}m</div>
                 </div>
-                <div className="bg-[#232326] border border-[#242426] rounded-[8px] p-6 flex flex-col gap-2">
+                <div className="bg-bento-item border border-border rounded-[8px] p-6 flex flex-col gap-2">
                   <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Active Hubs</div>
                   <div className="text-2xl font-bold text-foreground">{stats.categories.length}</div>
                 </div>
@@ -168,7 +168,7 @@ export default function PomodoroStats() {
                       <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.05} />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'currentColor', opacity: 0.3, fontSize: 9, fontWeight: 900 }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: 'currentColor', opacity: 0.1, fontSize: 9, fontWeight: 900 }} />
-                      <Tooltip cursor={{ fill: 'currentColor', fillOpacity: 0.02 }} contentStyle={{ backgroundColor: '#151517', border: '1px solid #242426', borderRadius: '8px', fontSize: '10px' }} />
+                      <Tooltip cursor={{ fill: 'currentColor', fillOpacity: 0.02 }} contentStyle={{ backgroundColor: 'var(--bento-panel)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '10px' }} />
                       <Bar dataKey="value" fill="currentColor" fillOpacity={0.6} radius={[0, 0, 0, 0]} barSize={24} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -180,12 +180,12 @@ export default function PomodoroStats() {
               <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub Weight</div>
               <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
                 {stats.categories.map((cat) => (
-                  <div key={cat.name} className="bg-[#232326] border border-[#242426] rounded-[8px] p-6">
+                  <div key={cat.name} className="bg-bento-item border border-border rounded-[8px] p-6">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 truncate">{cat.name}</span>
                       <span className="text-xl font-bold text-foreground">{cat.count}</span>
                     </div>
-                    <div className="h-2 w-full bg-[#151517] rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-bento-panel rounded-full overflow-hidden">
                       <div className="h-full bg-primary rounded-full" style={{ width: `${cat.percent}%` }} />
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export default function PomodoroStats() {
                <div className="flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Recent Note Sessions</div>
                  {stats.notes.slice(-10).reverse().map((n, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 bg-[#232326] border border-[#242426] rounded-[8px]">
+                   <div key={i} className="flex items-center justify-between p-4 bg-bento-item border border-border rounded-[8px]">
                      <span className="text-[10px] font-black uppercase truncate pr-4">{n.notePath?.split(/[/\\]/).pop()?.replace('.md', '')}</span>
                      <span className="text-[10px] font-bold tabular-nums opacity-60">{Math.round(n.duration || 0)}m</span>
                    </div>
@@ -262,7 +262,7 @@ export default function PomodoroStats() {
                <div className="flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Practice History</div>
                  {stats.practices.slice(-10).reverse().map((p, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 bg-[#232326] border border-[#242426] rounded-[8px]">
+                   <div key={i} className="flex items-center justify-between p-4 bg-bento-item border border-border rounded-[8px]">
                      <div className="flex flex-col">
                        <span className="text-[10px] font-black uppercase truncate">{p.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub}</span>
                        <span className="text-[8px] font-bold opacity-30">{new Date(p.timestamp).toLocaleDateString()}</span>

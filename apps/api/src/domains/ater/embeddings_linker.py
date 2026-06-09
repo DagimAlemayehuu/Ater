@@ -4,8 +4,7 @@ import os
 import re
 import gc
 import numpy as np
-import onnxruntime as ort
-from transformers import AutoTokenizer
+# Imports for onnxruntime and transformers are moved inside load_model() to optimize cold-start
 from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 
@@ -63,6 +62,8 @@ class EmbeddingsLinker:
     def load_model(cls):
         """Loads tokenizer and ONNX inference session as a lazy-loaded Singleton."""
         if cls._session is None or cls._tokenizer is None:
+            import onnxruntime as ort
+            from transformers import AutoTokenizer
             model_dir, model_path = cls._get_model_paths()
             if not model_path.exists():
                 raise FileNotFoundError(f"ONNX model not found at {model_path}")

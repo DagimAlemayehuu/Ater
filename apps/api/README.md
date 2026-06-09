@@ -1,6 +1,6 @@
 # Ater Sidecar (Python API)
 
-This is the high-performance reasoning orchestration and Notion synchronization layer for Ater. It operates as a local FastAPI python sidecar service, bridging the Tauri React desktop client with external APIs and Notion database assets.
+This is the high-performance reasoning orchestration layer for Ater. It operates as a local FastAPI python sidecar service, bridging the Tauri React desktop client with external APIs and local assets.
 
 ## Core Responsibilities
 
@@ -11,14 +11,13 @@ This is the high-performance reasoning orchestration and Notion synchronization 
     - **Oracle Pre-Analysis**: MetaScannerAgent briefing for global document context.
     - **Singularity Parallelism**: Massively parallel generation governed by the `TokenGovernor`.
     - **Cognitive Anchoring**: Strict domain-persona stability via anchoring laws.
-- **Notion Synapse**: High-speed, async connectors for Notion goals, academic schedules, and task lists.
 - **Obsidian Vault Syncer**: Local filesystem parser that processes Obsidian vault indices and structures to display in the desktop file tree.
 
 ## Stack
 
 - **Web Framework**: FastAPI + Uvicorn
 - **AI Integration**: Google Generative AI (Python SDK)
-- **Data Clients**: Notion Client (Async), SQLite (local caching)
+- **Data Clients**: SQLite (local caching)
 - **Validation**: Pydantic v2
 - **Runtime Environment**: Python 3.11+ managed by `uv`
 
@@ -26,7 +25,7 @@ This is the high-performance reasoning orchestration and Notion synchronization 
 
 - `POST /api/ai/upload`: Uploads and pre-processes files for context-rich AI conversation.
 - `POST /api/ai/brainstorm`: Performs instruction-anchored thinking loops.
-- `GET /api/academics/dashboard`: Retrieves consolidated data from Notion academic databases.
+- `GET /api/academics/dashboard`: Retrieves consolidated data from the local Obsidian Vault's academic databases.
 - `GET /api/obsidian/files`: Parses recursive folders and file lists from the target local Obsidian vault path.
 
 ## Setup & Running

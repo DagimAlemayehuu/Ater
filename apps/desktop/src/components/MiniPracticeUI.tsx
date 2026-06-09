@@ -154,9 +154,9 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     <div className="my-1 border border-border rounded-[12px] overflow-hidden bg-bento-panel shadow-sm not-prose relative">
       {/* ── Feynman Gate Locked Overlay ── */}
       {session.isFeynmanLocked && (
-        <div className="absolute inset-0 z-40 bg-[#151517]/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-[#242426] bg-[#151517] p-4 rounded-[12px] space-y-4 shadow-2xl relative">
-            <div className="flex items-center gap-2 border-b border-[#242426] pb-2">
+        <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md border border-border bg-bento-panel p-4 rounded-[12px] space-y-4 shadow-2xl relative">
+            <div className="flex items-center gap-2 border-b border-border pb-2">
               <BrainCircuit className="text-primary shrink-0" size={18} />
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-primary">Cognitive Lock</h3>
@@ -168,19 +168,19 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <div className="p-2 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+              <div className="p-2 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
                 <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
                 <span className={cn("text-[10px] font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
                   {(retrievability * 100).toFixed(1)}%
                 </span>
               </div>
-              <div className="p-2 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+              <div className="p-2 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
                 <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
                 <span className="text-[10px] font-black tracking-tight text-foreground">
                   {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
                 </span>
               </div>
-              <div className="p-2 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+              <div className="p-2 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
                 <span className="text-[6px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
                 <span className={cn("text-[10px] font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
                   {lapses}
@@ -202,7 +202,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                 disabled={session.isFeynmanValidating}
                 rows={3}
                 placeholder="Explain the core mechanisms, concepts, and rules..."
-                className="w-full p-2 bg-[#232326] border border-[#242426] rounded-[8px] text-[10px] font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+                className="w-full p-2 bg-bento-item border border-border rounded-[8px] text-[10px] font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
               />
 
               {session.feynmanError && (

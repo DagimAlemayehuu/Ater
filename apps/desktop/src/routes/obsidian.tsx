@@ -20,6 +20,7 @@ import { PanelLoader } from '@/components/ui/loading-state'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
+import { ObsidianEditor } from '@/components/obsidian/ObsidianEditor'
 import { NoteProperties } from '@/components/obsidian/NoteProperties'
 import { HubConnectionsNav, parseHubTree } from '@/components/obsidian/HubConnectionsNav'
 import { KnowledgeFooter } from '@/components/obsidian/KnowledgeFooter'
@@ -259,6 +260,13 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const noteContentRef = useRef('')
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState('')
+
+  // --- Note List for Autocomplete ---
+  const noteList = useMemo(() => {
+    return files
+      .filter(f => !f.is_dir && typeof f.name === 'string' && f.name.toLowerCase().endsWith('.md'))
+      .map(f => f.name.slice(0, -3))
+  }, [files])
 
   // --- PDF State & Ref ---
   const pdfRef = useRef<any>(null)
@@ -2006,18 +2014,16 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
                 <div className="mt-8">
                   {isEditing ? (
-                    <textarea
+                    <ObsidianEditor
                       value={editedContent}
-                      onChange={(e) => setEditedContent(e.target.value)}
+                      onChange={setEditedContent}
                       onKeyDown={(e) => {
                         if ((e.metaKey || e.ctrlKey) && e.key === 's') {
                           e.preventDefault()
                           handleSaveNote()
                         }
                       }}
-                      className="w-full h-[600px] p-8 bg-[#151517] border border-[#242426] rounded-[4px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20 text-foreground"
-                      placeholder="Start writing..."
-                      autoFocus
+                      noteList={noteList}
                     />
                   ) : (
                     <MarkdownViewer 

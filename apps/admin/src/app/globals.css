@@ -152,34 +152,5 @@
   .bg-bento-card { background-color: hsl(var(--bento-card)); }
   .bg-bento-item { background-color: hsl(var(--bento-item)); }
 
-  /* Custom Light Mode Overrides for Hardcoded Tailwind Dark Utilities */
-  :root:not(.dark) .bg-\[\#1a1a1c\] { background-color: hsl(var(--card)) !important; }
-  :root:not(.dark) .bg-\[\#1a1a1c\]\/50 { background-color: hsla(var(--card) / 0.5) !important; }
-  :root:not(.dark) .bg-\[\#151517\] { background-color: hsl(var(--background)) !important; }
-  :root:not(.dark) .bg-\[\#232326\] { background-color: hsl(var(--muted)) !important; }
-  :root:not(.dark) .bg-\[\#232326\]\/50 { background-color: hsla(var(--muted) / 0.5) !important; }
-  :root:not(.dark) .bg-\[\#131314\] { background-color: hsl(var(--muted)) !important; }
-  :root:not(.dark) .bg-\[\#0e0e0f\] { background-color: hsl(var(--background)) !important; }
-
-  :root:not(.dark) .border-\[\#242426\] { border-color: hsl(var(--border)) !important; }
-  :root:not(.dark) .border-\[\#242426\]\/60 { border-color: hsla(var(--border) / 0.6) !important; }
-
-  :root:not(.dark) .divide-\[\#242426\]\/60 > :not([hidden]) ~ :not([hidden]) { border-color: hsla(var(--border) / 0.6) !important; }
-  :root:not(.dark) .divide-\[\#242426\] > :not([hidden]) ~ :not([hidden]) { border-color: hsl(var(--border)) !important; }
-
-  :root:not(.dark) .text-\[\#a1a1aa\] { color: hsl(var(--muted-foreground)) !important; }
-  :root:not(.dark) .text-\[\#a1a1aa\]\/20 { color: hsla(var(--muted-foreground) / 0.3) !important; }
-  :root:not(.dark) .text-\[\#a1a1aa\]\/50 { color: hsla(var(--muted-foreground) / 0.6) !important; }
-  :root:not(.dark) .border-\[\#a1a1aa\] { border-color: hsl(var(--muted-foreground)) !important; }
-  :root:not(.dark) .border-\[\#a1a1aa\]\/50 { border-color: hsla(var(--muted-foreground) / 0.6) !important; }
-
-  /* Hover and active states */
-  :root:not(.dark) .hover\:bg-\[\#232326\]\/30:hover { background-color: hsla(var(--accent) / 0.3) !important; }
-  :root:not(.dark) .hover\:bg-\[\#232326\]\/50:hover { background-color: hsla(var(--accent) / 0.5) !important; }
-  :root:not(.dark) .hover\:bg-\[\#232326\]:hover { background-color: hsl(var(--accent)) !important; }
-  :root:not(.dark) .hover\:bg-\[\#232326\]\/60:hover { background-color: hsla(var(--accent) / 0.6) !important; }
-  :root:not(.dark) .hover\:bg-\[\#232326\]\/80:hover { background-color: hsla(var(--accent) / 0.8) !important; }
-  :root:not(.dark) .hover\:bg-\[\#1a1a1c\]:hover { background-color: hsl(var(--card)) !important; }
-  :root:not(.dark) .hover\:bg-\[\#1a1a1c\]\/50:hover { background-color: hsla(var(--card) / 0.5) !important; }
 }
 

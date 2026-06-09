@@ -3,7 +3,7 @@ Ater - FastAPI Sidecar Entry Point
 
 This process is spawned by Tauri on desktop launch and communicates
 exclusively via localhost HTTP. All secret keys are passed per-request
-via HTTP headers (X-Notion-Key, X-Gemini-Key, X-Vault-Path).
+via HTTP headers (X-Gemini-Key, X-Vault-Path).
 """
 
 import signal
@@ -68,7 +68,7 @@ ServerLifespanManager.register_signal_handlers()
 
 app = FastAPI(
     title="Ater Python Sidecar",
-    description="FastAPI backend sidecar for Ater. Handles AI, Notion, and Obsidian logic.",
+    description="FastAPI backend sidecar for Ater. Handles AI and Obsidian logic.",
     version="0.1.0",
     lifespan=ServerLifespanManager.lifespan,
 )

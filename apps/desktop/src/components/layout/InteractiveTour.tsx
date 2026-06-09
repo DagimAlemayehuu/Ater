@@ -19,9 +19,6 @@ interface TourStep {
 }
 
 export function InteractiveTour() {
-  const isBypass = new URLSearchParams(window.location.search).get('bypass') === 'true' || window.location.hash.includes('bypass=true');
-  if (isBypass) return null;
-
   const { config, saveConfig } = useConfig();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1714,7 +1711,8 @@ export function InteractiveTour() {
     }
   }, [currentStep, isActive, coords]);
 
-  if (!isActive) return null;
+  const isBypass = new URLSearchParams(window.location.search).get('bypass') === 'true' || window.location.hash.includes('bypass=true');
+  if (isBypass || !isActive) return null;
 
   const current = steps[currentStep];
   const isOracleInputStep = current.title === "Oracle: Socratic Dialogue Input";

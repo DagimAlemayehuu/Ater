@@ -6,7 +6,7 @@ Ater is a local-first personal intelligence operating system designed as a high-
 
 ---
 
-## 🏛️ System Architecture & Integrated Data Flow
+## System Architecture & Integrated Data Flow
 
 Ater's components operate in a hub-and-spoke topology centered around two key database nodes: a local SQLite caching/FSRS vector store (`ater.db`) and a remote, secure Supabase PostgreSQL database holding profiles, RLS policies, billing credit functions, and active device clearance locks.
 
@@ -44,7 +44,7 @@ Ater's components operate in a hub-and-spoke topology centered around two key da
 
 ---
 
-## 📦 Deep-Dive: The Sub-Applications
+## Deep-Dive: The Sub-Applications
 
 ### 1. High-Density Desktop Client (`apps/desktop`)
 *   **Technology Stack**: Tauri v2, React 18, Vite, TypeScript, Tailwind CSS, Monaco Editor, Zustand.
@@ -79,7 +79,7 @@ Ater's components operate in a hub-and-spoke topology centered around two key da
 
 ---
 
-## 🔒 Shared Supabase Database & Security Schema
+## Shared Supabase Database & Security Schema
 
 The shared database contains rigorous constraints to protect user profiles, credit pools, and hardware licenses:
 
@@ -123,7 +123,7 @@ Handles credit deductions atomically using bounds checks:
 
 ---
 
-## 🛠️ Tauri IPC Command Reference
+## Tauri IPC Command Reference
 
 The Tauri desktop client interfaces with the native Rust system using specific typed commands. Developers can find these calls implemented inside `apps/desktop/src/lib/sidecarApi.ts`:
 
@@ -140,7 +140,7 @@ The Tauri desktop client interfaces with the native Rust system using specific t
 
 ---
 
-## 🏛️ Comprehensive Directory Layout
+## Comprehensive Directory Layout
 
 ```
 /
@@ -164,7 +164,7 @@ The Tauri desktop client interfaces with the native Rust system using specific t
 
 ---
 
-## 🔐 Security & Operations Mandate
+## Security & Operations Mandate
 
 1.  **API Key Encapsulation**: Local configuration parameters are written to environment files (`.env`). No keys are hardcoded in the frontend.
 2.  **Encryption**: Client-side storage uses Tauri's native secure store. Local SQLite databases (`ater.db`) are restricted by local user OS permissions.
@@ -172,7 +172,7 @@ The Tauri desktop client interfaces with the native Rust system using specific t
 
 ---
 
-## 📜 Monorepo Changelog
+## Monorepo Changelog
 
 ### 2026-05-28 — Ater v33.0 "LLM Optimization & Spaced Repetition"
 *   **2B LLM Engine Optimization**: Tuned local note-generation loops for lightweight offline execution using optimized 2B parameter models.
