@@ -105,7 +105,7 @@ export default function Onboarding() {
   // Step 6 — Finalize
   const [finalStatus, setFinalStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [finalError, setFinalError] = useState('')
-  const [startWithTour, setStartWithTour] = useState(true)
+  const [startWithTour, setStartWithTour] = useState(false)
 
   // Sync config once loaded
   useEffect(() => {

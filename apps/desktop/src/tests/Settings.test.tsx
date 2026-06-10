@@ -38,10 +38,19 @@ vi.mock('sonner', () => ({
 }));
 
 describe('Settings Panel', () => {
+  const reloadMock = vi.fn();
+
   beforeEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    reloadMock.mockClear();
+    
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { reload: reloadMock },
+    });
   });
 
   function renderSettings() {
@@ -64,7 +73,7 @@ describe('Settings Panel', () => {
     });
   });
 
-  it('does not relaunch when factory reset verification fails', async () => {
+  it('does not reload when factory reset verification fails', async () => {
     vi.mocked(sidecarApi.factoryReset).mockResolvedValueOnce({
       success: false,
       restartRequired: false,
@@ -79,11 +88,11 @@ describe('Settings Panel', () => {
 
     await waitFor(() => expect(sidecarApi.factoryReset).toHaveBeenCalled());
 
-    expect(relaunch).not.toHaveBeenCalled();
+    expect(reloadMock).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalledWith('Factory reset failed: Purge verification failed');
   });
 
-  it('relaunches only after structured factory reset success', async () => {
+  it('reloads the page only after structured factory reset success', async () => {
     vi.mocked(sidecarApi.factoryReset).mockResolvedValueOnce({
       success: true,
       terminatedSidecar: true,
@@ -99,6 +108,6 @@ describe('Settings Panel', () => {
     fireEvent.click(screen.getByText(/Confirm Delete/i));
 
     await waitFor(() => expect(sidecarApi.factoryReset).toHaveBeenCalled());
-    await waitFor(() => expect(relaunch).toHaveBeenCalled(), { timeout: 2500 });
+    await waitFor(() => expect(reloadMock).toHaveBeenCalled(), { timeout: 2500 });
   }, 4000);
 });

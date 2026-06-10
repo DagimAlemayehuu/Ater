@@ -719,6 +719,42 @@ export default function Settings() {
             </CardContent>
           </Card>
 
+          {/* Simulation Mode Toggle Card */}
+          <Card className="col-span-1 md:col-span-2">
+            <CardHeader 
+              title="Interactive Tour / Simulation Mode" 
+              description="Explore the interface using offline demo data, or switch back to your real files and vault." 
+            />
+            <CardContent className="flex items-center justify-between h-[100px] text-left">
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Current Mode</p>
+                <p className="text-[14px] text-foreground font-mono font-black uppercase tracking-widest">
+                  {config?.isDemoMode ? 'SIMULATION / DEMO MODE' : 'REAL WORKSPACE'}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (config?.isDemoMode) {
+                    await saveConfig({ appMode: 'real', isDemoMode: false });
+                    toast.success('Switched to real workspace. Reloading...');
+                  } else {
+                    await saveConfig({ appMode: 'simulation', isDemoMode: true });
+                    toast.success('Switched to simulation mode. Reloading...');
+                  }
+                  setTimeout(() => window.location.reload(), 1000);
+                }}
+                className={cn(
+                  "h-10 px-6 text-[10px] font-black uppercase tracking-widest transition-all rounded-[8px]",
+                  config?.isDemoMode
+                    ? "bg-primary text-primary-foreground border border-primary hover:opacity-90"
+                    : "bg-[#232326] text-muted-foreground border border-[#242426] hover:text-foreground hover:bg-[#232326]/80"
+                )}
+              >
+                {config?.isDemoMode ? 'Switch to Real Workspace' : 'Switch to Demo/Simulation Mode'}
+              </button>
+            </CardContent>
+          </Card>
+
           {/* Danger Zone */}
           <div className="col-span-1 md:col-span-2 mt-4 text-left">
             <Card>
