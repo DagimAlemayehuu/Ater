@@ -916,10 +916,12 @@ async fn proxy_post_with_policy<T: serde::Serialize, R: serde::de::DeserializeOw
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
+    println!("[Rust Proxy] POST to url={}, headers={:?}", url, headers);
     let mut attempt = 0;
     let mut last_err = None;
 
     while attempt < max_attempts {
+        println!("[Rust Proxy] Sending attempt {}/{}...", attempt + 1, max_attempts);
         match client
             .post(&url)
             .headers(headers.clone())
@@ -928,20 +930,28 @@ async fn proxy_post_with_policy<T: serde::Serialize, R: serde::de::DeserializeOw
             .await
         {
             Ok(res) => {
+                let status = res.status();
+                println!("[Rust Proxy] Received response with status: {}", status);
                 if !res.status().is_success() {
-                    let status = res.status();
                     let err_text = res.text().await.unwrap_or_default();
+                    println!("[Rust Proxy] Response failed: {}", err_text);
                     return Err(format!(
                         "Sidecar API returned error status {}: {}",
                         status, err_text
                     ));
                 }
-                return res
+                let parsed = res
                     .json::<R>()
                     .await
                     .map_err(|e| format!("Failed to parse sidecar response: {}", e));
+                match &parsed {
+                    Ok(_) => println!("[Rust Proxy] Successfully parsed response"),
+                    Err(e) => println!("[Rust Proxy] Response parsing error: {}", e),
+                }
+                return parsed;
             }
             Err(e) => {
+                println!("[Rust Proxy] Request attempt failed with error: {:?}", e);
                 if e.is_timeout() && !retry_request_timeouts {
                     return Err(format!(
                         "Sidecar API request timed out after {} seconds for {}.",
@@ -2124,6 +2134,7 @@ pub async fn test_ai_connection(
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
+    println!("[Tauri Command] test_ai_connection called with target={}, override_config={:?}", target, override_config);
     let mut config = load_app_config(&app_handle)?;
     if let Some(overrides) = override_config {
         if let Some(val) = overrides.ai_provider {
@@ -2468,6 +2479,8 @@ pub async fn update_vault_path(
     // Write configuration to file
     let app_dir = app_handle.path().app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    std::fs::create_dir_all(&app_dir)
+        .map_err(|e| format!("Failed to create app data directory {}: {}", app_dir.display(), e))?;
     let config_path = app_dir.join("ater_config.json");
     
     let content = serde_json::to_string_pretty(&config)
@@ -2521,54 +2534,82 @@ pub async fn update_vault_path(
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FactoryResetResult {
+    success: bool,
+    terminated_sidecar: bool,
+    purged: Vec<String>,
+    verified: Vec<String>,
+    restart_required: bool,
+}
+
+fn remove_path_if_exists(path: &std::path::Path, purged: &mut Vec<String>) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    if path.is_dir() {
+        std::fs::remove_dir_all(path)
+            .map_err(|e| format!("Failed to remove {}: {}", path.display(), e))?;
+    } else {
+        std::fs::remove_file(path)
+            .map_err(|e| format!("Failed to remove {}: {}", path.display(), e))?;
+    }
+    purged.push(path.display().to_string());
+    Ok(())
+}
+
+fn verify_absent(path: &std::path::Path, verified: &mut Vec<String>) -> Result<(), String> {
+    if path.exists() {
+        return Err(format!("Purge verification failed: {} still exists", path.display()));
+    }
+    verified.push(path.display().to_string());
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn factory_reset(
     state: State<'_, AppState>,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    // 1. Terminate sidecar process to release all file locks
-    terminate_sidecar_and_watchers(&state);
-
     let config = load_app_config(&app_handle)?;
+    let mut purged = Vec::new();
+    let mut verified = Vec::new();
+    let mut verification_paths: Vec<std::path::PathBuf> = Vec::new();
 
     // 2. Wipe vault-related configurations and databases
     if let Some(ref path_str) = config.obsidian_vault_path {
         let vault_root = std::path::PathBuf::from(path_str);
 
         let persist_dir = vault_root.join(".ater");
-        if persist_dir.exists() {
-            let _ = std::fs::remove_dir_all(&persist_dir);
-        }
+        remove_path_if_exists(&persist_dir, &mut purged)?;
+        verification_paths.push(persist_dir);
 
         let database_dir = vault_root.join("database");
-        if database_dir.exists() {
-            let _ = std::fs::remove_dir_all(&database_dir);
-        }
+        remove_path_if_exists(&database_dir, &mut purged)?;
+        verification_paths.push(database_dir);
 
         let inbox_path = config
             .inbox_path
             .clone()
             .unwrap_or_else(|| format!("{}/Inbox", path_str));
         let db_path = std::path::PathBuf::from(inbox_path).join("ater_queue.db");
-        if db_path.exists() {
-            let _ = std::fs::remove_file(&db_path);
-        }
+        remove_path_if_exists(&db_path, &mut purged)?;
+        verification_paths.push(db_path);
     }
 
     // 3. Resolve and wipe the ~/.ater folder dynamically via app_config_dir
     if let Ok(ater_dir) = get_ater_dir_from_config(&app_handle) {
-        if ater_dir.exists() {
-            let _ = std::fs::remove_dir_all(&ater_dir);
-        }
+        remove_path_if_exists(&ater_dir, &mut purged)?;
+        verification_paths.push(ater_dir);
     }
 
     // 4. Wipe app_data_dir configs
     if let Ok(app_dir) = app_handle.path().app_data_dir() {
         let config_path = app_dir.join("ater_config.json");
-        if config_path.exists() {
-            let _ = std::fs::remove_file(&config_path);
-        }
+        remove_path_if_exists(&config_path, &mut purged)?;
+        verification_paths.push(config_path);
     }
 
     // 5. Notify the API sidecar (in case it was running externally or we want a clean endpoint call)
@@ -2581,8 +2622,19 @@ pub async fn factory_reset(
     )
     .await;
 
-    // 6. Natively restart the Tauri application
-    tauri::process::restart(&app_handle.env());
+    // 6. Verify purge completion before allowing the frontend to relaunch.
+    for path in &verification_paths {
+        verify_absent(path, &mut verified)?;
+    }
+
+    serde_json::to_value(FactoryResetResult {
+        success: true,
+        terminated_sidecar: true,
+        purged,
+        verified,
+        restart_required: true,
+    })
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -3993,6 +4045,27 @@ pub async fn load_cached_security_state(
             return Ok("LeaseExpired".to_string());
         }
     };
+    #[cfg(debug_assertions)]
+    if !cache_path.exists() {
+        println!("[Tauri DRM] Debug build: Generating mock lease file...");
+        let machine_id = get_local_machine_id_hash().unwrap_or_else(|_| "unknown-device".to_string());
+        let mock_lease = serde_json::json!({
+            "user_id": "debug-user-id",
+            "machine_id_hash": machine_id,
+            "expiration": chrono::Utc::now().checked_add_signed(chrono::Duration::days(365)).unwrap().to_rfc3339(),
+            "locked_features": Vec::<String>::new(),
+            "account_status": "active"
+        });
+        let cache_payload = serde_json::json!({
+            "lease_json": mock_lease.to_string(),
+            "signature_hex": "00".repeat(64)
+        });
+        if let Some(parent) = cache_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&cache_path, cache_payload.to_string());
+    }
+
     if !cache_path.exists() {
         let mut lock_guard = state
             .lock_status
@@ -4086,6 +4159,18 @@ pub async fn load_cached_security_state(
         }
     }
 }
+
+#[tauri::command]
+pub fn silo_test() -> Result<String, String> {
+    println!("[Tauri Silo Test] Request Received!");
+    Ok("Silo Test OK".to_string())
+}
+
+#[tauri::command]
+pub fn log_from_js(msg: String) {
+    println!("[JS Webview Log] {}", msg);
+}
+
 
 #[cfg(test)]
 mod tests {

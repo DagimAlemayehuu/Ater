@@ -38,6 +38,7 @@ import {
 import {Button} from '@/components/ui/button'
 import {Badge} from '@/components/ui/badge'
 import {Label} from '@/components/ui/label'
+import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {
  Select,
@@ -823,7 +824,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
           </button>
          ))}
         </div>
-        <Button onClick={handleVaultPracticeGenerate} disabled={vaultLoading || vaultSelectedFiles.length === 0} className="w-full h-10 font-black uppercase tracking-widest text-[9px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[6px] transition-colors">
+       <Button data-tour="start-practice-btn" onClick={handleVaultPracticeGenerate} disabled={vaultLoading || vaultSelectedFiles.length === 0} className="w-full h-10 font-black uppercase tracking-widest text-[9px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[6px] transition-colors">
          {vaultLoading ? <>Generating...</> : <>Practice from Vault <ArrowRight size={13} className="ml-2"/></>}
         </Button>
        </div>
@@ -963,7 +964,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          </div>
         ))}
        </div>
-       <Button onClick={handleStartSession} disabled={isLoading} className="h-11 w-full bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors">Start Session</Button>
+       <Button data-tour="start-practice-btn" onClick={handleStartSession} disabled={isLoading} className="h-11 w-full bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors">Start Practice</Button>
       </div>
     </div>
    </div>
@@ -1425,7 +1426,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               </Button>
               <div className="flex items-center gap-2">
                 {!isRevealed ? (
-                  <Button onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Check</Button>
+                  <Button data-tour="submit-answer-btn" onClick={handleSubmitAnswer} disabled={!userAnswers[currentQuestion.id] && !['writing','synthesis','debug','trace','calculation','data_analysis','scenario','code'].includes(currentQuestion.type)} className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none">Submit Answer</Button>
                 ) : (
                   <div className="flex gap-2">
                     {session.scores[currentQuestion.id] === undefined && ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type) && (
@@ -1548,7 +1549,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
             <div className="flex flex-row gap-3 pt-6 border-t border-[#242426]">
               <Button onClick={() => { session.reset(); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
               <Button variant="outline" onClick={() => { const distribution = Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any; session.reset(); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: distribution }); setView('configuring'); }} className="h-11 flex-1 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
-              <Button variant="outline" onClick={() => { session.reset(); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Done</Button>
+              <Button data-tour="finish-session-btn" variant="outline" onClick={() => { dispatchWalkthroughTrigger('practice_session_completed'); session.reset(); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Finish Session</Button>
             </div>
           </div>
         </div>

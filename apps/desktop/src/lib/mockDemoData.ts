@@ -301,8 +301,12 @@ export const MOCK_QUEUE_STATUS = {
 };
 
 export const MOCK_ORACLE_RESPONSES: Record<string, string> = {
-  "hello": "Hello! I am your Socratic AI Oracle. I have mapped your CS 201 curriculum. You have active study materials in **Unit 1: Searching & Complexity** (like Binary Search and Time Complexity). How can I assist your learning today?",
+  "hello": "Hello! I am your Socratic AI Oracle. I have mapped your Distributed Systems curriculum. You have active study materials in **Fault Tolerance and Replication** (like Consensus, Raft, Vector Clocks, and CAP Theorem). How can I assist your learning today?",
+  "consensus": "Consensus is how distributed systems agree on a single data value or state among multiple nodes. Why is consensus harder when network partitions can delay messages indefinitely?",
+  "raft": "Raft is a consensus algorithm designed to be easy to understand. It elects a leader node which has sole responsibility for managing the replicated log. What happens if the leader fails?",
+  "vector clock": "Vector clocks are used to capture causal relationships in distributed systems. Unlike logical clocks, they can detect concurrent updates. Why does linear time fail to order events in a partition?",
+  "cap": "The CAP theorem states that a distributed data store can simultaneously provide at most two out of three guarantees: Consistency, Availability, and Partition Tolerance. When a partition occurs, why must you choose between linearizability and availability?",
   "binary search": "Binary Search is a highly efficient search method. It works by taking a sorted dataset and repeatedly dividing it in half. Why must the array be sorted before using it? Think about what happens if you try search a random phonebook by dividing it in half.",
   "time complexity": "Time Complexity refers to how an algorithm's execution time scales relative to input size (N). For instance, Binary Search is O(log N), while simple iteration is O(N). Which structure would you choose if N grew to a billion elements?",
-  "default": "I've scanned the mock curriculum. Let's analyze the concepts in your Obsidian notes. Ask me about **Binary Search** index adjustments or why **Time Complexity** bounds are essential for scaling."
+  "default": "I've scanned the mock curriculum. Let's analyze the concepts in your Obsidian notes. Ask me about **Consensus** properties, **Raft leader election**, or the **CAP Theorem** tradeoffs."
 };

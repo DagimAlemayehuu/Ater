@@ -19,6 +19,9 @@ vi.mock('../lib/sidecarApi', () => ({
     srsDue: vi.fn(),
     listHubNotes: vi.fn(),
     getMachineId: vi.fn().mockResolvedValue('test-machine'),
+    siloTest: vi.fn().mockResolvedValue('Silo Test OK'),
+    testAiConnection: vi.fn().mockResolvedValue({ success: true }),
+    logFromJs: vi.fn(),
   }
 }));
 

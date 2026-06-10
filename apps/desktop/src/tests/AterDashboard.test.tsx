@@ -17,6 +17,9 @@ vi.mock('../lib/sidecarApi', () => ({
         findVaultPage: vi.fn(),
         search_similar: vi.fn(),
         oracleChatStream: vi.fn(),
+        siloTest: vi.fn().mockResolvedValue('Silo Test OK'),
+        testAiConnection: vi.fn().mockResolvedValue({ success: true }),
+        logFromJs: vi.fn(),
     }
 }));
 

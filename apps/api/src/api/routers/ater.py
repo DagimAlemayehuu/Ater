@@ -1104,39 +1104,37 @@ async def factory_reset_system(
     """
     Absolute Wipe: Wipes database and files.
     """
-    if not secrets.vault_path:
-        raise HTTPException(status_code=400, detail="Vault Path not configured")
-
-    vault_root = Path(secrets.vault_path)
-    db_path = Path(secrets.inbox_path or str(vault_root / "Inbox")) / "ater_queue.db"
-
     try:
-        if db_path.exists():
-            conn = sqlite3.connect(str(db_path))
-            conn.execute("DELETE FROM study_sessions")
-            conn.execute("DELETE FROM study_telemetry")
-            conn.execute("DELETE FROM practice_log")
-            conn.execute("DELETE FROM note_srs")
-            conn.execute("DELETE FROM queue")
-            conn.commit()
-            conn.close()
+        if secrets.vault_path:
+            vault_root = Path(secrets.vault_path)
+            db_path = Path(secrets.inbox_path or str(vault_root / "Inbox")) / "ater_queue.db"
 
-        academic_folders = [
-            "database/assignments",
-            "database/exams",
-            "database/study planner",
-            "database/courses",
-            "database/semesters",
-            "database/years",
-            "database/bases/Inbox"
-        ]
-        
-        for folder in academic_folders:
-            folder_path = vault_root / folder
-            if folder_path.exists() and folder_path.is_dir():
-                for f in folder_path.glob("*.md"):
-                    if not f.name.startswith("."):
-                        f.unlink()
+            if db_path.exists():
+                conn = sqlite3.connect(str(db_path))
+                conn.execute("DELETE FROM study_sessions")
+                conn.execute("DELETE FROM study_telemetry")
+                conn.execute("DELETE FROM practice_log")
+                conn.execute("DELETE FROM note_srs")
+                conn.execute("DELETE FROM queue")
+                conn.commit()
+                conn.close()
+
+            academic_folders = [
+                "database/assignments",
+                "database/exams",
+                "database/study planner",
+                "database/courses",
+                "database/semesters",
+                "database/years",
+                "database/bases/Inbox"
+            ]
+            
+            for folder in academic_folders:
+                folder_path = vault_root / folder
+                if folder_path.exists() and folder_path.is_dir():
+                    for f in folder_path.glob("*.md"):
+                        if not f.name.startswith("."):
+                            f.unlink()
 
         AterService.clear_sessions()
         if state.ater_watcher:

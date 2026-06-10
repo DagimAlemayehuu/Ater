@@ -29,3 +29,27 @@ def test_governor_learns_provider_header_limits(tmp_path):
     governor.update_limits_from_provider(requests_limit=12, tokens_limit=9000)
     assert governor.max_rpm == 12
     assert governor.max_tpm == 9000
+
+
+def test_model_factory_google_model_prefix():
+    from src.domains.ai.factory import ModelFactory
+    model = ModelFactory.get_model(
+        provider="google",
+        model_name="gemma-4-31b-it",
+        api_key="dummy_key"
+    )
+    assert model.model == "models/gemma-4-31b-it"
+
+    model2 = ModelFactory.get_model(
+        provider="google",
+        model_name="models/gemma-4-31b-it",
+        api_key="dummy_key"
+    )
+    assert model2.model == "models/gemma-4-31b-it"
+
+    model3 = ModelFactory.get_model(
+        provider="google",
+        model_name="tunedModels/custom-tuning-123",
+        api_key="dummy_key"
+    )
+    assert model3.model == "tunedModels/custom-tuning-123"

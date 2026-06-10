@@ -20,6 +20,9 @@ vi.mock('../lib/sidecarApi', () => ({
     aterWatcherToggle: vi.fn(),
     findVaultPage: vi.fn(),
     getMachineId: vi.fn().mockResolvedValue('test-machine-id'),
+    siloTest: vi.fn().mockResolvedValue('Silo Test OK'),
+    testAiConnection: vi.fn().mockResolvedValue({ success: true }),
+    logFromJs: vi.fn(),
   }
 }));
 

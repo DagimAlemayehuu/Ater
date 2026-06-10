@@ -8,3 +8,8 @@
 ---
 
 - 2026-06-08 | docs/ | SDD v1.0 bootstrap — directory structure and core documents initialized.
+- 2026-06-10 | apps/desktop/src-tauri/src/commands.rs | Automated offline DRM mock lease creation for debug builds.
+- 2026-06-10 | apps/desktop/src/lib/sidecarApi.ts | Defensive null serialization for connection test configurations and development credit deduction bypass.
+- 2026-06-10 | apps/desktop/src/lib/ConfigContext.tsx | Cleaned up temporary bridge diagnostics logger.
+- 2026-06-10 | docs/ | Created infrastructure_cleanup_final.md sprint report and ai_pipeline_matrix.md validation archive.
+- 2026-06-10 | apps/desktop/src/routes/onboarding.tsx | Fixed vault selection by avoiding backend restart during picker validation and creating the database folder before testing write access.

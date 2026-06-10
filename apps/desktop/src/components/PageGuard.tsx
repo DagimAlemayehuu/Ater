@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useSecurityStore } from '@/context/securityStore'
 import { LockoutScreen } from './ui/LockoutScreen'
+import { isSimulationMode } from '@/lib/appMode'
 
 interface PageGuardProps {
   featureSlug: string
@@ -12,6 +13,10 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
   const checkOnlineLockout = useSecurityStore(state => state.checkOnlineLockout)
   const creditBalance = useSecurityStore(state => state.creditBalance)
   const [isSyncing, setIsSyncing] = useState(false)
+
+  if (isSimulationMode()) {
+    return <>{children}</>
+  }
 
   const isBypass = import.meta.env.DEV &&
     (new URLSearchParams(window.location.search).get('bypass') === 'true' ||

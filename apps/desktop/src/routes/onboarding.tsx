@@ -22,9 +22,17 @@ const parseOptionalNumber = (value: any) => {
 }
 
 export default function Onboarding() {
-  const [step, setStep] = useState(1)
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
+  const [step, setStep] = useState(() => {
+    if (config?.displayName && config?.obsidianVaultPath) {
+      return 4
+    }
+    if (config?.displayName) {
+      return 2
+    }
+    return 1
+  })
 
   // Existing Vault Auto-Detection States
   const [detectedProfile, setDetectedProfile] = useState<any | null>(null)
@@ -139,17 +147,32 @@ export default function Onboarding() {
     }
   }, [config?.obsidianVaultPath, hasCheckedOnMount])
 
-  const handleNext = () => setStep((s) => s + 1)
-  const handleBack = () => setStep((s) => s - 1)
+  const handleNext = () => {
+    if (step === 2 && !config?.isDemoMode) {
+      setStep(4)
+    } else if (step === 4 && !config?.isDemoMode) {
+      setStep(6)
+    } else {
+      setStep((s) => s + 1)
+    }
+  }
+  const handleBack = () => {
+    if (step === 4 && !config?.isDemoMode) {
+      setStep(2)
+    } else if (step === 6 && !config?.isDemoMode) {
+      setStep(4)
+    } else {
+      setStep((s) => s - 1)
+    }
+  }
 
   const checkExistingVaultConfig = async (selectedPath: string) => {
     const normalizedPath = normalizeVaultPath(selectedPath)
     try {
-      // 1. Temporarily save obsidianVaultPath to let sidecarApi know where the vault is
-      await sidecarApi.updateVaultPath(normalizedPath)
+      // Persist obsidianVaultPath so native vault reads resolve against this selection.
       await saveConfig({ obsidianVaultPath: normalizedPath, inboxPath: vaultChildPath(normalizedPath, 'Inbox') })
       
-      // 3. Try reading database/user_profile.md
+      // Try reading database/user_profile.md
       const note = await sidecarApi.readObsidianNote('database/user_profile.md')
       if (note && note.content) {
         const { metadata } = parseFrontmatter(note.content)
@@ -245,13 +268,13 @@ export default function Onboarding() {
         
         // Smarter verification: check write permissions on selected vault path first
         try {
-          await sidecarApi.updateVaultPath(pathStr)
           await saveConfig({ obsidianVaultPath: pathStr, inboxPath: vaultChildPath(pathStr, 'Inbox') })
           
-          // Test writing a temporary file to check permissions
-          const testFilePath = 'database/.write_test';
-          await sidecarApi.createObsidianFile(testFilePath, 'permission_check', true);
-          await sidecarApi.deleteObsidianItem(testFilePath);
+          // Ensure the probe parent exists for newly selected empty vaults.
+          await sidecarApi.createObsidianFolder('database')
+          const testFilePath = 'database/.write_test'
+          await sidecarApi.createObsidianFile(testFilePath, 'permission_check', true)
+          await sidecarApi.deleteObsidianItem(testFilePath)
           
           setVaultPath(pathStr)
           await checkExistingVaultConfig(pathStr)
@@ -260,7 +283,8 @@ export default function Onboarding() {
           console.warn('[Onboarding] Path permission check failed:', writeErr)
           setVaultPath('')
           await saveConfig({ obsidianVaultPath: '', inboxPath: '' })
-          toast.error(writeErr?.message || "Ater cannot write to that folder. Choose a user-writable vault location.")
+          const message = typeof writeErr === 'string' ? writeErr : writeErr?.message
+          toast.error(message || "Ater cannot write to that folder. Choose a user-writable vault location.")
         }
       }
     } catch (err) {
@@ -286,6 +310,18 @@ export default function Onboarding() {
         aiMaxConcurrency: parseOptionalNumber(activeLimits.maxConcurrency)
       })
       if (res.success) {
+        await saveConfig({
+          aiApiKey: activeKey,
+          aiProvider: activeProvider,
+          aiModel: activeModel,
+          aiBaseUrl: activeBaseUrl,
+          aiMaxTpm: parseOptionalNumber(activeLimits.maxTpm),
+          aiMaxRpm: parseOptionalNumber(activeLimits.maxRpm),
+          aiMaxTpd: parseOptionalNumber(activeLimits.maxTpd),
+          aiMaxRpd: parseOptionalNumber(activeLimits.maxRpd),
+          aiMaxConcurrency: parseOptionalNumber(activeLimits.maxConcurrency),
+          savedApiKeys: savedKeys,
+        })
         setTestStatus('success')
         setTestMessage('Connected successfully')
       } else {
@@ -573,34 +609,84 @@ export default function Onboarding() {
         </div>
       )}
 
+      {/* Simulation Entry Modal (Walkthrough Step 1.6) */}
+      {!showDetectedModal && step === 1 && !config?.isDemoMode && !config?.walkthroughCompleted && config?.walkthroughMilestone === '1.6' && config?.walkthroughStatus !== 'skipped' && (
+        <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 select-none animate-fade-in pointer-events-auto">
+          <div className="w-full max-w-md bg-[#151517] border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
+            <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-3">
+              Interactive Tour
+            </div>
+            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">
+              Learn the Ropes
+            </h2>
+            <p className="text-[12px] text-muted-foreground leading-relaxed mb-6 font-sans">
+              Would you like to take a guided walkthrough of the workspace using simulation data? You can safely explore the UI without affecting your actual files.
+            </p>
+
+            <div className="flex w-full gap-3">
+              <button
+                data-tour="simulation-entry"
+                onClick={async () => {
+                  // isDemoMode=true lets the route guard skip to the main workspace.
+                  // The InteractiveTour click-capture picks up data-tour="simulation-entry"
+                  // and fires the simulation_started trigger automatically.
+                  await saveConfig({ isDemoMode: true });
+                  navigate('/obsidian');
+                }}
+                className="flex-1 py-3 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest hover:opacity-90 rounded-[8px] transition-all cursor-pointer"
+              >
+                Start Guided Tour
+              </button>
+              <button
+                onClick={async () => {
+                  // Save a non-'1.6' milestone so the modal doesn't re-appear.
+                  await saveConfig({ walkthroughMilestone: 'skip', walkthroughStatus: 'skipped' } as any);
+                }}
+                className="px-5 py-3 border border-[#242426] bg-[#232326]/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
+              >
+                Configure Manually
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-12 right-12 z-10">
         <ThemeSwitch />
       </div>
       <div className="w-full max-w-lg mx-auto bg-[#151517] border border-[#242426] rounded-[12px] p-8 shadow-2xl my-8">
 
         {/* Step indicator */}
-        {finalStatus === 'idle' || finalStatus === 'error' ? (
-          <div className="flex items-center gap-3 mb-10 flex-wrap">
-            {[1, 2, 3, 4, 5, 6].map((s) => (
-              <div key={s} className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "size-1.5 rounded-full",
-                    step === s
-                      ? "bg-foreground"
-                      : step > s
-                      ? "bg-muted-foreground/60"
-                      : "bg-[#242426]"
-                  )}
-                />
-                {s < 6 && <div className="w-6 h-px bg-[#242426]" />}
-              </div>
-            ))}
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">
-              Step {step} of 6
-            </span>
-          </div>
-        ) : null}
+        {finalStatus === 'idle' || finalStatus === 'error' ? (() => {
+          const visibleSteps = config?.isDemoMode
+            ? [1, 2, 3, 4, 5, 6]
+            : (config?.displayName ? [2, 4, 6] : [1, 2, 4, 6]);
+          const currentDisplayStep = visibleSteps.indexOf(step) + 1;
+          const totalDisplaySteps = visibleSteps.length;
+          if (currentDisplayStep === 0) return null;
+          return (
+            <div className="flex items-center gap-3 mb-10 flex-wrap">
+              {visibleSteps.map((s, idx) => (
+                <div key={s} className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      step === s
+                        ? "bg-foreground"
+                        : step > s
+                        ? "bg-muted-foreground/60"
+                        : "bg-[#242426]"
+                    )}
+                  />
+                  {idx < totalDisplaySteps - 1 && <div className="w-6 h-px bg-[#242426]" />}
+                </div>
+              ))}
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">
+                Step {currentDisplayStep} of {totalDisplaySteps}
+              </span>
+            </div>
+          );
+        })() : null}
 
         {/* Running state */}
         {finalStatus === 'running' && (
@@ -695,6 +781,7 @@ export default function Onboarding() {
 
             <button
               onClick={selectVault}
+              data-tour="select-vault-btn"
               className="w-full bg-[#232326]/30 border border-[#242426] hover:border-foreground py-4 px-4 mb-8 text-left rounded-[8px] transition-colors"
             >
               <span className="text-[11px] font-black uppercase tracking-widest text-foreground block">
@@ -887,7 +974,7 @@ export default function Onboarding() {
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <button onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save Key</button>
+                    <button data-tour="save-key-btn" onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save Key</button>
                     <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Cancel</button>
                   </div>
                 </div>
@@ -903,7 +990,7 @@ export default function Onboarding() {
 
             {/* Test Connection for Active Key */}
             {activeKey && (
-              <div className="w-full p-4 border border-[#242426] bg-[#232326]/10 rounded-[8px] mb-8 text-left space-y-4">
+              <div data-tour="ai-connection-status" className="w-full p-4 border border-[#242426] bg-[#232326]/10 rounded-[8px] mb-8 text-left space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="space-y-0.5">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active Key Selected</span>
@@ -1195,7 +1282,7 @@ export default function Onboarding() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mb-6 select-none cursor-pointer animate-fade-in" onClick={() => setStartWithTour(!startWithTour)}>
+            <div data-tour="demo-mode-checkbox" className="flex items-center gap-3 mb-6 select-none cursor-pointer animate-fade-in" onClick={() => setStartWithTour(!startWithTour)}>
               <input
                 type="checkbox"
                 checked={startWithTour}

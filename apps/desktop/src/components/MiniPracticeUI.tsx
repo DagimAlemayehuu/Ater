@@ -151,7 +151,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const confidenceWager = currentQ ? (session.confidenceWagers[currentQ.id] || null) : null;
 
   return (
-    <div className="my-1 border border-border rounded-[12px] overflow-hidden bg-bento-panel shadow-sm not-prose relative">
+    <div data-tour="quiz-section" className="my-1 border border-border rounded-[12px] overflow-hidden bg-bento-panel shadow-sm not-prose relative">
       {/* ── Feynman Gate Locked Overlay ── */}
       {session.isFeynmanLocked && (
         <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -429,6 +429,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                 </div>
                 <Button 
                   onClick={checkAnswer} 
+                  data-tour="srs-btn-good"
                   disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0) || !confidenceWager}
                   className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] "
                 >

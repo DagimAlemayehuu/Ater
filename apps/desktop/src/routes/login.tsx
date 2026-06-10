@@ -99,6 +99,7 @@ export default function Login() {
 
           <button
             type="submit"
+            data-tour="activate-btn"
             disabled={localLoading}
             className={cn(
               "w-full mt-6 py-2.5 flex items-center justify-center border rounded-[8px] transition-all duration-150",

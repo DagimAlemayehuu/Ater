@@ -6,12 +6,12 @@ import { stripWL, statusColorClass, getYearOrder, wrapWL, cleanTitle, getVal, ge
 import type { VaultDatabase } from './types'
 
 // ─── Tab Button ────────────────────────────────────────────────────────────────
-export function TabButton({ active, onClick, icon, label }: {
-  active: boolean; onClick: () => void; icon: React.ReactNode; label: string
+export function TabButton({ active, onClick, icon, label, 'data-tour': dataTour }: {
+  active: boolean; onClick: () => void; icon: React.ReactNode; label: string; 'data-tour'?: string
 }) {
   return (
     <button onClick={onClick} 
-      data-tour={`tab-${label.toLowerCase()}`}
+      data-tour={dataTour ?? `tab-${label.toLowerCase()}`}
       className={cn(
         'relative flex-none h-full flex items-center gap-1.5 px-4 text-[9px] font-black uppercase tracking-widest whitespace-nowrap focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
         active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/10'

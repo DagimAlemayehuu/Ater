@@ -123,6 +123,7 @@ const FileTreeItem = React.memo(({
     >
       <div 
         draggable
+        data-tour={!node.isFolder ? 'obsidian-file-item' : undefined}
         onDragStart={(e) => onDragStart(e, node.path)}
         onClick={() => node.isFolder ? onToggleFolder(node.path) : onSelectFile(node.path)}
         className={cn(
@@ -353,6 +354,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                  </button>
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
                    <button 
+                      data-tour="btn-jump-pdf"
                       onClick={async () => {
                         const src = noteMetadata.source_file || noteMetadata.source
                         if (!src) return;
@@ -408,6 +410,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    </button>
                  )}
                    <button 
+                      data-tour="btn-toggle-properties"
                       onClick={() => config && saveConfig({ showProperties: !config.showProperties })}
                       className={cn(
                         "w-8 h-8 flex items-center justify-center rounded-[8px] border  shadow-sm",
@@ -1808,6 +1811,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             />
           </div>
           <button 
+            data-tour="btn-toggle-graph"
             className={cn(
               "p-1.5 rounded-[4px] shrink-0 transition-colors", 
               showGraphView 
@@ -2055,8 +2059,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   <div className="flex flex-wrap justify-center gap-2">
                     <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
                     <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-[#a1a1aa]/30 text-[#a1a1aa] hover:bg-[#232326] transition-none">Hard</button>
-                    <button onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
-                    <button onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
+                    <button data-tour="srs-btn-good" onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
+                    <button data-tour="srs-btn-easy" onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
                   </div>
                 </div>
               </div>

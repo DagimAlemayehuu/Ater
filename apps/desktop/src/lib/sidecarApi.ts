@@ -11,6 +11,8 @@ import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
 import { realSupabase } from '@/lib/supabase'
 import { toVaultRelativePath } from '@/lib/vaultPath'
+import { isSimulationMode } from '@/lib/appMode'
+import { simulationSidecarApi } from '@/lib/simulation/adapter'
 
 function enforceFeatureLock(featureSlug: string) {
     if (useSecurityStore.getState().isFeatureLocked(featureSlug)) {
@@ -19,6 +21,10 @@ function enforceFeatureLock(featureSlug: string) {
 }
 
 async function deductCredits(featureSlug: string) {
+    if (import.meta.env.DEV) {
+        return;
+    }
+
     if (await isDemoActive()) {
         const balance = useSecurityStore.getState().creditBalance;
         if (balance <= 0) {
@@ -58,6 +64,9 @@ async function deductCredits(featureSlug: string) {
 }
 
 async function isDemoActive(): Promise<boolean> {
+    if (isSimulationMode()) {
+        return true
+    }
     if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
         return true; // Force demo mode in standard web previews/captures
     }
@@ -199,6 +208,7 @@ export const sidecarApi = {
 
     // ── Native Tauri IPC Routes (Fully wired, no fake mocks!) ──
     health: async (): Promise<HealthResponse> => {
+        if (isSimulationMode()) return simulationSidecarApi.health()
         try {
             return await invoke<HealthResponse>('get_health')
         } catch {
@@ -211,6 +221,7 @@ export const sidecarApi = {
     },
 
     listVaultDatabases: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.listVaultDatabases()
         if (await isDemoActive()) {
             return {
                 databases: [
@@ -277,6 +288,7 @@ export const sidecarApi = {
     },
     
     queryVaultDatabase: async (dbName: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.queryVaultDatabase(dbName)
         try {
             return await invoke<any>('query_vault_database', { dbName })
         } catch (err) {
@@ -286,6 +298,7 @@ export const sidecarApi = {
     },
     
     listVaultDatabaseRows: async (dbName: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.listVaultDatabaseRows(dbName)
         try {
             return await invoke<any>('list_vault_database_rows', { dbName })
         } catch (err) {
@@ -344,6 +357,7 @@ export const sidecarApi = {
     },
 
     getVaultOptions: async (source: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.getVaultOptions(source)
         if (optionsCache.has(source)) {
             // Trigger a background refresh to keep it fresh (Stale-While-Revalidate)
             invoke<any>('get_vault_options', { source }).then(res => {
@@ -396,6 +410,7 @@ export const sidecarApi = {
     },
 
     findVaultPage: async (pageName: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.findVaultPage(pageName)
         try {
             return await invoke<any>('find_vault_page', { pageName })
         } catch (err) {
@@ -417,6 +432,7 @@ export const sidecarApi = {
     },
 
     getVaultGraph: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.getVaultGraph()
         if (await isDemoActive()) {
             return {
                 nodes: [
@@ -440,6 +456,7 @@ export const sidecarApi = {
     },
 
     getVaultBacklinks: async (pageName: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.getVaultBacklinks(pageName)
         try {
             return await invoke<any>('get_vault_backlinks', { pageName })
         } catch (err) {
@@ -449,8 +466,9 @@ export const sidecarApi = {
     },
 
     testAiConnection: async (target: 'primary' = 'primary', overrideConfig?: any) => {
+        if (isSimulationMode()) return simulationSidecarApi.testAiConnection()
         try {
-            return await invoke<any>('test_ai_connection', { target, overrideConfig })
+            return await invoke<any>('test_ai_connection', { target, overrideConfig: overrideConfig ?? null })
         } catch (err) {
             console.error('[Tauri Native RAG] testAiConnection failed:', err)
             return { success: false, message: 'Connection failed', error: String(err) }
@@ -458,6 +476,7 @@ export const sidecarApi = {
     },
 
     listObsidianFiles: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.listObsidianFiles()
         if (await isDemoActive()) {
             return { files: mockDemo.MOCK_FILES }
         }
@@ -471,6 +490,7 @@ export const sidecarApi = {
     },
     
     readObsidianNote: async (path: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.readObsidianNote(path)
         const ipcPath = await normalizeVaultIpcPath(path)
         if (await isDemoActive()) {
             const cleanPath = ipcPath.replace(/\\/g, '/');
@@ -490,6 +510,7 @@ export const sidecarApi = {
     },
     
     updateObsidianNote: async (path: string, content: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.updateObsidianNote(path, content)
         enforceFeatureLock('file_ingestion')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
@@ -501,6 +522,7 @@ export const sidecarApi = {
     },
 
     deleteObsidianItem: async (path: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.deleteObsidianItem(path)
         enforceFeatureLock('file_ingestion')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
@@ -512,6 +534,7 @@ export const sidecarApi = {
     },
 
     createObsidianFile: async (path: string, content: string = '', overwrite: boolean = false) => {
+        if (isSimulationMode()) return simulationSidecarApi.createObsidianFile(path, content)
         enforceFeatureLock('file_ingestion')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
@@ -523,6 +546,7 @@ export const sidecarApi = {
     },
 
     createObsidianFolder: async (path: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.createObsidianFolder(path)
         enforceFeatureLock('file_ingestion')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
@@ -534,6 +558,7 @@ export const sidecarApi = {
     },
 
     moveObsidianItem: async (oldPath: string, newPath: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.moveObsidianItem(oldPath, newPath)
         enforceFeatureLock('file_ingestion')
         const oldIpcPath = await normalizeVaultIpcPath(oldPath)
         const newIpcPath = await normalizeVaultIpcPath(newPath)
@@ -552,6 +577,7 @@ export const sidecarApi = {
     },
 
     aterProcess: async (payload: { file_path?: string; text?: string; target_hub_id?: string }) => {
+        if (isSimulationMode()) return simulationSidecarApi.aterProcess(payload)
         enforceFeatureLock('ai-features')
         await deductCredits('ater_generation')
         try {
@@ -563,6 +589,7 @@ export const sidecarApi = {
     },
  
     aterGeneratePlan: async (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) => {
+        if (isSimulationMode()) return simulationSidecarApi.aterGeneratePlan(payload)
         enforceFeatureLock('ai-features')
         await deductCredits('ater_generation')
         try {
@@ -574,6 +601,7 @@ export const sidecarApi = {
     },
  
     aterConfirm: async (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) => {
+        if (isSimulationMode()) return simulationSidecarApi.aterConfirm(payload)
         enforceFeatureLock('ai-features')
         await deductCredits('ater_generation')
         try {
@@ -612,6 +640,7 @@ export const sidecarApi = {
     },
 
     aterQueueStatus: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.aterQueueStatus()
         if (await isDemoActive()) {
             return mockDemo.MOCK_QUEUE_STATUS;
         }
@@ -635,6 +664,7 @@ export const sidecarApi = {
     },
 
     aterListInbox: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.aterListInbox()
         try {
             return await invoke<any>('ater_list_inbox')
         } catch (err) {
@@ -644,6 +674,7 @@ export const sidecarApi = {
     },
 
     aterListGenerated: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.aterListGenerated()
         try {
             return await invoke<any>('ater_list_generated')
         } catch (err) {
@@ -680,6 +711,7 @@ export const sidecarApi = {
     },
 
     listHubs: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.listHubs()
         if (await isDemoActive()) {
             return mockDemo.MOCK_HUBS;
         }
@@ -692,6 +724,7 @@ export const sidecarApi = {
     },
     
     listHubNotes: async (hubId: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.listHubNotes(hubId)
         if (await isDemoActive()) {
             return mockDemo.MOCK_HUB_NOTES;
         }
@@ -704,6 +737,7 @@ export const sidecarApi = {
     },
     
     generatePractice: async (hubId: string, config: any) => {
+        if (isSimulationMode()) return simulationSidecarApi.generatePractice(hubId, config)
         await deductCredits('generate-practice')
         if (await isDemoActive()) {
             return {
@@ -1146,6 +1180,7 @@ export const sidecarApi = {
     },
 
     logPracticeResult: async (hubId: string, score: number, total: number, notePath?: string) => {
+        if (isSimulationMode()) return simulationSidecarApi.logPracticeResult({ hubId, score, total, notePath })
         enforceFeatureLock('interactive_quiz')
         try {
             return await invoke<any>('log_practice_result', { hubId, score, total, notePath })
@@ -1156,6 +1191,7 @@ export const sidecarApi = {
     },
     
     getStudyHistory: async () => {
+        if (isSimulationMode()) return simulationSidecarApi.getStudyHistory()
         if (await isDemoActive()) {
             return mockDemo.MOCK_STUDY_HISTORY;
         }
@@ -1360,6 +1396,21 @@ export const sidecarApi = {
             return await invoke<any>('log_practice_attempt', { noteId, questionType, isCorrect, timeTakenSeconds })
         } catch (err) {
             console.error('[Tauri Native RAG] logPracticeAttempt failed:', err)
+        }
+    },
+    siloTest: async (): Promise<string> => {
+        try {
+            return await invoke<string>('silo_test')
+        } catch (err) {
+            console.error('[Tauri Native RAG] siloTest failed:', err)
+            throw err
+        }
+    },
+    logFromJs: async (msg: string): Promise<void> => {
+        try {
+            await invoke<void>('log_from_js', { msg })
+        } catch (err) {
+            console.error('[Tauri Native RAG] logFromJs failed:', err)
         }
     },
 }

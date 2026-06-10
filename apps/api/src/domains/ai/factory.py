@@ -131,6 +131,11 @@ class ModelFactory:
         if provider not in ModelFactory.PROVIDERS:
             raise ValueError(f"Unsupported AI provider: {provider}")
 
+        if provider == "google":
+            model_lower = model_name.lower()
+            if not (model_lower.startswith("models/") or model_lower.startswith("tunedmodels/")):
+                model_name = f"models/{model_name}"
+
         governor.configure(
             provider,
             model_name,
@@ -207,4 +212,68 @@ class ModelFactory:
                 else:
                     config[k] = v
 
-        return model_class(**config)
+        model = model_class(**config)
+
+        def normalize_content(content):
+            if isinstance(content, list):
+                text_parts = []
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        text_parts.append(part.get("text", ""))
+                    elif isinstance(part, str):
+                        text_parts.append(part)
+                return "".join(text_parts)
+            return content
+
+        def normalize_message(msg):
+            if hasattr(msg, 'content'):
+                msg.content = normalize_content(msg.content)
+            return msg
+
+        original_invoke = model.invoke
+        def patched_invoke(*args, **kwargs):
+            res = original_invoke(*args, **kwargs)
+            return normalize_message(res)
+        object.__setattr__(model, "invoke", patched_invoke)
+
+        original_ainvoke = model.ainvoke
+        async def patched_ainvoke(*args, **kwargs):
+            res = await original_ainvoke(*args, **kwargs)
+            return normalize_message(res)
+        object.__setattr__(model, "ainvoke", patched_ainvoke)
+
+        original_generate = model.generate
+        def patched_generate(*args, **kwargs):
+            res = original_generate(*args, **kwargs)
+            if res and res.generations:
+                for gen_list in res.generations:
+                    for gen in gen_list:
+                        if hasattr(gen, 'message'):
+                            normalize_message(gen.message)
+            return res
+        object.__setattr__(model, "generate", patched_generate)
+
+        original_agenerate = model.agenerate
+        async def patched_agenerate(*args, **kwargs):
+            res = await original_agenerate(*args, **kwargs)
+            if res and res.generations:
+                for gen_list in res.generations:
+                    for gen in gen_list:
+                        if hasattr(gen, 'message'):
+                            normalize_message(gen.message)
+            return res
+        object.__setattr__(model, "agenerate", patched_agenerate)
+
+        original_stream = model.stream
+        def patched_stream(*args, **kwargs):
+            for chunk in original_stream(*args, **kwargs):
+                yield normalize_message(chunk)
+        object.__setattr__(model, "stream", patched_stream)
+
+        original_astream = model.astream
+        async def patched_astream(*args, **kwargs):
+            async for chunk in original_astream(*args, **kwargs):
+                yield normalize_message(chunk)
+        object.__setattr__(model, "astream", patched_astream)
+
+        return model

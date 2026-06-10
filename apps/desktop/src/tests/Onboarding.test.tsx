@@ -3,10 +3,22 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Onboarding from '../routes/onboarding';
 import { ConfigProvider } from '../lib/ConfigContext';
 import { MemoryRouter } from 'react-router-dom';
+import { open } from '@tauri-apps/plugin-dialog';
+import { sidecarApi } from '../lib/sidecarApi';
 
 // Mock Tauri dialog open
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: vi.fn().mockResolvedValue('/mock/vault/path'),
+}));
+
+vi.mock('../lib/sidecarApi', () => ({
+  sidecarApi: {
+    updateVaultPath: vi.fn().mockResolvedValue(undefined),
+    createObsidianFolder: vi.fn().mockResolvedValue(undefined),
+    createObsidianFile: vi.fn().mockResolvedValue(undefined),
+    deleteObsidianItem: vi.fn().mockResolvedValue(undefined),
+    readObsidianNote: vi.fn().mockRejectedValue(new Error('No existing profile')),
+  },
 }));
 
 // Mock Supabase
@@ -58,5 +70,40 @@ describe('Onboarding Component', () => {
       expect(screen.getByText(/Select Your Vault/i)).toBeInTheDocument();
       expect(screen.getByText(/Point Ater to your local Obsidian vault folder/i)).toBeInTheDocument();
     });
+  });
+
+  it('creates the database folder before probing write access for a selected vault', async () => {
+    render(
+      <MemoryRouter>
+        <ConfigProvider>
+          <Onboarding />
+        </ConfigProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText(/Enter your name/i), {
+      target: { value: 'Dagim' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+
+    fireEvent.click(await screen.findByRole('button', { name: /Choose Folder/i }));
+
+    await waitFor(() => {
+      expect(open).toHaveBeenCalledWith({
+        directory: true,
+        multiple: false,
+        title: 'Select your Obsidian vault folder',
+      });
+      expect(sidecarApi.updateVaultPath).not.toHaveBeenCalled();
+      expect(sidecarApi.createObsidianFolder).toHaveBeenCalledWith('database');
+      expect(sidecarApi.createObsidianFile).toHaveBeenCalledWith(
+        'database/.write_test',
+        'permission_check',
+        true
+      );
+    });
+    expect(sidecarApi.createObsidianFolder).toHaveBeenCalledBefore(
+      sidecarApi.createObsidianFile as any
+    );
   });
 });

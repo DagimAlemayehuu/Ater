@@ -25,6 +25,7 @@ export function ThemeSwitch() {
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button 
+          data-tour="theme-switch"
           variant='ghost' 
           size='icon' 
           className='w-8 h-8 rounded-[8px] text-muted-foreground hover:text-foreground hover:bg-bento-item transition-all'

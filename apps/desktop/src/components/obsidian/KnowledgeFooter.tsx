@@ -76,6 +76,7 @@ export const KnowledgeFooter = React.memo(({
         <div className="flex flex-col items-center gap-4 justify-center">
           {isHub && (
             <button 
+              data-tour="obsidian-pomodoro"
               onClick={() => {
                 let hubName = activePath?.split(/[/\\]/).pop()?.replace('_Hub.md', '').replace('.md', '').replace(/_/g, ' ') || 'Current Hub';
                 hubName = hubName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');

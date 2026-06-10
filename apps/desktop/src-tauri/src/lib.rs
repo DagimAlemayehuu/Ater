@@ -582,7 +582,9 @@ pub fn run() {
             commands::get_security_state,
             commands::load_cached_security_state,
             commands::update_vault_path,
-            commands::get_sidecar_token
+            commands::get_sidecar_token,
+            commands::silo_test,
+            commands::log_from_js
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {useState, useEffect} from 'react'
+import {useNavigate} from 'react-router-dom'
 import {cn} from '@/lib/utils'
-import {useConfig, SavedApiKey} from '@/lib/ConfigContext'
+import {useConfig, SavedApiKey, AppConfig} from '@/lib/ConfigContext'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {open} from '@tauri-apps/plugin-dialog'
 import {usePomodoroStore} from '@/lib/pomodoroStore'
@@ -64,6 +65,7 @@ const parseOptionalNumber = (value: any) => {
 }
 
 export default function Settings() {
+  const navigate = useNavigate()
   const {config, saveConfig} = useConfig()
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
   
@@ -207,6 +209,26 @@ export default function Settings() {
     })
   }
 
+  // Auto-enable edit modes during tour/simulation
+  useEffect(() => {
+    if (config?.isDemoMode && config?.walkthroughStatus === 'active') {
+      const ms = config.walkthroughMilestone
+      if (ms === '2.1' || ms === '2.2') {
+        if (editingKey !== 'folder_settings') {
+          startVaultEdit()
+        }
+      } else if (ms === '2.3' || ms === '2.4') {
+        if (editingKey !== 'primary_engine') {
+          startAiEdit()
+        }
+      } else if (ms === '2.5' || ms === '2.6') {
+        if (editingKey !== 'timer_settings') {
+          startPomodoroEdit()
+        }
+      }
+    }
+  }, [config?.isDemoMode, config?.walkthroughStatus, config?.walkthroughMilestone])
+
   const handleSave = async () => {
     try {
       if (editingKey === 'primary_engine') {
@@ -337,29 +359,34 @@ export default function Settings() {
     try {
       toast.info('Factory reset in progress...');
       const res = await sidecarApi.factoryReset();
-      if (res.success) {
-        // Clear local config completely
-        await saveConfig({
-          aiApiKey: '',
-          aiProvider: 'google',
-          aiModel: 'gemini-2.0-flash',
-          savedApiKeys: [],
-          obsidianVaultPath: '',
-          inboxPath: '',
-          isActivated: false,
-          activationEmail: '',
-          activationCode: '',
-          displayName: '',
-          isProgramConfigured: false
-        });
-        
-        clearLocalHistory();
-        toast.success('System has been factory reset. Restarting...');
-        const { relaunch } = await import('@tauri-apps/plugin-process');
-        setTimeout(() => relaunch(), 1500);
+      if (!res?.success) {
+        throw new Error(res?.error || 'Factory reset did not complete. No relaunch was attempted.');
       }
+      if (res.restartRequired !== true) {
+        throw new Error('Factory reset completed without a restart instruction.');
+      }
+      // Clear local config completely after the native purge has verified success.
+      await saveConfig({
+        aiApiKey: '',
+        aiProvider: 'google',
+        aiModel: 'gemini-2.0-flash',
+        savedApiKeys: [],
+        obsidianVaultPath: '',
+        inboxPath: '',
+        isActivated: false,
+        activationEmail: '',
+        activationCode: '',
+        displayName: '',
+        isProgramConfigured: false
+      });
+
+      clearLocalHistory();
+      toast.success('System has been factory reset.');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err: any) {
-      toast.error('Factory reset failed: ' + err.message);
+      toast.error('Factory reset failed: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -422,18 +449,60 @@ export default function Settings() {
       maxConcurrency: parseOptionalNumber(newKeyLimits.maxConcurrency)
     }
     const currentKeys = config?.savedApiKeys || []
-    await saveConfig({savedApiKeys: [...currentKeys, newKey]})
+    await saveConfig({
+      savedApiKeys: [...currentKeys, newKey],
+      aiProvider: newKey.provider,
+      aiApiKey: newKey.key,
+      aiModel: newKey.model || (newKey.provider === 'google' ? 'gemini-2.0-flash' : ''),
+      aiBaseUrl: newKey.baseUrl || '',
+      aiMaxTpm: newKey.maxTpm,
+      aiMaxRpm: newKey.maxRpm,
+      aiMaxTpd: newKey.maxTpd,
+      aiMaxRpd: newKey.maxRpd,
+      aiMaxConcurrency: newKey.maxConcurrency
+    })
     setNewKeyName('')
     setNewKeyValue('')
     setNewKeyModel('')
     setNewKeyBaseUrl('')
     setNewKeyLimits({maxTpm: '', maxRpm: '', maxTpd: '', maxRpd: '', maxConcurrency: ''})
     setIsAddingKey(false)
+    toast.success(`Key "${newKeyName}" added and activated.`);
   }
 
   const deleteApiKey = async (id: string) => {
     const currentKeys = config?.savedApiKeys || []
-    await saveConfig({savedApiKeys: currentKeys.filter(k => k.id !== id)})
+    const deletedKey = currentKeys.find(k => k.id === id)
+    const remainingKeys = currentKeys.filter(k => k.id !== id)
+    
+    const updates: Partial<AppConfig> = { savedApiKeys: remainingKeys }
+    
+    if (deletedKey && config?.aiApiKey === deletedKey.key) {
+      if (remainingKeys.length > 0) {
+        const fallback = remainingKeys[0]
+        updates.aiProvider = fallback.provider
+        updates.aiApiKey = fallback.key
+        updates.aiModel = fallback.model || (fallback.provider === 'google' ? 'gemini-2.0-flash' : '')
+        updates.aiBaseUrl = fallback.baseUrl || ''
+        updates.aiMaxTpm = fallback.maxTpm
+        updates.aiMaxRpm = fallback.maxRpm
+        updates.aiMaxTpd = fallback.maxTpd
+        updates.aiMaxRpd = fallback.maxRpd
+        updates.aiMaxConcurrency = fallback.maxConcurrency
+        toast.info(`Active key deleted. Fallback to: ${fallback.name}`)
+      } else {
+        updates.aiApiKey = ''
+        updates.aiBaseUrl = ''
+        updates.aiMaxTpm = undefined
+        updates.aiMaxRpm = undefined
+        updates.aiMaxTpd = undefined
+        updates.aiMaxRpd = undefined
+        updates.aiMaxConcurrency = undefined
+        toast.info('Active key deleted. No saved keys left.')
+      }
+    }
+    
+    await saveConfig(updates)
   }
 
   const renderGeneral = () => {
@@ -456,7 +525,7 @@ export default function Settings() {
             >
               <div className="space-y-6">
                 {/* Obsidian Path */}
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="settings-obsidian-path">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Obsidian Folder</label>
                   <div className="flex gap-2">
                     <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden text-left">
@@ -478,7 +547,7 @@ export default function Settings() {
                 </div>
 
                 {/* Inbox Path */}
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="settings-inbox-path">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Inbox Folder (For scanning PDFs)</label>
                   <div className="flex gap-2">
                     <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden text-left">
@@ -512,7 +581,7 @@ export default function Settings() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 border border-[#242426] bg-[#232326]/30 rounded-[8px]">
+                <div className="flex items-center justify-between p-4 border border-[#242426] bg-[#232326]/30 rounded-[8px]" data-tour="settings-auto-scan">
                   <div className="space-y-1 text-left">
                     <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Auto-Scan Folder</label>
                     <p className="text-[11px] text-muted-foreground font-bold font-sans">Check folders and import files automatically.</p>
@@ -535,7 +604,7 @@ export default function Settings() {
           </div>
 
           {/* Version & Updates Card */}
-          <Card className="col-span-1">
+          <Card className="col-span-1" data-tour="settings-update-check">
             <CardHeader 
               title="Updates" 
               description="Check if a newer version of the app is available." 
@@ -567,7 +636,7 @@ export default function Settings() {
           </Card>
 
           {/* User Profile Card */}
-          <div className="col-span-1">
+          <div className="col-span-1" data-tour="settings-profile-edit">
             <SettingsCard
               title="Your Name"
               value="The name you want the app to call you."
@@ -599,7 +668,7 @@ export default function Settings() {
           </div>
 
           {/* Diagnostics Card */}
-          <Card className="col-span-1">
+          <Card className="col-span-1" data-tour="settings-export-logs">
             <CardHeader 
               title="Troubleshooting Logs" 
               description="Save a text file with recent system errors to help fix problems." 
@@ -656,18 +725,21 @@ export default function Settings() {
               <CardHeader title="Danger Zone" description="Warning: These actions cannot be undone." />
               <CardContent className="flex gap-4">
                 <button
+                  data-tour="settings-danger-reset"
                   onClick={() => handleClearConfig()}
                   className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
                 >
                   Reset All Settings
                 </button>
                 <button
+                  data-tour="settings-danger-clear-history"
                   onClick={() => handleResetTrackedData()}
                   className="h-11 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all"
                 >
                   Clear Study History
                 </button>
                 <button
+                  data-tour="settings-danger-factory"
                   onClick={() => handleFactoryReset()}
                   className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-foreground text-background border border-foreground hover:bg-foreground/90 rounded-[8px] transition-all"
                 >
@@ -714,23 +786,42 @@ export default function Settings() {
                       return (
                         <button
                           key={k.id}
-                          disabled={editingKey !== 'primary_engine'}
-                          onClick={() => {
-                            setSelectedVaultKeyId(k.id);
-                            setAiEdit({
-                              provider: k.provider,
-                              key: k.key,
-                              model: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
-                              baseUrl: k.baseUrl || '',
-                              maxTpm: k.maxTpm?.toString() || '',
-                              maxRpm: k.maxRpm?.toString() || '',
-                              maxTpd: k.maxTpd?.toString() || '',
-                              maxRpd: k.maxRpd?.toString() || '',
-                              maxConcurrency: k.maxConcurrency?.toString() || ''
-                            });
+                          onClick={async () => {
+                            if (editingKey === 'primary_engine') {
+                              setSelectedVaultKeyId(k.id);
+                              setAiEdit({
+                                provider: k.provider,
+                                key: k.key,
+                                model: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
+                                baseUrl: k.baseUrl || '',
+                                maxTpm: k.maxTpm?.toString() || '',
+                                maxRpm: k.maxRpm?.toString() || '',
+                                maxTpd: k.maxTpd?.toString() || '',
+                                maxRpd: k.maxRpd?.toString() || '',
+                                maxConcurrency: k.maxConcurrency?.toString() || ''
+                              });
+                            } else {
+                              await saveConfig({
+                                aiProvider: k.provider,
+                                aiApiKey: k.key,
+                                aiModel: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : (config.aiModel || '')),
+                                aiBaseUrl: k.baseUrl || '',
+                                aiMaxTpm: k.maxTpm,
+                                aiMaxRpm: k.maxRpm,
+                                aiMaxTpd: k.maxTpd,
+                                aiMaxRpd: k.maxRpd,
+                                aiMaxConcurrency: k.maxConcurrency
+                              });
+                              try {
+                                await sidecarApi.aterWatcherToggle();
+                              } catch (e) {
+                                console.error('[Tauri Native RAG] Failed to sync watcher after selecting API key:', e);
+                              }
+                              toast.success(`Activated key: ${k.name}`);
+                            }
                           }}
                           className={cn(
-                            "px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 rounded-[8px]",
+                            "px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition-colors rounded-[8px]",
                             (isSelected && editingKey !== 'primary_engine') || (aiEdit.key === k.key && editingKey === 'primary_engine')
                               ? "bg-primary text-primary-foreground border-primary" 
                               : "bg-[#232326]/50 text-muted-foreground border-[#242426] hover:bg-[#232326]"
@@ -882,6 +973,7 @@ export default function Settings() {
 
                   <div className="pt-4">
                     <button
+                      data-tour="ai-connection-status"
                       onClick={() => handleTestConnection()}
                       disabled={testStatus.loading || (editingKey === 'primary_engine' ? !aiEdit.key : !config?.aiApiKey)}
                       className={cn(
@@ -1019,12 +1111,13 @@ export default function Settings() {
                       </div>
 
                       <div className="flex gap-2 pt-2">
-                        <button onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save</button>
+                        <button data-tour="save-key-btn" onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save</button>
                         <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Cancel</button>
                       </div>
                     </div>
                   ) : (
                     <button 
+                      data-tour="ai-add-key"
                       onClick={() => setIsAddingKey(true)}
                       className="flex flex-col items-center justify-center p-8 border border-dashed border-[#242426] hover:border-primary hover:bg-[#232326]/40 rounded-[8px] gap-2 transition-colors min-h-[140px]"
                     >
@@ -1062,6 +1155,7 @@ export default function Settings() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-foreground block text-left">Work duration (minutes)</label>
                   <input 
+                    data-tour="timer-work-duration"
                     type="number" 
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
@@ -1131,6 +1225,7 @@ export default function Settings() {
             </Tabs.Trigger>
             <Tabs.Trigger 
               value="ai"
+              data-tour="tab-ai-config"
               className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
             >
               AI & Keys
@@ -1138,6 +1233,7 @@ export default function Settings() {
             </Tabs.Trigger>
             <Tabs.Trigger 
               value="focus"
+              data-tour="tab-timer"
               className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
             >
               Focus Timer
@@ -1145,6 +1241,7 @@ export default function Settings() {
             </Tabs.Trigger>
             <Tabs.Trigger 
               value="intelligence"
+              data-tour="tab-token-tracker"
               className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
             >
               Usage Tracker

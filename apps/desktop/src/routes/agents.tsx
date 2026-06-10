@@ -18,6 +18,7 @@ import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 import { Send, Trash2, Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
+import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
 
 interface Message {
   role: 'user' | 'assistant';
@@ -273,6 +274,9 @@ function OracleView() {
           } catch (e) {}
         }
       }
+      if (config?.isDemoMode) {
+        dispatchWalkthroughTrigger('oracle_queried');
+      }
     } catch (err: any) {
       toast.error(`Error: ${err?.message || 'Connection failed'}`);
     } finally {
@@ -337,6 +341,7 @@ function OracleView() {
           <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
             <textarea 
               ref={textareaRef} 
+              data-tour="oracle-input"
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
@@ -964,7 +969,10 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  if (currentHasMore) {
  if (isStrict) await new Promise(r => setTimeout(r, 500));
  else { setIsAwaitingNextBatch(true); break; }
-} else { setIsCompleted(true); break; }
+} else {
+ setIsCompleted(true);
+ break;
+}
 }
 } catch (err: any) {
  setAterError(err.message || 'Workflow failed')
@@ -977,6 +985,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     {/* Tab Navigation Bento Box */}
     <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center justify-center gap-1 shadow-sm z-30">
       <button 
+        data-tour="tab-oracle-chat"
         onClick={() => setSearchParams({ tab: 'ater' })}
         className={cn(
           "relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
@@ -987,6 +996,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
         {activeTab === 'ater' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
       </button>
       <button 
+        data-tour="tab-pipeline"
         onClick={() => setSearchParams({ tab: 'pipeline' })}
         className={cn(
           "relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
@@ -1077,6 +1087,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
              inboxFiles.map(f => (
              <div 
              key={f.path} 
+             data-tour="inbox-file-item"
              onClick={() => {setSelectedInboxFile(f); setAterError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
              className="p-8 rounded-[12px] border border-border bg-bento-card hover:bg-accent/50 hover:border-foreground/30 cursor-pointer group flex flex-col justify-between transition-all shadow-sm"
              >
@@ -1114,14 +1125,14 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           </div>
           <div className="flex items-center gap-2">
           {!isCurriculumReady && !processing && (
-          <button onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent/50 hover:border-foreground/40 rounded-[8px] transition-colors">Analyze Context</button>
+          <button data-tour="process-file-btn" onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent/50 hover:border-foreground/40 rounded-[8px] transition-colors">Process File</button>
           )}
           {isCurriculumReady && !activePlan && !processing && (
-          <button onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors">Generate Plan</button>
+          <button data-tour="generate-plan-btn" onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors">Generate Plan</button>
           )}
           {isAwaitingConfirmation && (
           <div className="flex items-center gap-2">
-          <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50">Full Deploy</button>
+          <button data-tour="confirm-deploy-btn" onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50">Confirm Setup & Deploy</button>
           <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent rounded-[8px] transition-colors disabled:opacity-50">Deploy Step 1</button>
           </div>
           )}

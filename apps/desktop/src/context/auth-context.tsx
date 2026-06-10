@@ -179,13 +179,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       }
 
-      await saveConfig({ 
-        isActivated: true, 
-        activationEmail: cleanEmail, 
+      // Reset any leftover simulation/tour state so the welcome screen
+      // always shows correctly on fresh login.
+      await saveConfig({
+        isActivated: true,
+        activationEmail: cleanEmail,
         activationCode: cleanCode,
         isProgramConfigured: false,
-        displayName: derivedName
-      })
+        displayName: derivedName,
+        isDemoMode: false,
+        appMode: 'real',
+        walkthroughCompleted: false,
+        walkthroughMilestone: '1.6',
+        walkthroughStatus: 'inactive',
+      } as any)
       
       setStatus('approved')
       setProfile({ full_name: derivedName })

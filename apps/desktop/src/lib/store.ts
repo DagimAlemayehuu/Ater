@@ -48,15 +48,16 @@ class MockStore {
 
 export function getAppStore(): Promise<Store> {
   if (!storePromise) {
-    const tauriLoad = load(STORE_FILENAME, { defaults: {}, autoSave: true })
-    const timeout = new Promise<Store>((_, reject) =>
-      setTimeout(() => reject(new Error('Tauri Store Load Timeout')), 1500)
-    )
-    storePromise = Promise.race([tauriLoad, timeout])
-      .catch(err => {
-        console.warn('[Store] Falling back to MockStore due to:', err)
-        return new MockStore() as unknown as Store
-      })
+    if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
+      console.info('[Store] Running outside Tauri environment. Fallback to MockStore.');
+      storePromise = Promise.resolve(new MockStore() as unknown as Store);
+    } else {
+      storePromise = load(STORE_FILENAME, { defaults: {}, autoSave: true })
+        .catch(err => {
+          console.warn('[Store] Failed to load Tauri Store. Fallback to MockStore:', err);
+          return new MockStore() as unknown as Store;
+        });
+    }
   }
-  return storePromise
+  return storePromise;
 }

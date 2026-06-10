@@ -3,6 +3,7 @@ import { X, Send, Loader2, RotateCcw, Copy, Check } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { AterMarkdown } from './MarkdownViewer'
+import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 interface Message {
@@ -65,6 +66,7 @@ export function AterExplainDialog({
   /* ── Open: fetch initial explanation ────────────────────────────────── */
   useEffect(() => {
     if (!isOpen) return
+    dispatchWalkthroughTrigger('explain_dialog_open')
     // Build a key that represents this "session" — use the contextLabel.
     const key = contextLabel ?? '__open__'
     if (key === fetchKeyRef.current) return

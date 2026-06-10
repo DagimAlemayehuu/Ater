@@ -70,30 +70,16 @@ Runs `BEFORE INSERT OR UPDATE OF machine_id ON public.profiles`.
 2. Verifies whether the raw string value or its SHA-256 hex digest matches a record inside `public.hardware_blacklist.machine_id_hash`.
 3. Rejects matches with SQL error code `D0001`.
 
+### 2.3 Local Debug DRM Bypass (Offline Lease Mocking)
+In debug builds (governed by the `cfg!(debug_assertions)` compilation flag), licensing checks are bypassed to enable developer testing without network authentication:
+1. **Mock Lease Injection**: If no lease file (`offline_lease.json`) is found in the local application directory at startup, a mock lease is automatically generated.
+2. **Lease settings**: The mock lease expires 365 days from creation, binds to the local hardware footprint (`machine_id_hash`), and clears all restricted elements in `locked_features`.
+3. **State Transition**: The app transitions to `AppLockStatus::Active`, enabling the UI and unlocking backend proxy commands.
+
 ---
 
 ## 3. Responsive Layout & Theme Specification
-
-Ater enforces a strict monochrome visual layout using Bento box components. It must render correctly on all viewport resolutions down to 1024px, with specific support for the 1280px workspace standard.
-
-### 3.1 Styling Guidelines
-- **Monochrome Theme Palette**: The color scheme is derived from HSL CSS variables configured in Tailwind. Magic hex values are prohibited.
-- **Font Face**: The `Outfit` font is the exclusive typeface used in Ater. No secondary font families may be registered.
-- **No Bullet Points in Prose**: Any text block generated or displayed inside the mental model and main content blocks must be continuous prose paragraphs. Bullet points are restricted to practice sections.
-
-### 3.2 Component Tokens
-
-| Semantic Token | Tailwind Class | Light Mode HSL | Dark Mode HSL |
-|---|---|---|---|
-| Panel Background | `bg-bento-panel` | `0 0% 100%` | `240 5.9% 10%` |
-| Card Background | `bg-bento-card` | `240 4.8% 95.9%` | `240 3.7% 15.9%` |
-| Item Background | `bg-bento-item` | `240 5.9% 90%` | `240 3.7% 12%` |
-| Accent/Border | `border-border` | `240 5.9% 90%` | `240 3.7% 15.9%` |
-
-### 3.3 Responsive Scaling Engine
-To guarantee zero-overflow at 1280px:
-1. **Dynamic Layout Framework**: Sidebar components hold fixed pixel widths (e.g. `w-64 shrink-0`), while content cards use fluid sizing parameters (`flex-1 min-w-0 w-full`).
-2. **Horizontal Containment**: Grid components inside statistics and dashboard cards are configured using fractional units (`grid-cols-2` or `grid-cols-1 md:grid-cols-2`) and avoid fixed-width wrapper containers.
+... [unchanged text] ...
 3. **Chart Viewport Responsiveness**: SVG charts must be nested inside `<ResponsiveContainer width="100%" height="100%">` elements. Sizing calculations are updated dynamically via browser `ResizeObserver` callbacks to match wrapper boundaries.
 
 ---
@@ -129,3 +115,12 @@ graph TD
 4. **Cycle Resolution**: Detects circular dependencies. The cycle is broken by identifying the weakest link in the loop (the reference with the lowest cosine similarity) and deleting it.
 5. **Synthesis Note Clustering**: Concepts with cosine similarity scores above 0.75 are clustered. For clusters with two or more items, a Tier 2 Synthesis Note Plan is generated and appended.
 6. **Topological Sort**: Sorts the planned notes in strict dependency order using Kahn's algorithm. Tie-breaks are resolved using minimum page numbers, followed by character offset in the source material.
+
+### 4.3 Frontend-to-Sidecar Bridge Communication Flow
+All AI-powered user actions (chatting, explaining text, generating practice queries) traverse the system-wide bridge proxy:
+1. **UI Invocation**: React views invoke helper methods in `sidecarApi.ts`.
+2. **Billing Bypass**: In development environments (`import.meta.env.DEV`), API credit deduction checks are bypassed to prevent database connection failures from blocking local executions.
+3. **Tauri IPC**: The client triggers the native Tauri bridge command (e.g. `ater_chat`, `ater_explain`).
+4. **DRM Licensing Check**: The Tauri command executes the `verify_licensing!` macro to confirm the feature is unlocked.
+5. **Proxy Forwarding**: Rust fetches local configuration keys, appends authentication headers (`x-ater-token`, `x-ai-key`, etc.), and forwards a proxy `POST` request to the sidecar's localhost FastAPI port (default `8765`).
+6. **Sidecar & LLM Processing**: The Python sidecar intercepts the request, resolves the model properties through `ModelFactory`, executes the Langchain invoke call, and routes the response back to the desktop client.

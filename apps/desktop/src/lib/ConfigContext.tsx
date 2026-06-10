@@ -7,6 +7,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getAppStore } from '@/lib/store';
+import { sidecarApi } from '@/lib/sidecarApi';
+import { AppMode, setRuntimeAppMode, toAppMode } from '@/lib/appMode';
 
 import DEFAULT_SYSTEM_PROMPT_STRATEGIST from '@/templates/system-prompts/strategist.md?raw';
 import DEFAULT_SYSTEM_PROMPT_CREATOR from '@/templates/system-prompts/creator.md?raw';
@@ -78,6 +80,7 @@ export interface AppConfig {
     machineId: string;
     displayName: string;
     isProgramConfigured: boolean;
+    appMode: AppMode;
     isDemoMode: boolean;
 }
 
@@ -129,6 +132,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     machineId: '',
     displayName: '',
     isProgramConfigured: false,
+    appMode: 'real',
     isDemoMode: false,
 };
 
@@ -185,7 +189,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const activationCode = (await store.get<string>('activationCode')) || '';
                 const displayName = (await store.get<string>('displayName')) || '';
                 const isProgramConfigured = (await store.get<boolean>('isProgramConfigured')) ?? false;
-                const isDemoMode = (await store.get<boolean>('isDemoMode')) ?? false;
+                const legacyIsDemoMode = (await store.get<boolean>('isDemoMode')) ?? false;
+                const appMode = toAppMode(await store.get<string>('appMode'), legacyIsDemoMode);
+                const isDemoMode = appMode === 'simulation';
+                const walkthroughMilestone = (await store.get<string>('walkthroughMilestone')) || '1.6';
+                const walkthroughStatus = (await store.get<string>('walkthroughStatus')) || 'inactive';
+                const walkthroughCompleted = (await store.get<boolean>('walkthroughCompleted')) ?? false;
                 
                 let machineId = await store.get<string>('machineId');
                 if (!machineId) {
@@ -234,13 +243,18 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     machineId,
                     displayName,
                     isProgramConfigured,
+                    appMode,
                     isDemoMode,
+                    walkthroughMilestone,
+                    walkthroughStatus,
+                    walkthroughCompleted,
                 };
 
                 const isBypass = import.meta.env.DEV &&
                     (new URLSearchParams(window.location.search).get('bypass') === 'true' ||
                      window.location.hash.includes('bypass=true'))
                 if (isBypass) {
+                    loadedConfig.appMode = 'simulation';
                     loadedConfig.isDemoMode = true;
                     loadedConfig.displayName = "Stitch Explorer";
                     loadedConfig.obsidianVaultPath = "/Mock/Vault";
@@ -274,9 +288,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     await store.save();
                 }
 
+                setRuntimeAppMode(loadedConfig.appMode);
                 setConfig(loadedConfig);
             } catch (err) {
                 console.error('[Config] Failed to initialize store:', err);
+                setRuntimeAppMode(DEFAULT_CONFIG.appMode);
                 setConfig(DEFAULT_CONFIG);
             } finally {
                 setIsLoading(false);
@@ -291,12 +307,27 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         try {
             const store = await getAppStore();
-            const updatedConfig = { ...config, ...newConfig } as any;
+            const nextMode = toAppMode(
+                (newConfig as any).appMode ?? config.appMode,
+                (newConfig as any).isDemoMode ?? config.isDemoMode
+            );
+            const updatedConfig = {
+                ...config,
+                ...newConfig,
+                appMode: nextMode,
+                isDemoMode: nextMode === 'simulation',
+            } as any;
+            const entries = { ...newConfig } as any;
+            if ('appMode' in entries || 'isDemoMode' in entries) {
+                entries.appMode = nextMode;
+                entries.isDemoMode = nextMode === 'simulation';
+            }
+            setRuntimeAppMode(nextMode);
 
             // Update store — skip undefined values (not JSON-serializable by Tauri IPC).
             // Delete the key from the store instead so it cleanly reverts to default.
-            for (const key of Object.keys(newConfig)) {
-                const val = (newConfig as any)[key];
+            for (const key of Object.keys(entries)) {
+                const val = entries[key];
                 if (val === undefined) {
                     try { await store.delete(key); } catch { /* key may not exist yet */ }
                 } else {

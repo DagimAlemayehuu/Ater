@@ -281,12 +281,12 @@ export default function AcademicDashboard() {
  }, [databases])
 
  const tabs = React.useMemo(() => [
- {id: 'PROGRAM' as AcademicTab, label: 'Program', icon: <GraduationCap size={11} />},
- {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />},
- {id: 'PLANNER' as AcademicTab, label: 'Planner', icon: <LayoutDashboard size={11} />},
- {id: 'ASSIGNMENTS' as AcademicTab, label: 'Assignments', icon: <ClipboardList size={11} />},
- {id: 'EXAMS' as AcademicTab, label: 'Exams', icon: <FlaskConical size={11} />},
- {id: 'PRACTICE' as AcademicTab, label: 'Practice', icon: <Layers size={11} />},
+ {id: 'PROGRAM' as AcademicTab, label: 'Program', icon: <GraduationCap size={11} />, dataTour: 'tab-academic-program'},
+ {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />, dataTour: 'tab-academic-courses'},
+ {id: 'PLANNER' as AcademicTab, label: 'Planner', icon: <LayoutDashboard size={11} />, dataTour: 'tab-academic-planner'},
+ {id: 'ASSIGNMENTS' as AcademicTab, label: 'Assignments', icon: <ClipboardList size={11} />, dataTour: 'tab-academic-assignments'},
+ {id: 'EXAMS' as AcademicTab, label: 'Exams', icon: <FlaskConical size={11} />, dataTour: 'tab-academic-exams'},
+ {id: 'PRACTICE' as AcademicTab, label: 'Practice', icon: <Layers size={11} />, dataTour: 'tab-academic-practice'},
  ], [])
 
  // ── Keyboard Shortcuts ─────────────────────────────────────────────────────
@@ -381,7 +381,7 @@ export default function AcademicDashboard() {
      <div className={cn("shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center shadow-sm z-30", activeTab === 'CALENDAR' && "hidden")}>
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide h-full">
         {tabs.map(t => (
-         <TabButton key={t.id} active={activeTab === t.id} onClick={() => setSearchParams({ tab: t.id })} icon={t.icon} label={t.label} />
+         <TabButton key={t.id} active={activeTab === t.id} onClick={() => setSearchParams({ tab: t.id })} icon={t.icon} label={t.label} data-tour={t.dataTour} />
         ))}
       </div>
      </div>

@@ -27,6 +27,9 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
+// Mock Tauri internals so store.ts loads the mocked plugin-store
+(window as any).__TAURI_INTERNALS__ = {};
+
 // Mock Tauri IPC
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn((cmd) => {

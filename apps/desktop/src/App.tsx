@@ -12,6 +12,7 @@ import Practice from '@/routes/practice'
 import AcademicDashboard from '@/routes/academic'
 import Agents from '@/routes/agents'
 import Onboarding from '@/routes/onboarding'
+import WelcomePage from '@/routes/welcome'
 
 import { HeaderProvider } from '@/context/header-context'
 import { Toaster } from '@/components/ui/sonner'
@@ -24,6 +25,8 @@ import { BlockingLoader } from '@/components/ui/loading-state'
 import { useSecurityStore } from '@/context/securityStore'
 import { PageGuard } from '@/components/PageGuard'
 import { LockoutScreen } from '@/components/ui/LockoutScreen'
+import { WalkthroughProvider } from '@/components/layout/InteractiveTour'
+import { SimulationProvider } from '@/context/SimulationContext'
 
 export default function App() {
   const initializeSecurity = useSecurityStore(state => state.initializeSecurity)
@@ -35,9 +38,11 @@ export default function App() {
   return (
     <ThemeProvider>
       <ConfigProvider>
-        <UpdateChecker />
-        <SecurityBlocker />
-        <AppRoutes />
+        <SimulationProvider>
+          <UpdateChecker />
+          <SecurityBlocker />
+          <AppRoutes />
+        </SimulationProvider>
       </ConfigProvider>
     </ThemeProvider>
   )
@@ -115,7 +120,7 @@ function SecurityBlocker() {
 }
 
 function AppRoutes() {
-  const { isConfigured, isLoading: configLoading } = useConfig();
+  const { isConfigured, isLoading: configLoading, config } = useConfig();
   
   if (configLoading) {
     return <BlockingLoader label="Initializing" />
@@ -126,36 +131,40 @@ function AppRoutes() {
       <HashRouter>
         <NavigationProvider>
           <HeaderProvider>
-            <AuthGuard>
-              <Suspense fallback={
-                <BlockingLoader label="Loading Module" />
-              }>
-                <Routes>
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="*" element={
-                    (!isConfigured && 
-                      !(import.meta.env.DEV && (
-                        new URLSearchParams(window.location.search).get('bypass') === 'true' ||
-                        window.location.hash.includes('bypass=true')
-                      ))
-                    ) ? (
-                      <Navigate to="/onboarding" replace />
-                    ) : (
-                      <AuthenticatedLayout>
-                        <Routes>
-                          <Route path="/" element={<Navigate to="/agents?tab=oracle" replace />} />
-                          <Route path="/obsidian" element={<PageGuard featureSlug="file_ingestion"><ObsidianVault /></PageGuard>} />
-                          <Route path="/academic" element={<PageGuard featureSlug="interactive_quiz"><AcademicDashboard /></PageGuard>} />
-                          <Route path="/agents" element={<PageGuard featureSlug="ai-features"><Agents /></PageGuard>} />
-                          <Route path="/practice" element={<PageGuard featureSlug="practice-recall"><Practice /></PageGuard>} />
-                          <Route path="/settings" element={<Settings />} />
-                        </Routes>
-                      </AuthenticatedLayout>
-                    )
-                  } />
-                </Routes>
-              </Suspense>
-            </AuthGuard>
+            <WalkthroughProvider>
+              <AuthGuard>
+                <Suspense fallback={
+                  <BlockingLoader label="Loading Module" />
+                }>
+                  <Routes>
+                    <Route path="/welcome" element={<WelcomePage />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    <Route path="*" element={
+                      (!isConfigured && !config?.isDemoMode &&
+                        config?.walkthroughStatus !== 'active' &&
+                        !(import.meta.env.DEV && (
+                          new URLSearchParams(window.location.search).get('bypass') === 'true' ||
+                          window.location.hash.includes('bypass=true')
+                        ))
+                      ) ? (
+                        <Navigate to="/welcome" replace />
+                      ) : (
+                        <AuthenticatedLayout>
+                          <Routes>
+                            <Route path="/" element={<Navigate to="/agents?tab=oracle" replace />} />
+                            <Route path="/obsidian" element={<PageGuard featureSlug="file_ingestion"><ObsidianVault /></PageGuard>} />
+                            <Route path="/academic" element={<PageGuard featureSlug="interactive_quiz"><AcademicDashboard /></PageGuard>} />
+                            <Route path="/agents" element={<PageGuard featureSlug="ai-features"><Agents /></PageGuard>} />
+                            <Route path="/practice" element={<PageGuard featureSlug="practice-recall"><Practice /></PageGuard>} />
+                            <Route path="/settings" element={<Settings />} />
+                          </Routes>
+                        </AuthenticatedLayout>
+                      )
+                    } />
+                  </Routes>
+                </Suspense>
+              </AuthGuard>
+            </WalkthroughProvider>
             <Toaster />
             <PomodoroController />
           </HeaderProvider>
@@ -164,4 +173,3 @@ function AppRoutes() {
     </AuthProvider>
   );
 }
-
