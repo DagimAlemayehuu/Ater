@@ -40,4 +40,51 @@ describe('useArtifactStore', () => {
     expect(store.incrementRepairAttempts('artifact-1')).toBe(3)
     expect(store.incrementRepairAttempts('artifact-1')).toBe(3)
   })
+
+  it('updates the version in-place if messageIndex matches', () => {
+    const store = useArtifactStore.getState()
+    store.registerArtifacts([
+      {
+        id: 'artifact-1',
+        title: 'Motion',
+        versions: [{ version: 1, messageIndex: 5, raw: 'v1', chapters: [{ id: 'c1', title: 'Intro', content: 'Text' }] }],
+      },
+    ])
+    // Calling addVersion with messageIndex 5 should update version 1 in-place instead of appending version 2
+    store.addVersion('artifact-1', [{ id: 'c1', title: 'Intro', content: 'Updated Text', sandbox: 'console.log("hello")' }], 'v1-updated', 5)
+
+    expect(useArtifactStore.getState().artifacts[0].versions).toHaveLength(1)
+    expect(useArtifactStore.getState().artifacts[0].versions[0].chapters[0].sandbox).toBe('console.log("hello")')
+    expect(useArtifactStore.getState().artifacts[0].versions[0].raw).toBe('v1-updated')
+    expect(useArtifactStore.getState().activeVersionByArtifact['artifact-1']).toBe(1)
+  })
+
+  it('preserves existing sandbox code in chapters when re-registering an existing version', () => {
+    const store = useArtifactStore.getState()
+    
+    // 1. Initial register
+    store.registerArtifacts([
+      {
+        id: 'artifact-1',
+        title: 'Motion',
+        versions: [{ version: 1, messageIndex: 5, raw: 'v1', chapters: [{ id: 'c1', title: 'Intro', content: 'Text' }] }],
+      },
+    ])
+    
+    // 2. Add sandbox code via addVersion
+    store.addVersion('artifact-1', [{ id: 'c1', title: 'Intro', content: 'Text', sandbox: 'console.log("hello")' }], 'v1', 5)
+    expect(useArtifactStore.getState().artifacts[0].versions[0].chapters[0].sandbox).toBe('console.log("hello")')
+
+    // 3. Re-register (like on new messages loop)
+    store.registerArtifacts([
+      {
+        id: 'artifact-1',
+        title: 'Motion',
+        versions: [{ version: 1, messageIndex: 5, raw: 'v1', chapters: [{ id: 'c1', title: 'Intro', content: 'Text' }] }],
+      },
+    ])
+
+    // Should preserve the sandbox code
+    expect(useArtifactStore.getState().artifacts[0].versions[0].chapters[0].sandbox).toBe('console.log("hello")')
+  })
 })

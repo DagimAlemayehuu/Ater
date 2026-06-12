@@ -58,6 +58,7 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
       if (!event.data || event.data.type !== 'ater:sandbox-error') return
       const runtimeError = event.data as SandboxRuntimeError & { type: string }
       if (!runtimeError.artifactId) return
+      if (runtimeError.message === 'Script error.' || runtimeError.message?.includes('Script error')) return
       recordIframeError(runtimeError)
       const attempts = incrementRepairAttempts(runtimeError.artifactId)
       const artifact = artifacts.find((item) => item.id === runtimeError.artifactId)

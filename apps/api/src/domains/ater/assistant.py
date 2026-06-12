@@ -2226,7 +2226,7 @@ def _lesson_sandbox_spec(topic: str, lesson_title: str) -> str:
     if "rubik" in combined or "rubics" in combined:
         return (
             "interactive Rubik's Cube lesson stepper with clickable U, U', D, D', R, R', L, L', F, F', B, B' "
-            "controls, chapter-aware move sequences, reset button, and a simple colored 3D cube visualization"
+            "controls, chapter-aware move sequences, reset button, and a flat 2D net cube visualization showing all 6 sides"
         )
     return f"interactive lesson sandbox for {lesson_title or topic}".strip()
 
@@ -2462,7 +2462,8 @@ async def run_assistant_chat(
     secrets: AppSecrets,
     messages_history: List[Dict[str, Any]],
     rag_context: Optional[str] = None,
-    user_context: Optional[Dict[str, Any]] = None
+    user_context: Optional[Dict[str, Any]] = None,
+    active_artifact: Optional[Dict[str, Any]] = None
 ):
     """
     Ater agent loop. Yields SSE events:
@@ -2566,6 +2567,17 @@ async def run_assistant_chat(
     sys_prompt = sys_prompt.replace("{{hub_catalog}}", hub_catalog_str)
     sys_prompt = sys_prompt.replace("{{active_hub_str}}", active_hub_str)
     sys_prompt = sys_prompt.replace("{{rag_context_str}}", rag_context_str)
+
+    if active_artifact and active_artifact.get("code"):
+        sys_prompt += (
+            "\n=== ACTIVE ARTIFACT FOR ITERATIVE EDITS ===\n"
+            "The user has an active interactive simulator panel open. You can modify, fix, expand, or personalize it.\n"
+            f"Title: {active_artifact.get('title', 'Untitled artifact')}\n"
+            f"Version: {active_artifact.get('version', 1)}\n"
+            "Current sandbox code:\n"
+            f"{active_artifact.get('code')}\n"
+            "If the user asks to modify, fix, expand, or personalize this simulator, you MUST return an updated XML artifact with all chapters preserved, but replace the <sandbox> block with a <sandbox-spec> tag specifying the requested changes (e.g., <sandbox-spec>change the colors of the rubik's cube simulator to bright neon</sandbox-spec>). Do NOT write or edit the full code inside a <sandbox> block yourself — the system will automatically edit the previous code inline according to your sandbox specification.\n"
+        )
 
     # ── Format message history ─────────────────────────────────────────────
     formatted_messages = [SystemMessage(content=sys_prompt)]

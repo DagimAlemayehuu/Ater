@@ -116,17 +116,34 @@ export function AterExplainDialog({
       if (msg.role !== 'assistant') continue
       const extracted = extractArtifacts(msg.content)
       if (extracted.artifacts.length > 0) {
-        const mappedArtifacts = extracted.artifacts.map((artifact) => ({
-          ...artifact,
-          id: `message-${messageIndex}-${artifact.id}`,
-          versions: artifact.versions.map((version) => ({
-            ...version,
-            chapters: version.chapters.map((chapter) => ({
-              ...chapter,
-              id: `message-${messageIndex}-${chapter.id}`,
+        const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+        const mappedArtifacts = extracted.artifacts.map((artifact) => {
+          const topicId = `explain-topic-${slugify(artifact.title)}`
+          return {
+            ...artifact,
+            id: topicId,
+            messageIndex,
+            versions: artifact.versions.map((version) => ({
+              ...version,
+              messageIndex,
+              chapters: version.chapters.map((chapter) => ({
+                ...chapter,
+                id: `${topicId}-${chapter.id}`,
+              })),
             })),
-          })),
-        }))
+          }
+        })
+
+        const stateBefore = useArtifactStore.getState()
+        const previousCodesByArtifact: Record<string, string> = {}
+        for (const artifact of mappedArtifacts) {
+          const existingArtifact = stateBefore.artifacts.find(item => item.id === artifact.id)
+          const activeVersionNumber = existingArtifact ? stateBefore.activeVersionByArtifact[existingArtifact.id] : undefined
+          const activeVersion = existingArtifact?.versions.find(v => v.version === activeVersionNumber) || (existingArtifact ? existingArtifact.versions[existingArtifact.versions.length - 1] : undefined)
+          const previousCode = activeVersion?.chapters.find(c => c.sandbox)?.sandbox || ''
+          previousCodesByArtifact[artifact.id] = previousCode
+        }
+
         useArtifactStore.getState().registerArtifacts(mappedArtifacts)
 
         for (const artifact of mappedArtifacts) {
@@ -136,13 +153,20 @@ export function AterExplainDialog({
             const key = `${messageIndex}:${artifact.id}:${chapter.id}:${chapter.sandboxSpec}`
             if (generatedSpecRef.current.has(key)) continue
             generatedSpecRef.current.add(key)
-            sidecarApi.generateArtifactCode({ prompt: chapter.sandboxSpec, context: msg.content }).then((result) => {
+
+            const previousCode = previousCodesByArtifact[artifact.id] || ''
+
+            sidecarApi.generateArtifactCode({ 
+              prompt: chapter.sandboxSpec, 
+              context: msg.content,
+              previous_code: previousCode
+            }).then((result) => {
               const code = result.code || result.answer || ''
               if (!code) return
               const chapters = version.chapters.map((item) => (
                 item.id === chapter.id ? { ...item, sandbox: code } : item
               ))
-              useArtifactStore.getState().addVersion(artifact.id, chapters, code)
+              useArtifactStore.getState().addVersion(artifact.id, chapters, code, messageIndex)
             }).catch(() => {
               // The placeholder remains visible; the user can continue the chat.
             })
@@ -160,6 +184,7 @@ export function AterExplainDialog({
           title: spec.prompt,
           versions: [{
             version: 1,
+            messageIndex,
             raw: `<sandbox-spec>${spec.prompt}</sandbox-spec>`,
             chapters: [{
               id: `${artifactId}-chapter-1`,
@@ -178,7 +203,7 @@ export function AterExplainDialog({
             title: 'Generated Sandbox',
             content: '',
             sandbox: code,
-          }], code)
+          }], code, messageIndex)
         }).catch(() => {
           // The placeholder remains visible; the user can continue the chat.
         })
@@ -341,7 +366,7 @@ export function AterExplainDialog({
             <div ref={messagesEndRef} />
           </div>
 
-          {artifactState.isPanelOpen && (
+          {artifactState.artifacts.length > 0 && (
             <>
               <button
                 type="button"
@@ -350,9 +375,18 @@ export function AterExplainDialog({
                   event.preventDefault()
                   setIsDraggingSplit(true)
                 }}
-                className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-[#18181b] hover:bg-foreground/20"
+                className={cn(
+                  "w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-[#18181b] hover:bg-foreground/20",
+                  !artifactState.isPanelOpen && "hidden"
+                )}
               />
-              <div className="min-w-[420px] max-w-[82%]" style={{ width: `${artifactState.panelWidth}%` }}>
+              <div
+                className={cn(
+                  "min-w-[420px] max-w-[82%]",
+                  !artifactState.isPanelOpen && "hidden"
+                )}
+                style={{ width: `${artifactState.panelWidth}%` }}
+              >
                 <ArtifactViewer shielded={isDraggingSplit} />
               </div>
             </>

@@ -128,13 +128,14 @@ async def assistant_chat(
     messages_history = payload.get("history", [])
     rag_context = payload.get("rag_context")
     user_context = payload.get("user_context")
+    active_artifact = payload.get("active_artifact")
     
     if not secrets.ai_key:
         raise HTTPException(status_code=400, detail="AI API key is required. Please set it in Settings.")
         
     async def sse_generator():
         try:
-            async for event in run_assistant_chat(secrets, messages_history, rag_context, user_context):
+            async for event in run_assistant_chat(secrets, messages_history, rag_context, user_context, active_artifact):
                 yield event
         except Exception as e:
             logger.error(f"[Assistant Stream] Generator error: {e}", exc_info=True)
@@ -337,7 +338,7 @@ async def ater_chat(
 
 Guide the student using Socratic dialogue. Help them think deeply, ask guiding questions, check their understanding, and explain complex parts thoroughly but in a highly accessible way. Keep your formatting elegant using Markdown.
 
-If the student asks to modify, fix, expand, or personalize an active simulator, return an updated XML artifact with a complete <sandbox> block. Do not return partial diffs."""
+If the student asks to modify, fix, expand, or personalize the interactive simulator, you MUST return an updated XML artifact with all chapters preserved, but replace the <sandbox> block with a <sandbox-spec> tag specifying the requested changes (e.g., <sandbox-spec>change the colors of the rubik's cube simulator to bright neon</sandbox-spec>). Do NOT write or edit the full code inside a <sandbox> block yourself — the system will automatically edit the previous code inline according to your sandbox specification."""
 
         formatted_messages = [("system", sys_prompt)]
         for msg in messages:
@@ -351,7 +352,24 @@ If the student asks to modify, fix, expand, or personalize an active simulator, 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def _is_rubiks_sandbox_request(prompt: str) -> bool:
+def _clean_markdown_fences(code: str) -> str:
+    code = code.strip()
+    if code.startswith("```"):
+        newline_idx = code.find("\n")
+        if newline_idx != -1:
+            code = code[newline_idx:].strip()
+        else:
+            code = code[3:].strip()
+        if code.endswith("```"):
+            code = code[:-3].strip()
+    return code
+
+
+def _is_rubiks_sandbox_request(prompt: str, previous_code: str = "") -> bool:
+    if previous_code:
+        # If we already have a sandbox, any subsequent request is an edit/modification.
+        # We must return False so that the LLM performs the modification inline.
+        return False
     normalized = str(prompt or "").lower()
     return "rubik" in normalized or "rubics" in normalized
 
@@ -359,51 +377,102 @@ def _is_rubiks_sandbox_request(prompt: str) -> bool:
 def _build_rubiks_cube_sandbox() -> str:
     return """<style>
   :root{color-scheme:dark}
-  .rubik-shell{height:100%;min-height:620px;background:#0d0d10;color:#f5f5f5;font-family:Outfit,Inter,system-ui,sans-serif;padding:28px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:22px}
-  .rubik-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid #2a2a2e;padding-bottom:18px}
+  .rubik-shell{height:100%;min-height:620px;background:#0d0d10;color:#f5f5f5;font-family:Outfit,Inter,system-ui,sans-serif;padding:24px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:20px}
+  .rubik-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid #2a2a2e;padding-bottom:14px}
   .rubik-kicker{font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:#a1a1aa}
-  .rubik-title{font-size:30px;line-height:1.05;font-weight:900;letter-spacing:0;text-transform:uppercase;margin-top:7px}
-  .rubik-subtitle{max-width:820px;margin-top:9px;color:#c8c8cf;font-size:15px;line-height:1.55}
-  .rubik-stage{display:grid;grid-template-columns:minmax(480px,1fr) minmax(280px,360px);gap:22px;min-height:0}
-  .cube-card{position:relative;display:grid;place-items:center;overflow:hidden;border:1px solid #28282d;background:radial-gradient(circle at 50% 35%,#24242a 0,#151519 54%,#101013 100%);min-height:430px}
-  .cube-perspective{width:min(50vw,430px);height:min(50vw,430px);min-width:320px;min-height:320px;position:relative;perspective:900px;display:grid;place-items:center}
-  .cube3d{position:relative;width:260px;height:260px;transform-style:preserve-3d;transform:rotateX(-28deg) rotateY(-38deg) rotateZ(0deg);filter:drop-shadow(0 34px 28px rgba(0,0,0,.55))}
-  .cube-face{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px;padding:10px;background:#09090b;border:1px solid #3f3f46;border-radius:12px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.04)}
-  .face-F{transform:translateZ(130px)}
-  .face-R{transform:rotateY(90deg) translateZ(130px)}
-  .face-U{transform:rotateX(90deg) translateZ(130px)}
-  .sticker{border-radius:9px;border:1px solid rgba(0,0,0,.5);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2);transition:transform .16s ease,filter .16s ease,box-shadow .16s ease}
-  .sticker.flash{transform:scale(.86);filter:brightness(1.28);box-shadow:0 0 18px rgba(255,255,255,.24),inset 0 0 0 2px rgba(255,255,255,.35)}
-  .face-tag{position:absolute;left:22px;top:20px;font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#a1a1aa}
-  .lesson-panel{border:1px solid #28282d;background:#151519;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0}
+  .rubik-title{font-size:26px;line-height:1.1;font-weight:900;text-transform:uppercase;margin-top:6px}
+  .rubik-subtitle{max-width:820px;margin-top:8px;color:#c8c8cf;font-size:14px;line-height:1.5}
+  .rubik-stage{display:grid;grid-template-columns:1fr 340px;gap:20px;min-height:0}
+  
+  .cube-card{position:relative;display:flex;align-items:center;justify-content:center;border:1px solid #28282d;background:#131316;padding:20px;min-height:400px;border-radius:10px}
+  .cube-net{
+    display:grid;
+    grid-template-areas:
+      ". U . ."
+      "L F R B"
+      ". D . .";
+    grid-template-columns: repeat(4, 75px);
+    grid-template-rows: repeat(3, 75px);
+    gap: 8px;
+    justify-content: center;
+    align-content: center;
+  }
+  .cube-face{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    grid-template-rows:repeat(3, 1fr);
+    gap:2px;
+    padding:4px;
+    background:#1f1f24;
+    border:2px solid #2a2a30;
+    border-radius:6px;
+    position:relative;
+    aspect-ratio:1/1;
+  }
+  .cube-face::after {
+    content: attr(data-face);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: rgba(255,255,255,0.12);
+    pointer-events: none;
+    z-index: 10;
+  }
+  
+  .face-U{grid-area:U}
+  .face-L{grid-area:L}
+  .face-F{grid-area:F}
+  .face-R{grid-area:R}
+  .face-B{grid-area:B}
+  .face-D{grid-area:D}
+  
+  .sticker{
+    border-radius:3px;
+    border:1px solid rgba(0,0,0,0.4);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1);
+    transition:transform .16s ease,filter .16s ease;
+    aspect-ratio:1/1;
+  }
+  .sticker.flash{transform:scale(.85);filter:brightness(1.3)}
+  
+  .lesson-panel{border:1px solid #28282d;background:#151519;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0;border-radius:10px}
   .lesson-panel h3{font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;margin:0;color:#f4f4f5}
-  .step{font-size:16px;line-height:1.6;color:#d9d9df;min-height:128px}
-  .moves{display:flex;flex-wrap:wrap;gap:9px}
-  button{min-height:40px;border:1px solid #3f3f46;background:#1f1f24;color:#f7f7f8;border-radius:8px;padding:0 14px;font-size:13px;font-weight:900;letter-spacing:.06em;cursor:pointer}
+  .step{font-size:15px;line-height:1.6;color:#d9d9df;min-height:110px}
+  .moves{display:flex;flex-wrap:wrap;gap:8px}
+  
+  button{min-height:38px;border:1px solid #3f3f46;background:#1f1f24;color:#f7f7f8;border-radius:8px;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:background .2s}
   button:hover{background:#2b2b31;border-color:#5a5a64}
   button:active{transform:translateY(1px)}
   .primary{background:#f4f4f5;color:#111113;border-color:#f4f4f5}
-  .controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
-  .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #2a2a2e;padding-top:18px}
-  .nav{display:flex;gap:9px}
+  .primary:hover{background:#e4e4e7}
+  
+  .controls{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #2a2a2e;padding-top:14px}
   .log{font-size:13px;color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;min-width:0}
-  @media(max-width:900px){.rubik-shell{padding:20px}.rubik-stage{grid-template-columns:1fr}.cube-card{min-height:360px}.cube-perspective{width:330px;height:330px}.cube3d{width:210px;height:210px}.face-F{transform:translateZ(105px)}.face-R{transform:rotateY(90deg) translateZ(105px)}.face-U{transform:rotateX(90deg) translateZ(105px)}.controls{grid-template-columns:repeat(3,1fr)}}
+  
+  @media(max-width:900px){
+    .rubik-shell{padding:16px}
+    .rubik-stage{grid-template-columns:1fr}
+    .cube-net{grid-template-columns:repeat(4,65px);grid-template-rows:repeat(3,65px)}
+    .controls{grid-template-columns:repeat(3,1fr)}
+  }
 </style>
 <div class="rubik-shell">
   <div class="rubik-head">
     <div>
       <div class="rubik-kicker">Interactive Lesson Sandbox</div>
-      <div class="rubik-title">Rubik's Cube Beginner Method</div>
-      <div class="rubik-subtitle">Use the lesson buttons to rehearse each algorithm, or use the manual controls to explore face turns. The visible cube updates from the same sticker state used by the move engine.</div>
+      <div class="rubik-title">Rubik's Cube Flat Net Simulator</div>
+      <div class="rubik-subtitle">This flat 2D projection shows all 6 faces (U, L, F, R, B, D) simultaneously. Use the stepper or manual controls to practice.</div>
     </div>
     <button id="reset">Reset</button>
   </div>
   <div class="rubik-stage">
     <div class="cube-card">
-      <div class="face-tag">Live Cube State</div>
-      <div class="cube-perspective" aria-label="Rubik's Cube visualization">
-        <div id="cube" class="cube3d" data-face="visible-cube"></div>
-      </div>
+      <div class="cube-net" id="cube" aria-label="Flat Rubik's Cube net view"></div>
     </div>
     <div class="lesson-panel">
       <h3 id="stepTitle">Step 1: Notation</h3>
@@ -423,6 +492,7 @@ def _build_rubiks_cube_sandbox() -> str:
 </div>
 <script>
 const faceOrder=['U','L','F','R','B','D'];
+// === COLOR PALETTE ===
 const palette={U:'#f8fafc',D:'#facc15',F:'#dc2626',B:'#f97316',L:'#16a34a',R:'#2563eb'};
 const moves=["U","U'","D","D'","R","R'","L","L'","F","F'","B","B'"];
 const cubeState={U:Array(9).fill('U'),D:Array(9).fill('D'),F:Array(9).fill('F'),B:Array(9).fill('B'),L:Array(9).fill('L'),R:Array(9).fill('R')};
@@ -482,14 +552,14 @@ async function applySequence(sequence){
 }
 function renderCube(){
   cube.innerHTML='';
-  ['U','F','R'].forEach(face=>{
+  faceOrder.forEach(face=>{
     const faceEl=document.createElement('div');
     faceEl.className='cube-face face-'+face;
     faceEl.dataset.face=face;
     cubeState[face].forEach(colorKey=>{
       const cell=document.createElement('div');
       cell.className='sticker'+(lastTouched===face?' flash':'');
-      cell.style.background=palette[colorKey];
+      cell.style.backgroundColor=palette[colorKey];
       faceEl.appendChild(cell);
     });
     cube.appendChild(faceEl);
@@ -537,9 +607,10 @@ async def generate_artifact_code(
     """Generates raw self-contained HTML/JS code for a sandbox-spec request."""
     prompt = payload.get("prompt", "")
     context = payload.get("context", "")
+    previous_code = payload.get("previous_code", "")
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt is required")
-    if _is_rubiks_sandbox_request(f"{prompt}\n{context}"):
+    if _is_rubiks_sandbox_request(f"{prompt}\n{context}", previous_code):
         return {"code": _build_rubiks_cube_sandbox()}
 
     ai_key = secrets.ai_key
@@ -554,17 +625,40 @@ async def generate_artifact_code(
             temperature=0.3,
             max_tokens=2500,
         )
-        sys_prompt = """Generate one self-contained browser sandbox snippet.
+        if previous_code:
+            if "rubik-shell" in previous_code:
+                sys_prompt = """You are a precise frontend code editor. Your task is to edit the provided Rubik's Cube Flat Net Simulator code.
+You MUST preserve the entire existing HTML/CSS/JS structure of the simulator.
+Do NOT rewrite the code from scratch. Do NOT simplify it. Do NOT discard its layout, styles, rotation math, buttons, step navigation, or features.
+You are ONLY allowed to modify the specific parts corresponding to the user's request (e.g. updating colors in the 'palette' object or editing CSS rules/variables).
+Return the complete, updated HTML page. Do not include markdown code blocks/fences (```), explanations, or prose. Just the raw updated code."""
+            else:
+                sys_prompt = """You are a precise frontend code editor. Your task is to modify the provided sandbox code inline according to the user's request.
+Do NOT rewrite the code from scratch. Do NOT simplify its structure or discard existing features.
+Keep all existing HTML tags, structure, classes, styles, scripts, event listeners, and logic intact, except for the specific lines that need to be changed to satisfy the user's request.
+Return the complete, updated HTML page. Do not include markdown code blocks/fences (```), explanations, or prose. Just the raw updated code."""
+            human_prompt = f"""Sandbox request: {prompt}
+
+Lesson context:
+{context}
+
+Previous sandbox code to edit:
+{previous_code}
+
+Return the complete updated code only. Do not explain, do not add markdown backticks."""
+        else:
+            sys_prompt = """Generate one self-contained browser sandbox snippet.
 Return raw HTML/CSS/JavaScript only. Do not use markdown fences, prose, React, imports, build tools, external files, or privileged APIs.
 Assume Tailwind CDN, the Outfit font, and CSS variables are injected by the host. Prefer compact SVG, Canvas, and vanilla JavaScript."""
-        human_prompt = f"""Sandbox request: {prompt}
+            human_prompt = f"""Sandbox request: {prompt}
 
 Lesson context:
 {context}
 
 Return the code only."""
         res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
-        return {"code": res.content.strip() if hasattr(res, "content") else str(res).strip()}
+        code = res.content.strip() if hasattr(res, "content") else str(res).strip()
+        return {"code": _clean_markdown_fences(code)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -605,7 +699,8 @@ Broken code:
 
 Return corrected code only."""
         res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
-        return {"code": res.content.strip() if hasattr(res, "content") else str(res).strip()}
+        code = res.content.strip() if hasattr(res, "content") else str(res).strip()
+        return {"code": _clean_markdown_fences(code)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

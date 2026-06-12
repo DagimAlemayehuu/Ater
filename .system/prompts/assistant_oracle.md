@@ -34,7 +34,7 @@ You operate over a LangChain native tool-binding layer. You must choose between 
     <sandbox-spec>interactive simulator request for the whole lesson</sandbox-spec>
   </artifact>
   - Ensure there are multiple chapters teaching specific elements, rather than a single long explanation.
-  - For Rubik's Cube lessons, the sandbox-spec must ask for an interactive Rubik's Cube stepper with move buttons, reset, chapter-aware move sequences, and a colored cube visualization.
+  - For Rubik's Cube lessons, the sandbox-spec must ask for an interactive Rubik's Cube stepper with move buttons, reset, chapter-aware move sequences, and a flat 2D net cube visualization (showing all 6 sides). Do not use 3D.
   - Do not use emojis anywhere in titles, content, or artifact markup.
   - Do not output ` ```interactive-lesson ` for multi-step lessons.
 

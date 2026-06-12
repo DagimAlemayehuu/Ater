@@ -977,7 +977,7 @@ export const sidecarApi = {
         }
     },
 
-    generateArtifactCode: async (payload: { prompt: string; context?: string }) => {
+    generateArtifactCode: async (payload: { prompt: string; context?: string; previous_code?: string }) => {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
@@ -1035,6 +1035,7 @@ export const sidecarApi = {
     oracleChatStream: async (payload: {
         history: { role: string; content: string }[],
         rag_context?: string,
+        active_artifact?: any,
         user_context?: {
             display_name?: string;
             program_configured?: boolean;

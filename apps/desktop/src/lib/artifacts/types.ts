@@ -11,12 +11,14 @@ export interface ArtifactVersion {
   version: number
   chapters: ArtifactChapter[]
   raw: string
+  messageIndex?: number
 }
 
 export interface InteractiveArtifact {
   id: string
   title: string
   versions: ArtifactVersion[]
+  messageIndex?: number
 }
 
 export interface SandboxSpec {
