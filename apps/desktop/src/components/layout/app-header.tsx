@@ -1,11 +1,9 @@
 import React from 'react'
-import { ChevronLeft, ChevronRight, Activity, Search, PanelLeft, Minimize2, Maximize2, Save, X, RefreshCw, Heart } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
 import { cn } from '@/lib/utils'
-import { useLocation } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
-import { useConfig } from '@/lib/ConfigContext'
 import { Timer } from 'lucide-react'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useSecurityStore } from '@/context/securityStore'
@@ -14,8 +12,6 @@ export function AppHeader() {
   const { goBack, goForward, canGoBack, canGoForward, history, currentIndex } = useNavigation()
   const { centerContent, rightContent } = useHeader()
   const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore()
-  const { config } = useConfig()
-  const location = useLocation()
   const creditBalance = useSecurityStore(state => state.creditBalance)
 
   // Dynamic Breadcrumb Logic
@@ -45,6 +41,10 @@ export function AppHeader() {
       module = 'Practice Hub'
       const view = searchParams.get('view')
       if (view) subPath = view.charAt(0) + view.slice(1).toLowerCase()
+    } else if (entryPath.startsWith('/notebooks')) {
+      module = 'NotebookLM'
+      const id = searchParams.get('id')
+      if (id) subPath = 'Notebook Workspace'
     } else if (entryPath.startsWith('/agents')) {
       module = 'Ater'
     } else if (entryPath.startsWith('/settings')) {

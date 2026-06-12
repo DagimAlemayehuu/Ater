@@ -318,6 +318,24 @@ class ShowPracticeConfigInput(BaseModel):
     global_time_limit_minutes: Optional[int] = Field(default=None, description="Global time limit in minutes.")
 
 
+class NotebookLMQueryInput(BaseModel):
+    notebook_id: str = Field(description="UUID of the Google NotebookLM notebook to query.")
+    query: str = Field(description="Question to ask about the notebook's sources.")
+    conversation_id: Optional[str] = Field(default=None, description="Optional conversation UUID to continue a thread.")
+
+
+class NotebookLMResearchInput(BaseModel):
+    query: str = Field(description="Query to search the web/Drive for finding new sources.")
+    notebook_id: Optional[str] = Field(default=None, description="Optional notebook UUID. If not provided, a new notebook will be created.")
+    mode: str = Field(default="fast", description="Search mode: 'fast' (~30s, ~10 sources) or 'deep' (~5min, ~40 sources).")
+    title: Optional[str] = Field(default=None, description="Optional title for the new notebook if created.")
+
+
+class NotebookLMStudioCreateInput(BaseModel):
+    notebook_id: str = Field(description="UUID of the Google NotebookLM notebook.")
+    artifact_type: str = Field(description="Type of studio artifact to generate: 'audio', 'video', 'report', 'quiz', 'flashcards', 'mind_map', 'slide_deck', 'infographic', 'data_table'.")
+    options: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Optional parameters for generation: audio_format, audio_length, question_count, difficulty, report_format, custom_prompt, focus_prompt, etc.")
+
 
 def get_fallback_display_name() -> str:
     import os
@@ -454,6 +472,90 @@ class AterAssistant:
         last_part = body_bytes[-limit:].decode('utf-8', errors='ignore')
         warning = "\n\n[Content truncated — file exceeds limit. Showing head and tail.]\n\n"
         return f"{fm_part}\n{first_part}{warning}{last_part}"
+
+    # ── NotebookLM tools ───────────────────────────────────────────────────
+
+    async def notebooklm_query(self, notebook_id: str, query: str, conversation_id: Optional[str] = None) -> str:
+        """Query a Google NotebookLM notebook using its sources."""
+        from src.domains.notebooklm.runner import NotebookLMRunner, NotebookLMException
+        args = ["notebook", "query", notebook_id, query]
+        if conversation_id:
+            args += ["--conversation-id", conversation_id]
+        args += ["--json"]
+        try:
+            res = await NotebookLMRunner.run_command(args, parse_json=True)
+            if isinstance(res, dict):
+                answer = res.get("answer", "")
+                citations = res.get("citations", [])
+                citation_text = ""
+                if citations:
+                    citation_text = "\n\nCitations:\n" + "\n".join([f"- [{c.get('index', i)}]: {c.get('source_title', '')} (page {c.get('page_number', '')})" for i, c in enumerate(citations)])
+                return f"{answer}{citation_text}"
+            return str(res)
+        except NotebookLMException as e:
+            return f"Error querying NotebookLM: {e}"
+
+    async def notebooklm_research(self, query: str, notebook_id: Optional[str] = None, mode: str = "fast", title: Optional[str] = None) -> str:
+        """Run web/Drive research and import sources into a notebook."""
+        from src.domains.notebooklm.runner import NotebookLMRunner, NotebookLMException
+        args = ["research", "start", query]
+        if notebook_id:
+            args += ["--notebook-id", notebook_id]
+        if mode:
+            args += ["--mode", mode]
+        if title:
+            args += ["--title", title]
+        try:
+            start_res = await NotebookLMRunner.run_command(args)
+            task_id = None
+            for word in start_res.split():
+                if len(word) > 10 and "-" in word:
+                    task_id = word.strip("()<>:[].,\"'")
+            
+            logger.info(f"Started research. Output: {start_res}. Polling for completion...")
+            nb_id = notebook_id
+            
+            max_polls = 30
+            poll_interval = 5
+            task_success = False
+            for _ in range(max_polls):
+                await asyncio.sleep(poll_interval)
+                status_args = ["research", "status"]
+                if nb_id:
+                    status_args += [nb_id]
+                status_res = await NotebookLMRunner.run_command(status_args)
+                if "complete" in status_res.lower() or "done" in status_res.lower() or "success" in status_res.lower():
+                    task_success = True
+                    break
+                elif "failed" in status_res.lower() or "error" in status_res.lower():
+                    return f"Research failed: {status_res}"
+            
+            if not task_success:
+                return f"Research started (Task ID: {task_id}), but did not complete within the timeout."
+
+            import_args = ["research", "import"]
+            if nb_id:
+                import_args += [nb_id]
+            if task_id:
+                import_args += [task_id]
+            import_res = await NotebookLMRunner.run_command(import_args)
+            return f"Research completed and sources imported successfully!\nOutput: {import_res}"
+            
+        except NotebookLMException as e:
+            return f"Error executing research: {e}"
+
+    async def notebooklm_studio_create(self, notebook_id: str, artifact_type: str, options: Optional[Dict[str, Any]] = None) -> str:
+        """Create a study aid or content artifact from notebook sources."""
+        from src.domains.notebooklm.runner import NotebookLMRunner, NotebookLMException
+        payload = {"artifact_type": artifact_type, **(options or {})}
+        try:
+            args = NotebookLMRunner.build_studio_create_args(notebook_id, payload)
+            res = await NotebookLMRunner.run_command(args)
+            return f"Studio generation started for {artifact_type}!\nOutput: {res}"
+        except ValueError as e:
+            return f"Invalid NotebookLM studio request: {e}"
+        except NotebookLMException as e:
+            return f"Error generating studio artifact: {e}"
 
     # ── Vault tools ────────────────────────────────────────────────────────
 
@@ -1984,6 +2086,16 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
             StructuredTool.from_function(name="show_practice_config", func=self.show_practice_config,
                 description="Show the practice session configuration card in the chat UI for the user to confirm/start.",
                 args_schema=ShowPracticeConfigInput),
+            # NotebookLM
+            StructuredTool.from_function(name="notebooklm_query", coroutine=self.notebooklm_query,
+                description="Query a Google NotebookLM notebook by its UUID using its sources.",
+                args_schema=NotebookLMQueryInput),
+            StructuredTool.from_function(name="notebooklm_research", coroutine=self.notebooklm_research,
+                description="Search the web or Drive for a query, create/retrieve a notebook, and import discovered sources.",
+                args_schema=NotebookLMResearchInput),
+            StructuredTool.from_function(name="notebooklm_studio_create", coroutine=self.notebooklm_studio_create,
+                description="Generate a study aid artifact (audio, report, quiz, flashcards, mind map, slides, infographic) from a notebook.",
+                args_schema=NotebookLMStudioCreateInput),
             # Dynamic UI
             StructuredTool.from_function(name="render_ui", func=self.render_ui,
                 description=(
@@ -2043,6 +2155,9 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 "get_generated_files": lambda: self.get_generated_files(),
                 "generate_summary": lambda: self.generate_summary(**args),
                 "show_practice_config": lambda: self.show_practice_config(**args),
+                "notebooklm_query": lambda: self.notebooklm_query(**args),
+                "notebooklm_research": lambda: self.notebooklm_research(**args),
+                "notebooklm_studio_create": lambda: self.notebooklm_studio_create(**args),
             }
             fn = dispatch.get(name)
             if fn is None:

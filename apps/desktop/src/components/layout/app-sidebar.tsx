@@ -1,11 +1,8 @@
-import { NavLink, useLocation } from 'react-router-dom'
-import { Settings, User, GraduationCap, Book } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
+import { Settings, User, GraduationCap, Book, Library } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ThemeSwitch } from '@/components/theme-switch'
 
 export function AppSidebar() {
-  const location = useLocation()
-  const isOnboarding = location.pathname === '/onboarding'
 
   const linkClass = (isActive: boolean) => cn(
     "relative p-2.5 transition-all rounded-[8px] flex items-center justify-center size-10",
@@ -46,6 +43,14 @@ export function AppSidebar() {
                     <>
                       {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
                       <Book className="size-5" strokeWidth={2.5} />
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/notebooks" className={({ isActive }) => linkClass(isActive)} title="NotebookLM" data-tour="sidebar-notebooks">
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
+                      <Library className="size-5" strokeWidth={2.5} />
                     </>
                   )}
                 </NavLink>

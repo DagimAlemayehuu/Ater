@@ -63,6 +63,21 @@ class ServerLifespanManager:
     async def lifespan(app: FastAPI):
         """Manage application lifespan events."""
         logger.info("FastAPI sidecar startup event: non-blocking initialization verified.")
+        
+        # Check nlm CLI availability
+        import shutil
+        from pathlib import Path
+        nlm_path = shutil.which("nlm")
+        if not nlm_path:
+            local_nlm = Path(sys.executable).parent / "nlm"
+            if local_nlm.exists():
+                nlm_path = str(local_nlm)
+        
+        if nlm_path:
+            logger.info(f"[NotebookLM] Verified 'nlm' CLI path: {nlm_path}")
+        else:
+            logger.error("[NotebookLM] WARNING: 'nlm' CLI was not found in PATH or virtualenv bin. Subprocess operations may fail.")
+            
         yield
         import src.api.state as state
         if state.ater_watcher:

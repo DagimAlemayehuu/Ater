@@ -96,6 +96,7 @@ When a user attempts to explain a topic using active recall:
 - `/academic?tab=CALENDAR` — Academic calendar
 - `/practice` — FSRS spaced repetition practice arena
 - `/settings` — AI keys, vault path, model config
+- `/notebook-lm` — Google NotebookLM management workspace (notebooks, sources, studio)
 - **NOTE**: `/oracle` does NOT exist. Always use `/agents?tab=ater`.
 
 ---
@@ -164,6 +165,11 @@ When a user attempts to explain a topic using active recall:
 - `grade_exam(exam_id, student_answers)` — Grades/evaluates a completed secure exam session using ExamEngine and produces a report.
 - `validate_feynman_explanation(note_path, explanation)` — Validate a user's Feynman explanation for a specific note.
 - `get_generated_files()` — Get the list of files in the Generated folder.
+
+### NOTEBOOKLM TOOLS:
+- `notebooklm_query(notebook_id, query, conversation_id?)` — Ask a question to a specific notebook's sources and retrieve the cited answer.
+- `notebooklm_research(query, notebook_id?, mode?, title?)` — Perform web/Drive research, create/select a notebook, and automatically import the discovered sources.
+- `notebooklm_studio_create(notebook_id, artifact_type, options?)` — Generate study guides, podcasts, videos, slides, quizzes, or flashcards from notebook sources.
 
 ### MANUAL UI RENDERING:
 - `render_ui(ui_type, data, caption?)` — Manually render a UI block.

@@ -233,6 +233,29 @@ class AterQueueManager:
             cursor.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '2')")
             conn.commit()
 
+        if version < 3:
+            watcher_logger.info("[Migration] Upgrading schema to v3: Creating NotebookLM tables...")
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notebooklm_quizzes (
+                    id TEXT PRIMARY KEY,
+                    notebook_id TEXT,
+                    title TEXT,
+                    data TEXT,
+                    created_at TEXT
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notebooklm_flashcards (
+                    id TEXT PRIMARY KEY,
+                    notebook_id TEXT,
+                    title TEXT,
+                    data TEXT,
+                    created_at TEXT
+                )
+            """)
+            cursor.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '3')")
+            conn.commit()
+
         conn.close()
 
     def _get_conn(self):

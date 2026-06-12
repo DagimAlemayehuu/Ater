@@ -31,3 +31,4 @@ onnx>=1.21.0
 onnxruntime>=1.26.0
 optimum>=2.1.0
 transformers>=4.57.6
+notebooklm-mcp-cli>=0.7.1

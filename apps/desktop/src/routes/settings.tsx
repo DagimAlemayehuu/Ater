@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {useState, useEffect} from 'react'
-import {useNavigate} from 'react-router-dom'
 import {cn} from '@/lib/utils'
 import {useConfig, SavedApiKey, AppConfig} from '@/lib/ConfigContext'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -10,6 +9,9 @@ import {TokenTracker} from '@/components/intelligence/TokenTracker'
 import * as Tabs from '@radix-ui/react-tabs'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { fetchSidecarJson } from '@/lib/sidecarHttp'
+import { invoke } from '@tauri-apps/api/core'
+import { open as openUrl } from '@tauri-apps/plugin-shell'
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
@@ -65,7 +67,6 @@ const parseOptionalNumber = (value: any) => {
 }
 
 export default function Settings() {
-  const navigate = useNavigate()
   const {config, saveConfig} = useConfig()
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
   
@@ -99,6 +100,71 @@ export default function Settings() {
   // Advanced toggles for simplifying UX
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showAddKeyAdvanced, setShowAddKeyAdvanced] = useState(false)
+
+  // NotebookLM States
+  const [notebooklmStatus, setNotebooklmStatus] = useState<{ auth_status: string, email: string | null } | null>(null)
+  const [notebooklmAuthenticating, setNotebooklmAuthenticating] = useState(false)
+
+  const fetchNotebookLMStatus = async (force = false) => {
+    try {
+      const activePort = await invoke<number>('get_sidecar_port').catch(() => 8765);
+      const sidecarToken = await invoke<string>('get_sidecar_token').catch(() => '');
+      const url = `http://127.0.0.1:${activePort}/api/notebooklm/auth/status${force ? '?force=true' : ''}`;
+      const res = await fetchSidecarJson(url, {
+        headers: {
+          'X-Ater-Token': sidecarToken
+        }
+      }, fetch, 30000);
+      setNotebooklmStatus(res);
+    } catch (err) {
+      console.error('[Settings] Failed to fetch NotebookLM status:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotebookLMStatus();
+    const interval = setInterval(fetchNotebookLMStatus, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleNotebookLMLogin = async (clear = false) => {
+    setNotebooklmAuthenticating(true);
+    try {
+      const activePort = await invoke<number>('get_sidecar_port').catch(() => 8765);
+      const sidecarToken = await invoke<string>('get_sidecar_token').catch(() => '');
+      const url = `http://127.0.0.1:${activePort}/api/notebooklm/auth/login?force=true${clear ? '&clear=true' : ''}`;
+      
+      const res = await fetchSidecarJson(url, {
+        method: 'POST',
+        headers: {
+          'X-Ater-Token': sidecarToken
+        }
+      }, fetch, 30000);
+      if (res.success) {
+        toast.success(clear ? 'NotebookLM account switch started.' : 'NotebookLM login started.');
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          attempts++;
+          await fetchNotebookLMStatus(true);
+          if (attempts > 30) clearInterval(poll);
+        }, 3000);
+      } else {
+        toast.error('Failed to trigger login: ' + res.message);
+      }
+    } catch (err: any) {
+      toast.error('Could not initiate login: ' + err.message);
+    } finally {
+      setNotebooklmAuthenticating(false);
+    }
+  };
+
+  const handleOpenNotebookLMWeb = async () => {
+    try {
+      await openUrl('https://notebooklm.google.com/');
+    } catch (err: any) {
+      toast.error('Could not open NotebookLM: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     import('@tauri-apps/api/app').then(({ getVersion }) => {
@@ -1246,6 +1312,89 @@ export default function Settings() {
     )
   }
 
+  const renderIntegrations = () => {
+    const isConfigured = notebooklmStatus?.auth_status === 'configured';
+    const isStale = notebooklmStatus?.auth_status === 'stale';
+    const email = notebooklmStatus?.email;
+
+    return (
+      <div className="w-full space-y-8 pb-20">
+        <div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-2">Connected Services</h2>
+          <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">Configure external integrations and account connections.</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
+          <Card className="bg-bento-panel rounded-[12px] border border-border">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-left">
+                  <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-foreground">Google NotebookLM</h3>
+                  <p className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-wider">
+                    Link your Google account to access your notebooks, sources, and study studio.
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    disabled={notebooklmAuthenticating}
+                    onClick={handleOpenNotebookLMWeb}
+                    className="h-8 px-4 border border-border/60 text-[9px] font-black uppercase tracking-widest hover:bg-muted/20 rounded-[8px] transition-all disabled:opacity-50"
+                  >
+                    Open NotebookLM
+                  </button>
+                  <button
+                    disabled={notebooklmAuthenticating}
+                    onClick={() => handleNotebookLMLogin(false)}
+                    className="h-8 px-4 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all disabled:opacity-50"
+                  >
+                    {notebooklmAuthenticating ? 'Connecting...' : (isConfigured ? 'Reconnect Account' : 'Connect Account')}
+                  </button>
+                  {isConfigured && (
+                    <button
+                      disabled={notebooklmAuthenticating}
+                      onClick={() => handleNotebookLMLogin(true)}
+                      className="h-8 px-4 border border-border/60 text-[9px] font-black uppercase tracking-widest hover:bg-muted/20 rounded-[8px] transition-all disabled:opacity-50"
+                    >
+                      Switch Account
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="border border-border/40 bg-bento-item/10 rounded-[8px] p-4 flex flex-col gap-4 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</span>
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "size-1.5 rounded-full animate-pulse",
+                      isConfigured ? "bg-emerald-500" : isStale ? "bg-amber-500" : "bg-muted-foreground/40"
+                    )} />
+                    <span className="text-[10px] font-black uppercase tracking-widest font-mono">
+                      {isConfigured ? 'Connected' : isStale ? 'Session Stale' : 'Not Connected'}
+                    </span>
+                  </div>
+                </div>
+
+                {(isConfigured || isStale) && email && (
+                  <div className="flex items-center justify-between border-t border-border/20 pt-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Linked Account</span>
+                    <span className="text-[11px] font-mono font-bold text-foreground">{email}</span>
+                  </div>
+                )}
+                
+                <div className="border-t border-border/20 pt-3 text-[10px] font-sans font-bold text-muted-foreground leading-normal">
+                  <p>
+                    NotebookLM CLI authentication uses a supported Chrome-family browser profile so Ater can read session credentials. Open NotebookLM launches the web app in your device default browser.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col font-sans bg-transparent text-foreground overflow-hidden gap-3">
       <Tabs.Root defaultValue="general" className="flex-1 flex flex-col overflow-hidden gap-3">
@@ -1265,6 +1414,13 @@ export default function Settings() {
               className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
             >
               AI & Keys
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
+            </Tabs.Trigger>
+            <Tabs.Trigger 
+              value="integrations"
+              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
+            >
+              Integrations
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
             </Tabs.Trigger>
             <Tabs.Trigger 
@@ -1296,6 +1452,10 @@ export default function Settings() {
               
               <Tabs.Content value="ai" className="outline-none">
                 {renderAI()}
+              </Tabs.Content>
+              
+              <Tabs.Content value="integrations" className="outline-none">
+                {renderIntegrations()}
               </Tabs.Content>
               
               <Tabs.Content value="focus" className="outline-none">

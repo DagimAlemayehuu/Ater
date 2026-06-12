@@ -1,6 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState, lazy, Suspense } from 'react'
-import { sidecarApi } from '@/lib/sidecarApi'
+import { useEffect, useState, Suspense } from 'react'
 import { ConfigProvider, useConfig } from '@/lib/ConfigContext'
 import { ThemeProvider } from '@/context/theme-provider'
 import { NavigationProvider } from '@/context/navigation-provider'
@@ -13,6 +12,7 @@ import AcademicDashboard from '@/routes/academic'
 import Agents from '@/routes/agents'
 import Onboarding from '@/routes/onboarding'
 import WelcomePage from '@/routes/welcome'
+import Notebooks from '@/routes/notebooks'
 
 import { HeaderProvider } from '@/context/header-context'
 import { Toaster } from '@/components/ui/sonner'
@@ -156,6 +156,7 @@ function AppRoutes() {
                             <Route path="/academic" element={<PageGuard featureSlug="interactive_quiz"><AcademicDashboard /></PageGuard>} />
                             <Route path="/agents" element={<PageGuard featureSlug="ai-features"><Agents /></PageGuard>} />
                             <Route path="/practice" element={<PageGuard featureSlug="practice-recall"><Practice /></PageGuard>} />
+                            <Route path="/notebooks" element={<PageGuard featureSlug="ai-features"><Notebooks /></PageGuard>} />
                             <Route path="/settings" element={<Settings />} />
                           </Routes>
                         </AuthenticatedLayout>

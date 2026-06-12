@@ -35,6 +35,7 @@ dependencies = [
     "optimum[exporters,onnx,onnxruntime]>=2.1.0",
     "onnx>=1.21.0",
     "onnxruntime>=1.26.0",
+    "notebooklm-mcp-cli>=0.7.1",
 ]
 
 [project.scripts]
