@@ -44,8 +44,8 @@
     ],
     "resources": [
       "../../api/onnx_model",
-      "../../Ater.md",
-      "../../.system/prompts/*"
+      "../../../Ater.md",
+      "../../../.system/prompts/*"
     ],
     "externalBin": [
       "binaries/ater-api"
