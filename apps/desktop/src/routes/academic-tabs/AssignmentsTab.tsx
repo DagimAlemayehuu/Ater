@@ -120,13 +120,13 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
           </div>
           <div className="flex items-center gap-2">
             {daysLeft !== null && (
-              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft < 0 ? 'border-foreground bg-[#232326]' : daysLeft <= 3 ? 'border-foreground/40 bg-[#1a1a1c]' : 'border-[#242426] bg-[#1a1a1c]')}>
+              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft < 0 ? 'border-foreground bg-bento-item' : daysLeft <= 3 ? 'border-foreground/40 bg-bento-card' : 'border-border bg-bento-card')}>
                 <div className="text-2xl font-black text-foreground">{daysLeft < 0 ? Math.abs(daysLeft) : daysLeft}</div>
-                <div className="text-[7px] font-black uppercase text-[#a1a1aa]">{daysLeft < 0 ? 'days late' : 'days left'}</div>
+                <div className="text-[7px] font-black uppercase text-muted-foreground">{daysLeft < 0 ? 'days late' : 'days left'}</div>
               </div>
             )}
-            <button onClick={() => onOpenNote(assignment.path || `database/assignments/${assignment.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-foreground hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
-            <button onClick={() => { onDelete('assignments', selectedId); setSelectedId(null) }} className="p-2 text-[#a1a1aa] hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
+            <button onClick={() => onOpenNote(assignment.path || `database/assignments/${assignment.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-bento-item/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
+            <button onClick={() => { onDelete('assignments', selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
 
@@ -155,7 +155,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
         {/* Mark complete */}
         <button onClick={e => handleToggleDone(assignment, e)}
           className={cn('px-6 py-3 border rounded-[6px] text-[10px] font-black uppercase tracking-widest w-full transition-colors',
-            isDone ? 'border-[#242426] bg-[#232326]/30 text-[#a1a1aa] hover:bg-[#232326]' : 'border-foreground bg-foreground text-background hover:bg-foreground/90')}>
+            isDone ? 'border-border bg-bento-item/30 text-muted-foreground hover:bg-bento-item' : 'border-foreground bg-foreground text-background hover:bg-foreground/90')}>
           {isDone ? '↩ Mark Incomplete' : '✓ Mark Complete'}
         </button>
       </div>
@@ -181,12 +181,12 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
       )}
 
       {/* Filter bar */}
-      <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap bg-transparent">
-        <div className="flex items-center gap-1 bg-[#1a1a1c] border border-[#242426] p-1 rounded-[6px]">
+      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap bg-transparent">
+        <div className="flex items-center gap-1 bg-bento-card border border-border p-1 rounded-[6px]">
           {(['Pending', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                filter === f ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
+                filter === f ? 'bg-bento-item text-foreground' : 'text-muted-foreground hover:text-foreground')}>
               {f}
             </button>
           ))}
@@ -194,26 +194,26 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
         {/* Course filter */}
         <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
-          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
+          className="bg-bento-card border border-border rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
           {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
         {/* Sort */}
         <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
+          className="bg-bento-card border border-border rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
           <option value="due">By Due Date</option>
           <option value="priority">By Priority</option>
           <option value="course">By Course</option>
         </select>
 
-        <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
-          <Search size={11} className="text-[#a1a1aa]" />
+        <div className="flex items-center gap-2 flex-1 bg-bento-card border border-border rounded-[6px] px-3 py-2">
+          <Search size={11} className="text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
             className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
           data-tour="assignment-add"
-          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -231,7 +231,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
       )}
 
       {/* Stats row */}
-      <div className="px-6 py-2 border-b border-[#242426] flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa] shrink-0">
+      <div className="px-6 py-2 border-b border-border flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-muted-foreground shrink-0">
         <span>{pending.length} pending</span>
         <span>{overdue.length > 0 ? `${overdue.length} overdue` : '0 overdue'}</span>
         <span>{dueSoon.length} due soon</span>
@@ -252,17 +252,17 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
             <div key={idx} onClick={() => setSelectedId(a.id)}
               data-tour={`assignment-card-${a.id}`}
               className={cn('flex items-center gap-4 p-3 border rounded-[8px] cursor-pointer group hover:border-foreground/40 transition-colors',
-                isDone ? 'opacity-40 border-[#242426] bg-[#1a1a1c]/50' : isLate ? 'border-[#242426] bg-[#1a1a1c] ring-1 ring-destructive/20' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
+                isDone ? 'opacity-40 border-border bg-bento-card/50' : isLate ? 'border-border bg-bento-card ring-1 ring-destructive/20' : 'border-border bg-bento-card hover:bg-bento-item/30')}>
               <button onClick={e => handleToggleDone(a, e)}
                 className={cn('w-4 h-4 border rounded-[4px] shrink-0 flex items-center justify-center transition-colors',
-                  isDone ? 'bg-foreground border-foreground' : 'border-[#242426] hover:border-foreground')}>
+                  isDone ? 'bg-foreground border-foreground' : 'border-border hover:border-foreground')}>
                 {isDone && <Check size={9} strokeWidth={4} className="text-background" />}
               </button>
               <div className="flex-1 min-w-0">
                 <span className={cn('text-[11px] font-black uppercase truncate block text-foreground', isDone && 'line-through text-muted-foreground')}>
                   {cleanTitle(a.title)}
                 </span>
-                {course && <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">{course}</span>}
+                {course && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/65">{course}</span>}
               </div>
               {priority && (
                 <span className={cn('px-2 py-0.5 text-[7px] font-black uppercase border rounded-[3px] shrink-0', priorityColorClass(priority))}>{priority}</span>

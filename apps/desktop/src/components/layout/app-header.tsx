@@ -84,8 +84,8 @@ export function AppHeader() {
             className={cn(
               "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoBack 
-                ? "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item" 
-                : "text-[#a1a1aa]/20 cursor-not-allowed"
+                ? "text-muted-foreground hover:text-foreground hover:bg-bento-item" 
+                : "text-muted-foreground/20 cursor-not-allowed"
             )}
           >
             <ChevronLeft size={18} strokeWidth={1.5} />
@@ -99,8 +99,8 @@ export function AppHeader() {
             className={cn(
               "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
               canGoForward 
-                ? "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item" 
-                : "text-[#a1a1aa]/20 cursor-not-allowed"
+                ? "text-muted-foreground hover:text-foreground hover:bg-bento-item" 
+                : "text-muted-foreground/20 cursor-not-allowed"
             )}
           >
             <ChevronRight size={18} strokeWidth={1.5} />

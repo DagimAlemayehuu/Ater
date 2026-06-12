@@ -5,6 +5,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { autocompletion } from '@codemirror/autocomplete'
+import { useTheme } from '@/context/theme-provider'
 
 interface ObsidianEditorProps {
   value: string
@@ -17,6 +18,7 @@ export function ObsidianEditor({ value, onChange, noteList = [], onKeyDown }: Ob
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
+  const { resolvedTheme } = useTheme()
 
   // Keep the onChange reference fresh to avoid re-initializing CodeMirror
   useEffect(() => {
@@ -48,49 +50,54 @@ export function ObsidianEditor({ value, onChange, noteList = [], onKeyDown }: Ob
       }
     }
 
+    const extensions = [
+      history(),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
+      drawSelection(),
+      EditorView.lineWrapping,
+      markdown(),
+      autocompletion({ override: [wikilinkCompletionSource] }),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          onChangeRef.current(update.state.doc.toString())
+        }
+      }),
+      EditorView.theme({
+        "&": {
+          height: "100%",
+          backgroundColor: "hsl(var(--card))",
+          color: "hsl(var(--foreground))"
+        },
+        ".cm-scroller": {
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: "14px",
+          lineHeight: "1.7",
+          padding: "20px"
+        },
+        ".cm-content": {
+          caretColor: "hsl(var(--foreground))"
+        },
+        "&.cm-focused .cm-cursor": {
+          borderLeftColor: "hsl(var(--foreground))"
+        },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+          backgroundColor: "rgba(128, 128, 128, 0.2) !important"
+        },
+        ".cm-gutters": {
+          backgroundColor: "hsl(var(--card))",
+          color: "hsl(var(--muted-foreground))",
+          border: "none"
+        }
+      }, { dark: resolvedTheme === 'dark' })
+    ]
+
+    if (resolvedTheme === 'dark') {
+      extensions.push(oneDark)
+    }
+
     const state = EditorState.create({
       doc: value,
-      extensions: [
-        history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
-        drawSelection(),
-        EditorView.lineWrapping,
-        markdown(),
-        oneDark,
-        autocompletion({ override: [wikilinkCompletionSource] }),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            onChangeRef.current(update.state.doc.toString())
-          }
-        }),
-        EditorView.theme({
-          "&": {
-            height: "100%",
-            backgroundColor: "#151517",
-            color: "#ebebeb"
-          },
-          ".cm-scroller": {
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "14px",
-            lineHeight: "1.7",
-            padding: "20px"
-          },
-          ".cm-content": {
-            caretColor: "#ebebeb"
-          },
-          "&.cm-focused .cm-cursor": {
-            borderLeftColor: "#ebebeb"
-          },
-          "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-            backgroundColor: "rgba(255, 255, 255, 0.1) !important"
-          },
-          ".cm-gutters": {
-            backgroundColor: "#151517",
-            color: "#404040",
-            border: "none"
-          }
-        }, { dark: true })
-      ]
+      extensions
     })
 
     const view = new EditorView({
@@ -102,7 +109,7 @@ export function ObsidianEditor({ value, onChange, noteList = [], onKeyDown }: Ob
     return () => {
       view.destroy()
     }
-  }, [noteList])
+  }, [noteList, resolvedTheme])
 
   // Sync value changes from parent if they diverge from the local state
   useEffect(() => {
@@ -118,7 +125,7 @@ export function ObsidianEditor({ value, onChange, noteList = [], onKeyDown }: Ob
     <div 
       ref={containerRef} 
       onKeyDown={onKeyDown}
-      className="w-full h-[600px] border border-[#242426] rounded-[4px] overflow-hidden focus-within:ring-1 focus-within:ring-white/20 transition-all"
+      className="w-full h-[600px] border border-border rounded-[4px] overflow-hidden focus-within:ring-1 focus-within:ring-white/20 transition-all"
     />
   )
 }

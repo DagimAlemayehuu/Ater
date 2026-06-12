@@ -44,7 +44,7 @@ export function SectionHeader({ title, count, onAction, actionLabel }: {
 // ─── Empty State ───────────────────────────────────────────────────────────────
 export function EmptyState({ message, icon }: { message: string; icon?: React.ReactNode }) {
   return (
-    <div className="py-16 text-center border border-[#242426] w-full bg-[#1a1a1c] rounded-[8px] flex flex-col items-center gap-3">
+    <div className="py-16 text-center border border-border w-full bg-bento-card rounded-[8px] flex flex-col items-center gap-3">
       {icon && <div className="text-muted-foreground">{icon}</div>}
       <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{message}</p>
     </div>
@@ -132,11 +132,11 @@ export function CreateBanner({ label, onConfirm, onCancel, placeholder }: {
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => { ref.current?.focus() }, [])
   return (
-    <div className="p-3 bg-[#1a1a1c] border border-[#242426] rounded-[8px] flex items-center gap-3">
-      <Plus size={12} className="text-[#a1a1aa] shrink-0" />
+    <div className="p-3 bg-bento-card border border-border rounded-[8px] flex items-center gap-3">
+      <Plus size={12} className="text-muted-foreground shrink-0" />
       <input ref={ref} value={name} onChange={e => setName(e.target.value)}
         placeholder={placeholder || `New ${label} name...`}
-        className="flex-1 bg-transparent border-b border-[#242426] focus:border-[#a1a1aa] text-sm font-bold focus:outline-none pb-0.5 text-foreground placeholder:text-muted-foreground/30"
+        className="flex-1 bg-transparent border-b border-border focus:border-muted-foreground text-sm font-bold focus:outline-none pb-0.5 text-foreground placeholder:text-muted-foreground/30"
         onKeyDown={e => { if (e.key === 'Enter') onConfirm(name); if (e.key === 'Escape') onCancel() }}
       />
       <button onClick={() => onConfirm(name)} disabled={!name.trim()}
@@ -185,11 +185,11 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
   if (type === 'bool') {
     const checked = value === true || value === 'true'
     return (
-      <div className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex flex-col justify-between gap-4 hover:bg-[#232326]/30 transition-colors cursor-pointer" onClick={() => handleSave(!checked)}>
-        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]">{displayLabel}</span>
+      <div className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col justify-between gap-4 hover:bg-bento-item/30 transition-colors cursor-pointer" onClick={() => handleSave(!checked)}>
+        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{displayLabel}</span>
         <div className="flex items-center justify-between">
           <span className="text-lg font-black uppercase text-foreground">{checked ? 'Yes' : 'No'}</span>
-          <div className={cn('w-6 h-6 border flex items-center justify-center rounded-[8px]', checked ? 'border-foreground bg-[#232326]' : 'border-[#242426]')}>
+          <div className={cn('w-6 h-6 border flex items-center justify-center rounded-[8px]', checked ? 'border-foreground bg-bento-item' : 'border-border')}>
             {checked && <Check size={12} strokeWidth={3} className="text-foreground" />}
           </div>
         </div>
@@ -198,11 +198,11 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
   }
 
   return (
-    <div className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex flex-col gap-3 group/bigprop relative hover:bg-[#232326]/30 transition-colors cursor-pointer"
+    <div className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col gap-3 group/bigprop relative hover:bg-bento-item/30 transition-colors cursor-pointer"
       onClick={startEdit}>
       <div className="flex items-center justify-between">
-        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]">{displayLabel}</span>
-        <Edit3 size={10} className="text-muted-foreground/0 group-hover/bigprop:text-[#a1a1aa]/50" />
+        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{displayLabel}</span>
+        <Edit3 size={10} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground/50" />
       </div>
 
       {editing ? (
@@ -216,13 +216,13 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
           <input autoFocus type="date" value={editVal}
             onChange={e => setEditVal(e.target.value)}
             onBlur={() => handleSave()}
-            className="bg-transparent text-foreground px-2 py-1 text-sm font-black outline-none border border-[#242426] rounded-[8px] focus:border-[#a1a1aa] w-full" />
+            className="bg-transparent text-foreground px-2 py-1 text-sm font-black outline-none border border-border rounded-[8px] focus:border-muted-foreground w-full" />
         ) : (
           <input autoFocus value={editVal}
             onChange={e => setEditVal(e.target.value)}
             onBlur={() => handleSave()}
             onKeyDown={e => e.key === 'Enter' && handleSave()}
-            className="bg-transparent text-foreground px-2 py-1 text-lg font-black uppercase outline-none border border-[#242426] rounded-[8px] focus:border-[#a1a1aa] w-full" />
+            className="bg-transparent text-foreground px-2 py-1 text-lg font-black uppercase outline-none border border-border rounded-[8px] focus:border-muted-foreground w-full" />
         )
       ) : (
         <span className={cn('text-lg font-black tracking-tighter truncate leading-none',
@@ -302,10 +302,10 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
   }
 
   return (
-    <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-[#151517] border border-[#242426] rounded-[8px] shadow-2xl z-50 p-2"
+    <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-bento-panel border border-border rounded-[8px] shadow-2xl z-50 p-2"
       onClick={e => e.stopPropagation()}>
       <input autoFocus placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-        className="w-full bg-[#1a1a1c] text-[10px] font-black uppercase px-3 py-2 mb-2 border border-[#242426] rounded-[8px] focus:outline-none text-foreground" />
+        className="w-full bg-bento-card text-[10px] font-black uppercase px-3 py-2 mb-2 border border-border rounded-[8px] focus:outline-none text-foreground" />
       <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5">
         {filtered.map(opt => (
           <div key={opt} className={cn('flex items-center justify-between group hover:bg-muted/10', rawValue === opt ? 'bg-primary/5' : '')}>
@@ -365,7 +365,7 @@ export function AcademicRoadmap({ items, semesters = [], activeId, onSelect }: {
           <div key={idx} className="space-y-1.5">
             <div onClick={() => onSelect(item.id)} className={cn(
               'flex items-center justify-between p-3 border rounded-[8px] transition-colors',
-              isSelected ? 'border-[#a1a1aa] bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30'
+              isSelected ? 'border-muted-foreground bg-bento-item' : 'border-border bg-bento-card hover:bg-bento-item/30'
             )}>
               <div className="flex flex-col">
                 <span className={cn('text-[10px] font-black uppercase tracking-widest', isSelected ? 'text-foreground' : 'text-muted-foreground')}>
@@ -408,22 +408,22 @@ export function ProgramSetupForm({ onScaffold }: {
   const [level, setLevel] = useState('Undergraduate')
 
   return (
-    <div className="p-10 border border-[#242426] bg-[#1a1a1c] rounded-[8px] flex flex-col items-center justify-center text-center space-y-8">
+    <div className="p-10 border border-border bg-bento-card rounded-[8px] flex flex-col items-center justify-center text-center space-y-8">
       <div className="space-y-2">
         <h3 className="text-lg font-black uppercase tracking-tight text-foreground">Initialize Program</h3>
-        <p className="text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]">Works for any academic level</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Works for any academic level</p>
       </div>
       <div className="w-full max-w-sm space-y-4 text-left">
         <div className="flex flex-col gap-1">
-          <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Program Name</label>
+          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Program Name</label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. BSc Computer Science"
-            className="w-full bg-[#151517] border border-[#242426] rounded-[8px] px-4 py-3 text-sm font-bold outline-none focus:border-[#a1a1aa] text-foreground" />
+            className="w-full bg-bento-panel border border-border rounded-[8px] px-4 py-3 text-sm font-bold outline-none focus:border-muted-foreground text-foreground" />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Level</label>
+            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Level</label>
             <select value={level} onChange={e => setLevel(e.target.value)}
-              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-[10px] font-black uppercase outline-none text-foreground">
+              className="bg-bento-panel border border-border rounded-[8px] px-3 py-3 text-[10px] font-black uppercase outline-none text-foreground">
               <option>High School</option>
               <option>Undergraduate</option>
               <option>Master's</option>
@@ -432,14 +432,14 @@ export function ProgramSetupForm({ onScaffold }: {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Duration (yrs)</label>
+            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Duration (yrs)</label>
             <input type="number" min={1} max={10} value={years} onChange={e => setYears(parseInt(e.target.value) || 1)}
-              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-foreground" />
+              className="bg-bento-panel border border-border rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-foreground" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Current Yr</label>
+            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Current Yr</label>
             <input type="number" min={1} max={years} value={currentYear} onChange={e => setCurrentYear(parseInt(e.target.value) || 1)}
-              className="bg-[#151517] border border-[#242426] rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-foreground" />
+              className="bg-bento-panel border border-border rounded-[8px] px-3 py-3 text-sm font-bold outline-none text-foreground" />
           </div>
         </div>
         <button onClick={() => onScaffold(name, years, level, currentYear - 1)} disabled={!name.trim()}

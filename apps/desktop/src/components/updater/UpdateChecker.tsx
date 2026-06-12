@@ -14,7 +14,7 @@ function renderReleaseNotes(body: string) {
         const trimmed = line.trim();
         if (trimmed.startsWith('### ')) {
           return (
-            <h4 key={index} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground mt-3 border-b border-[#242426] pb-1.5">
+            <h4 key={index} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground mt-3 border-b border-border pb-1.5">
               {trimmed.replace('### ', '')}
             </h4>
           );
@@ -133,12 +133,12 @@ export function UpdateChecker() {
 
   return (
     <div 
-      className={`fixed top-6 right-6 z-[9999] max-w-sm w-96 bg-[#151517]/95 border border-[#242426] rounded-[12px] p-5 shadow-2xl backdrop-blur-md transition-all duration-300 transform ${
+      className={`fixed top-6 right-6 z-[9999] max-w-sm w-96 bg-bento-panel/95 border border-border rounded-[12px] p-5 shadow-2xl backdrop-blur-md transition-all duration-300 transform ${
         visible ? 'translate-x-0 opacity-100' : 'translate-x-12 opacity-0'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#242426] pb-3 mb-3">
+      <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="size-3.5 text-foreground" />
           <span className="font-black uppercase tracking-widest text-foreground text-[11px]">New Version Available</span>
@@ -164,17 +164,17 @@ export function UpdateChecker() {
 
       {/* Changelog body */}
       {updateAvailable.body && (
-        <div className="mt-3 p-3.5 bg-[#1c1c1e] border border-[#242426]/60 rounded-[8px] max-h-[160px] overflow-y-auto custom-scrollbar">
+        <div className="mt-3 p-3.5 bg-[#1c1c1e] border border-border/60 rounded-[8px] max-h-[160px] overflow-y-auto custom-scrollbar">
           {renderReleaseNotes(updateAvailable.body)}
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2.5 mt-4 pt-3 border-t border-[#242426]">
+      <div className="flex items-center justify-end gap-2.5 mt-4 pt-3 border-t border-border">
         <button 
           onClick={handleClose}
           disabled={isUpdating}
-          className="text-[9px] font-black uppercase tracking-widest bg-transparent hover:bg-[#232326] text-muted-foreground hover:text-foreground h-8 px-4 rounded-[6px] transition-colors border border-[#242426]/20"
+          className="text-[9px] font-black uppercase tracking-widest bg-transparent hover:bg-bento-item text-muted-foreground hover:text-foreground h-8 px-4 rounded-[6px] transition-colors border border-border/20"
         >
           Later
         </button>

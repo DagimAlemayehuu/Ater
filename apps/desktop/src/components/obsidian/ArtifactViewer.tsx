@@ -105,26 +105,26 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
   }
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-l border-border bg-[#111113]">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#242426] px-4 py-3">
+    <aside className="flex h-full min-h-0 flex-col border-l border-border bg-bento-bg">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
           <div className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground/50">Artifact</div>
           <h3 className="truncate text-[13px] font-black uppercase tracking-wide text-foreground">{activeArtifact.title}</h3>
         </div>
         <button
           onClick={() => setPanelOpen(false)}
-          className="grid size-8 place-items-center rounded-[6px] text-muted-foreground/60 hover:bg-white/5 hover:text-foreground"
+          className="grid size-8 place-items-center rounded-[6px] text-muted-foreground/60 hover:bg-accent hover:text-foreground"
           title="Collapse artifact panel"
         >
           <PanelRightClose size={15} />
         </button>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#242426] px-4 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
         <select
           value={activeArtifact.id}
           onChange={(event) => setActiveArtifact(event.target.value)}
-          className="h-8 min-w-0 flex-1 rounded-[6px] border border-[#242426] bg-[#18181b] px-2 text-[10px] font-bold uppercase tracking-wider text-foreground"
+          className="h-8 min-w-0 flex-1 rounded-[6px] border border-border bg-bento-card px-2 text-[10px] font-bold uppercase tracking-wider text-foreground"
         >
           {artifacts.map((artifact) => (
             <option key={artifact.id} value={artifact.id}>{artifact.title}</option>
@@ -133,13 +133,13 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
         <select
           value={activeVersion.version}
           onChange={(event) => setActiveVersion(activeArtifact.id, Number(event.target.value))}
-          className="h-8 rounded-[6px] border border-[#242426] bg-[#18181b] px-2 text-[10px] font-bold uppercase tracking-wider text-foreground"
+          className="h-8 rounded-[6px] border border-border bg-bento-card px-2 text-[10px] font-bold uppercase tracking-wider text-foreground"
         >
           {activeArtifact.versions.map((version) => (
             <option key={version.version} value={version.version}>v{version.version}</option>
           ))}
         </select>
-        <div className="flex rounded-[6px] border border-[#242426] bg-[#18181b] p-0.5">
+        <div className="flex rounded-[6px] border border-border bg-bento-card p-0.5">
           <button
             onClick={() => setMode('preview')}
             className={cn('grid size-7 place-items-center rounded-[4px]', mode === 'preview' ? 'bg-foreground text-background' : 'text-muted-foreground')}
@@ -158,7 +158,7 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
       </div>
 
       {(isRepairing || error) && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-[#242426] bg-amber-500/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-amber-500/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-300">
           {isRepairing ? <Loader2 size={13} className="animate-spin" /> : <AlertTriangle size={13} />}
           {isRepairing ? 'Self-healing in progress...' : `Runtime error: ${error?.message || 'Sandbox failed'}`}
         </div>
@@ -167,7 +167,7 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
       <div className="min-h-0 flex-1 overflow-hidden">
         {mode === 'preview' ? (
           <div className="flex h-full min-h-0 flex-col">
-            <div className="shrink-0 border-b border-[#242426] px-5 py-4">
+            <div className="shrink-0 border-b border-border px-5 py-4">
               <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
                 Chapter {activeChapterIndex + 1} / {chapters.length}
               </div>
@@ -182,7 +182,7 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
               {sandboxCode ? (
                 <SandboxIFrame code={sandboxCode} artifactId={activeArtifact.id} version={activeVersion.version} shielded={shielded} />
               ) : activeChapter.sandboxSpec ? (
-                <div className="m-4 border border-dashed border-[#3f3f46] p-6 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                <div className="m-4 border border-dashed border-border p-6 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">
                   Generating sandbox for {activeChapter.sandboxSpec}
                 </div>
               ) : (
@@ -199,21 +199,21 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
             </div>
           </div>
         ) : (
-          <pre className="h-full overflow-auto bg-[#0d0d0f] p-4 text-[11px] leading-relaxed text-zinc-200">{rawCode}</pre>
+          <pre className="h-full overflow-auto bg-bento-bg p-4 text-[11px] leading-relaxed text-foreground border-b border-border">{rawCode}</pre>
         )}
       </div>
 
-      <div className="flex shrink-0 items-center justify-between border-t border-[#242426] px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3">
         <button
           onClick={() => goToChapter(-1)}
           disabled={activeChapterIndex === 0}
-          className="flex h-8 items-center gap-1 rounded-[6px] border border-[#242426] px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground disabled:opacity-30"
+          className="flex h-8 items-center gap-1 rounded-[6px] border border-border px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground disabled:opacity-30 hover:bg-accent/40"
         >
           <ChevronLeft size={13} /> Back
         </button>
         <button
           onClick={() => setMode('preview')}
-          className="grid size-8 place-items-center rounded-[6px] border border-[#242426] text-muted-foreground hover:text-foreground"
+          className="grid size-8 place-items-center rounded-[6px] border border-border text-muted-foreground hover:text-foreground hover:bg-accent/40"
           title="Retry preview"
         >
           <RotateCcw size={13} />
@@ -221,7 +221,7 @@ export function ArtifactViewer({ shielded = false }: ArtifactViewerProps) {
         <button
           onClick={() => goToChapter(1)}
           disabled={activeChapterIndex >= chapters.length - 1}
-          className="flex h-8 items-center gap-1 rounded-[6px] border border-[#242426] px-3 text-[9px] font-black uppercase tracking-widest text-foreground disabled:opacity-30"
+          className="flex h-8 items-center gap-1 rounded-[6px] border border-border px-3 text-[9px] font-black uppercase tracking-widest text-foreground disabled:opacity-30 hover:bg-accent/40"
         >
           Next <ChevronRight size={13} />
         </button>

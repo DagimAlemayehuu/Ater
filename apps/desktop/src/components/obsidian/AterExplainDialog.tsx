@@ -59,7 +59,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-      className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/20 text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-foreground transition-none w-full justify-end"
+      className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border/20 text-[9px] font-black uppercase tracking-widest text-muted-foreground/75 hover:text-foreground transition-none w-full justify-end"
     >
       {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} />}
       {copied ? 'Copied' : 'Copy'}
@@ -292,7 +292,7 @@ export function AterExplainDialog({
               AI Tutor
             </span>
             {subLabel && (
-              <span className="text-[9px] text-muted-foreground/30 font-medium truncate max-w-[260px]">
+              <span className="text-[9px] text-muted-foreground/60 font-medium truncate max-w-[260px]">
                 {subLabel}
               </span>
             )}
@@ -301,13 +301,13 @@ export function AterExplainDialog({
             <button
               onClick={runInitial}
               title="Restart explanation"
-              className="p-1.5 text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-none"
+              className="p-1.5 text-muted-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-none"
             >
               <RotateCcw size={12} />
             </button>
             <button
               onClick={handleClose}
-              className="p-1.5 text-muted-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-none"
+              className="p-1.5 text-muted-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-none"
             >
               <X size={14} />
             </button>
@@ -317,8 +317,8 @@ export function AterExplainDialog({
         {/* Context chip */}
         {contextLabel && (
           <div className="px-5 py-3 border-b border-border/20 bg-muted/5 shrink-0">
-            <div className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mb-1">Context</div>
-            <div className="text-[11px] text-foreground/50 leading-relaxed line-clamp-2 italic">
+            <div className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/70 mb-1">Context</div>
+            <div className="text-[11px] text-foreground/80 leading-relaxed line-clamp-2 italic">
               &ldquo;{contextLabel}&rdquo;
             </div>
           </div>
@@ -376,7 +376,7 @@ export function AterExplainDialog({
                   setIsDraggingSplit(true)
                 }}
                 className={cn(
-                  "w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-[#18181b] hover:bg-foreground/20",
+                  "w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20",
                   !artifactState.isPanelOpen && "hidden"
                 )}
               />
@@ -395,7 +395,7 @@ export function AterExplainDialog({
             <button
               type="button"
               onClick={() => useArtifactStore.getState().setPanelOpen(true)}
-              className="absolute right-4 top-28 z-40 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-[#18181b] px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-[#242426]"
+              className="absolute right-4 top-28 z-40 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-card px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-accent"
               title="Open artifact panel"
             >
               <PanelRightOpen size={14} />

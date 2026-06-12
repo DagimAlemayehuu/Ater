@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { AterMarkdown } from './MarkdownViewer'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/context/theme-provider'
 
 interface InteractiveLessonRendererProps {
   content: string
@@ -11,27 +12,17 @@ interface InteractiveLessonRendererProps {
 
 // ─── Theme Hook ──────────────────────────────────────────────────────────────
 function useAppTheme() {
-  const [isDark, setIsDark] = useState(
-    () => document.documentElement.classList.contains('dark')
-  )
-  useEffect(() => {
-    const el = document.documentElement
-    const obs = new MutationObserver(() =>
-      setIsDark(el.classList.contains('dark'))
-    )
-    obs.observe(el, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [])
-  return isDark
+  const { resolvedTheme } = useTheme()
+  return resolvedTheme === 'dark'
 }
 
 // ─── Shared Styling Helpers ──────────────────────────────────────────────────
-const border = (dark: boolean) => (dark ? 'border-[#242426]' : 'border-zinc-200')
-const panel  = (dark: boolean) => (dark ? 'bg-[#151517]' : 'bg-zinc-50')
-const inner  = (dark: boolean) => (dark ? 'bg-[#111113]' : 'bg-white')
-const muted  = (dark: boolean) => (dark ? 'text-[#a1a1aa]' : 'text-zinc-400')
+const border = (dark: boolean) => 'border-border'
+const panel  = (dark: boolean) => 'bg-bento-panel'
+const inner  = (dark: boolean) => 'bg-bento-bg'
+const muted  = (dark: boolean) => 'text-muted-foreground'
 const label  = 'text-[9px] font-black uppercase tracking-[0.2em]'
-const sectionHead = 'text-xs font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400'
+const sectionHead = 'text-xs font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-400'
 
 // ─── WIDGET 1: Puzzle Collaboration Simulator (Collaboration_Concept) ─────────
 function PuzzleConceptWidget({ dark }: { dark: boolean }) {
@@ -73,7 +64,7 @@ function PuzzleConceptWidget({ dark }: { dark: boolean }) {
     <div className={cn('rounded-[6px] border p-4 space-y-4', border(dark), panel(dark))}>
       <div>
         <span className={cn(label, muted(dark))}>Interactive Sandbox: Puzzle Collaboration Simulator</span>
-        <p className="text-[11px] leading-relaxed text-zinc-500 mt-1">
+        <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 mt-1">
           Observe how allocating tasks according to individual capacities avoids discrimination and optimizes outcome.
         </p>
       </div>
@@ -85,7 +76,7 @@ function PuzzleConceptWidget({ dark }: { dark: boolean }) {
             <div key={role.id} className={cn('p-3 rounded-[4px] border flex flex-col md:flex-row md:items-center justify-between gap-3', inner(dark), border(dark))}>
               <div className="space-y-0.5">
                 <span className="text-[11px] font-bold uppercase tracking-wider">{role.label}</span>
-                <p className="text-[10px] text-zinc-500">{role.desc}</p>
+                <p className="text-[10px] text-zinc-600 dark:text-zinc-400">{role.desc}</p>
               </div>
               <div className="flex gap-1.5">
                 {professionals.map(p => {
@@ -97,10 +88,8 @@ function PuzzleConceptWidget({ dark }: { dark: boolean }) {
                       className={cn(
                         'px-2.5 py-1 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                         active
-                          ? dark
-                            ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]'
-                            : 'bg-zinc-900 text-white border-zinc-900'
-                          : cn('bg-transparent', border(dark), muted(dark), dark ? 'hover:border-white' : 'hover:border-zinc-900')
+                          ? 'bg-foreground text-background border-foreground'
+                          : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
                       )}
                     >
                       {p.label}
@@ -116,10 +105,10 @@ function PuzzleConceptWidget({ dark }: { dark: boolean }) {
       <div className={cn(
         'p-3 rounded-[4px] border text-[10px] font-bold uppercase tracking-wider transition-all text-center',
         result.status === 'success'
-          ? dark ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]' : 'bg-zinc-900 text-white border-zinc-900'
+          ? 'bg-foreground/5 text-foreground border-foreground/20'
           : result.status === 'mismatch'
-          ? 'border-zinc-400 text-zinc-600 dark:text-zinc-400'
-          : cn('bg-transparent', border(dark), muted(dark))
+          ? 'border-destructive/30 text-destructive bg-destructive/5'
+          : 'bg-transparent border-border text-muted-foreground'
       )}>
         {result.text}
       </div>
@@ -151,7 +140,7 @@ function LegoScaffoldWidget({ dark }: { dark: boolean }) {
     <div className={cn('rounded-[6px] border p-4 space-y-4', border(dark), panel(dark))}>
       <div>
         <span className={cn(label, muted(dark))}>Interactive Sandbox: Lego Scaffold Builder</span>
-        <p className="text-[11px] leading-relaxed text-zinc-500 mt-1">
+        <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 mt-1">
           Adjust the key variables of teamwork to see how structural alignment keeps the collaborative scaffold stable.
         </p>
       </div>
@@ -231,10 +220,8 @@ function LegoScaffoldWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-3 py-1 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 sharing
-                  ? dark
-                    ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]'
-                    : 'bg-zinc-900 text-white border-zinc-900'
-                  : cn('bg-transparent', border(dark), muted(dark))
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
               {sharing ? 'Sharing Enabled' : 'Hoarded'}
@@ -245,10 +232,9 @@ function LegoScaffoldWidget({ dark }: { dark: boolean }) {
 
       <div className={cn(
         'p-3 rounded-[4px] border transition-all text-center',
-        border(dark),
         balanceScore === 100
-          ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-          : 'bg-transparent'
+          ? 'bg-foreground/5 text-foreground border-foreground/20'
+          : 'bg-transparent border-border text-muted-foreground'
       )}>
         <span className={cn(label, 'block mb-0.5')}>{status.label}</span>
         <p className="text-[10px] opacity-80">{status.text}</p>
@@ -298,7 +284,7 @@ function GardenPartnershipWidget({ dark }: { dark: boolean }) {
     <div className={cn('rounded-[6px] border p-4 space-y-4', border(dark), panel(dark))}>
       <div>
         <span className={cn(label, muted(dark))}>Interactive Sandbox: Garden Irrigation System</span>
-        <p className="text-[11px] leading-relaxed text-zinc-500 mt-1">
+        <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 mt-1">
           Simulate a community partnership garden. Balanced distribution of benefits and inclusive access keeps all plants alive.
         </p>
       </div>
@@ -314,10 +300,10 @@ function GardenPartnershipWidget({ dark }: { dark: boolean }) {
                 className={cn(
                   'p-2 rounded-[3px] border text-center flex flex-col justify-center items-center transition-all duration-200',
                   st.state === 'blooming'
-                    ? dark ? 'border-white bg-[#1d1d20]' : 'border-zinc-900 bg-zinc-50'
+                    ? 'border-foreground/30 bg-muted text-foreground font-bold'
                     : st.state === 'dry'
-                    ? 'border-dashed border-zinc-400 text-zinc-400 bg-transparent'
-                    : 'border-zinc-300 bg-transparent opacity-10'
+                    ? 'border-dashed border-border text-muted-foreground bg-transparent'
+                    : 'border-border bg-transparent opacity-10'
                 )}
               >
                 <span className="text-[9px] font-bold uppercase tracking-wider block">{p.label}</span>
@@ -369,10 +355,9 @@ function GardenPartnershipWidget({ dark }: { dark: boolean }) {
 
       <div className={cn(
         'p-3 rounded-[4px] border text-[10px] font-bold uppercase tracking-wider text-center',
-        border(dark),
         plantStates.filter(s => s.state === 'blooming').length === 6
-          ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-          : 'bg-transparent'
+          ? 'bg-foreground/5 text-foreground border-foreground/20'
+          : 'bg-transparent border-border text-muted-foreground'
       )}>
         {statusText}
       </div>
@@ -398,7 +383,7 @@ function CathedralPillarWidget({ dark }: { dark: boolean }) {
     <div className={cn('rounded-[6px] border p-4 space-y-4', border(dark), panel(dark))}>
       <div>
         <span className={cn(label, muted(dark))}>Interactive Sandbox: Pillar Structural Simulator</span>
-        <p className="text-[11px] leading-relaxed text-zinc-500 mt-1">
+        <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 mt-1">
           Adjust the load-bearing pillars of collaboration. If any pillar drops below threshold, the cathedral arch collapses.
         </p>
       </div>
@@ -483,10 +468,9 @@ function CathedralPillarWidget({ dark }: { dark: boolean }) {
 
       <div className={cn(
         'p-3 rounded-[4px] border text-[10px] font-bold uppercase tracking-wider text-center',
-        border(dark),
         minVal >= 60
-          ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-          : 'bg-transparent'
+          ? 'bg-foreground/5 text-foreground border-foreground/20'
+          : 'bg-transparent border-border text-muted-foreground'
       )}>
         <span className="block mb-0.5">{status.label}</span>
         <p className="text-[10px] opacity-75 font-normal uppercase tracking-normal">{status.text}</p>
@@ -524,7 +508,7 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
     <div className={cn('rounded-[6px] border p-4 space-y-4', border(dark), panel(dark))}>
       <div>
         <span className={cn(label, muted(dark))}>Interactive Sandbox: Outreach Channel Optimizer</span>
-        <p className="text-[11px] leading-relaxed text-zinc-500 mt-1">
+        <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 mt-1">
           Activate outreach parameters to maximize community development access. Goal: Reach 100% of community demographics.
         </p>
       </div>
@@ -542,13 +526,13 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
             {unreachedGroups.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {unreachedGroups.map(g => (
-                  <span key={g} className="px-1.5 py-0.5 rounded-[2px] border border-dashed border-zinc-400 text-[8px] uppercase tracking-wider text-zinc-500">
+                  <span key={g} className="px-1.5 py-0.5 rounded-[2px] border border-dashed border-zinc-400 text-[8px] uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                     {g}
                   </span>
                 ))}
               </div>
             ) : (
-              <span className="text-[9px] font-bold text-zinc-500 block">None. 100% Total Outreach Attained.</span>
+              <span className="text-[9px] font-bold text-zinc-600 dark:text-zinc-400 block">None. 100% Total Outreach Attained.</span>
             )}
           </div>
         </div>
@@ -562,8 +546,8 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 networks
-                  ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-                  : 'bg-transparent text-zinc-400'
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
               {networks ? 'Activated' : 'Inactive'}
@@ -577,8 +561,8 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 signLang
-                  ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-                  : 'bg-transparent text-zinc-400'
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
               {signLang ? 'Activated' : 'Inactive'}
@@ -592,8 +576,8 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 translation
-                  ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-                  : 'bg-transparent text-zinc-400'
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
               {translation ? 'Activated' : 'Inactive'}
@@ -607,8 +591,8 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 commitment
-                  ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-                  : 'bg-transparent text-zinc-400'
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
               {commitment ? 'Activated' : 'Inactive'}
@@ -620,8 +604,8 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
       <div className={cn(
         'p-2.5 rounded-[4px] border text-[9px] font-bold uppercase tracking-widest text-center',
         reach === 100
-          ? dark ? 'bg-[#ebebeb] text-zinc-950 border-white' : 'bg-zinc-900 text-white border-zinc-900'
-          : cn('bg-transparent', border(dark), muted(dark))
+          ? 'bg-foreground/5 text-foreground border-foreground/20'
+          : 'bg-transparent border-border text-muted-foreground'
       )}>
         {reach === 100
           ? 'Outreach Optimized. All community groups successfully integrated.'
@@ -658,7 +642,7 @@ function StakeholdersWidget({ dark }: { dark: boolean }) {
     <div className={cn('rounded-[6px] border p-4 space-y-4', border(dark), panel(dark))}>
       <div>
         <span className={cn(label, muted(dark))}>Interactive Sandbox: Stakeholder Alignment Matrix</span>
-        <p className="text-[11px] leading-relaxed text-zinc-500 mt-1">
+        <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 mt-1">
           Align stakeholders with their key contributions to establish a mutual support network.
         </p>
       </div>
@@ -668,7 +652,7 @@ function StakeholdersWidget({ dark }: { dark: boolean }) {
         <div className={cn('p-3 rounded-[4px] border flex flex-col md:flex-row md:items-center justify-between gap-3', inner(dark), border(dark))}>
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold uppercase tracking-wider">Parents</span>
-            <p className="text-[10px] text-zinc-500">Represent student interests, offering home background information and reinforcement resources.</p>
+            <p className="text-[10px] text-zinc-600 dark:text-zinc-400">Represent student interests, offering home background information and reinforcement resources.</p>
           </div>
           <select
             value={selectedParent}
@@ -686,7 +670,7 @@ function StakeholdersWidget({ dark }: { dark: boolean }) {
         <div className={cn('p-3 rounded-[4px] border flex flex-col md:flex-row md:items-center justify-between gap-3', inner(dark), border(dark))}>
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold uppercase tracking-wider">Teachers</span>
-            <p className="text-[10px] text-zinc-500">Provide direct educational delivery, assessment structure, and instructional design.</p>
+            <p className="text-[10px] text-zinc-600 dark:text-zinc-400">Provide direct educational delivery, assessment structure, and instructional design.</p>
           </div>
           <select
             value={selectedTeacher}
@@ -704,7 +688,7 @@ function StakeholdersWidget({ dark }: { dark: boolean }) {
         <div className={cn('p-3 rounded-[4px] border flex flex-col md:flex-row md:items-center justify-between gap-3', inner(dark), border(dark))}>
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold uppercase tracking-wider">Students</span>
-            <p className="text-[10px] text-zinc-500">Vested interest in the directly delivered learning experience and individual outcomes.</p>
+            <p className="text-[10px] text-zinc-600 dark:text-zinc-400">Vested interest in the directly delivered learning experience and individual outcomes.</p>
           </div>
           <select
             value={selectedStudent}
@@ -722,8 +706,8 @@ function StakeholdersWidget({ dark }: { dark: boolean }) {
       <div className={cn(
         'p-3 rounded-[4px] border text-[10px] font-bold uppercase tracking-wider text-center',
         result.status === 'stable'
-          ? dark ? 'bg-[#ebebeb] text-zinc-950' : 'bg-zinc-900 text-white'
-          : 'bg-transparent border-dashed'
+          ? 'bg-foreground/5 text-foreground border-foreground/20'
+          : 'bg-transparent border-dashed border-border text-muted-foreground'
       )}>
         {result.text}
       </div>
@@ -847,12 +831,10 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             onClick={() => go(-1)}
             disabled={cursor === 0}
             className={cn(
-              'px-3 py-1 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
+              'px-3 py-1 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all border-border',
               cursor === 0
-                ? 'opacity-25 cursor-not-allowed'
-                : dark
-                ? 'border-[#242426] text-[#a1a1aa] hover:border-white hover:text-white'
-                : 'border-zinc-200 text-zinc-400 hover:border-zinc-900 hover:text-zinc-900'
+                ? 'opacity-25 cursor-not-allowed text-muted-foreground/30'
+                : 'text-foreground hover:border-foreground hover:bg-foreground/5'
             )}
           >
             Back
@@ -863,10 +845,8 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             className={cn(
               'px-3 py-1 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
               cursor === total - 1
-                ? 'opacity-25 cursor-not-allowed'
-                : dark
-                ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb] hover:bg-transparent hover:text-white'
-                : 'bg-zinc-900 text-white border-zinc-900 hover:bg-white hover:text-zinc-900'
+                ? 'opacity-25 cursor-not-allowed border-border text-muted-foreground/30'
+                : 'bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground'
             )}
           >
             Next
@@ -885,10 +865,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
               onChange={e => setTextVal(e.target.value)}
               rows={4}
               placeholder="Provide a comprehensive academic explanation..."
-              className={cn(
-                'w-full p-3 border text-[12px] rounded-[4px] focus:outline-none resize-none font-mono',
-                dark ? 'bg-[#111113] border-[#242426] focus:border-[#a1a1aa]' : 'bg-white border-zinc-200 focus:border-zinc-500'
-              )}
+              className="w-full p-3 border text-[12px] rounded-[4px] focus:outline-none resize-none font-mono bg-bento-bg border-border focus:border-foreground/30 text-foreground"
             />
             {userKeywords.length > 0 && (
               <div className="space-y-1.5">
@@ -900,10 +877,8 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                       className={cn(
                         'px-2 py-0.5 rounded-[3px] border text-[8px] font-bold uppercase tracking-wider transition-all',
                         kw.matched
-                          ? dark
-                            ? 'border-white bg-[#ebebeb] text-zinc-950 font-black'
-                            : 'border-zinc-900 bg-zinc-900 text-white font-black'
-                          : cn('bg-transparent border-dashed text-zinc-400', border(dark))
+                          ? 'border-foreground bg-foreground text-background font-black'
+                          : 'bg-transparent border-dashed text-muted-foreground border-border'
                       )}
                     >
                       {kw.word}
@@ -915,12 +890,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             <div className="flex justify-between items-center">
               <button
                 onClick={() => setTextSubmitted(true)}
-                className={cn(
-                  'px-4 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
-                  dark
-                    ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb] hover:bg-transparent hover:text-white'
-                    : 'bg-zinc-900 text-white border-zinc-900 hover:bg-white hover:text-zinc-900'
-                )}
+                className="px-4 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground"
               >
                 Submit
               </button>
@@ -933,7 +903,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                   <>
                     <hr className={cn('my-2 border-t', border(dark))} />
                     <span className={cn(label, muted(dark), 'block')}>Explanation:</span>
-                    <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">{q.explanation}</p>
+                    <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">{q.explanation}</p>
                   </>
                 )}
               </div>
@@ -960,10 +930,8 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                     className={cn(
                       'flex-1 py-3 border text-[11px] font-black uppercase tracking-wider rounded-[4px] transition-all',
                       active
-                        ? dark
-                          ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]'
-                          : 'bg-zinc-900 text-white border-zinc-900'
-                        : cn('bg-transparent', border(dark), muted(dark), dark ? 'hover:border-white' : 'hover:border-zinc-900')
+                        ? 'bg-foreground text-background border-foreground'
+                        : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
                     )}
                   >
                     {val ? 'True' : 'False'}
@@ -976,7 +944,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                 <span className={cn(label, 'block mb-1')}>
                   {textVal === String(q.answer) ? 'Response Validated' : 'Response Incorrect'}
                 </span>
-                <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">{q.explanation}</p>
+                <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">{q.explanation}</p>
               </div>
             )}
           </div>
@@ -999,10 +967,10 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                     className={cn(
                       'w-full text-left px-3 py-2.5 border text-[11px] rounded-[4px] transition-all flex items-start gap-2',
                       showResults && isCorrect
-                        ? dark ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]' : 'bg-zinc-900 text-white border-zinc-900'
+                        ? 'bg-foreground text-background border-foreground'
                         : showResults && chosen && !isCorrect
-                        ? 'border-zinc-400 text-zinc-400 line-through'
-                        : dark ? 'border-[#242426] hover:border-white' : 'border-zinc-200 hover:border-zinc-900'
+                        ? 'border-border text-muted-foreground line-through opacity-50'
+                        : 'border-border hover:border-foreground text-foreground'
                     )}
                   >
                     <span className={cn(label, muted(dark))}>{opt.key}.</span>
@@ -1016,7 +984,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                 <span className={cn(label, 'block mb-1')}>
                   {mcqCorrect ? 'Evaluation Correct' : 'Evaluation Incorrect'}
                 </span>
-                <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">{q.explanation}</p>
+                <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">{q.explanation}</p>
               </div>
             )}
           </div>
@@ -1041,10 +1009,10 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                       className={cn(
                         'w-full text-left px-2.5 py-2.5 border text-[10px] font-bold uppercase tracking-wide rounded-[4px] transition-all',
                         active
-                          ? dark ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]' : 'bg-zinc-900 text-white border-zinc-900'
+                          ? 'bg-foreground text-background border-foreground'
                           : assigned
-                          ? cn('bg-transparent opacity-50', border(dark))
-                          : dark ? 'border-[#242426] hover:border-white' : 'border-zinc-200 hover:border-zinc-900'
+                          ? 'bg-transparent opacity-50 border-border'
+                          : 'border-border hover:border-foreground text-foreground'
                       )}
                     >
                       {p.left}
@@ -1072,10 +1040,10 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                       className={cn(
                         'w-full text-left px-2.5 py-2.5 border text-[10px] rounded-[4px] transition-all leading-snug',
                         matched
-                          ? cn('bg-transparent opacity-50', border(dark))
+                          ? 'bg-transparent opacity-50 border-border'
                           : selectedLeft
-                          ? dark ? 'border-[#242426] hover:border-white' : 'border-zinc-200 hover:border-zinc-900'
-                          : dark ? 'border-[#242426] text-[#a1a1aa]/30' : 'border-zinc-200 text-zinc-300'
+                          ? 'border-border hover:border-foreground text-foreground'
+                          : 'border-border text-muted-foreground/30'
                       )}
                     >
                       {p.right}
@@ -1088,12 +1056,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             <div className="flex justify-between items-center pt-2">
               <button
                 onClick={() => setMatchVerified(true)}
-                className={cn(
-                  'px-4 py-1.5 border text-[9px] font-black uppercase tracking-[0.2em] rounded-[4px] transition-all',
-                  dark
-                    ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb] hover:bg-transparent hover:text-white'
-                    : 'bg-zinc-900 text-white border-zinc-900 hover:bg-white hover:text-zinc-900'
-                )}
+                className="px-4 py-1.5 border text-[9px] font-black uppercase tracking-[0.2em] rounded-[4px] transition-all bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground"
               >
                 Validate Pairs
               </button>
@@ -1108,7 +1071,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             {matchVerified && (
               <div className={cn('p-3 border rounded-[4px]', border(dark), panel(dark))}>
                 <span className={cn(label, 'block mb-1')}>Evaluation Result</span>
-                <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <p className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">
                   {Object.keys(userPairs).length === q.pairs.length
                     ? q.explanation || 'Verification complete.'
                     : 'Complete all pairings before validation.'}
@@ -1129,8 +1092,8 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
               className={cn(
                 'w-1.5 h-1.5 rounded-full transition-all',
                 i === cursor
-                  ? dark ? 'bg-[#ebebeb]' : 'bg-zinc-900'
-                  : dark ? 'bg-[#242426]' : 'bg-zinc-200'
+                  ? 'bg-foreground'
+                  : 'bg-border hover:bg-foreground/50'
               )}
             />
           ))}

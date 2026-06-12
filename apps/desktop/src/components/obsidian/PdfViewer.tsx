@@ -34,7 +34,7 @@ export interface PdfViewerRef {
 
 export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title, initialPage = 1, filterPages, onStateChange }, ref) => {
     const { config } = useConfig();
-    const { theme } = useTheme();
+    const { resolvedTheme } = useTheme();
     const [page, setPage] = useState(initialPage);
     const [sidecarPort, setSidecarPort] = useState<number>(8765);
 
@@ -236,8 +236,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     }, []);
 
 
-    const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const resolvedTheme = isDarkMode ? 'dark' : 'light';
+    // resolvedTheme is fetched dynamically from useTheme context
 
     // Memoize URL to prevent reloads when jumping between waypoints in the same file
     const pdfUrl = useMemo(() => {

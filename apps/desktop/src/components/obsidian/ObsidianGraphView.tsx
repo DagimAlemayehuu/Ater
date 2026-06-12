@@ -230,14 +230,14 @@ export function ObsidianGraphView({
                         
                         {/* Overlay Navigation Controls */}
                         <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-10">
-                            <button onClick={handleCenter} className="p-2.5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm hover:bg-[#232326] text-muted-foreground transition-colors" title="Center Graph">
+                            <button onClick={handleCenter} className="p-2.5 bg-bento-card border border-border rounded-[8px] shadow-sm hover:bg-bento-item text-muted-foreground transition-colors" title="Center Graph">
                                 <Maximize size={16} />
                             </button>
-                            <div className="flex flex-col bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm overflow-hidden">
-                                <button onClick={handleZoomIn} className="p-2.5 hover:bg-[#232326] text-muted-foreground border-b border-[#242426] transition-colors" title="Zoom In">
+                            <div className="flex flex-col bg-bento-card border border-border rounded-[8px] shadow-sm overflow-hidden">
+                                <button onClick={handleZoomIn} className="p-2.5 hover:bg-bento-item text-muted-foreground border-b border-border transition-colors" title="Zoom In">
                                     <ZoomIn size={16} />
                                 </button>
-                                <button onClick={handleZoomOut} className="p-2.5 hover:bg-[#232326] text-muted-foreground transition-colors" title="Zoom Out">
+                                <button onClick={handleZoomOut} className="p-2.5 hover:bg-bento-item text-muted-foreground transition-colors" title="Zoom Out">
                                     <ZoomOut size={16} />
                                 </button>
                             </div>
@@ -246,7 +246,7 @@ export function ObsidianGraphView({
                         {/* Settings Toggle */}
                         <button 
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className="absolute top-6 right-6 p-2.5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] shadow-sm hover:bg-[#232326] text-muted-foreground z-20 transition-colors"
+                            className="absolute top-6 right-6 p-2.5 bg-bento-card border border-border rounded-[8px] shadow-sm hover:bg-bento-item text-muted-foreground z-20 transition-colors"
                         >
                             <Settings size={18} className={cn(isSettingsOpen && "text-foreground")} />
                         </button>
@@ -256,14 +256,14 @@ export function ObsidianGraphView({
 
             {/* Settings Side Panel */}
             {isSettingsOpen && (
-                <div className="absolute top-4 right-4 w-72 bg-[#1a1a1c] border border-[#242426] rounded-[12px] shadow-2xl flex flex-col z-30 transition-none max-h-[calc(100%-2rem)]">
-                    <div className="px-5 py-4 border-b border-[#242426] flex items-center justify-between">
+                <div className="absolute top-4 right-4 w-72 bg-bento-card border border-border rounded-[12px] shadow-2xl flex flex-col z-30 transition-none max-h-[calc(100%-2rem)]">
+                    <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                         <span className="text-[11px] font-black uppercase tracking-widest text-foreground/80">Graph settings</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-[#232326] transition-colors" title="Reset settings">
+                            <button onClick={() => setSettings(DEFAULT_SETTINGS)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors" title="Reset settings">
                                 <RefreshCw size={14} />
                             </button>
-                            <button onClick={() => setIsSettingsOpen(false)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-[#232326] transition-colors">
+                            <button onClick={() => setIsSettingsOpen(false)} className="p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors">
                                 <X size={14} />
                             </button>
                         </div>
@@ -281,7 +281,7 @@ export function ObsidianGraphView({
                                 Forces
                             </button>
                             
-                            <div className="pl-6 flex flex-col gap-6 py-4 border-l border-[#242426] ml-1.5">
+                            <div className="pl-6 flex flex-col gap-6 py-4 border-l border-border ml-1.5">
                                 <ForceSlider 
                                     label="Center force" 
                                     value={settings.centerForce} 
@@ -337,7 +337,7 @@ function ForceSlider({ label, value, min, max, step, onChange }: { label: string
                     min={min} max={max} step={step}
                     value={value} 
                     onChange={e => onChange(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-[#232326] rounded-full appearance-none cursor-pointer accent-foreground hover:accent-foreground transition-all"
+                    className="w-full h-1 bg-bento-item rounded-full appearance-none cursor-pointer accent-foreground hover:accent-foreground transition-all"
                 />
             </div>
         </div>

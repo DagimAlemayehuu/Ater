@@ -98,7 +98,7 @@ function SecurityBlocker() {
         <button
           onClick={handleRetry}
           disabled={isRetrying}
-          className="border border-destructive/40 px-3 py-1 bg-destructive/20 hover:bg-destructive hover:text-white transition-none uppercase text-[8px] font-bold"
+          className="border border-destructive/40 px-3 py-1 bg-destructive/20 hover:bg-destructive hover:text-background transition-none uppercase text-[8px] font-bold"
         >
           {isRetrying ? 'Syncing...' : 'Re-Authenticate Lease'}
         </button>

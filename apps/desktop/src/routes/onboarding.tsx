@@ -563,7 +563,7 @@ export default function Onboarding() {
       {/* Existing Vault Detected Modal */}
       {showDetectedModal && detectedProfile && (
         <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 select-none animate-fade-in pointer-events-auto">
-          <div className="w-full max-w-md bg-[#151517] border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
+          <div className="w-full max-w-md bg-bento-panel border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
             <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-3">
               Existing Vault Configuration Detected
             </div>
@@ -574,7 +574,7 @@ export default function Onboarding() {
               We found a complete academic setup in this vault. Launch directly to your dashboard or review the parameters.
             </p>
 
-            <div className="w-full space-y-2.5 mb-8 p-4 bg-[#232326]/30 border border-[#242426] rounded-[8px]">
+            <div className="w-full space-y-2.5 mb-8 p-4 bg-bento-item/30 border border-border rounded-[8px]">
               <div className="flex justify-between items-center text-[10px]">
                 <span className="text-muted-foreground uppercase font-black tracking-widest">Program</span>
                 <span className="text-foreground uppercase font-black tracking-widest">{detectedProfile.programName}</span>
@@ -600,7 +600,7 @@ export default function Onboarding() {
               </button>
               <button
                 onClick={handleReviewDetectedConfig}
-                className="px-5 py-3 border border-[#242426] bg-[#232326]/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
+                className="px-5 py-3 border border-border bg-bento-item/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
               >
                 Review & Edit
               </button>
@@ -612,7 +612,7 @@ export default function Onboarding() {
       {/* Simulation Entry Modal (Walkthrough Step 1.6) */}
       {!showDetectedModal && step === 1 && !config?.isDemoMode && !config?.walkthroughCompleted && config?.walkthroughMilestone === '1.6' && config?.walkthroughStatus !== 'skipped' && (
         <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 select-none animate-fade-in pointer-events-auto">
-          <div className="w-full max-w-md bg-[#151517] border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
+          <div className="w-full max-w-md bg-bento-panel border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
             <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-3">
               Interactive Tour
             </div>
@@ -642,7 +642,7 @@ export default function Onboarding() {
                   // Save a non-'1.6' milestone so the modal doesn't re-appear.
                   await saveConfig({ walkthroughMilestone: 'skip', walkthroughStatus: 'skipped' } as any);
                 }}
-                className="px-5 py-3 border border-[#242426] bg-[#232326]/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
+                className="px-5 py-3 border border-border bg-bento-item/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
               >
                 Configure Manually
               </button>
@@ -654,7 +654,7 @@ export default function Onboarding() {
       <div className="absolute top-12 right-12 z-10">
         <ThemeSwitch />
       </div>
-      <div className="w-full max-w-lg mx-auto bg-[#151517] border border-[#242426] rounded-[12px] p-8 shadow-2xl my-8">
+      <div className="w-full max-w-lg mx-auto bg-bento-panel border border-border rounded-[12px] p-8 shadow-2xl my-8">
 
         {/* Step indicator */}
         {finalStatus === 'idle' || finalStatus === 'error' ? (() => {
@@ -694,7 +694,7 @@ export default function Onboarding() {
             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">
               Initializing
             </div>
-            <div className="h-1.5 w-full bg-[#232326] rounded-[4px] mb-3 overflow-hidden">
+            <div className="h-1.5 w-full bg-bento-item rounded-[4px] mb-3 overflow-hidden">
               <div className="h-full bg-foreground w-1/2 rounded-[4px] animate-pulse" />
             </div>
             <p className="text-[11px] font-mono text-muted-foreground uppercase">
@@ -747,7 +747,7 @@ export default function Onboarding() {
                 placeholder="Enter your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground placeholder:text-muted-foreground/30 uppercase tracking-widest rounded-[8px] transition-colors"
+                className="w-full bg-bento-item/30 border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground placeholder:text-muted-foreground/30 uppercase tracking-widest rounded-[8px] transition-colors"
               />
             </div>
 
@@ -758,7 +758,7 @@ export default function Onboarding() {
                 "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                 name
                   ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                  : "bg-[#232326] text-muted-foreground cursor-not-allowed border-[#242426]"
+                  : "bg-bento-item text-muted-foreground cursor-not-allowed border-border"
               )}
             >
               Continue
@@ -782,7 +782,7 @@ export default function Onboarding() {
             <button
               onClick={selectVault}
               data-tour="select-vault-btn"
-              className="w-full bg-[#232326]/30 border border-[#242426] hover:border-foreground py-4 px-4 mb-8 text-left rounded-[8px] transition-colors"
+              className="w-full bg-bento-item/30 border border-border hover:border-foreground py-4 px-4 mb-8 text-left rounded-[8px] transition-colors"
             >
               <span className="text-[11px] font-black uppercase tracking-widest text-foreground block">
                 {vaultPath ? 'Vault Selected' : 'Choose Folder'}
@@ -801,7 +801,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-bento-item/30"
               >
                 Back
               </button>
@@ -812,7 +812,7 @@ export default function Onboarding() {
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   vaultPath
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-[#232326] text-muted-foreground cursor-not-allowed border-[#242426]"
+                    : "bg-bento-item text-muted-foreground cursor-not-allowed border-border"
                 )}
               >
                 Continue
@@ -861,14 +861,14 @@ export default function Onboarding() {
                       className={cn(
                         "flex items-center justify-between p-3.5 border rounded-[8px] cursor-pointer transition-colors",
                         isSelected 
-                          ? "bg-[#232326]/55 border-primary" 
-                          : "bg-[#232326]/20 border-[#242426] hover:bg-[#232326]/30"
+                          ? "bg-bento-item/55 border-primary" 
+                          : "bg-bento-item/20 border-border hover:bg-bento-item/30"
                       )}
                     >
                       <div className="text-left space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-bold text-foreground uppercase">{k.name}</span>
-                          <span className="text-[8px] px-1 bg-[#1c1c1e] text-muted-foreground border border-[#242426] rounded uppercase">{k.provider}</span>
+                          <span className="text-[8px] px-1 bg-[#1c1c1e] text-muted-foreground border border-border rounded uppercase">{k.provider}</span>
                         </div>
                         <div className="text-[10px] font-mono text-muted-foreground">••••••••{k.key.slice(-4)}</div>
                       </div>
@@ -891,14 +891,14 @@ export default function Onboarding() {
             {/* Add New Key Form / Trigger */}
             <div className="w-full mb-8">
               {isAddingKey ? (
-                <div className="p-5 border border-[#242426] bg-[#232326]/30 rounded-[8px] space-y-4">
+                <div className="p-5 border border-border bg-bento-item/30 rounded-[8px] space-y-4">
                   <div className="text-[10px] font-black uppercase tracking-widest text-foreground">Add New API Key</div>
                   
                   <input 
                     placeholder="Name (e.g. My Gemini Key)"
                     value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                    className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
                   />
 
                   <select
@@ -913,21 +913,21 @@ export default function Onboarding() {
                       else if (provider === 'openrouter') setNewKeyModel('google/gemini-2.0-flash-001')
                       else setNewKeyModel('')
                     }}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                    className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
                   >
-                    <option value="google" className="bg-[#151517]">Google</option>
-                    <option value="openai" className="bg-[#151517]">OpenAI</option>
-                    <option value="anthropic" className="bg-[#151517]">Anthropic</option>
-                    <option value="groq" className="bg-[#151517]">Groq</option>
-                    <option value="openrouter" className="bg-[#151517]">OpenRouter</option>
-                    <option value="custom" className="bg-[#151517]">Custom Provider</option>
+                    <option value="google" className="bg-bento-panel">Google</option>
+                    <option value="openai" className="bg-bento-panel">OpenAI</option>
+                    <option value="anthropic" className="bg-bento-panel">Anthropic</option>
+                    <option value="groq" className="bg-bento-panel">Groq</option>
+                    <option value="openrouter" className="bg-bento-panel">OpenRouter</option>
+                    <option value="custom" className="bg-bento-panel">Custom Provider</option>
                   </select>
 
                   <input
                     placeholder="Model Name"
                     value={newKeyModel}
                     onChange={(e) => setNewKeyModel(e.target.value)}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                    className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                   />
 
                   {newKeyProvider === 'custom' && (
@@ -935,7 +935,7 @@ export default function Onboarding() {
                       placeholder="Base URL (Advanced)"
                       value={newKeyBaseUrl}
                       onChange={(e) => setNewKeyBaseUrl(e.target.value)}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                      className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                     />
                   )}
 
@@ -944,7 +944,7 @@ export default function Onboarding() {
                     placeholder="API Key"
                     value={newKeyValue}
                     onChange={(e) => setNewKeyValue(e.target.value)}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                    className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                   />
 
                   <div className="space-y-3 pt-1">
@@ -956,18 +956,18 @@ export default function Onboarding() {
                       {showAddKeyAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
                     </button>
                     {showAddKeyAdvanced && (
-                      <div className="space-y-3 pt-3 border-t border-[#242426]/60">
+                      <div className="space-y-3 pt-3 border-t border-border/60">
                         <div className="grid grid-cols-2 gap-2">
-                          <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                          <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                          <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                          <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                          <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                          <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                          <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                          <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
                         </div>
                         <input
                           placeholder="Max simultaneous requests"
                           value={newKeyLimits.maxConcurrency}
                           onChange={(e) => setNewKeyLimits({...newKeyLimits, maxConcurrency: e.target.value})}
-                          className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                          className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                         />
                       </div>
                     )}
@@ -981,7 +981,7 @@ export default function Onboarding() {
               ) : (
                 <button 
                   onClick={() => setIsAddingKey(true)}
-                  className="w-full py-4 border border-dashed border-[#242426] hover:border-primary hover:bg-[#232326]/40 rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
+                  className="w-full py-4 border border-dashed border-border hover:border-primary hover:bg-bento-item/40 rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all"
                 >
                   Add API Key
                 </button>
@@ -990,7 +990,7 @@ export default function Onboarding() {
 
             {/* Test Connection for Active Key */}
             {activeKey && (
-              <div data-tour="ai-connection-status" className="w-full p-4 border border-[#242426] bg-[#232326]/10 rounded-[8px] mb-8 text-left space-y-4">
+              <div data-tour="ai-connection-status" className="w-full p-4 border border-border bg-bento-item/10 rounded-[8px] mb-8 text-left space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="space-y-0.5">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active Key Selected</span>
@@ -1020,7 +1020,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-bento-item/30"
               >
                 Back
               </button>
@@ -1030,7 +1030,7 @@ export default function Onboarding() {
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   activeKey
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-[#232326] text-foreground border-[#242426] hover:bg-[#232326]/80"
+                    : "bg-bento-item text-foreground border-border hover:bg-bento-item/80"
                 )}
               >
                 {activeKey ? 'Continue' : 'Skip'}
@@ -1060,12 +1060,12 @@ export default function Onboarding() {
                 <select 
                   value={programPreset}
                   onChange={(e) => handlePresetChange(e.target.value)}
-                  className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors mb-4"
+                  className="w-full bg-bento-item/30 border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors mb-4"
                 >
-                  <option value="custom" className="bg-[#151517]">Custom (Empty Setup)</option>
-                  <option value="cs" className="bg-[#151517]">Computer Science B.S. (Standard CS Courses Scaffolding)</option>
-                  <option value="ds" className="bg-[#151517]">Data Science B.S. (Standard Statistics & ML Scaffolding)</option>
-                  <option value="business" className="bg-[#151517]">Business Administration (Finance & Econ Scaffolding)</option>
+                  <option value="custom" className="bg-bento-panel">Custom (Empty Setup)</option>
+                  <option value="cs" className="bg-bento-panel">Computer Science B.S. (Standard CS Courses Scaffolding)</option>
+                  <option value="ds" className="bg-bento-panel">Data Science B.S. (Standard Statistics & ML Scaffolding)</option>
+                  <option value="business" className="bg-bento-panel">Business Administration (Finance & Econ Scaffolding)</option>
                 </select>
               </div>
 
@@ -1081,7 +1081,7 @@ export default function Onboarding() {
                     setProgramName(e.target.value);
                     if (programPreset !== 'custom') setProgramPreset('custom');
                   }}
-                  className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground uppercase tracking-widest rounded-[8px] transition-colors"
+                  className="w-full bg-bento-item/30 border border-border focus:border-foreground px-3 py-2.5 text-[12px] font-bold outline-none text-foreground uppercase tracking-widest rounded-[8px] transition-colors"
                 />
               </div>
 
@@ -1093,10 +1093,10 @@ export default function Onboarding() {
                   <select 
                     value={programLevel}
                     onChange={(e) => setProgramLevel(e.target.value)}
-                    className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors"
+                    className="w-full bg-bento-item/30 border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors"
                   >
                     {['Undergraduate', 'Graduate', 'Doctorate', 'Professional'].map(lvl => (
-                      <option key={lvl} value={lvl} className="bg-[#151517]">{lvl}</option>
+                      <option key={lvl} value={lvl} className="bg-bento-panel">{lvl}</option>
                     ))}
                   </select>
                 </div>
@@ -1107,10 +1107,10 @@ export default function Onboarding() {
                   <select 
                     value={programDuration}
                     onChange={(e) => setProgramDuration(Number(e.target.value))}
-                    className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors"
+                    className="w-full bg-bento-item/30 border border-border focus:border-foreground px-3 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer rounded-[8px] transition-colors"
                   >
                     {[1,2,3,4,5,6,7,8].map(y => (
-                      <option key={y} value={y} className="bg-[#151517]">{y} Year{y > 1 ? 's' : ''}</option>
+                      <option key={y} value={y} className="bg-bento-panel">{y} Year{y > 1 ? 's' : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -1129,7 +1129,7 @@ export default function Onboarding() {
                         "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border transition-colors rounded-[8px]",
                         programCurrentYear === i + 1
                           ? "bg-foreground text-background border-foreground"
-                          : "bg-[#232326]/30 text-muted-foreground border-[#242426] hover:border-foreground hover:text-foreground"
+                          : "bg-bento-item/30 text-muted-foreground border-border hover:border-foreground hover:text-foreground"
                       )}
                     >
                       Year {i + 1}
@@ -1142,7 +1142,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-bento-item/30"
               >
                 Back
               </button>
@@ -1153,7 +1153,7 @@ export default function Onboarding() {
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   programName
                     ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
-                    : "bg-[#232326] text-muted-foreground cursor-not-allowed border-[#242426]"
+                    : "bg-bento-item text-muted-foreground cursor-not-allowed border-border"
                 )}
               >
                 Continue
@@ -1182,7 +1182,7 @@ export default function Onboarding() {
                   type="number" 
                   value={workDuration}
                   onChange={(e) => setWorkDuration(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
+                  className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
                 />
               </div>
 
@@ -1192,7 +1192,7 @@ export default function Onboarding() {
                   type="number" 
                   value={shortBreak}
                   onChange={(e) => setShortBreak(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
+                  className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
                 />
               </div>
 
@@ -1202,7 +1202,7 @@ export default function Onboarding() {
                   type="number" 
                   value={longBreak}
                   onChange={(e) => setLongBreak(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
+                  className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
                 />
               </div>
 
@@ -1214,7 +1214,7 @@ export default function Onboarding() {
                   max="10"
                   value={sessionsBeforeLong}
                   onChange={(e) => setSessionsBeforeLong(parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
+                  className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px]"
                 />
               </div>
             </div>
@@ -1222,7 +1222,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-bento-item/30"
               >
                 Back
               </button>
@@ -1249,7 +1249,7 @@ export default function Onboarding() {
               Review your configuration before generating your vault roadmap.
             </p>
 
-            <div className="w-full space-y-3 mb-8 p-5 bg-[#232326]/30 border border-[#242426] rounded-[8px]">
+            <div className="w-full space-y-3 mb-8 p-5 bg-bento-item/30 border border-border rounded-[8px]">
               <div className="flex justify-between items-start">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Vault</span>
                 <span className="text-[10px] font-mono text-foreground max-w-[220px] text-right break-all">
@@ -1287,9 +1287,9 @@ export default function Onboarding() {
                 type="checkbox"
                 checked={startWithTour}
                 onChange={() => {}}
-                className="rounded border-[#242426] bg-[#232326]/30 text-primary focus:ring-primary size-4"
+                className="rounded border-border bg-bento-item/30 text-primary focus:ring-primary size-4"
               />
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#a1a1aa] block">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
                 Start with Guided Walkthrough Tour (No AI Keys required)
               </span>
             </div>
@@ -1303,7 +1303,7 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
-                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-[#242426] hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-[#232326]/30"
+                className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-bento-item/30"
               >
                 Back
               </button>

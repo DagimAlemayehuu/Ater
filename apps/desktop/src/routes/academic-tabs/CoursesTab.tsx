@@ -114,14 +114,14 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
 
         {/* Countdown */}
         {nextExam && (
-          <div className="p-5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] flex items-center justify-between">
+          <div className="p-5 bg-bento-card border border-border rounded-[8px] flex items-center justify-between">
             <div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Next Exam</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Next Exam</span>
               <p className="text-[14px] font-black uppercase mt-0.5 text-foreground">{cleanTitle(nextExam.title)}</p>
             </div>
             <div className="text-right">
               <span className="text-3xl font-black text-foreground">{nextExam.date ? differenceInDays(new Date(nextExam.date), now) : '--'}</span>
-              <p className="text-[8px] font-black uppercase text-[#a1a1aa]">days</p>
+              <p className="text-[8px] font-black uppercase text-muted-foreground">days</p>
             </div>
           </div>
         )}
@@ -158,8 +158,8 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                 return (
                   <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
                     className={cn('p-3 border rounded-[6px] flex items-center gap-3 cursor-pointer transition-colors',
-                      isDone ? 'border-[#242426] bg-[#1a1a1c] opacity-50' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/50')}>
-                    <div className={cn('w-3 h-3 border rounded-[2px] shrink-0', isDone ? 'bg-foreground border-foreground' : 'border-[#242426]')} />
+                      isDone ? 'border-border bg-bento-card opacity-50' : 'border-border bg-bento-card hover:bg-bento-item/50')}>
+                    <div className={cn('w-3 h-3 border rounded-[2px] shrink-0', isDone ? 'bg-foreground border-foreground' : 'border-border')} />
                     <span className={cn('text-[10px] font-black uppercase truncate', isDone ? 'text-muted-foreground line-through' : 'text-foreground')}>
                       {cleanTitle(hub.title || hub.id)}
                     </span>
@@ -178,8 +178,8 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
             <div className="flex flex-col gap-2">
               {pending.map((a, idx) => (
                 <div key={idx} onClick={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)}
-                  className="flex items-center gap-3 p-3 border border-[#242426] bg-[#1a1a1c] rounded-[6px] cursor-pointer hover:bg-[#232326]/50 transition-colors">
-                  <div className="w-3.5 h-3.5 border border-[#242426] rounded-[2px] shrink-0" />
+                  className="flex items-center gap-3 p-3 border border-border bg-bento-card rounded-[6px] cursor-pointer hover:bg-bento-item/50 transition-colors">
+                  <div className="w-3.5 h-3.5 border border-border rounded-[2px] shrink-0" />
                   <span className="text-[11px] font-black uppercase flex-1 text-foreground">{cleanTitle(a.title)}</span>
                   {a.due_date && <CountdownBadge days={getDaysUntil(a.due_date)} />}
                 </div>
@@ -197,24 +197,24 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter bar */}
-      <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap">
-        <div className="flex items-center gap-1.5 bg-[#1a1a1c] p-1 border border-[#242426] rounded-[6px]">
+      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-1.5 bg-bento-card p-1 border border-border rounded-[6px]">
           {(['Active', 'All', 'Completed'] as const).map(f => (
             <button key={f} onClick={() => setStatusFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                statusFilter === f ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
+                statusFilter === f ? 'bg-bento-item text-foreground' : 'text-muted-foreground hover:text-foreground')}>
               {f}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
-          <Search size={11} className="text-[#a1a1aa]" />
+        <div className="flex items-center gap-2 flex-1 bg-bento-card border border-border rounded-[6px] px-3 py-2">
+          <Search size={11} className="text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses..."
             className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAddingCourse(true)}
           data-tour="course-add"
-          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -228,7 +228,7 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
       )}
 
       {/* Summary stats */}
-      <div className="px-6 py-2 border-b border-[#242426] flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa] shrink-0">
+      <div className="px-6 py-2 border-b border-border flex items-center gap-5 text-[8px] font-black uppercase tracking-widest text-muted-foreground shrink-0">
         <span>{allCourses.length} total</span>
         <span>{filtered.length} shown</span>
         <span>{allCourses.filter(c => !stripWL(getVal(c, 'Status', 'status')).toLowerCase().includes('complet')).length} active</span>
@@ -265,19 +265,19 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
             return (
               <div key={idx} onClick={() => setSelectedId(course.id)}
                 data-tour={`course-card-${course.id}`}
-                className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-all flex flex-col gap-3">
+                className="p-5 border border-border bg-bento-card rounded-[8px] cursor-pointer hover:bg-bento-item/30 transition-all flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="text-[13px] font-black uppercase leading-tight text-foreground">{cleanTitle(course.title)}</h3>
                   {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}
                 </div>
-                <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">
+                <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/65">
                   {professor && <span>{professor}</span>}
                   {semester  && <span>· {semester}</span>}
                   {credits   && <span>· {credits} CR</span>}
                 </div>
                 {cHubs.length > 0 && (
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[7px] font-black uppercase text-[#a1a1aa]/65">
+                    <div className="flex justify-between text-[7px] font-black uppercase text-muted-foreground/65">
                       <span>Study Progress</span><span>{doneH}/{cHubs.length}</span>
                     </div>
                     <div className="h-0.5 bg-[#242426] rounded-full overflow-hidden">
@@ -285,12 +285,12 @@ export default function CoursesTab({ data, databases, onUpdate, onCreate, onDele
                     </div>
                   </div>
                 )}
-                <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-[#242426] pt-2">
+                <div className="flex items-center gap-3 text-[8px] font-black uppercase tracking-widest border-t border-border pt-2">
                   {pendingCt > 0 && <span className="text-foreground">{pendingCt} due</span>}
                   {daysToExam !== null && daysToExam >= 0 && (
-                    <span className={daysToExam <= 7 ? 'text-foreground font-black' : 'text-[#a1a1aa]/65'}>exam in {daysToExam}d</span>
+                    <span className={daysToExam <= 7 ? 'text-foreground font-black' : 'text-muted-foreground/65'}>exam in {daysToExam}d</span>
                   )}
-                  {pendingCt === 0 && daysToExam === null && <span className="text-[#a1a1aa]/30">All clear</span>}
+                  {pendingCt === 0 && daysToExam === null && <span className="text-muted-foreground/30">All clear</span>}
                   <ChevronRight size={10} className="ml-auto text-muted-foreground/40" />
                 </div>
               </div>

@@ -376,15 +376,14 @@ def _is_rubiks_sandbox_request(prompt: str, previous_code: str = "") -> bool:
 
 def _build_rubiks_cube_sandbox() -> str:
     return """<style>
-  :root{color-scheme:dark}
-  .rubik-shell{height:100%;min-height:620px;background:#0d0d10;color:#f5f5f5;font-family:Outfit,Inter,system-ui,sans-serif;padding:24px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:20px}
-  .rubik-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid #2a2a2e;padding-bottom:14px}
-  .rubik-kicker{font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:#a1a1aa}
+  .rubik-shell{height:100%;min-height:620px;background:hsl(var(--background));color:hsl(var(--foreground));font-family:Outfit,Inter,system-ui,sans-serif;padding:24px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:20px}
+  .rubik-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid hsl(var(--border));padding-bottom:14px}
+  .rubik-kicker{font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:hsl(var(--muted-foreground))}
   .rubik-title{font-size:26px;line-height:1.1;font-weight:900;text-transform:uppercase;margin-top:6px}
-  .rubik-subtitle{max-width:820px;margin-top:8px;color:#c8c8cf;font-size:14px;line-height:1.5}
+  .rubik-subtitle{max-width:820px;margin-top:8px;color:hsl(var(--muted-foreground));font-size:14px;line-height:1.5}
   .rubik-stage{display:grid;grid-template-columns:1fr 340px;gap:20px;min-height:0}
   
-  .cube-card{position:relative;display:flex;align-items:center;justify-content:center;border:1px solid #28282d;background:#131316;padding:20px;min-height:400px;border-radius:10px}
+  .cube-card{position:relative;display:flex;align-items:center;justify-content:center;border:1px solid hsl(var(--border));background:hsl(var(--muted)/0.3);padding:20px;min-height:400px;border-radius:10px}
   .cube-net{
     display:grid;
     grid-template-areas:
@@ -403,8 +402,8 @@ def _build_rubiks_cube_sandbox() -> str:
     grid-template-rows:repeat(3, 1fr);
     gap:2px;
     padding:4px;
-    background:#1f1f24;
-    border:2px solid #2a2a30;
+    background:hsl(var(--muted)/0.6);
+    border:2px solid hsl(var(--border));
     border-radius:6px;
     position:relative;
     aspect-ratio:1/1;
@@ -418,7 +417,7 @@ def _build_rubiks_cube_sandbox() -> str:
     justify-content: center;
     font-size: 20px;
     font-weight: 900;
-    color: rgba(255,255,255,0.12);
+    color: hsl(var(--foreground)/0.08);
     pointer-events: none;
     z-index: 10;
   }
@@ -433,26 +432,26 @@ def _build_rubiks_cube_sandbox() -> str:
   .sticker{
     border-radius:3px;
     border:1px solid rgba(0,0,0,0.4);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.15);
     transition:transform .16s ease,filter .16s ease;
     aspect-ratio:1/1;
   }
   .sticker.flash{transform:scale(.85);filter:brightness(1.3)}
   
-  .lesson-panel{border:1px solid #28282d;background:#151519;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0;border-radius:10px}
-  .lesson-panel h3{font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;margin:0;color:#f4f4f5}
-  .step{font-size:15px;line-height:1.6;color:#d9d9df;min-height:110px}
+  .lesson-panel{border:1px solid hsl(var(--border));background:hsl(var(--muted)/0.4);padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0;border-radius:10px}
+  .lesson-panel h3{font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;margin:0;color:hsl(var(--foreground))}
+  .step{font-size:15px;line-height:1.6;color:hsl(var(--foreground)/0.9);min-height:110px}
   .moves{display:flex;flex-wrap:wrap;gap:8px}
   
-  button{min-height:38px;border:1px solid #3f3f46;background:#1f1f24;color:#f7f7f8;border-radius:8px;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:background .2s}
-  button:hover{background:#2b2b31;border-color:#5a5a64}
+  button{min-height:38px;border:1px solid hsl(var(--border));background:hsl(var(--muted)/0.5);color:hsl(var(--foreground));border-radius:8px;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:background .2s, border-color .2s}
+  button:hover{background:hsl(var(--muted)/0.8);border-color:hsl(var(--muted-foreground))}
   button:active{transform:translateY(1px)}
-  .primary{background:#f4f4f5;color:#111113;border-color:#f4f4f5}
-  .primary:hover{background:#e4e4e7}
+  .primary{background:hsl(var(--primary));color:hsl(var(--background));border-color:hsl(var(--primary))}
+  .primary:hover{background:hsl(var(--primary)/0.9)}
   
   .controls{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-  .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #2a2a2e;padding-top:14px}
-  .log{font-size:13px;color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;min-width:0}
+  .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid hsl(var(--border));padding-top:14px}
+  .log{font-size:13px;color:hsl(var(--muted-foreground));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;min-width:0}
   
   @media(max-width:900px){
     .rubik-shell{padding:16px}

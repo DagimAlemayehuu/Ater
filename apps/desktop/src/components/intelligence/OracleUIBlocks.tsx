@@ -1554,7 +1554,7 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                                                                     .filter(([key]) => !(headers || []).includes(key))
                                                                     .map(([key, val]) => (
                                                                         <div key={key} className="flex justify-between py-1 border-b border-border/10">
-                                                                            <span className="text-[#a1a1aa]">{key.replace(/_/g, ' ')}</span>
+                                                                            <span className="text-muted-foreground">{key.replace(/_/g, ' ')}</span>
                                                                             <span className="text-foreground font-bold font-mono">{String(val)}</span>
                                                                         </div>
                                                                     ))
@@ -1659,7 +1659,7 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                                 <button 
                                     onClick={runPropagation}
                                     disabled={isPropagating}
-                                    className="px-2 py-0.5 mt-1 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 hover:text-white rounded-[4px] uppercase text-[8px] font-black tracking-widest transition-all w-24 text-center disabled:opacity-40"
+                                    className="px-2 py-0.5 mt-1 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 hover:text-background rounded-[4px] uppercase text-[8px] font-black tracking-widest transition-all w-24 text-center disabled:opacity-40"
                                 >
                                     {isPropagating ? 'Flowing...' : 'Test Flow'}
                                 </button>

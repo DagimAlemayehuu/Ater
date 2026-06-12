@@ -29,7 +29,7 @@ export default function Login() {
       <div className="absolute top-8 right-8">
         <ThemeSwitch />
       </div>
-      <div className="w-full max-w-[340px] bg-[#151517] border border-[#242426] rounded-[12px] p-8 shadow-2xl">
+      <div className="w-full max-w-[340px] bg-bento-panel border border-border rounded-[12px] p-8 shadow-2xl">
         <div className="mb-8">
           <h1 className="text-xl font-black uppercase tracking-[0.15em] text-foreground">Ater</h1>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">
@@ -46,7 +46,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground py-2.5 px-3 text-foreground text-[12px] outline-none rounded-[8px] transition-colors"
+              className="w-full bg-bento-item/30 border border-border focus:border-foreground py-2.5 px-3 text-foreground text-[12px] outline-none rounded-[8px] transition-colors"
               required
               autoComplete="email"
             />
@@ -60,7 +60,7 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground py-2.5 px-3 text-foreground text-[12px] outline-none rounded-[8px] transition-colors"
+              className="w-full bg-bento-item/30 border border-border focus:border-foreground py-2.5 px-3 text-foreground text-[12px] outline-none rounded-[8px] transition-colors"
               required
               autoComplete="current-password"
             />
@@ -77,7 +77,7 @@ export default function Login() {
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="w-full bg-[#232326]/30 border border-[#242426] focus:border-foreground py-2.5 px-3 text-foreground text-[13px] font-mono tracking-[0.2em] outline-none uppercase rounded-[8px] transition-colors"
+              className="w-full bg-bento-item/30 border border-border focus:border-foreground py-2.5 px-3 text-foreground text-[13px] font-mono tracking-[0.2em] outline-none uppercase rounded-[8px] transition-colors"
               required
               maxLength={8}
               spellCheck={false}
@@ -104,7 +104,7 @@ export default function Login() {
             className={cn(
               "w-full mt-6 py-2.5 flex items-center justify-center border rounded-[8px] transition-all duration-150",
               localLoading
-                ? "bg-[#232326] border-[#242426] text-muted-foreground cursor-wait"
+                ? "bg-bento-item border-border text-muted-foreground cursor-wait"
                 : "bg-primary text-primary-foreground border-primary hover:opacity-90"
             )}
           >

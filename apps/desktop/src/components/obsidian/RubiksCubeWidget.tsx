@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/context/theme-provider'
 
 interface RubiksCubeWidgetProps {
   payload: {
@@ -184,7 +185,9 @@ function getStickerColors(char: string, dark: boolean) {
   return map[char] || { bg: '#52525b', fg: '#ffffff' }
 }
 
-export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProps) {
+export default function RubiksCubeWidget({ payload, dark: darkProp }: RubiksCubeWidgetProps) {
+  const { resolvedTheme } = useTheme()
+  const dark = resolvedTheme ? resolvedTheme === 'dark' : darkProp
   const { title, description, scramble = '', solution = '' } = payload
 
   // Solution steps parsing
@@ -234,7 +237,7 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
     return `${screenX.toFixed(1)},${screenY.toFixed(1)}`
   }
 
-  const drawSticker = (corners: [number, number, number][], colorCode: string) => {
+  const drawSticker = React.useCallback((corners: [number, number, number][], colorCode: string) => {
     const points = corners.map(c => project(c[0], c[1], c[2])).join(' ')
     const style = getStickerColors(colorCode, dark)
 
@@ -265,7 +268,7 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
         </text>
       </g>
     )
-  }
+  }, [dark])
 
   // Generate faces polygons
   const stickersPolygons = useMemo(() => {
@@ -329,18 +332,18 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
     }
 
     return polys
-  }, [cube, dark])
+  }, [cube, dark, drawSticker])
 
-  const borderClass = dark ? 'border-[#242426]' : 'border-zinc-200'
-  const panelClass = dark ? 'bg-[#151517]' : 'bg-zinc-50'
-  const innerClass = dark ? 'bg-[#111113]' : 'bg-white'
+  const borderClass = 'border-border'
+  const panelClass = 'bg-bento-panel'
+  const innerClass = 'bg-bento-bg'
 
   return (
     <div className={cn('rounded-[8px] border p-4 space-y-4 max-w-xl mx-auto', borderClass, panelClass)}>
       <div>
-        <h4 className="text-[12px] font-black uppercase tracking-wider">{title}</h4>
+        <h4 className="text-[12px] font-black uppercase tracking-wider text-foreground">{title}</h4>
         {description && (
-          <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
+          <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
             {description}
           </p>
         )}
@@ -358,7 +361,7 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
         <div className="flex-1 space-y-3 w-full">
           {solutionMoves.length > 0 && (
             <div className="space-y-1">
-              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 block">Interactive Stepper</span>
+              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground block">Interactive Stepper</span>
               <div className={cn('p-2.5 rounded-[4px] border flex flex-wrap gap-1 items-center justify-center min-h-[36px]', innerClass, borderClass)}>
                 {solutionMoves.map((m, idx) => {
                   const active = idx === stepIndex - 1
@@ -369,11 +372,9 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
                       className={cn(
                         'px-1.5 py-0.5 text-[9px] font-black tracking-wide rounded-[3px] border transition-all',
                         active
-                          ? dark
-                            ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb]'
-                            : 'bg-zinc-900 text-white border-zinc-900'
+                          ? 'bg-foreground text-background border-foreground'
                           : completed
-                          ? 'opacity-40 border-zinc-400'
+                          ? 'opacity-40 border-muted-foreground'
                           : cn('opacity-20', borderClass)
                       )}
                     >
@@ -387,8 +388,10 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
                   onClick={() => setStepIndex(prev => Math.max(0, prev - 1))}
                   disabled={stepIndex === 0}
                   className={cn(
-                    'flex-1 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
-                    stepIndex === 0 ? 'opacity-20 cursor-not-allowed' : dark ? 'hover:border-white text-white' : 'hover:border-zinc-900 text-zinc-900'
+                    'flex-1 py-1.5 border border-border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
+                    stepIndex === 0
+                      ? 'opacity-20 cursor-not-allowed text-muted-foreground/30'
+                      : 'hover:border-foreground text-foreground bg-transparent hover:bg-foreground/5'
                   )}
                 >
                   Prev Step
@@ -399,17 +402,15 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
                   className={cn(
                     'flex-1 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
                     stepIndex === solutionMoves.length
-                      ? 'opacity-20 cursor-not-allowed'
-                      : dark
-                      ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb] hover:bg-transparent hover:text-white'
-                      : 'bg-zinc-900 text-white border-zinc-900 hover:bg-white hover:text-zinc-900'
+                      ? 'opacity-20 cursor-not-allowed border-border text-muted-foreground/30'
+                      : 'bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground'
                   )}
                 >
                   Next Step
                 </button>
                 <button
                   onClick={resetAll}
-                  className={cn('px-3 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] text-zinc-400 hover:text-foreground')}
+                  className="px-3 py-1.5 border border-border text-[9px] font-black uppercase tracking-widest rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
                 >
                   Reset
                 </button>
@@ -419,18 +420,13 @@ export default function RubiksCubeWidget({ payload, dark }: RubiksCubeWidgetProp
 
           {/* Manual Input Buttons */}
           <div className="space-y-1">
-            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 block">Manual Rotation Sandbox</span>
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground block">Manual Rotation Sandbox</span>
             <div className="grid grid-cols-6 gap-1">
               {['U', "U'", 'D', "D'", 'R', "R'", 'L', "L'", 'F', "F'", 'B', "B'"].map(move => (
                 <button
                   key={move}
                   onClick={() => handleManualMove(move)}
-                  className={cn(
-                    'py-1 border text-[9px] font-black uppercase tracking-wide rounded-[3px] transition-all',
-                    dark
-                      ? 'border-[#242426] bg-[#111113] text-[#ebebeb] hover:border-white'
-                      : 'border-zinc-200 bg-white text-zinc-800 hover:border-zinc-900'
-                  )}
+                  className="py-1 border border-border bg-bento-card text-foreground hover:border-foreground hover:bg-foreground/5 rounded-[3px] transition-all"
                 >
                   {move}
                 </button>

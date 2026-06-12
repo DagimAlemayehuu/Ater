@@ -13,13 +13,13 @@ import { supabase } from '@/lib/supabase'
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
-  <div className={cn("border border-[#242426] bg-[#151517] rounded-[12px] transition-colors", className)}>
+  <div className={cn("border border-border bg-bento-panel rounded-[12px] transition-colors", className)}>
     {children}
   </div>
 )
 
 const CardHeader = ({title, description}: any) => (
-  <div className="p-6 border-b border-[#242426]">
+  <div className="p-6 border-b border-border">
     <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-foreground">{title}</h3>
     {description && <p className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-wider">{description}</p>}
   </div>
@@ -32,7 +32,7 @@ const CardContent = ({children, className}: any) => (
 )
 
 const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCancel}: any) => (
-  <Card className="bg-[#151517] rounded-[12px] border border-[#242426]">
+  <Card className="bg-bento-panel rounded-[12px] border border-border">
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -528,7 +528,7 @@ export default function Settings() {
                 <div className="space-y-2" data-tour="settings-obsidian-path">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Obsidian Folder</label>
                   <div className="flex gap-2">
-                    <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden text-left">
+                    <div className="flex-1 px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px] overflow-hidden text-left">
                       <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.vaultPath : config?.obsidianVaultPath || 'Not selected'}</span>
                     </div>
                     <button
@@ -539,7 +539,7 @@ export default function Settings() {
                           if (selected) setVaultEdit({...vaultEdit, vaultPath: selected as string});
                         } catch (err) {console.error(err);}
                       }}
-                      className="px-6 py-3 bg-[#232326]/50 text-[10px] font-black uppercase tracking-widest border border-[#242426] hover:bg-[#232326] rounded-[8px] transition-colors disabled:opacity-50"
+                      className="px-6 py-3 bg-bento-item/50 text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bento-item rounded-[8px] transition-colors disabled:opacity-50"
                     >
                       Select
                     </button>
@@ -550,7 +550,7 @@ export default function Settings() {
                 <div className="space-y-2" data-tour="settings-inbox-path">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Inbox Folder (For scanning PDFs)</label>
                   <div className="flex gap-2">
-                    <div className="flex-1 px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px] overflow-hidden text-left">
+                    <div className="flex-1 px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px] overflow-hidden text-left">
                       <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.inboxPath : config?.inboxPath || 'Default (Inbox/)'}</span>
                     </div>
                     <button
@@ -561,7 +561,7 @@ export default function Settings() {
                           if (selected) setVaultEdit({...vaultEdit, inboxPath: selected as string});
                         } catch (err) {console.error(err);}
                       }}
-                      className="px-6 py-3 bg-[#232326]/50 text-[10px] font-black uppercase tracking-widest border border-[#242426] hover:bg-[#232326] rounded-[8px] transition-colors disabled:opacity-50"
+                      className="px-6 py-3 bg-bento-item/50 text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bento-item rounded-[8px] transition-colors disabled:opacity-50"
                     >
                       Select
                     </button>
@@ -576,12 +576,12 @@ export default function Settings() {
                     disabled={editingKey !== 'folder_settings'}
                     value={editingKey === 'folder_settings' ? vaultEdit.academicPath : config?.academicFolderPath || 'Notes'}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVaultEdit({...vaultEdit, academicPath: e.target.value})}
-                    className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
                     placeholder="e.g. Notes"
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 border border-[#242426] bg-[#232326]/30 rounded-[8px]" data-tour="settings-auto-scan">
+                <div className="flex items-center justify-between p-4 border border-border bg-bento-item/30 rounded-[8px]" data-tour="settings-auto-scan">
                   <div className="space-y-1 text-left">
                     <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Auto-Scan Folder</label>
                     <p className="text-[11px] text-muted-foreground font-bold font-sans">Check folders and import files automatically.</p>
@@ -593,7 +593,7 @@ export default function Settings() {
                       "px-4 py-2 text-[9px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 rounded-[8px]",
                       (editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) 
                         ? "bg-primary text-primary-foreground border-primary" 
-                        : "bg-[#232326] text-muted-foreground border-[#242426] hover:bg-[#232326]/80"
+                        : "bg-bento-item text-muted-foreground border-border hover:bg-bento-item/80"
                     )}
                   >
                     {(editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) ? 'On' : 'Off'}
@@ -620,7 +620,7 @@ export default function Settings() {
                 className={cn(
                   "h-10 px-6 text-[10px] font-black uppercase tracking-widest transition-all rounded-[8px] flex items-center gap-2",
                   updateStatus === 'up-to-date' 
-                    ? "bg-[#232326] text-muted-foreground border border-[#242426]" 
+                    ? "bg-bento-item text-muted-foreground border border-border" 
                     : "bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
                 )}
               >
@@ -653,7 +653,7 @@ export default function Settings() {
                       type="text"
                       value={profileEdit.name}
                       onChange={(e) => setProfileEdit({...profileEdit, name: e.target.value})}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-2.5 text-[12px] font-black uppercase tracking-widest focus:outline-none focus:border-primary rounded-[8px]"
+                      className="w-full bg-bento-item/30 border border-border px-4 py-2.5 text-[12px] font-black uppercase tracking-widest focus:outline-none focus:border-primary rounded-[8px]"
                       placeholder="Your Name"
                     />
                   </div>
@@ -694,7 +694,7 @@ export default function Settings() {
               description="Details about your email and device ID." 
             />
             <CardContent className="space-y-2 text-left h-[100px] flex flex-col justify-center">
-              <div className="flex justify-between items-center text-[10px] font-mono border-b border-[#242426]/50 pb-1">
+              <div className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-1">
                 <span className="text-muted-foreground uppercase tracking-widest font-sans font-bold">Email</span>
                 <span className="text-foreground truncate max-w-[150px]">{config?.activationEmail || 'Anonymous'}</span>
               </div>
@@ -747,7 +747,7 @@ export default function Settings() {
                   "h-10 px-6 text-[10px] font-black uppercase tracking-widest transition-all rounded-[8px]",
                   config?.isDemoMode
                     ? "bg-primary text-primary-foreground border border-primary hover:opacity-90"
-                    : "bg-[#232326] text-muted-foreground border border-[#242426] hover:text-foreground hover:bg-[#232326]/80"
+                    : "bg-bento-item text-muted-foreground border border-border hover:text-foreground hover:bg-bento-item/80"
                 )}
               >
                 {config?.isDemoMode ? 'Switch to Real Workspace' : 'Switch to Demo/Simulation Mode'}
@@ -809,7 +809,7 @@ export default function Settings() {
             >
               <div className="space-y-6 text-foreground text-left">
                 {/* Saved Key Selection */}
-                <div className="space-y-4 pb-6 border-b border-[#242426]">
+                <div className="space-y-4 pb-6 border-b border-border">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">
                     Choose active key:
                   </label>
@@ -860,7 +860,7 @@ export default function Settings() {
                             "px-4 py-2 text-[10px] font-black uppercase tracking-widest border transition-colors rounded-[8px]",
                             (isSelected && editingKey !== 'primary_engine') || (aiEdit.key === k.key && editingKey === 'primary_engine')
                               ? "bg-primary text-primary-foreground border-primary" 
-                              : "bg-[#232326]/50 text-muted-foreground border-[#242426] hover:bg-[#232326]"
+                              : "bg-bento-item/50 text-muted-foreground border-border hover:bg-bento-item"
                           )}
                         >
                           {k.name}
@@ -886,14 +886,14 @@ export default function Settings() {
                         if (provider === 'custom') defaultModel = aiEdit.model || 'openai-compatible-model';
                         setAiEdit({...aiEdit, provider, model: defaultModel});
                       }}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                      className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                     >
-                      <option value="google" className="bg-[#151517]">Google Gemini</option>
-                      <option value="openai" className="bg-[#151517]">OpenAI</option>
-                      <option value="anthropic" className="bg-[#151517]">Anthropic</option>
-                      <option value="groq" className="bg-[#151517]">Groq (Fast)</option>
-                      <option value="openrouter" className="bg-[#151517]">OpenRouter</option>
-                      <option value="custom" className="bg-[#151517]">Custom Provider</option>
+                      <option value="google" className="bg-bento-panel">Google Gemini</option>
+                      <option value="openai" className="bg-bento-panel">OpenAI</option>
+                      <option value="anthropic" className="bg-bento-panel">Anthropic</option>
+                      <option value="groq" className="bg-bento-panel">Groq (Fast)</option>
+                      <option value="openrouter" className="bg-bento-panel">OpenRouter</option>
+                      <option value="custom" className="bg-bento-panel">Custom Provider</option>
                     </select>
                   </div>
 
@@ -904,12 +904,12 @@ export default function Settings() {
                         type="password"
                         value={aiEdit.key}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, key: e.target.value})}
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] focus:outline-none focus:border-primary font-mono rounded-[8px]"
+                        className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] focus:outline-none focus:border-primary font-mono rounded-[8px]"
                         autoFocus
                         placeholder={`Enter ${aiEdit.provider.toUpperCase()} Key`}
                       />
                     ) : (
-                      <div className="px-4 py-3 bg-[#232326]/20 text-[13px] font-mono text-muted-foreground border border-[#242426] rounded-[8px]">
+                      <div className="px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px]">
                         <span>
                           {config?.aiApiKey ? '••••••••' + config?.aiApiKey.slice(-4) : 'Not configured'}
                         </span>
@@ -924,7 +924,7 @@ export default function Settings() {
                       disabled={editingKey !== 'primary_engine'}
                       value={editingKey === 'primary_engine' ? aiEdit.model : config?.aiModel || ''}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
-                      className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                      className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                     />
                   </div>
 
@@ -937,7 +937,7 @@ export default function Settings() {
                         value={editingKey === 'primary_engine' ? aiEdit.baseUrl : config?.aiBaseUrl || ''}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, baseUrl: e.target.value})}
                         placeholder="https://provider.example.com/v1"
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                        className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                       />
                     </div>
                   )}
@@ -952,7 +952,7 @@ export default function Settings() {
                       {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
                     </button>
                     {showAdvanced && (
-                      <div className="space-y-4 pt-4 border-t border-[#242426]/60">
+                      <div className="space-y-4 pt-4 border-t border-border/60">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Speed Limits</label>
                           <div className="grid grid-cols-2 gap-2">
@@ -963,7 +963,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxTpm : config?.aiMaxTpm || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpm: e.target.value})}
                               placeholder="Max tokens per minute"
-                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                             />
                             <input
                               type="number"
@@ -972,7 +972,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxRpm : config?.aiMaxRpm || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpm: e.target.value})}
                               placeholder="Max requests per minute"
-                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                             />
                             <input
                               type="number"
@@ -981,7 +981,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxTpd : config?.aiMaxTpd || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpd: e.target.value})}
                               placeholder="Max tokens per day"
-                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                             />
                             <input
                               type="number"
@@ -990,7 +990,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxRpd : config?.aiMaxRpd || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpd: e.target.value})}
                               placeholder="Max requests per day"
-                              className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
                             />
                           </div>
                           <input
@@ -1000,7 +1000,7 @@ export default function Settings() {
                             value={editingKey === 'primary_engine' ? aiEdit.maxConcurrency : config?.aiMaxConcurrency || ''}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxConcurrency: e.target.value})}
                             placeholder="Max simultaneous requests"
-                            className="w-full bg-[#232326]/30 border border-[#242426] px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 mt-2"
+                            className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 mt-2"
                           />
                         </div>
                       </div>
@@ -1046,10 +1046,10 @@ export default function Settings() {
               <CardContent className="text-left">
                 <div className="grid grid-cols-1 gap-3">
                   {config?.savedApiKeys?.map((k) => (
-                    <div key={k.id} className="group relative flex flex-col p-4 border border-[#242426] bg-[#232326]/30 hover:bg-[#232326] transition-colors rounded-[8px]">
+                    <div key={k.id} className="group relative flex flex-col p-4 border border-border bg-bento-item/30 hover:bg-bento-item transition-colors rounded-[8px]">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate max-w-[150px]">{k.name}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 border border-[#242426] bg-[#151517] rounded-[4px] font-bold uppercase text-muted-foreground">{k.provider}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 border border-border bg-bento-panel rounded-[4px] font-bold uppercase text-muted-foreground">{k.provider}</span>
                       </div>
                       <div className="text-[12px] font-mono text-muted-foreground truncate">••••••••{k.key.slice(-4)}</div>
                       {(k.model || k.maxTpm || k.maxRpm) && (
@@ -1068,12 +1068,12 @@ export default function Settings() {
                   ))}
 
                   {isAddingKey ? (
-                    <div className="flex flex-col p-4 border border-primary bg-[#232326]/20 rounded-[8px] space-y-4">
+                    <div className="flex flex-col p-4 border border-primary bg-bento-item/20 rounded-[8px] space-y-4">
                       <input 
                         placeholder="Name (e.g. My Gemini Key)"
                         value={newKeyName}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyName(e.target.value)}
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
                         autoFocus
                       />
                       <select
@@ -1089,27 +1089,27 @@ export default function Settings() {
                             if (provider === 'openrouter') setNewKeyModel('google/gemini-2.0-flash-001')
                           }
                         }}
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
                       >
-                        <option value="google" className="bg-[#151517]">Google</option>
-                        <option value="openai" className="bg-[#151517]">OpenAI</option>
-                        <option value="anthropic" className="bg-[#151517]">Anthropic</option>
-                        <option value="groq" className="bg-[#151517]">Groq</option>
-                        <option value="openrouter" className="bg-[#151517]">OpenRouter</option>
-                        <option value="custom" className="bg-[#151517]">Custom Provider</option>
+                        <option value="google" className="bg-bento-panel">Google</option>
+                        <option value="openai" className="bg-bento-panel">OpenAI</option>
+                        <option value="anthropic" className="bg-bento-panel">Anthropic</option>
+                        <option value="groq" className="bg-bento-panel">Groq</option>
+                        <option value="openrouter" className="bg-bento-panel">OpenRouter</option>
+                        <option value="custom" className="bg-bento-panel">Custom Provider</option>
                       </select>
                       <input
                         placeholder="Model Name"
                         value={newKeyModel}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyModel(e.target.value)}
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                       />
                       {newKeyProvider === 'custom' && (
                         <input
                           placeholder="Base URL (Advanced)"
                           value={newKeyBaseUrl}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyBaseUrl(e.target.value)}
-                          className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                          className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                         />
                       )}
                       <input 
@@ -1117,7 +1117,7 @@ export default function Settings() {
                         placeholder="API Key"
                         value={newKeyValue}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyValue(e.target.value)}
-                        className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                       />
                       
                       <div className="space-y-3 pt-1">
@@ -1129,18 +1129,18 @@ export default function Settings() {
                           {showAddKeyAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
                         </button>
                         {showAddKeyAdvanced && (
-                          <div className="space-y-3 pt-3 border-t border-[#242426]/60">
+                          <div className="space-y-3 pt-3 border-t border-border/60">
                             <div className="grid grid-cols-2 gap-2">
-                              <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                              <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                              <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                              <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
                             </div>
                             <input
                               placeholder="Max simultaneous requests"
                               value={newKeyLimits.maxConcurrency}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxConcurrency: e.target.value})}
-                              className="w-full bg-[#232326]/30 border border-[#242426] px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                              className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
                             />
                           </div>
                         )}
@@ -1155,7 +1155,7 @@ export default function Settings() {
                     <button 
                       data-tour="ai-add-key"
                       onClick={() => setIsAddingKey(true)}
-                      className="flex flex-col items-center justify-center p-8 border border-dashed border-[#242426] hover:border-primary hover:bg-[#232326]/40 rounded-[8px] gap-2 transition-colors min-h-[140px]"
+                      className="flex flex-col items-center justify-center p-8 border border-dashed border-border hover:border-primary hover:bg-bento-item/40 rounded-[8px] gap-2 transition-colors min-h-[140px]"
                     >
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">Add New Key</span>
                     </button>
@@ -1196,7 +1196,7 @@ export default function Settings() {
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
-                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1206,7 +1206,7 @@ export default function Settings() {
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.short : config?.pomodoroShortBreakDuration}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
-                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1216,7 +1216,7 @@ export default function Settings() {
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.long : config?.pomodoroLongBreakDuration}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
-                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1235,7 +1235,7 @@ export default function Settings() {
                         setPomodoroEdit({...pomodoroEdit, sessions: 1});
                       }
                     }}
-                    className="w-full px-4 py-3 bg-[#232326]/30 border border-[#242426] text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
                   />
                 </div>
               </div>
@@ -1313,7 +1313,7 @@ export default function Settings() {
       {/* Danger Zone Action Confirmation Modal */}
       {confirmAction !== 'none' && (
         <div className="fixed inset-0 z-[9999] bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in pointer-events-auto select-none">
-          <div className="w-full max-w-md bg-[#151517] border border-destructive/30 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
+          <div className="w-full max-w-md bg-bento-panel border border-destructive/30 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
             <div className="text-[9px] font-black uppercase tracking-widest text-destructive mb-3">
               Confirm Destructive Action
             </div>
@@ -1351,7 +1351,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => setConfirmAction('none')}
-                className="px-5 py-3 border border-[#242426] bg-[#232326]/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
+                className="px-5 py-3 border border-border bg-bento-item/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
               >
                 Cancel
               </button>

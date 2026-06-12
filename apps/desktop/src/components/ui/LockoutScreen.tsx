@@ -59,7 +59,7 @@ export function LockoutScreen({
           <button
             onClick={onVerify}
             disabled={isSyncing}
-            className="border border-border bg-transparent text-foreground hover:bg-accent/40 hover:text-white transition-none uppercase text-[9px] font-black tracking-widest px-4 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="border border-border bg-transparent text-foreground hover:bg-accent/40 hover:text-background transition-none uppercase text-[9px] font-black tracking-widest px-4 py-2.5 flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`size-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'VERIFYING...' : 'RE-VERIFY CLEARANCE'}

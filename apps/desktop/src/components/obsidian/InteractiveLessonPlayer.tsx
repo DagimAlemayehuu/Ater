@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { AterMarkdown } from './MarkdownViewer'
 import RubiksCubeWidget from './RubiksCubeWidget'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { useTheme } from '@/context/theme-provider'
 
 interface Chapter {
   title: string
@@ -16,21 +17,6 @@ interface InteractiveLessonPlayerProps {
     title: string
     chapters: Chapter[]
   }
-}
-
-function useAppTheme() {
-  const [isDark, setIsDark] = useState(
-    () => document.documentElement.classList.contains('dark')
-  )
-  useEffect(() => {
-    const el = document.documentElement
-    const obs = new MutationObserver(() =>
-      setIsDark(el.classList.contains('dark'))
-    )
-    obs.observe(el, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [])
-  return isDark
 }
 
 // Global cache for maintaining current chapter state across unmount/remount
@@ -48,7 +34,8 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
     lessonChapterCache[cacheKey] = currentChapter
   }, [currentChapter, cacheKey])
 
-  const isDark = useAppTheme()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
 
   if (!chapters || chapters.length === 0) {
     return (
@@ -73,10 +60,10 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
     }
   }
 
-  const borderClass = isDark ? 'border-[#242426]' : 'border-zinc-200'
-  const panelClass = isDark ? 'bg-[#151517]' : 'bg-zinc-50'
-  const innerClass = isDark ? 'bg-[#111113]' : 'bg-white'
-  const mutedClass = isDark ? 'text-[#a1a1aa]' : 'text-zinc-400'
+  const borderClass = 'border-border'
+  const panelClass = 'bg-bento-panel'
+  const innerClass = 'bg-bento-bg'
+  const mutedClass = 'text-muted-foreground'
 
   return (
     <div className={cn('rounded-[8px] border p-5 space-y-5 my-6 max-w-2xl mx-auto shadow-sm', borderClass, panelClass)}>
@@ -105,10 +92,10 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
                 className={cn(
                   'h-full flex-1 transition-all duration-300 rounded-[1px]',
                   active
-                    ? isDark ? 'bg-white' : 'bg-zinc-900'
+                    ? 'bg-foreground'
                     : completed
-                    ? isDark ? 'bg-zinc-600' : 'bg-zinc-400'
-                    : isDark ? 'bg-[#242426]' : 'bg-zinc-200'
+                    ? 'bg-muted-foreground/60'
+                    : 'bg-muted'
                 )}
               />
             )
@@ -142,9 +129,7 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
             'flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
             currentChapter === 0
               ? 'opacity-20 cursor-not-allowed'
-              : isDark
-              ? 'hover:border-white text-white bg-transparent'
-              : 'hover:border-zinc-900 text-zinc-900 bg-transparent'
+              : 'hover:border-foreground text-foreground bg-transparent hover:bg-foreground/5'
           )}
         >
           <ChevronLeft size={12} />
@@ -152,19 +137,14 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
         </button>
 
         {currentChapter === totalChapters - 1 ? (
-          <div className={cn('flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400')}>
+          <div className="flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400">
             <Check size={12} />
             Completed
           </div>
         ) : (
           <button
             onClick={handleNext}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
-              isDark
-                ? 'bg-[#ebebeb] text-zinc-950 border-[#ebebeb] hover:bg-transparent hover:text-white'
-                : 'bg-zinc-900 text-white border-zinc-900 hover:bg-white hover:text-zinc-900'
-            )}
+            className="flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground"
           >
             Next
             <ChevronRight size={12} />

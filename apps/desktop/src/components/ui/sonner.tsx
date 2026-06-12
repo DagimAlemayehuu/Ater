@@ -10,13 +10,13 @@ export function Toaster({ ...props }: ToasterProps) {
       position="top-right"
       className='toaster group [&_div[data-content]]:w-full font-sans'
       toastOptions={{
-        className: 'bg-[#151517] border border-[#242426] text-foreground rounded-[8px] p-4 shadow-xl',
+        className: 'bg-bento-panel border border-border text-foreground rounded-[8px] p-4 shadow-xl',
       }}
       style={
         {
-          '--normal-bg': '#151517',
-          '--normal-text': '#ffffff',
-          '--normal-border': '#242426',
+          '--normal-bg': 'hsl(var(--card))',
+          '--normal-text': 'hsl(var(--foreground))',
+          '--normal-border': 'hsl(var(--border))',
         } as React.CSSProperties
       }
       {...props}

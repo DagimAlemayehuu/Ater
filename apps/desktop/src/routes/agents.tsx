@@ -540,7 +540,7 @@ function OracleView() {
               setIsDraggingSplit(true);
             }}
             className={cn(
-              "w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-[#18181b] hover:bg-foreground/20",
+              "w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20",
               !artifactState.isPanelOpen && "hidden"
             )}
           />
@@ -559,7 +559,7 @@ function OracleView() {
         <button
           type="button"
           onClick={() => useArtifactStore.getState().setPanelOpen(true)}
-          className="fixed right-5 top-24 z-50 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-[#18181b] px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-[#242426]"
+          className="fixed right-5 top-24 z-50 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-muted px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-accent"
           title="Open artifact panel"
         >
           <PanelRightOpen size={14} />

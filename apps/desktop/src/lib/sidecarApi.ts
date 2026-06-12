@@ -982,10 +982,10 @@ export const sidecarApi = {
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
-                code: `<main class="min-h-[260px] rounded-xl border border-white/10 bg-zinc-950 p-6 text-white">
+                code: `<main class="min-h-[260px] rounded-xl border border-white/10 bg-zinc-950 p-6 text-background">
   <h1 class="text-xl font-black">Interactive Sandbox</h1>
   <p class="mt-2 text-sm text-zinc-300">${payload.prompt}</p>
-  <button class="mt-4 rounded-md bg-white px-3 py-2 text-xs font-black uppercase tracking-widest text-zinc-950" onclick="this.nextElementSibling.textContent='Exploration started'">Run</button>
+  <button class="mt-4 rounded-md bg-white px-3 py-2 text-xs font-black uppercase tracking-widest text-background" onclick="this.nextElementSibling.textContent='Exploration started'">Run</button>
   <p class="mt-3 text-sm text-zinc-400"></p>
 </main>`,
             }

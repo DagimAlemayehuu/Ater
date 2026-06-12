@@ -94,24 +94,24 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           </div>
           <div className="flex items-center gap-2">
             {!isPast && daysLeft !== null && (
-              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft <= 3 ? 'border-foreground bg-[#232326]' : 'border-[#242426] bg-[#1a1a1c]')}>
+              <div className={cn('px-4 py-2 border text-center rounded-[8px]', daysLeft <= 3 ? 'border-foreground bg-bento-item' : 'border-border bg-bento-card')}>
                 <div className="text-2xl font-black text-foreground">{daysLeft}</div>
-                <div className="text-[7px] font-black uppercase text-[#a1a1aa]">days</div>
+                <div className="text-[7px] font-black uppercase text-muted-foreground">days</div>
               </div>
             )}
-            <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-[#a1a1aa] hover:text-foreground hover:bg-[#232326]/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
-            <button onClick={() => { onDelete('exams', selectedId); setSelectedId(null) }} className="p-2 text-[#a1a1aa] hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
+            <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-bento-item/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
+            <button onClick={() => { onDelete('exams', selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
 
         {/* Score entry if past */}
         {isPast && !grade && (
-          <div className="p-5 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
-            <p className="text-[9px] font-black uppercase tracking-widest text-[#a1a1aa]">Enter Your Result</p>
+          <div className="p-5 bg-bento-card border border-border rounded-[8px] space-y-3">
+            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Enter Your Result</p>
             <div className="grid grid-cols-4 gap-3">
               {GRADES.map(g => (
                 <button key={g} onClick={() => onUpdate('exams', exam.id, { Grade: wrapWL(g), Status: wrapWL('Graded') })}
-                  className={cn('py-2 border rounded-[6px] text-[10px] font-black uppercase hover:border-foreground/50 hover:bg-[#232326]/50 transition-colors', gradeColorClass(g))}>
+                  className={cn('py-2 border rounded-[6px] text-[10px] font-black uppercase hover:border-foreground/50 hover:bg-bento-item/50 transition-colors', gradeColorClass(g))}>
                   {g}
                 </button>
               ))}
@@ -135,16 +135,16 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
         {!isPast && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#a1a1aa]">Preparation</span>
-              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-[#a1a1aa] hover:text-foreground">View Hubs →</button>
+              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground">Preparation</span>
+              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View Hubs →</button>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px]">
-                <span className="text-[8px] font-black uppercase text-[#a1a1aa]">Study Hubs Done</span>
+              <div className="p-4 border border-border bg-bento-card rounded-[8px]">
+                <span className="text-[8px] font-black uppercase text-muted-foreground">Study Hubs Done</span>
                 <p className="text-xl font-black mt-1 text-foreground">{studyHubDone} / {examHubs.length}</p>
               </div>
-              <div className="p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px]">
-                <span className="text-[8px] font-black uppercase text-[#a1a1aa]">Total Study Time</span>
+              <div className="p-4 border border-border bg-bento-card rounded-[8px]">
+                <span className="text-[8px] font-black uppercase text-muted-foreground">Total Study Time</span>
                 <p className="text-xl font-black mt-1 text-foreground">{totalStudyTime > 0 ? `${Math.round(totalStudyTime / 60)}h` : '--'}</p>
               </div>
               <BigPropertyCard label="Confidence" value={getVal(exam, 'Confidence', 'confidence') || ''}
@@ -157,11 +157,11 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                   return (
                     <div key={i} onClick={() => onOpenNote(h.path || `database/study planner/${h.id}.md`)}
                       className={cn('flex items-center gap-3 p-2.5 border rounded-[6px] cursor-pointer hover:border-foreground/45 transition-colors',
-                        done ? 'border-[#242426] opacity-50 bg-[#1a1a1c]/50' : 'border-[#242426] bg-[#1a1a1c]')}>
-                      <div className={cn('w-3.5 h-3.5 border rounded-[3px] flex items-center justify-center shrink-0', done ? 'bg-foreground border-foreground' : 'border-[#242426]')}>
+                        done ? 'border-border opacity-50 bg-bento-card/50' : 'border-border bg-bento-card')}>
+                      <div className={cn('w-3.5 h-3.5 border rounded-[3px] flex items-center justify-center shrink-0', done ? 'bg-foreground border-foreground' : 'border-border')}>
                         {done && <Check size={8} strokeWidth={4} className="text-background" />}
                       </div>
-                      <span className={cn('text-[10px] font-black uppercase flex-1', done && 'line-through text-[#a1a1aa]')}>
+                      <span className={cn('text-[10px] font-black uppercase flex-1', done && 'line-through text-muted-foreground')}>
                         {cleanTitle(h.title || h.id)}
                       </span>
                     </div>
@@ -192,44 +192,44 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
     <div className="h-full flex flex-col overflow-hidden">
       {/* Next Exam banner */}
       {next && (
-        <div className="mx-6 mt-4 p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] flex items-center justify-between shrink-0">
+        <div className="mx-6 mt-4 p-4 bg-bento-card border border-border rounded-[8px] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <Target size={12} className="text-[#a1a1aa]" />
+            <Target size={12} className="text-muted-foreground" />
             <div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]">Next Exam</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Next Exam</span>
               <p className="text-[12px] font-black uppercase text-foreground">{cleanTitle(next.title)}</p>
             </div>
           </div>
           <div className="text-right">
             <span className="text-xl font-black text-foreground">{differenceInDays(new Date(next.date), now)}</span>
-            <p className="text-[8px] font-black uppercase text-[#a1a1aa]">days</p>
+            <p className="text-[8px] font-black uppercase text-muted-foreground">days</p>
           </div>
         </div>
       )}
 
       {/* Filter bar */}
-      <div className="px-6 py-3 border-b border-[#242426] flex items-center gap-3 shrink-0 flex-wrap bg-transparent">
-        <div className="flex items-center gap-1 bg-[#1a1a1c] border border-[#242426] p-1 rounded-[6px]">
+      <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap bg-transparent">
+        <div className="flex items-center gap-1 bg-bento-card border border-border p-1 rounded-[6px]">
           {(['Upcoming', 'All', 'Past'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-[4px] transition-colors',
-                filter === f ? 'bg-[#232326] text-foreground' : 'text-[#a1a1aa] hover:text-foreground')}>
+                filter === f ? 'bg-bento-item text-foreground' : 'text-muted-foreground hover:text-foreground')}>
               {f}
             </button>
           ))}
         </div>
         <select value={course} onChange={e => setCourse(e.target.value)}
-          className="bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
+          className="bg-bento-card border border-border rounded-[6px] px-3 py-2 text-[9px] font-black uppercase tracking-widest text-foreground focus:outline-none cursor-pointer">
           {courseOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
-        <div className="flex items-center gap-2 flex-1 bg-[#1a1a1c] border border-[#242426] rounded-[6px] px-3 py-2">
-          <Search size={11} className="text-[#a1a1aa]" />
+        <div className="flex items-center gap-2 flex-1 bg-bento-card border border-border rounded-[6px] px-3 py-2">
+          <Search size={11} className="text-muted-foreground" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exams..."
             className="flex-1 bg-transparent text-[11px] font-bold focus:outline-none text-foreground placeholder:text-muted-foreground/30" />
         </div>
         <button onClick={() => setAdding(true)}
           data-tour="exam-add"
-          className="flex items-center gap-1.5 px-3 py-2 text-[#a1a1aa] hover:text-foreground border border-[#242426] bg-[#232326]/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-[#232326] transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-colors">
           <Plus size={10} /> Add
         </button>
       </div>
@@ -261,23 +261,23 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
               <div key={idx} onClick={() => setSelectedId(exam.id)}
                 data-tour={`exam-card-${exam.id}`}
                 className={cn('p-5 border rounded-[8px] cursor-pointer flex flex-col gap-3 hover:border-foreground/40 transition-colors',
-                  isUrgent ? 'border-[#242426] bg-[#1a1a1c] ring-1 ring-white/10' : 'border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]/30')}>
+                  isUrgent ? 'border-border bg-bento-card ring-1 ring-white/10' : 'border-border bg-bento-card hover:bg-bento-item/30')}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     {examType && <span className={cn('inline-block px-2 py-0.5 text-[7px] font-black uppercase border rounded-[3px] mb-2', typeColorClass(examType))}>{examType}</span>}
                     <h3 className="text-[13px] font-black uppercase leading-tight text-foreground">{cleanTitle(exam.title)}</h3>
-                    {examCourse && <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65 mt-1">{examCourse}</p>}
+                    {examCourse && <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/65 mt-1">{examCourse}</p>}
                   </div>
                   {grade && <span className={cn('px-2 py-0.5 text-[9px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}
                 </div>
-                <div className="flex items-center justify-between border-t border-[#242426] pt-2">
+                <div className="flex items-center justify-between border-t border-border pt-2">
                   {exam.date && (
                     <span className="text-[9px] font-black uppercase text-muted-foreground">
                       {format(parseISO(exam.date), 'MMM d, yyyy')}
                     </span>
                   )}
                   {!isPast && daysLeft !== null && <CountdownBadge days={daysLeft} />}
-                  {isPast && !grade && <span className="text-[8px] font-black uppercase text-[#a1a1aa]/50">Grade?</span>}
+                  {isPast && !grade && <span className="text-[8px] font-black uppercase text-muted-foreground/50">Grade?</span>}
                 </div>
               </div>
             )

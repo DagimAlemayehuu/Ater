@@ -616,26 +616,26 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
      <div className="flex flex-row items-center justify-between gap-4">
      <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
-     <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", view === 'dashboard' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}>Dashboard</button>
-     <button onClick={() => setView('history' as any)} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", (view as string) === 'history' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}>History</button>
-     <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1", (view as string) === 'vault' ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50")}><BookOpen size={10}/>Reference Vault</button>
+     <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", view === 'dashboard' ? "bg-bento-item text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50")}>Dashboard</button>
+     <button onClick={() => setView('history' as any)} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", (view as string) === 'history' ? "bg-bento-item text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50")}>History</button>
+     <button onClick={() => { setView('vault' as any); if (selectedHub) loadVaultFiles(selectedHub) }} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1", (view as string) === 'vault' ? "bg-bento-item text-foreground border border-border" : "text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50")}><BookOpen size={10}/>Reference Vault</button>
      </div>
      <div className="flex gap-2 w-auto">
      <Button data-tour="practice-due-btn" onClick={handleReviewDueCards} className="h-9 flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none"><FlameKindling size={10} className="mr-1"/>Review Due</Button>
-     <Button data-tour="practice-custom-btn" onClick={() => setView('configuring')} className="h-9 flex-none px-6 bg-[#1a1a1c] border border-[#242426] hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">Custom</Button>
+     <Button data-tour="practice-custom-btn" onClick={() => setView('configuring')} className="h-9 flex-none px-6 bg-bento-card border border-border hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">Custom</Button>
      </div>
      </div>
 
      <div data-tour="practice-stats-grid" className="grid grid-cols-3 gap-4">
-     <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
+     <div className="p-6 bg-bento-card border border-border rounded-[12px] flex flex-col gap-1">
      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
      <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
      </div>
-     <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
+     <div className="p-6 bg-bento-card border border-border rounded-[12px] flex flex-col gap-1">
      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
      <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
      </div>
-     <div className="p-6 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col gap-1">
+     <div className="p-6 bg-bento-card border border-border rounded-[12px] flex flex-col gap-1">
      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
      <span className="text-2xl font-black tracking-tight uppercase text-foreground">{stability}</span>
      </div>
@@ -643,7 +643,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
      <div className="flex flex-col gap-8">
      <div className="grid grid-cols-2 gap-8">
-     <div className="p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-6">
+     <div className="p-8 bg-bento-card border border-border rounded-[12px] space-y-6">
      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
      <div className="w-full h-64">
      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -651,14 +651,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.1)" />
      <XAxis dataKey="name" hide />
      <YAxis domain={[0, 100]} hide />
-     <Tooltip contentStyle={{backgroundColor: '#1a1a1c', border: '1px solid #242426', borderRadius: '8px', fontSize: '10px'}} />
-     <Line type="monotone" dataKey="score" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{r: 2, fill: '#151517'}} />
+     <Tooltip contentStyle={{backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '10px'}} />
+     <Line type="monotone" dataKey="score" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{r: 2, fill: 'hsl(var(--background))'}} />
      </LineChart>
      </ResponsiveContainer>
      </div>
      </div>
 
-     <div className="p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-8">
+     <div className="p-8 bg-bento-card border border-border rounded-[12px] space-y-8">
      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2">
      <span>Cognitive Modalities</span>
      {!hasLogs && (
@@ -684,7 +684,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
      <span className="text-muted-foreground/40">{stat.type}</span>
      <span className="text-foreground/90">{stat.p}%</span>
      </div>
-     <div className="h-1.5 bg-[#232326] rounded-full overflow-hidden">
+     <div className="h-1.5 bg-bento-item rounded-full overflow-hidden">
      <div className="h-full bg-primary/60" style={{width: `${stat.p}%`}}></div>
      </div>
      </div>
@@ -709,17 +709,17 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
      <div className="flex flex-row items-center justify-between gap-4">
      <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
-     <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", false ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/60 hover:text-foreground hover:bg-[#232326]/50")}>Dashboard</button>
-     <button onClick={() => setView('history')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", true ? "bg-[#232326] text-foreground border border-[#242426]" : "text-muted-foreground/60 hover:text-foreground hover:bg-[#232326]/50")}>History</button>
+     <button onClick={() => setView('dashboard')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", false ? "bg-bento-item text-foreground border border-border" : "text-muted-foreground/60 hover:text-foreground hover:bg-bento-item/50")}>Dashboard</button>
+     <button onClick={() => setView('history')} className={cn("flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ", true ? "bg-bento-item text-foreground border border-border" : "text-muted-foreground/60 hover:text-foreground hover:bg-bento-item/50")}>History</button>
      </div>
-     <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-[#1a1a1c] border border-[#242426] rounded-[8px] font-black uppercase tracking-widest text-[9px] hover:border-foreground/50 transition-none">Start</Button>
+     <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-bento-card border border-border rounded-[8px] font-black uppercase tracking-widest text-[9px] hover:border-foreground/50 transition-none">Start</Button>
      </div>
 
      <div className="space-y-4">
-     <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-[#242426] pb-2">Past Sessions</h3>
+     <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 border-b border-border pb-2">Past Sessions</h3>
      <div className="grid grid-cols-1 gap-2">
      {(Array.isArray(pastPractices) ? pastPractices : []).slice().reverse().map((p, i) => (
-     <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] cursor-pointer hover:border-foreground/30 flex items-center justify-between transition-colors">
+     <div key={i} onClick={() => handleResumePractice(p.path)} className="group p-4 bg-bento-card border border-border rounded-[8px] cursor-pointer hover:border-foreground/30 flex items-center justify-between transition-colors">
      <div className="flex items-center gap-4">
      <div className="text-[10px] font-black text-muted-foreground/40">{p.score}%</div>
      <div className="flex flex-col">
@@ -755,35 +755,35 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
      <div className="flex flex-row items-center justify-between gap-4">
      <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
-     <button onClick={() => setView('dashboard')} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50 transition-colors">Dashboard</button>
-     <button onClick={() => setView('history' as any)} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] text-muted-foreground/40 hover:text-foreground hover:bg-[#232326]/50 transition-colors">History</button>
-     <button className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] bg-[#232326] text-foreground border border-[#242426] flex items-center gap-1 transition-colors"><BookOpen size={10}/>Reference Vault</button>
+     <button onClick={() => setView('dashboard')} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50 transition-colors">Dashboard</button>
+     <button onClick={() => setView('history' as any)} className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50 transition-colors">History</button>
+     <button className="flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] bg-bento-item text-foreground border border-border flex items-center gap-1 transition-colors"><BookOpen size={10}/>Reference Vault</button>
      </div>
-     <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-[#1a1a1c] border border-[#242426] hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">New Session</Button>
+     <Button onClick={() => setView('configuring')} className="h-9 w-auto px-6 bg-bento-card border border-border hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none">New Session</Button>
      </div>
     <div className="grid grid-cols-3 gap-6">
      <div className="col-span-1 space-y-4">
-      <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
+      <div className="p-4 bg-bento-card border border-border rounded-[8px] space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub</div>
        <Select value={selectedHub} onValueChange={(val: string) => { setSelectedHub(val); loadVaultFiles(val) }}>
-        <SelectTrigger className="w-full h-9 bg-[#232326] border-[#242426] rounded-[6px] px-3 text-[10px] font-black uppercase tracking-tight focus:ring-1 focus:ring-white/10 transition-colors"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
-        <SelectContent className="border-[#242426] bg-[#1a1a1c]">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight hover:bg-[#232326]">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
+        <SelectTrigger className="w-full h-9 bg-bento-item border-border rounded-[6px] px-3 text-[10px] font-black uppercase tracking-tight focus:ring-1 focus:ring-white/10 transition-colors"><SelectValue placeholder="Select Hub..." /></SelectTrigger>
+        <SelectContent className="border-border bg-bento-card">{hubs.map(hub => <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight hover:bg-bento-item">{cleanTitle(hub.title)}</SelectItem>)}</SelectContent>
        </Select>
       </div>
-      <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
+      <div className="p-4 bg-bento-card border border-border rounded-[8px] space-y-3">
        <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Add Source Text</div>
        <input value={vaultSourceName} onChange={e => setVaultSourceName(e.target.value)} placeholder="Source name (e.g. Midterm 2024)"
-        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-foreground/20 text-foreground placeholder:text-muted-foreground/30 transition-colors"/>
+        className="w-full px-3 py-2 bg-bento-item border border-border rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-foreground/20 text-foreground placeholder:text-muted-foreground/30 transition-colors"/>
        <textarea value={vaultSourceText} onChange={e => setVaultSourceText(e.target.value)}
         placeholder="Paste exam questions, worksheet text here..." rows={5}
-        className="w-full px-3 py-2 bg-[#232326] border border-[#242426] rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-foreground/20 text-foreground placeholder:text-muted-foreground/30 resize-y transition-colors"/>
+        className="w-full px-3 py-2 bg-bento-item border border-border rounded-[6px] text-[10px] font-medium focus:outline-none focus:border-foreground/20 text-foreground placeholder:text-muted-foreground/30 resize-y transition-colors"/>
        <Button onClick={handleVaultUploadText} disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()} className="w-full h-9 font-black uppercase tracking-widest text-[9px] bg-primary text-primary-foreground hover:bg-primary/90 rounded-[6px] transition-colors">
         {vaultLoading ? <>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
        </Button>
       </div>
      </div>
      <div className="col-span-2 space-y-4">
-      <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-3">
+      <div className="p-4 bg-bento-card border border-border rounded-[8px] space-y-3">
        <div className="flex items-center justify-between">
         <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Question Banks</div>
         <span className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{vaultSelectedFiles.length} selected</span>
@@ -796,9 +796,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
           const isSel = vaultSelectedFiles.includes(vf.path)
           return (
            <button key={vf.path} onClick={() => setVaultSelectedFiles(prev => isSel ? prev.filter(p => p !== vf.path) : [...prev, vf.path])}
-            className={cn("w-full text-left p-3 border rounded-[8px] flex items-center justify-between transition-colors", isSel ? "border-foreground/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-foreground/20")}>
+            className={cn("w-full text-left p-3 border rounded-[8px] flex items-center justify-between transition-colors", isSel ? "border-foreground/40 bg-[#e4e4e7]/5" : "border-border bg-bento-item hover:border-foreground/20")}>
             <div className="flex items-center gap-3">
-             <div className={cn("w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors", isSel ? "bg-[#e4e4e7] border-foreground" : "border-[#242426]")}>{isSel && <Check size={10} className="text-background"/>}</div>
+             <div className={cn("w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors", isSel ? "bg-[#e4e4e7] border-foreground" : "border-border")}>{isSel && <Check size={10} className="text-background"/>}</div>
              <div><div className="text-[10px] font-black uppercase tracking-tight text-foreground">{vf.name}</div><div className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest">{vf.total_questions} questions</div></div>
             </div>
             <FileText size={12} className="text-muted-foreground/20"/>
@@ -809,12 +809,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
        )}
       </div>
       {vaultFiles.length > 0 && (
-       <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-4">
+       <div className="p-4 bg-bento-card border border-border rounded-[8px] space-y-4">
         <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Practice Mode</div>
         <div className="grid grid-cols-2 gap-2">
          {MODES.map(m => (
           <button key={m.id} onClick={() => setVaultMode(m.id as any)}
-           className={cn("p-3 border rounded-[8px] text-left transition-colors", vaultMode === m.id ? "border-foreground/40 bg-[#e4e4e7]/5" : "border-[#242426] bg-[#232326] hover:border-foreground/20")}>
+           className={cn("p-3 border rounded-[8px] text-left transition-colors", vaultMode === m.id ? "border-foreground/40 bg-[#e4e4e7]/5" : "border-border bg-bento-item hover:border-foreground/20")}>
            <div className="flex items-center gap-2 mb-1">
             <span className="text-muted-foreground/60">{m.icon}</span>
             <span className="text-[10px] font-black uppercase tracking-tight text-foreground">{m.label}</span>
@@ -846,19 +846,19 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
   <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
    <div className="flex-1 overflow-hidden flex flex-col p-10">
     <div className="flex items-center justify-between mb-8">
-    <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] rounded-[8px] bg-[#1a1a1c] transition-colors">Cancel</button>
+    <button onClick={() => setView('dashboard')} className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-[8px] bg-bento-card transition-colors">Cancel</button>
     <div className="text-xl font-black tracking-tight text-foreground">{totalQuestions} Questions</div>
     </div>
 
     <div data-tour="practice-config-panel" className="grid grid-cols-4 gap-4 flex-1 min-h-0">
       <div className="col-span-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-       <div className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-5">
+       <div className="p-4 bg-bento-card border border-border rounded-[12px] space-y-5">
         
         <div className="space-y-2">
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
          <Select value={selectedHub} onValueChange={(val: string) => {setSelectedHub(val); loadHubNotes(val);}}>
-          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 transition-colors"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
-          <SelectContent className="border-[#242426] bg-[#1a1a1c]">
+          <SelectTrigger className="w-full h-10 bg-bento-item border-border rounded-[8px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 transition-colors"><SelectValue placeholder="Select Topic..." /></SelectTrigger>
+          <SelectContent className="border-border bg-bento-card">
              <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">Global Interleaved (All Topics)</SelectItem>
              {hubs.map(hub => (<SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">{cleanTitle(hub.title)}</SelectItem>))}
           </SelectContent>
@@ -869,7 +869,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Difficulty</Label>
          <RadioGroup value={advancedConfig.difficulty} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, difficulty: val as any}))} className="grid grid-cols-4 gap-1">
           {[ {val: 'L1', label: '1'}, {val: 'L2', label: '2'}, {val: 'L3', label: '3'}, {val: 'Mixed', label: 'M'} ].map((level) => (
-           <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-[#242426] rounded-[8px] bg-[#232326] peer-data-[state=checked]:bg-[#e4e4e7]/10 peer-data-[state=checked]:border-foreground/40 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-[#e4e4e7]/5 transition-all">{level.label}</Label></div>
+           <div key={level.val}><RadioGroupItem value={level.val} id={level.val} className="peer sr-only" /><Label htmlFor={level.val} className="flex h-10 border border-border rounded-[8px] bg-bento-item peer-data-[state=checked]:bg-[#e4e4e7]/10 peer-data-[state=checked]:border-foreground/40 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-[#e4e4e7]/5 transition-all">{level.label}</Label></div>
           ))}
          </RadioGroup>
         </div>
@@ -878,14 +878,14 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
          <Popover>
           <PopoverTrigger asChild>
-           <Button variant="outline" className="w-full h-10 border-[#242426] bg-[#232326] text-[10px] font-black uppercase px-4 justify-between hover:bg-[#e4e4e7]/5 transition-colors">
+           <Button variant="outline" className="w-full h-10 border-border bg-bento-item text-[10px] font-black uppercase px-4 justify-between hover:bg-[#e4e4e7]/5 transition-colors">
             <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
             <Layers size={12} className="opacity-40" />
            </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0 rounded-[12px] border border-[#242426] bg-[#1a1a1c] overflow-hidden" align="start">
+          <PopoverContent className="w-[300px] p-0 rounded-[12px] border border-border bg-bento-card overflow-hidden" align="start">
            <Command className="bg-transparent">
-            <div className="p-3 border-b border-[#242426] flex justify-between items-center bg-[#232326]/50">
+            <div className="p-3 border-b border-border flex justify-between items-center bg-bento-item/50">
              <span className="text-[8px] font-black uppercase text-muted-foreground/40">{availableNotes.length} Total</span>
              <Button variant="ghost" size="default" className="h-7 text-[8px] font-black uppercase hover:bg-[#e4e4e7]/5" onClick={() => {if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: []}))} else {setAdvancedConfig(prev => ({...prev, selectedAtomicNotes: availableNotes.map(n => n.path)}))}}}>Toggle All</Button>
             </div>
@@ -895,7 +895,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               const isSelected = advancedConfig.selectedAtomicNotes.includes(note.path); 
               return (
                <CommandItem key={note.path} onSelect={() => toggleAtomicNote(note.path)} className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-[6px] text-[9px] font-black uppercase hover:bg-[#e4e4e7]/5">
-                <div className={cn("w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors", isSelected ? "bg-[#e4e4e7] border-foreground text-background" : "border-[#242426]")}>{isSelected && <Check size={8} />}</div>
+                <div className={cn("w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors", isSelected ? "bg-[#e4e4e7] border-foreground text-background" : "border-border")}>{isSelected && <Check size={8} />}</div>
                 <span className="truncate text-foreground/80">{note.title}</span>
                </CommandItem>
               ); 
@@ -909,34 +909,34 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="space-y-2">
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total (Min)</Label>
          <Select value={String(advancedConfig.globalTimeLimitMinutes || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, globalTimeLimitMinutes: val === "null" ? null : parseInt(val)}))}>
-          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
-          <SelectContent className="border-[#242426] bg-[#1a1a1c]">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
+          <SelectTrigger className="w-full h-10 bg-bento-item border-border rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
+          <SelectContent className="border-border bg-bento-card">{[null, 5, 10, 15, 30, 60].map(m => (<SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">{m ? `${m}m` : 'None'}</SelectItem>))}</SelectContent>
          </Select>
         </div>
 
         <div className="space-y-2">
          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Per Q (Sec)</Label>
          <Select value={String(advancedConfig.perQuestionTimeLimitSeconds || "null")} onValueChange={(val: string) => setAdvancedConfig(prev => ({...prev, perQuestionTimeLimitSeconds: val === "null" ? null : parseInt(val)}))}>
-          <SelectTrigger className="w-full h-10 bg-[#232326] border-[#242426] rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
-          <SelectContent className="border-[#242426] bg-[#1a1a1c]">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
+          <SelectTrigger className="w-full h-10 bg-bento-item border-border rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors"><SelectValue placeholder="No Limit" /></SelectTrigger>
+          <SelectContent className="border-border bg-bento-card">{[null, 15, 30, 60, 120].map(s => (<SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">{s ? `${s}s` : 'None'}</SelectItem>))}</SelectContent>
          </Select>
         </div>
 
        </div>
       </div>
 
-      <div className="col-span-3 p-8 bg-[#1a1a1c] border border-[#242426] rounded-[12px] flex flex-col min-h-0">
-       <div className="flex items-center justify-between border-b border-[#242426] pb-4 mb-6 gap-4">
+      <div className="col-span-3 p-8 bg-bento-card border border-border rounded-[12px] flex flex-col min-h-0">
+       <div className="flex items-center justify-between border-b border-border pb-4 mb-6 gap-4">
         <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Question Types Distribution</h3>
         <div className="flex items-center gap-4">
          <div className="flex flex-wrap gap-1.5 justify-end">
           {Object.entries(PRESETS).map(([k, p]) => (
-           <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-[#232326] hover:bg-[#e4e4e7]/5 border border-[#242426] text-muted-foreground hover:text-foreground transition-all rounded-[4px]" title={p.label}>
+           <button key={k} onClick={() => applyPreset(k)} className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-bento-item hover:bg-[#e4e4e7]/5 border border-border text-muted-foreground hover:text-foreground transition-all rounded-[4px]" title={p.label}>
             {p.label}
            </button>
           ))}
          </div>
-         <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-7 px-2.5 text-[8px] font-black uppercase border-[#242426] bg-[#232326] hover:bg-[#e4e4e7]/5 rounded-[4px]"><Zap size={10} className="mr-1"/>Random</Button>
+         <Button variant="outline" size="default" onClick={randomizeDistribution} className="h-7 px-2.5 text-[8px] font-black uppercase border-border bg-bento-item hover:bg-[#e4e4e7]/5 rounded-[4px]"><Zap size={10} className="mr-1"/>Random</Button>
         </div>
        </div>
        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 gap-x-6 gap-y-4 content-start">
@@ -955,7 +955,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         {key: 'scenario', label: 'Scenario Analysis'}, 
         {key: 'code', label: 'Code / Implementation'}
         ].map(type => (
-         <div key={type.key} className="space-y-2 p-3 bg-[#232326]/50 border border-[#242426] hover:border-foreground/20 transition-colors rounded-[8px]">
+         <div key={type.key} className="space-y-2 p-3 bg-bento-item/50 border border-border hover:border-foreground/20 transition-colors rounded-[8px]">
           <div className="flex justify-between items-center">
            <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{type.label}</Label>
            <span className="text-[9px] font-black tabular-nums text-foreground/80">{advancedConfig.questionDistribution[type.key as keyof AdvancedPracticeConfig['questionDistribution']]}</span>
@@ -1019,9 +1019,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       <div data-tour="practice-session-card" className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
         {/* ── Feynman Gate Locked Overlay ── */}
         {session.isFeynmanLocked && (
-          <div className="absolute inset-0 z-40 bg-[#151517]/90 backdrop-blur-md flex items-center justify-center p-6">
-            <div className="max-w-xl w-full border border-[#242426] bg-[#151517] p-8 rounded-[12px] space-y-6 shadow-2xl relative">
-              <div className="flex items-center gap-3 border-b border-[#242426] pb-4">
+          <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-6">
+            <div className="max-w-xl w-full border border-border bg-bento-panel p-8 rounded-[12px] space-y-6 shadow-2xl relative">
+              <div className="flex items-center gap-3 border-b border-border pb-4">
                 <BrainCircuit className="text-primary shrink-0" size={24} />
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest text-primary">Cognitive Lock Engaged</h3>
@@ -1033,19 +1033,19 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                <div className="p-3 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
                   <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Retrievability</span>
                   <span className={cn("text-xs font-black tracking-tight", retrievability < 0.70 ? "text-destructive" : "text-foreground")}>
                     {(retrievability * 100).toFixed(1)}%
                   </span>
                 </div>
-                <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                <div className="p-3 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
                   <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Stability</span>
                   <span className="text-xs font-black tracking-tight text-foreground">
                     {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
                   </span>
                 </div>
-                <div className="p-3 bg-[#232326] border border-[#242426] rounded-[8px] flex flex-col gap-0.5">
+                <div className="p-3 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
                   <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
                   <span className={cn("text-xs font-black tracking-tight", lapses >= 3 ? "text-destructive" : "text-foreground")}>
                     {lapses}
@@ -1067,7 +1067,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                   disabled={session.isFeynmanValidating}
                   rows={5}
                   placeholder="Explain the core concepts, mechanisms, and rules of this topic..."
-                  className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+                  className="w-full p-4 bg-bento-item border border-border rounded-[8px] text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
                 />
 
                 {session.feynmanError && (
@@ -1083,7 +1083,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                   variant="ghost"
                   onClick={resetSession}
                   disabled={session.isFeynmanValidating}
-                  className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-[#242426] bg-[#232326] rounded-[8px]"
+                  className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border bg-bento-item rounded-[8px]"
                 >
                   Exit Session
                 </Button>
@@ -1215,13 +1215,13 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                             : isWrongSelected 
                               ? "bg-destructive/10 border-destructive text-destructive" 
                               : isRevealed 
-                                ? "border-[#242426] opacity-30 grayscale" 
+                                ? "border-border opacity-30 grayscale" 
                                 : isSelected 
-                                  ? "bg-[#232326] border-foreground text-foreground" 
-                                  : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground"
+                                  ? "bg-bento-item border-foreground text-foreground" 
+                                  : "border-border bg-bento-panel hover:bg-bento-item text-foreground"
                         )}
                       >
-                        <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold rounded-[6px]", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-[#242426] bg-[#232326] text-muted-foreground/50")}>{key}</span>
+                        <span className={cn("shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold rounded-[6px]", isSelected ? "border-foreground bg-foreground/10 text-foreground" : "border-border bg-bento-item text-muted-foreground/50")}>{key}</span>
                         <div className="flex-1 overflow-x-auto"><MarkdownBlock content={String(val)} /></div>
                       </button>
                     );
@@ -1231,9 +1231,9 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
 
               {(!currentQuestion.type || ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(currentQuestion.type)) && (
                 <div className="space-y-6">
-                  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-[#242426] rounded-[8px] bg-[#151517]"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
-                  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-[#242426]/40 rounded-[8px] bg-[#151517] text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
-                  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-[#232326] border border-[#242426] rounded-[8px] text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
+                  {['debug', 'code'].includes(currentQuestion.type) && (currentQuestion.content || currentQuestion.codeSnippet) && <div className="p-1 border border-border rounded-[8px] bg-bento-panel"><MarkdownBlock content={`\`\`\`${currentQuestion.language || 'text'}\n${currentQuestion.content || currentQuestion.codeSnippet}\n\`\`\``} /></div>}
+                  {['trace', 'calculation', 'data_analysis', 'scenario', 'synthesis', 'writing'].includes(currentQuestion.type) && (currentQuestion.content) && <div className="p-4 border border-border/40 rounded-[8px] bg-bento-panel text-sm text-foreground/80"><MarkdownBlock content={currentQuestion.content} /></div>}
+                  <textarea rows={6} disabled={isRevealed} className="w-full p-4 bg-bento-item border border-border rounded-[8px] text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20" placeholder="Synthesize your technical analysis here..." value={userAnswers[currentQuestion.id] || ""} onChange={(e) => handleSelectAnswer(e.target.value)} />
                   {isRevealed && (
                     <div className="p-4 border border-primary/20 bg-primary/5 rounded-[8px] space-y-2">
                       <div className="text-[9px] font-black uppercase tracking-[0.3em] text-primary mb-1">Correct Answer</div>
@@ -1261,10 +1261,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                             : isWrongSelected 
                               ? "bg-destructive/10 border-destructive text-destructive ring-1 ring-inset ring-destructive" 
                               : isRevealed 
-                                ? "border-[#242426] opacity-30 grayscale text-muted-foreground/40" 
+                                ? "border-border opacity-30 grayscale text-muted-foreground/40" 
                                 : isSelected 
-                                  ? "bg-[#232326] border-foreground text-foreground ring-1 ring-inset ring-foreground" 
-                                  : "border-[#242426] bg-[#151517] hover:bg-[#232326] text-foreground/80"
+                                  ? "bg-bento-item border-foreground text-foreground ring-1 ring-inset ring-foreground" 
+                                  : "border-border bg-bento-panel hover:bg-bento-item text-foreground/80"
                         )}
                       >
                         {v}
@@ -1285,7 +1285,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                     return (
                       <div key={i} className={cn(
                         "flex items-center gap-4 p-3 border rounded-[8px] ",
-                        isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
+                        isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-bento-item hover:border-border/60"
                       )}>
                         <div className="flex flex-col gap-1.5 border-r border-border/10 pr-4">
                           <button disabled={isRevealed || i===0} onClick={moveUp} className="text-xs p-1 opacity-20 hover:opacity-100 hover:text-primary  disabled:opacity-0">▲</button>
@@ -1308,11 +1308,11 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                     return (
                       <div key={i} className={cn(
                         "flex items-center gap-4 p-3 border rounded-[8px] ",
-                        isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-[#242426] bg-[#232326] hover:border-[#242426]/60"
+                        isCorrect ? "border-primary bg-primary/5" : isWrong ? "border-destructive/20 bg-destructive/5" : "border-border bg-bento-item hover:border-border/60"
                       )}>
                         <div className="flex-1 font-black uppercase tracking-[0.2em] text-[10px] text-muted-foreground/60">{pair.left}</div>
                         <div className="flex-1">
-                          <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-[#232326] hover:bg-[#232326]/80 border border-[#242426] focus:border-primary rounded-[8px] outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
+                          <select disabled={isRevealed} value={selected} onChange={(e) => handleSelectAnswer({...userAnswers[currentQuestion.id], [pair.left]: e.target.value})} className="w-full p-3 bg-bento-item hover:bg-bento-item/80 border border-border focus:border-primary rounded-[8px] outline-none text-xs font-bold text-foreground cursor-pointer transition-colors">
                             <option value="">Select match...</option>
                             {rights.map((r: string, j: number) => <option key={j} value={r}>{r}</option>)}
                           </select>
@@ -1330,7 +1330,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               )}
 
               {currentQuestion.type === 'fill_in' && (
-                <div className="p-5 bg-[#151517] border border-[#242426] rounded-[8px] text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
+                <div className="p-5 bg-bento-panel border border-border rounded-[8px] text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
                   {(() => {
                     const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/);
                     return parts.map((part: string, i: number) => (
@@ -1348,12 +1348,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                                 handleSelectAnswer(newAns);
                               }} 
                               className={cn(
-                                "mx-2 border-b-2 bg-[#232326] hover:bg-[#232326]/80 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150 rounded-[6px]", 
+                                "mx-2 border-b-2 bg-bento-item hover:bg-bento-item/80 outline-none w-36 focus:w-40 text-center text-sm font-bold uppercase shrink-0 px-2 py-0.5 transition-all duration-150 rounded-[6px]", 
                                 isRevealed 
                                   ? (String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() === String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() 
                                     ? "border-primary bg-primary/10 text-primary" 
                                     : "border-destructive bg-destructive/10 text-destructive") 
-                                  : "border-[#242426] focus:border-primary text-foreground"
+                                  : "border-border focus:border-primary text-foreground"
                               )} 
                             />
                             {isRevealed && String((userAnswers[currentQuestion.id] || [])[i] || '').trim().toLowerCase() !== String((currentQuestion.answer || [])[i] || '').trim().toLowerCase() && (
@@ -1375,7 +1375,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               )}
 
               {isRevealed && ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) && Array.isArray(currentQuestion.required_keywords) && currentQuestion.required_keywords.length > 0 && (
-                <div className="p-8 border border-[#242426] rounded-[8px] bg-[#151517] space-y-4">
+                <div className="p-8 border border-border rounded-[8px] bg-bento-panel space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mandatory Concepts Checklist</div>
                     <div className="text-[10px] font-black tabular-nums text-muted-foreground/50">
@@ -1393,12 +1393,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                     {currentQuestion.required_keywords.map((kw: string, i: number) => {
                       const isFound = String(userAnswers[currentQuestion.id] || '').toLowerCase().includes(kw.toLowerCase());
                       return (
-                        <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer transition-colors shadow-sm", isFound ? "border-primary/50 bg-primary/5" : "border-[#242426] bg-[#1a1a1c] hover:bg-[#232326]")}>
+                        <label key={i} className={cn("flex items-center gap-4 p-4 border rounded-[8px] cursor-pointer transition-colors shadow-sm", isFound ? "border-primary/50 bg-primary/5" : "border-border bg-bento-card hover:bg-bento-item")}>
                           <input 
                             type="checkbox" 
                             checked={keywordChecks[kw] || false} 
                             onChange={(e) => session.setKeywordCheck(kw, e.target.checked)} 
-                            className="w-5 h-5 shrink-0 appearance-none border border-[#242426] bg-[#232326] rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
+                            className="w-5 h-5 shrink-0 appearance-none border border-border bg-bento-item rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
                           />
                           <span className={cn("text-sm font-bold transition-colors", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[10px] uppercase tracking-widest text-primary ml-3 font-black">(Found in your answer)</span>}</span>
                         </label>
@@ -1418,7 +1418,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
               <Button
                 variant="ghost"
                 onClick={handleExplainMore}
-                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-[#242426] bg-[#232326] hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-[8px] flex items-center gap-2 transition-colors duration-150"
+                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-border bg-bento-item hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-[8px] flex items-center gap-2 transition-colors duration-150"
                 title="Get a detailed lesson on this question's concept"
               >
                 <BookOpen size={12} />
@@ -1483,7 +1483,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
         <div className="flex-1 overflow-hidden flex flex-col p-10">
           <div className="max-w-3xl mx-auto w-full space-y-8 overflow-y-auto pr-2 custom-scrollbar">
             {/* Score hero */}
-            <div className="flex items-end justify-between border-b border-[#242426] pb-6">
+            <div className="flex items-end justify-between border-b border-border pb-6">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Session Complete</div>
                 <h1 className="text-9xl font-black tracking-tighter leading-none text-foreground">{score}<span className="text-3xl text-muted-foreground/30">%</span></h1>
@@ -1496,7 +1496,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
             </div>
 
             {/* Progress bar */}
-            <div className="h-2.5 w-full bg-[#1a1a1c] rounded-full overflow-hidden border border-[#242426]">
+            <div className="h-2.5 w-full bg-bento-card rounded-full overflow-hidden border border-border">
               <div className="h-full bg-[#e4e4e7] rounded-none transition-all duration-700" style={{width:`${score}%`}}/>
             </div>
 
@@ -1508,12 +1508,12 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                   {Object.entries(typeMap).map(([t, s]) => {
                     const pct = Math.round((s.correct/s.total)*100);
                     return (
-                      <div key={t} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[12px] space-y-2">
+                      <div key={t} className="p-4 bg-bento-card border border-border rounded-[12px] space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{TYPE_LABELS[t]||t}</span>
                           <span className="text-[10px] font-black tabular-nums text-foreground/80">{pct}%</span>
                         </div>
-                        <div className="h-1.5 w-full bg-[#232326] rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-bento-item rounded-full overflow-hidden">
                           <div className="h-full rounded-full" style={{width:`${pct}%`, background: pct >= 80 ? 'white' : pct >= 50 ? 'rgba(255,255,255,0.4)' : 'rgba(239, 68, 68, 0.6)'}}/>
                         </div>
                         <div className="text-[8px] font-black text-muted-foreground/20 uppercase tracking-widest">{s.correct}/{s.total} correct</div>
@@ -1530,15 +1530,15 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
                 <div className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Bookmarked for Review</div>
                 <div className="space-y-2">
                   {bookmarkedQuestions.map((q,i) => (
-                    <div key={i} className="p-4 bg-[#1a1a1c] border border-[#242426] rounded-[8px] space-y-2">
+                    <div key={i} className="p-4 bg-bento-card border border-border rounded-[8px] space-y-2">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[8px] border-[#242426] rounded-[4px] px-1.5 bg-[#232326]">{q.difficulty||'?'}</Badge>
+                        <Badge variant="outline" className="text-[8px] border-border rounded-[4px] px-1.5 bg-bento-item">{q.difficulty||'?'}</Badge>
                         <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{TYPE_LABELS[q.type]||q.type}</span>
                         {session.scores[q.id] === true && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-foreground/40">Correct</span>}
                         {session.scores[q.id] === false && <span className="ml-auto text-[8px] font-black uppercase tracking-widest text-destructive/60">Wrong</span>}
                       </div>
                       <div className="text-[11px] font-bold text-foreground/80 leading-relaxed">{q.question}</div>
-                      {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-[#242426]/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
+                      {(q as any).answer && <div className="text-[9px] font-black text-muted-foreground/40 border-t border-border/55 pt-2 mt-1">Answer: <span className="text-foreground/60">{String((q as any).answer)}</span></div>}
                     </div>
                   ))}
                 </div>
@@ -1546,10 +1546,10 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
             )}
 
             {/* Actions */}
-            <div className="flex flex-row gap-3 pt-6 border-t border-[#242426]">
+            <div className="flex flex-row gap-3 pt-6 border-t border-border">
               <Button onClick={() => { session.reset(); setView('configuring'); }} className="h-11 flex-1 bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Practice Again</Button>
-              <Button variant="outline" onClick={() => { const distribution = Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any; session.reset(); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: distribution }); setView('configuring'); }} className="h-11 flex-1 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
-              <Button data-tour="finish-session-btn" variant="outline" onClick={() => { dispatchWalkthroughTrigger('practice_session_completed'); session.reset(); setView('dashboard'); }} className="h-11 px-6 border-[#242426] bg-[#1a1a1c] hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Finish Session</Button>
+              <Button variant="outline" onClick={() => { const distribution = Object.fromEntries(Object.entries(typeMap).map(([t,s]) => [t, Math.max(0, s.total - s.correct)])) as any; session.reset(); setAdvancedConfig({...DEFAULT_CONFIG, questionDistribution: distribution }); setView('configuring'); }} className="h-11 flex-1 border-border bg-bento-card hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Retry Wrong Only</Button>
+              <Button data-tour="finish-session-btn" variant="outline" onClick={() => { dispatchWalkthroughTrigger('practice_session_completed'); session.reset(); setView('dashboard'); }} className="h-11 px-6 border-border bg-bento-card hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors">Finish Session</Button>
             </div>
           </div>
         </div>
@@ -1562,7 +1562,7 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
       <div className="flex-1 overflow-hidden flex items-center justify-center">
         <div className="text-center space-y-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Session state invalidated</p>
-          <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-[#242426] bg-[#1a1a1c] hover:bg-[#232326] text-foreground rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
+          <Button onClick={() => setView('dashboard')} variant="outline" className="h-10 px-8 border-border bg-bento-card hover:bg-bento-item text-foreground rounded-[8px] font-black uppercase tracking-widest text-[10px]">Reset Interface</Button>
         </div>
       </div>
     </div>

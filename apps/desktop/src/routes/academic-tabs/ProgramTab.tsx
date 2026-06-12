@@ -198,13 +198,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="grid grid-cols-3 gap-4">
             {semCourses.map((c, idx) => (
               <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                className="p-5 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
+                className="p-5 border border-border bg-bento-card rounded-[8px] cursor-pointer hover:bg-bento-item/30 transition-colors">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#a1a1aa]/65">Course</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/65">Course</span>
                   <span className="text-[9px] font-black text-foreground">{getVal(c, 'Credits', 'credits')} CR</span>
                 </div>
                 <h3 className="text-base font-black uppercase tracking-tight text-foreground">{cleanTitle(c.title)}</h3>
-                <p className="text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/50 mt-1">{getVal(c, 'Status', 'status')}</p>
+                <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 mt-1">{getVal(c, 'Status', 'status')}</p>
               </div>
             ))}
           </div>
@@ -247,18 +247,18 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="flex items-center gap-2">
             {!isCurrentYear && (
               <button onClick={() => handleSetCurrentYear(selectedYearId)}
-                className="px-3 py-1.5 border border-[#242426] bg-[#232326]/50 rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-[#232326] transition-colors">
+                className="px-3 py-1.5 border border-border bg-bento-item/50 rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-bento-item transition-colors">
                 Set Active
               </button>
             )}
             {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
               <button onClick={() => onUpdate('years', selectedYearId, { Status: '[[Completed]]' })}
-                className="px-3 py-1.5 bg-[#232326]/50 border border-[#242426] rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-[#232326] transition-colors">
+                className="px-3 py-1.5 bg-bento-item/50 border border-border rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-bento-item transition-colors">
                 Mark Complete
               </button>
             )}
             <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)}
-              className="p-2 text-[#a1a1aa] hover:text-foreground hover:bg-[#232326]/50 rounded-[4px] transition-colors">
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-bento-item/50 rounded-[4px] transition-colors">
               <BookOpen size={13} />
             </button>
             <button onClick={() => { onDelete('years', selectedYearId); setSelectedYearId(null) }}
@@ -315,21 +315,21 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
               })
               return (
                 <div key={idx} onClick={() => setSelectedSemId(s.id)}
-                  className="flex items-center justify-between p-4 border border-[#242426] bg-[#1a1a1c] rounded-[8px] cursor-pointer hover:bg-[#232326]/30 transition-colors">
+                  className="flex items-center justify-between p-4 border border-border bg-bento-card rounded-[8px] cursor-pointer hover:bg-bento-item/30 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={cn('w-5 h-5 border rounded-[4px] flex items-center justify-center text-[8px] font-black shrink-0',
                       isDone ? 'border-foreground bg-foreground text-background' :
-                      isActive ? 'border-[#a1a1aa] text-foreground bg-[#232326]' : 'border-[#242426] text-muted-foreground')}>
+                      isActive ? 'border-muted-foreground text-foreground bg-bento-item' : 'border-border text-muted-foreground')}>
                       {isDone ? <Check size={9} strokeWidth={4} /> : idx + 1}
                     </div>
                     <div>
                       <span className="text-[12px] font-black uppercase text-foreground">{cleanTitle(s.title)}</span>
-                      <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-[#a1a1aa]/65">{sStatus}</span>
+                      <span className="ml-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/65">{sStatus}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-[8px] font-black uppercase text-muted-foreground">{semCourses.length} courses</span>
-                    <ChevronRight size={11} className="text-[#a1a1aa]" />
+                    <ChevronRight size={11} className="text-muted-foreground" />
                   </div>
                 </div>
               )

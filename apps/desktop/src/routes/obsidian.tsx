@@ -129,9 +129,9 @@ const FileTreeItem = React.memo(({
         className={cn(
           "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
           isSelected 
-            ? "bg-[#232326] text-foreground font-semibold shadow-sm" 
-            : "hover:bg-foreground/[0.03] text-[#a1a1aa] hover:text-foreground",
-          dragOverPath === node.path && "bg-[#232326]/50 ring-1 ring-[#242426] ring-inset",
+            ? "bg-bento-item text-foreground font-semibold shadow-sm" 
+            : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
+          dragOverPath === node.path && "bg-bento-item/50 ring-1 ring-[#242426] ring-inset",
           draggedPath === node.path && "opacity-40 grayscale"
         )}
       >
@@ -1778,21 +1778,21 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         {/* Global Toolbar */}
         <div className="p-4 flex items-center justify-between gap-2">
           <button 
-            className="p-1.5 text-[#a1a1aa] hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
+            className="p-1.5 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
             title="New Note"
             onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
           >
             <Plus className="w-[18px] h-[18px]" />
           </button>
           <button 
-            className="p-1.5 text-[#a1a1aa] hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
+            className="p-1.5 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
             title="New Folder"
             onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
           >
             <FolderPlus className="w-[18px] h-[18px]" />
           </button>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a1a1aa]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search..."
@@ -1805,7 +1805,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 });
               }}
               className={cn(
-                "w-full bg-background border border-border/40 rounded-[4px] py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-[#a1a1aa]/50 focus:outline-none focus:border-border transition-colors",
+                "w-full bg-background border border-border/40 rounded-[4px] py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-border transition-colors",
                 isPending && "opacity-75"
               )}
             />
@@ -1816,7 +1816,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
               "p-1.5 rounded-[4px] shrink-0 transition-colors", 
               showGraphView 
                 ? "text-foreground bg-bento-item" 
-                : "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item"
+                : "text-muted-foreground hover:text-foreground hover:bg-bento-item"
             )} 
             onClick={() => setShowGraphView(!showGraphView)} 
             title="Toggle Graph View"
@@ -1833,7 +1833,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
               "px-3 py-3 border-b-2 outline-none transition-none",
               sidebarTab === 'explorer' 
                 ? "text-foreground border-foreground font-semibold" 
-                : "text-[#a1a1aa] border-transparent hover:text-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             )}
           >
             EXPLORER
@@ -1844,7 +1844,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
               "px-3 py-3 border-b-2 outline-none transition-none",
               sidebarTab === 'hubs' 
                 ? "text-foreground border-foreground font-semibold" 
-                : "text-[#a1a1aa] border-transparent hover:text-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             )}
           >
             HUBS
@@ -1855,7 +1855,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
               "px-3 py-3 border-b-2 outline-none transition-none",
               sidebarTab === 'pdfs' 
                 ? "text-foreground border-foreground font-semibold" 
-                : "text-[#a1a1aa] border-transparent hover:text-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             )}
           >
             PDFS
@@ -1863,7 +1863,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         </div>
 
         {/* Tab Contents */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 text-sm text-[#a1a1aa]">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 text-sm text-muted-foreground">
           {sidebarTab === 'explorer' && (
             <div 
               className="py-2 min-h-full"
@@ -1885,12 +1885,12 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
           {sidebarTab === 'hubs' && (
             <div className="flex flex-col p-2 gap-4">
               {loadingHubs ? (
-                <div className="py-8 flex justify-center"><RefreshCw size={16} className="animate-spin text-[#a1a1aa]/30" /></div>
+                <div className="py-8 flex justify-center"><RefreshCw size={16} className="animate-spin text-muted-foreground/30" /></div>
               ) : Object.keys(groupedHubs).length > 0 ? (
                 Object.entries(groupedHubs).map(([course, courseHubs]) => (
                   <div key={course} className="flex flex-col gap-1">
                     <div className="px-2 py-1 flex items-center gap-2">
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/40">{course}</span>
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{course}</span>
                       <div className="h-px flex-1 bg-border/40" />
                     </div>
                     {courseHubs.map(hub => (
@@ -1899,7 +1899,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                         onClick={() => selectFile(hub.path)}
                         className={cn(
                           "flex flex-col p-2 rounded-[4px] hover:bg-bento-item text-left transition-none mx-1",
-                          selectedPath === hub.path ? "bg-bento-item text-foreground font-medium" : "text-[#a1a1aa] hover:text-foreground"
+                          selectedPath === hub.path ? "bg-bento-item text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -1911,7 +1911,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   </div>
                 ))
               ) : (
-                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/20">No hubs found</div>
+                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No hubs found</div>
               )}
             </div>
           )}
@@ -1921,7 +1921,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
               {Object.entries(groupedPdfs).map(([folder, folderPdfs]) => (
                 <div key={folder} className="flex flex-col gap-1">
                   <div className="px-2 py-1 flex items-center gap-2">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/40">{folder}</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{folder}</span>
                     <div className="h-px flex-1 bg-border/40" />
                   </div>
                   {folderPdfs.map(file => (
@@ -1932,12 +1932,12 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                         "flex items-center gap-2 p-2 rounded-[4px] text-left transition-all mx-1",
                         selectedPath === file.path 
                           ? "bg-bento-item text-foreground font-medium" 
-                          : "text-[#a1a1aa] hover:text-foreground hover:bg-bento-item"
+                          : "text-muted-foreground hover:text-foreground hover:bg-bento-item"
                       )}
                     >
                       <FileText size={14} className={cn(
                         "shrink-0",
-                        selectedPath === file.path ? "text-foreground" : "text-[#a1a1aa]/50"
+                        selectedPath === file.path ? "text-foreground" : "text-muted-foreground/50"
                       )} />
                       <span className="text-[12px] truncate">{file.name.replace('.pdf', '')}</span>
                     </button>
@@ -1945,7 +1945,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 </div>
               ))}
               {Object.keys(groupedPdfs).length === 0 && (
-                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#a1a1aa]/20">No PDFs found</div>
+                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No PDFs found</div>
               )}
             </div>
           )}
@@ -1967,9 +1967,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
       >
         {!selectedPath ? (
-          <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-[#a1a1aa]/20 gap-4 mt-32">
+          <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground/20 gap-4 mt-32">
             <FileText size={64} strokeWidth={1} />
-            <p className="text-xs font-bold uppercase tracking-widest text-[#a1a1aa]/40">Select an asset to visualize</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
           </div>
         ) : (
           <div className={cn("mx-auto w-full max-w-full relative flex-1 flex flex-col", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "p-0 overflow-hidden" : "py-4 px-6 max-w-full")}>
@@ -1985,21 +1985,21 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 </h1>
 
                 {/* Metadata Pills */}
-                <div className="flex items-center gap-2 mb-10 border-b border-[#242426] pb-6">
+                <div className="flex items-center gap-2 mb-10 border-b border-border pb-6">
                   {noteMetadata?.semester && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-foreground hover:bg-[#232326] transition-colors text-xs font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
                       <Calendar className="w-3.5 h-3.5" />
                       {cleanTitle(noteMetadata.semester)}
                     </button>
                   )}
                   {noteMetadata?.course && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-foreground hover:bg-[#232326] transition-colors text-xs font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
                       <GraduationCap className="w-3.5 h-3.5" />
                       {cleanTitle(noteMetadata.course)}
                     </button>
                   )}
                   {noteMetadata?.unit && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#242426] text-[#a1a1aa] hover:text-foreground hover:bg-[#232326] transition-colors text-xs font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
                       <Hash className="w-3.5 h-3.5" />
                       Unit {cleanTitle(noteMetadata.unit)}
                     </button>
@@ -2055,10 +2055,10 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 />
 
                 <div className="mt-8 mb-12 flex flex-col items-center gap-3">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a1a1aa]/50">Space Repetition Review</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Space Repetition Review</div>
                   <div className="flex flex-wrap justify-center gap-2">
                     <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
-                    <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-[#a1a1aa]/30 text-[#a1a1aa] hover:bg-[#232326] transition-none">Hard</button>
+                    <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-muted-foreground/30 text-muted-foreground hover:bg-bento-item transition-none">Hard</button>
                     <button data-tour="srs-btn-good" onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
                     <button data-tour="srs-btn-easy" onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
                   </div>
@@ -2079,7 +2079,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 
                 {/* Knowledge Navigation Footer for PDF (when in context) */}
                 {studyTree.length > 0 && (
-                  <div className="border-t border-[#242426] bg-[#151517]/50 px-16 py-8">
+                  <div className="border-t border-border bg-bento-panel/50 px-16 py-8">
                     <KnowledgeFooter 
                       tree={studyTree} 
                       activePath={selectedPath}
@@ -2113,7 +2113,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         
         <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
-          <div className="p-4 border-b border-[#242426] flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-[#a1a1aa] uppercase bg-transparent shrink-0">
+          <div className="p-4 border-b border-border flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase bg-transparent shrink-0">
             <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg">
               <rect height="18" rx="2" width="18" x="3" y="3"></rect>
               <path d="M9 3v18"></path>
@@ -2129,20 +2129,20 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split(/[/\\]/).pop() : ''
             return (
               <div className="p-4 pb-1 shrink-0">
-                <div className="text-[11px] text-[#a1a1aa] uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>
+                <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>
                 <button
                   onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
-                  className="w-full flex items-center justify-between bg-[#232326] border border-[#242426] rounded-[12px] p-3 text-sm cursor-pointer hover:bg-opacity-80 transition-colors text-left"
+                  className="w-full flex items-center justify-between bg-bento-item border border-border rounded-[12px] p-3 text-sm cursor-pointer hover:bg-opacity-80 transition-colors text-left"
                 >
                   <span className="truncate text-foreground font-medium">{clean?.replace(/_/g, ' ')}</span>
-                  <ChevronDown size={16} className="text-[#a1a1aa] shrink-0" />
+                  <ChevronDown size={16} className="text-muted-foreground shrink-0" />
                 </button>
               </div>
             )
           })()}
 
           {/* Connection links */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6 text-sm text-[#a1a1aa]">
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6 text-sm text-muted-foreground">
             <div className="max-w-5xl mx-auto mt-2">
               {hubConnections ? (
                 <HubConnectionsNav
@@ -2154,8 +2154,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 />
               ) : (
                 <div className="py-20 flex flex-col items-center gap-3 opacity-20">
-                  <Network size={24} strokeWidth={1} className="text-[#a1a1aa]" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a1a1aa] text-center">No Map Found</span>
+                  <Network size={24} strokeWidth={1} className="text-muted-foreground" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">No Map Found</span>
                 </div>
               )}
             </div>
