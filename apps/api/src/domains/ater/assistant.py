@@ -358,6 +358,7 @@ def resolve_assistant_oracle_path() -> Path:
     if getattr(sys, 'frozen', False):
         exe_path = Path(sys.executable)
         paths = [
+            exe_path.parent / "resources" / ".system/prompts/assistant_oracle.md",
             exe_path.parent / ".system/prompts/assistant_oracle.md"
         ]
         if sys.platform == "darwin":

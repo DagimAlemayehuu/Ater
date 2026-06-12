@@ -24,4 +24,18 @@ The system SHALL provide explicit minimum width and height bounds for analytics 
 #### Scenario: Chart Rendering
 - **WHEN** the Practice session dashboard is mounted and rendered
 - **THEN** the Recharts components SHALL be wrapped in container structures with defined dimensions to avoid console dimension warnings
+### Requirement: Production Resource Packaging and Path Resolution
+The system SHALL bundle all system prompts (`Ater.md`, `assistant_oracle.md`) as Tauri application resources, and the frozen sidecar logic SHALL support locating them under the platform-specific resources directory (including the `resources/` folder on Windows) to prevent startup crashes.
 
+#### Scenario: Verify Windows and macOS frozen path resolution
+- **WHEN** the application is compiled and executed in frozen production mode
+- **THEN** the sidecar SHALL check both the root executable parent folder and the `resources/` subdirectory (on Windows) or the `Resources` directory (on macOS) for system prompts and model files
+- **THEN** the sidecar SHALL load the ONNX model and prompt guidelines successfully
+
+### Requirement: PyInstaller Sidecar Dependency Resolution
+The release pipeline SHALL ensure that all critical runtime dependencies (including `onnx`, `onnxruntime`, `optimum`, `transformers`, `numpy`, and `langchain`) are installed and packaged in the PyInstaller sidecar binary to prevent runtime import exceptions in the compiled desktop application.
+
+#### Scenario: Verify sidecar dependencies in build environment
+- **WHEN** the GitHub Actions release workflow executes the PyInstaller build step
+- **THEN** the workflow environment SHALL have all required sidecar packages installed from the updated dependency specification
+- **THEN** the resulting `ater-api` executable SHALL include all necessary runtime libraries for offline AI processing and PDF parsing

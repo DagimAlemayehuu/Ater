@@ -131,9 +131,11 @@ test.describe('Onboarding', () => {
             get: async (key: string) => {
               if (key === 'isActivated') return true;
               if (key === 'isProgramConfigured') return false;
-              if (key === 'displayName') return 'Test User';
+              if (key === 'displayName') return '';
               if (key === 'activationEmail') return 'test@example.com';
               if (key === 'activationCode') return 'TEST-CODE';
+              if (key === 'walkthroughCompleted') return true;
+              if (key === 'walkthroughStatus') return 'skipped';
               return null;
             },
           };

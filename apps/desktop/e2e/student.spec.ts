@@ -33,6 +33,8 @@ test.describe('Ater Student Onboarding Lifecycle', () => {
               if (key === 'isActivated') return true;
               if (key === 'isProgramConfigured') return false;
               if (key === 'displayName') return '';
+              if (key === 'walkthroughCompleted') return true;
+              if (key === 'walkthroughStatus') return 'skipped';
               return null;
             },
           };

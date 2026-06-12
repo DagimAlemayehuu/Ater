@@ -42,7 +42,11 @@ class EmbeddingsLinker:
             # In a PyInstaller bundle, resolve relative to the sidecar executable
             exe_path = Path(sys.executable)
             
-            # Windows: Resources are usually alongside the executable
+            # Windows: check resources subdirectory first, then alongside executable
+            potential_dir = exe_path.parent / "resources" / "onnx_model"
+            if potential_dir.exists():
+                return potential_dir, potential_dir / "model.onnx"
+                
             potential_dir = exe_path.parent / "onnx_model"
             if potential_dir.exists():
                 return potential_dir, potential_dir / "model.onnx"

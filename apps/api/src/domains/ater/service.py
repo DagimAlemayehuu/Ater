@@ -403,8 +403,10 @@ class AterService:
         if getattr(sys, 'frozen', False):
             exe_path = Path(sys.executable)
             
-            # Windows: Resources are usually alongside the executable
+            # Windows: check resources subdirectory first, then alongside executable
             paths = [
+                exe_path.parent / "resources" / "Ater.md",
+                exe_path.parent / "resources" / ".system/prompts/ATER_System_Instruction.md",
                 exe_path.parent / "Ater.md",
                 exe_path.parent / ".system/prompts/ATER_System_Instruction.md"
             ]
