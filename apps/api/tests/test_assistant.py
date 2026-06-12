@@ -5,7 +5,8 @@ from src.api.deps import AppSecrets
 from src.domains.ater.assistant import (
     to_underscore_title_case,
     sanitize_note_content,
-    AterAssistant
+    AterAssistant,
+    _convert_to_lesson_json
 )
 
 def test_underscore_title_case():
@@ -34,6 +35,44 @@ print("hello")
     assert 'hub: "[[My_Hub]]"' in sanitized
     # 3. Setext Defense: double newlines before horizontal rule
     assert "\n\n---" in sanitized
+
+
+def test_lesson_conversion_targets_interactive_artifact_protocol():
+    response = """LESSON: SOLVING A RUBIK'S CUBE
+
+CHAPTER 1: NOTATION & ORIENTATION
+
+Learn the face letters and how clockwise turns are named.
+
+CHAPTER 2: WHITE CROSS
+
+Build the first cross and align each edge with its center.
+"""
+
+    converted = _convert_to_lesson_json(response, "teach me how to solve a rubics cube")
+
+    assert "```interactive-lesson" not in converted
+    assert '<artifact title="Rubik\'s Cube Beginner Method">' in converted
+    assert '<chapter title="Step 1: Notation, Pieces, And Orientation">' in converted
+    assert "<sandbox-spec>" in converted
+    assert "interactive Rubik" in converted
+
+
+def test_rubiks_lesson_conversion_uses_canonical_detailed_beginner_method():
+    weak_response = """STEP 1: NOTATION & ORIENTATION
+
+The Rubik's Cube has faces.
+
+Please confirm you'd like to open an interactive Rubik's Cube solver.
+"""
+
+    converted = _convert_to_lesson_json(weak_response, "teach me how to solve a rubics cube in detail")
+
+    assert "Please confirm" not in converted
+    assert "White Daisy" in converted
+    assert "Right trigger" in converted
+    assert "R U R' U'" in converted
+    assert converted.count("<chapter ") >= 8
 
 def test_assistant_record_management(tmp_path):
     secrets = AppSecrets(
@@ -321,7 +360,3 @@ def test_get_vault_stats_filtering(tmp_path):
     # 3. Check stats with atomic_notes category filter
     atomic_result = assistant.get_vault_stats(category="atomic_notes")
     assert atomic_result == "atomic_notes: 1"
-
-
-
-

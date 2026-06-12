@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Send, Loader2, RotateCcw, Copy, Check } from 'lucide-react'
+import { X, Send, Loader2, RotateCcw, Copy, Check, PanelRightOpen } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { AterMarkdown } from './MarkdownViewer'
 import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
+import { extractArtifacts, stripArtifactMarkup } from '@/lib/artifacts/parser'
+import { useArtifactStore } from '@/lib/artifacts/store'
+import { ArtifactViewer } from './ArtifactViewer'
+import { shouldShowArtifactReopenButton } from '@/lib/artifacts/panel'
+
+const last = <T,>(items: T[]): T | undefined => items[items.length - 1]
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 interface Message {
@@ -18,6 +24,21 @@ type InitialFetcher = () => Promise<string>
 // Called for every follow-up message. Receives full message history.
 // Must resolve to the next assistant message string.
 type FollowUpFetcher = (messages: Message[]) => Promise<string>
+
+function getActiveArtifactPayload() {
+  const state = useArtifactStore.getState()
+  const artifact = state.artifacts.find((item) => item.id === state.activeArtifactId)
+  if (!artifact) return null
+  const versionNumber = state.activeVersionByArtifact[artifact.id] || last(artifact.versions)?.version || 1
+  const version = artifact.versions.find((item) => item.version === versionNumber) || last(artifact.versions)
+  const code = version?.chapters.find((chapter) => chapter.sandbox)?.sandbox || version?.raw || ''
+  if (!code) return null
+  return {
+    title: artifact.title,
+    version: version?.version || 1,
+    code,
+  }
+}
 
 export interface AterExplainDialogProps {
   isOpen: boolean
@@ -60,6 +81,9 @@ export function AterExplainDialog({
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const generatedSpecRef = useRef<Set<string>>(new Set())
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false)
+  const artifactState = useArtifactStore()
   // Track which trigger opened this dialog so we only fire once per open.
   const fetchKeyRef = useRef('')
 
@@ -87,10 +111,105 @@ export function AterExplainDialog({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  useEffect(() => {
+    for (const [messageIndex, msg] of messages.entries()) {
+      if (msg.role !== 'assistant') continue
+      const extracted = extractArtifacts(msg.content)
+      if (extracted.artifacts.length > 0) {
+        const mappedArtifacts = extracted.artifacts.map((artifact) => ({
+          ...artifact,
+          id: `message-${messageIndex}-${artifact.id}`,
+          versions: artifact.versions.map((version) => ({
+            ...version,
+            chapters: version.chapters.map((chapter) => ({
+              ...chapter,
+              id: `message-${messageIndex}-${chapter.id}`,
+            })),
+          })),
+        }))
+        useArtifactStore.getState().registerArtifacts(mappedArtifacts)
+
+        for (const artifact of mappedArtifacts) {
+          const version = artifact.versions[0]
+          for (const [chapterIndex, chapter] of version.chapters.entries()) {
+            if (!chapter.sandboxSpec) continue
+            const key = `${messageIndex}:${artifact.id}:${chapter.id}:${chapter.sandboxSpec}`
+            if (generatedSpecRef.current.has(key)) continue
+            generatedSpecRef.current.add(key)
+            sidecarApi.generateArtifactCode({ prompt: chapter.sandboxSpec, context: msg.content }).then((result) => {
+              const code = result.code || result.answer || ''
+              if (!code) return
+              const chapters = version.chapters.map((item) => (
+                item.id === chapter.id ? { ...item, sandbox: code } : item
+              ))
+              useArtifactStore.getState().addVersion(artifact.id, chapters, code)
+            }).catch(() => {
+              // The placeholder remains visible; the user can continue the chat.
+            })
+          }
+        }
+      }
+
+      for (const spec of extracted.sandboxSpecs) {
+        const key = `${messageIndex}:${spec.placeholderId}:${spec.prompt}`
+        if (generatedSpecRef.current.has(key)) continue
+        generatedSpecRef.current.add(key)
+        const artifactId = `message-${messageIndex}-${spec.placeholderId}`
+        useArtifactStore.getState().registerArtifacts([{
+          id: artifactId,
+          title: spec.prompt,
+          versions: [{
+            version: 1,
+            raw: `<sandbox-spec>${spec.prompt}</sandbox-spec>`,
+            chapters: [{
+              id: `${artifactId}-chapter-1`,
+              title: 'Generated Sandbox',
+              content: '',
+              sandboxSpec: spec.prompt,
+              sandboxPlaceholderId: spec.placeholderId,
+            }],
+          }],
+        }])
+        sidecarApi.generateArtifactCode({ prompt: spec.prompt, context: msg.content }).then((result) => {
+          const code = result.code || result.answer || ''
+          if (!code) return
+          useArtifactStore.getState().addVersion(artifactId, [{
+            id: `${artifactId}-chapter-1-generated`,
+            title: 'Generated Sandbox',
+            content: '',
+            sandbox: code,
+          }], code)
+        }).catch(() => {
+          // The placeholder remains visible; the user can continue the chat.
+        })
+      }
+    }
+  }, [messages])
+
+  useEffect(() => {
+    if (!isDraggingSplit) return
+
+    const onMove = (event: MouseEvent) => {
+      const viewportWidth = window.innerWidth || 1
+      const rightWidth = viewportWidth - event.clientX
+      useArtifactStore.getState().setPanelWidth((rightWidth / viewportWidth) * 100)
+    }
+    const onUp = () => setIsDraggingSplit(false)
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [isDraggingSplit])
+
   /* ── Close: wipe state ──────────────────────────────────────────────── */
   const handleClose = () => {
     setMessages([])
     setInput('')
+    useArtifactStore.getState().resetArtifacts()
+    generatedSpecRef.current.clear()
     fetchKeyRef.current = ''
     onClose()
   }
@@ -139,7 +258,7 @@ export function AterExplainDialog({
       />
 
       {/* Dialog — centered, no border-radius to match Ater design system */}
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[760px] max-w-[95vw] h-[78vh] max-h-[780px] bg-background border border-border flex flex-col shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(1180px,95vw)] h-[78vh] max-h-[780px] bg-background border border-border flex flex-col shadow-2xl">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 shrink-0">
@@ -180,39 +299,75 @@ export function AterExplainDialog({
           </div>
         )}
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 min-h-0 custom-scrollbar">
-          {messages.map((msg, i) => (
-            <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-              {msg.role === 'user' ? (
-                <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">
-                  {msg.content}
+        <div className="flex min-h-0 flex-1">
+          {/* Messages */}
+          <div
+            className="min-w-0 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar"
+            style={{ width: artifactState.isPanelOpen ? `${100 - artifactState.panelWidth}%` : '100%' }}
+          >
+            {messages.map((msg, i) => {
+              const displayContent = msg.role === 'assistant' ? stripArtifactMarkup(msg.content) : msg.content
+              return (
+                <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  {msg.role === 'user' ? (
+                    <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">
+                      {displayContent}
+                    </div>
+                  ) : (
+                    <div className="w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <AterMarkdown content={displayContent} />
+                      </div>
+                      <CopyButton text={msg.content} />
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <AterMarkdown content={msg.content} />
+              )
+            })}
+
+            {loading && (
+              <div className="flex justify-start">
+                <div className="border border-border bg-bento-card px-5 py-4 rounded-[12px] flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <CopyButton text={msg.content} />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Thinking...</span>
                 </div>
-              )}
-            </div>
-          ))}
-
-          {loading && (
-            <div className="flex justify-start">
-              <div className="border border-border bg-bento-card px-5 py-4 rounded-[12px] flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Thinking...</span>
               </div>
-            </div>
-          )}
+            )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
+
+          {artifactState.isPanelOpen && (
+            <>
+              <button
+                type="button"
+                aria-label="Resize artifact panel"
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  setIsDraggingSplit(true)
+                }}
+                className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-[#18181b] hover:bg-foreground/20"
+              />
+              <div className="min-w-[420px] max-w-[82%]" style={{ width: `${artifactState.panelWidth}%` }}>
+                <ArtifactViewer shielded={isDraggingSplit} />
+              </div>
+            </>
+          )}
+          {shouldShowArtifactReopenButton(artifactState.artifacts.length, artifactState.isPanelOpen) && (
+            <button
+              type="button"
+              onClick={() => useArtifactStore.getState().setPanelOpen(true)}
+              className="absolute right-4 top-28 z-40 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-[#18181b] px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-[#242426]"
+              title="Open artifact panel"
+            >
+              <PanelRightOpen size={14} />
+              Artifact
+            </button>
+          )}
         </div>
 
         {/* Input */}
@@ -281,6 +436,7 @@ export function makeExplainSidebarFetchers(params: {
       selection: params.selection,
       page: params.page,
       messages,
+      active_artifact: getActiveArtifactPayload(),
       scope: params.scope,
       source_kind: params.sourceKind,
       selection_context: params.selectionContext,
@@ -327,6 +483,7 @@ export function makePracticeExplainFetchers(params: {
       path: '',
       selection: params.question,
       messages,
+      active_artifact: getActiveArtifactPayload(),
       scope: 'selection',
     })
     return res.answer

@@ -901,6 +901,25 @@ async fn proxy_post_generation<T: serde::Serialize, R: serde::de::DeserializeOwn
     proxy_post_with_policy(port, path, body, headers, 900, 5, false).await
 }
 
+fn redact_proxy_headers(headers: &reqwest::header::HeaderMap) -> Vec<(String, String)> {
+    headers
+        .iter()
+        .map(|(name, value)| {
+            let header_name = name.as_str().to_string();
+            let normalized = header_name.to_ascii_lowercase();
+            let header_value = if normalized.contains("key")
+                || normalized.contains("token")
+                || normalized.contains("authorization")
+            {
+                "[REDACTED]".to_string()
+            } else {
+                value.to_str().unwrap_or("<non-utf8>").to_string()
+            };
+            (header_name, header_value)
+        })
+        .collect()
+}
+
 async fn proxy_post_with_policy<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     port: u16,
     path: &str,
@@ -916,7 +935,11 @@ async fn proxy_post_with_policy<T: serde::Serialize, R: serde::de::DeserializeOw
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
     let url = format!("http://127.0.0.1:{}{}", port, path);
-    println!("[Rust Proxy] POST to url={}, headers={:?}", url, headers);
+    println!(
+        "[Rust Proxy] POST to url={}, headers={:?}",
+        url,
+        redact_proxy_headers(&headers)
+    );
     let mut attempt = 0;
     let mut last_err = None;
 
@@ -2233,6 +2256,44 @@ pub async fn ater_chat(
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(sidecar_config.port, "/api/ater/chat", &payload, headers).await
+}
+
+#[tauri::command]
+pub async fn generate_artifact_code(
+    state: State<'_, AppState>,
+    payload: serde_json::Value,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_chat");
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    proxy_post(
+        sidecar_config.port,
+        "/api/ater/artifact/generate",
+        &payload,
+        headers,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn repair_artifact_code(
+    state: State<'_, AppState>,
+    payload: serde_json::Value,
+    sidecar_config: State<'_, crate::SidecarConfig>,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    verify_licensing!(state, "ater_chat");
+    let config = load_app_config(&app_handle)?;
+    let headers = get_proxy_headers(&config);
+    proxy_post(
+        sidecar_config.port,
+        "/api/ater/artifact/repair",
+        &payload,
+        headers,
+    )
+    .await
 }
 
 #[tauri::command]

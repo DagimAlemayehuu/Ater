@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Check, ArrowRight, RotateCcw, BookOpen, BrainCircuit } from 'lucide-react';
 import { AterMarkdown } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
-import { Question } from '@/types/practice';
+import { Question, QuestionType } from '@/types/practice';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { AterExplainDialog, makePracticeExplainFetchers } from '@/components/obsidian/AterExplainDialog';
 import { toast } from 'sonner';
@@ -57,7 +57,26 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     }
   }, [session.showScore]);
 
-  const currentQ = session.currentQuestion;
+  const rawQ = session.currentQuestion;
+  const currentQ = React.useMemo(() => {
+    const q = rawQ as any;
+    if (!q) return {} as Question;
+    const inferredType = (q.type || (
+      q.options || (q.choices && Object.keys(q.choices).length > 0)
+        ? 'mcq'
+        : q.pairs && q.pairs.length > 0
+        ? 'matching'
+        : q.steps && q.steps.length > 0
+        ? 'order'
+        : q.textWithBlanks || q.text_with_blanks
+        ? 'fill_in'
+        : 'writing'
+    )) as QuestionType;
+    return {
+      ...rawQ,
+      type: inferredType
+    } as any as Question;
+  }, [rawQ]) as Question;
   const isRevealed = session.isRevealed;
   const userAnswers = session.userAnswers;
   const scores = session.scores;
@@ -65,7 +84,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const keywordChecks = session.keywordChecks;
   const currentIdx = session.currentQuestionIdx;
 
-  if (!currentQ && !showScore) return null;
+  if (!rawQ && !showScore) return null;
 
   const handleSelectAnswer = (val: any) => {
     session.selectAnswer(val);

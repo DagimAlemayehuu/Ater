@@ -1,10 +1,10 @@
-import React, {useState, useEffect, useRef, lazy, Suspense, useMemo} from 'react'
+import React, {useState, useEffect, useRef, lazy, Suspense, useMemo, useCallback} from 'react'
 import { useTelemetryStore } from '@/lib/telemetryStore'
 import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
  Zap, Search, GraduationCap,
- User, BookOpen, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2
+ User, BookOpen, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen
 } from 'lucide-react'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {cn} from '@/lib/utils'
@@ -15,6 +15,10 @@ import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { MiniLoader } from '@/components/ui/loading-state'
 import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
+import { ArtifactViewer } from '@/components/obsidian/ArtifactViewer'
+import { extractArtifacts } from '@/lib/artifacts/parser'
+import { useArtifactStore } from '@/lib/artifacts/store'
+import { shouldShowArtifactReopenButton } from '@/lib/artifacts/panel'
 import { Send, Trash2, Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
@@ -49,8 +53,11 @@ function OracleView() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const generatedSpecRef = useRef<Set<string>>(new Set());
+  const artifactState = useArtifactStore();
 
   // Save messages to localStorage
   useEffect(() => {
@@ -76,10 +83,108 @@ function OracleView() {
 
   const handleClearHistory = () => {
     setMessages([]);
+    useArtifactStore.getState().resetArtifacts();
+    generatedSpecRef.current.clear();
     toast.success('Conversation history cleared.');
   };
 
-  const handleWikiLinkClick = async (pageName: string) => {
+  useEffect(() => {
+    for (const [messageIndex, msg] of messages.entries()) {
+      if (msg.role !== 'assistant') continue;
+      const extracted = extractArtifacts(msg.content);
+
+      if (extracted.artifacts.length > 0) {
+        const mappedArtifacts = extracted.artifacts.map((artifact) => ({
+          ...artifact,
+          id: `oracle-message-${messageIndex}-${artifact.id}`,
+          versions: artifact.versions.map((version) => ({
+            ...version,
+            chapters: version.chapters.map((chapter) => ({
+              ...chapter,
+              id: `oracle-message-${messageIndex}-${chapter.id}`,
+            })),
+          })),
+        }));
+        useArtifactStore.getState().registerArtifacts(mappedArtifacts);
+
+        for (const artifact of mappedArtifacts) {
+          const version = artifact.versions[0];
+          for (const [chapterIndex, chapter] of version.chapters.entries()) {
+            if (!chapter.sandboxSpec) continue;
+            const key = `${messageIndex}:${artifact.id}:${chapter.id}:${chapter.sandboxSpec}`;
+            if (generatedSpecRef.current.has(key)) continue;
+            generatedSpecRef.current.add(key);
+            sidecarApi.generateArtifactCode({ prompt: chapter.sandboxSpec, context: msg.content }).then((result) => {
+              const code = result.code || result.answer || '';
+              if (!code) return;
+              const chapters = version.chapters.map((item) => (
+                item.id === chapter.id ? { ...item, sandbox: code } : item
+              ));
+              useArtifactStore.getState().addVersion(artifact.id, chapters, code);
+            }).catch(() => {
+              // Leave the placeholder visible; the student can ask for a retry or modification.
+            });
+          }
+        }
+      }
+
+      for (const spec of extracted.sandboxSpecs) {
+        const key = `${messageIndex}:${spec.placeholderId}:${spec.prompt}`;
+        if (generatedSpecRef.current.has(key)) continue;
+        generatedSpecRef.current.add(key);
+
+        const artifactId = `oracle-message-${messageIndex}-${spec.placeholderId}`;
+        useArtifactStore.getState().registerArtifacts([{
+          id: artifactId,
+          title: spec.prompt,
+          versions: [{
+            version: 1,
+            raw: `<sandbox-spec>${spec.prompt}</sandbox-spec>`,
+            chapters: [{
+              id: `${artifactId}-chapter-1`,
+              title: 'Generated Sandbox',
+              content: '',
+              sandboxSpec: spec.prompt,
+              sandboxPlaceholderId: spec.placeholderId,
+            }],
+          }],
+        }]);
+
+        sidecarApi.generateArtifactCode({ prompt: spec.prompt, context: msg.content }).then((result) => {
+          const code = result.code || result.answer || '';
+          if (!code) return;
+          useArtifactStore.getState().addVersion(artifactId, [{
+            id: `${artifactId}-chapter-1-generated`,
+            title: 'Generated Sandbox',
+            content: '',
+            sandbox: code,
+          }], code);
+        }).catch(() => {
+          // Leave the placeholder visible; the student can ask for a retry or modification.
+        });
+      }
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const onMove = (event: MouseEvent) => {
+      const viewportWidth = window.innerWidth || 1;
+      const rightWidth = viewportWidth - event.clientX;
+      useArtifactStore.getState().setPanelWidth((rightWidth / viewportWidth) * 100);
+    };
+    const onUp = () => setIsDraggingSplit(false);
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDraggingSplit]);
+
+  const handleWikiLinkClick = useCallback(async (pageName: string) => {
     try {
       const searchRes = await sidecarApi.findVaultPage(pageName);
       if (searchRes.found && searchRes.path) {
@@ -90,7 +195,7 @@ function OracleView() {
     } catch (err) {
       toast.error('Could not navigate to note.');
     }
-  };
+  }, [navigate]);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
@@ -285,6 +390,15 @@ function OracleView() {
     }
   };
 
+  const handleSendMessageRef = useRef(handleSendMessage);
+  useEffect(() => {
+    handleSendMessageRef.current = handleSendMessage;
+  });
+
+  const stableSendMessage = useCallback((textToSend?: string) => {
+    handleSendMessageRef.current(textToSend);
+  }, []);
+
   const quickActions = [
     { title: "Search Vault", prompt: "What are my notes about...?", icon: Search, description: "Semantic search content." },
     { title: "Generate Quiz", prompt: "Generate a quiz about...", icon: GraduationCap, description: "Active recall test." },
@@ -292,7 +406,11 @@ function OracleView() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex min-h-0">
+      <div
+        className="flex min-h-0 flex-col"
+        style={{ width: artifactState.isPanelOpen ? `${100 - artifactState.panelWidth}%` : '100%' }}
+      >
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0 custom-scrollbar">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center -mt-12">
@@ -311,7 +429,7 @@ function OracleView() {
                     <div className="flex justify-start w-full">
                       <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
                         <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={handleSendMessage} />
+                          <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={stableSendMessage} />
                         </div>
                       </div>
                     </div>
@@ -365,6 +483,35 @@ function OracleView() {
           </div>
         </div>
       </div>
+      </div>
+
+      {artifactState.isPanelOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Resize artifact panel"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              setIsDraggingSplit(true);
+            }}
+            className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-[#18181b] hover:bg-foreground/20"
+          />
+          <div className="min-w-[420px] max-w-[82%]" style={{ width: `${artifactState.panelWidth}%` }}>
+            <ArtifactViewer shielded={isDraggingSplit} />
+          </div>
+        </>
+      )}
+      {shouldShowArtifactReopenButton(artifactState.artifacts.length, artifactState.isPanelOpen) && (
+        <button
+          type="button"
+          onClick={() => useArtifactStore.getState().setPanelOpen(true)}
+          className="fixed right-5 top-24 z-50 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-[#18181b] px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-[#242426]"
+          title="Open artifact panel"
+        >
+          <PanelRightOpen size={14} />
+          Artifact
+        </button>
+      )}
     </div>
   );
 }

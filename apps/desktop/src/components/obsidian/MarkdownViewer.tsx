@@ -12,6 +12,9 @@ import mermaid from 'mermaid'
 import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight, Info, AlertTriangle, ShieldAlert, CheckCircle2, HelpCircle, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import MiniPracticeUI from '../MiniPracticeUI'
+import RubiksCubeWidget from './RubiksCubeWidget'
+import InteractiveLessonPlayer from './InteractiveLessonPlayer'
+import { stripArtifactMarkup } from '@/lib/artifacts/parser'
 import { useNavigate } from 'react-router-dom'
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light'
 // @ts-ignore
@@ -34,6 +37,7 @@ SyntaxHighlighter.registerLanguage('typescript', ts)
 SyntaxHighlighter.registerLanguage('python', py)
 SyntaxHighlighter.registerLanguage('bash', bash)
 import { ExplainSidebar } from './ExplainSidebar'
+import InteractiveLessonRenderer from './InteractiveLessonRenderer'
 import { 
     FocusHUD, 
     GenerationStepper, 
@@ -48,7 +52,8 @@ import {
     FormCard,
     ConfirmActionBlock,
     SummaryCard,
-    PracticeConfigCard
+    PracticeConfigCard,
+    InteractiveSandboxBlock
 } from '../intelligence/OracleUIBlocks'
 
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]
@@ -720,6 +725,8 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                 return <SummaryCard payload={data} />;
             case 'practice_config_card':
                 return <PracticeConfigCard payload={data} />;
+            case 'interactive_sandbox':
+                return <InteractiveSandboxBlock payload={data} />;
             default:
                 return (
                     <pre className="text-xs p-3 bg-[#232326] border border-[#242426] overflow-x-auto rounded-[8px] font-mono">
@@ -741,8 +748,20 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
     );
 });
 
+const MarkdownContext = React.createContext<{
+    path?: string;
+    onNavigate?: (page: string) => void;
+    onSendMessage?: (text: string) => void;
+    components?: any;
+}>({});
+
 const CodeRenderer = memo((props: any) => {
     const { className, children, node, notePath, onSendMessage, components } = props;
+    const context = React.useContext(MarkdownContext);
+    const activeNotePath = notePath ?? context.path;
+    const activeOnSendMessage = onSendMessage ?? context.onSendMessage;
+    const activeComponents = components ?? context.components;
+
     const match = /language-([a-zA-Z0-9_-]+)/.exec(className || '')
     const language = match ? match[1] : null
     
@@ -764,6 +783,54 @@ const CodeRenderer = memo((props: any) => {
         }
     }, [children, language]);
 
+    const rubiksData = useMemo(() => {
+        if (language !== 'rubiks-cube') return null;
+        try {
+            return JSON.parse(String(children).trim());
+        } catch (e) {
+            return null;
+        }
+    }, [children, language]);
+
+    const lessonData = useMemo(() => {
+        if (language !== 'interactive-lesson') return null;
+        try {
+            return JSON.parse(String(children).trim());
+        } catch (e) {
+            return null;
+        }
+    }, [children, language]);
+
+    if (language === 'rubiks-cube') {
+        if (!rubiksData) {
+            return (
+                <div className="p-6 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] animate-pulse space-y-4">
+                    <div className="h-4 bg-muted-foreground/10 rounded w-1/3"></div>
+                    <div className="space-y-2">
+                        <div className="h-3 bg-muted-foreground/10 rounded w-full"></div>
+                    </div>
+                </div>
+            );
+        }
+        const dark = document.documentElement.classList.contains('dark');
+        return <RubiksCubeWidget payload={rubiksData} dark={dark} />;
+    }
+
+    if (language === 'interactive-lesson') {
+        if (!lessonData) {
+            return (
+                <div className="p-6 border border-[#242426] bg-[#1a1a1c] my-4 rounded-[12px] animate-pulse space-y-4">
+                    <div className="h-4 bg-muted-foreground/10 rounded w-1/3"></div>
+                    <div className="space-y-2">
+                        <div className="h-3 bg-muted-foreground/10 rounded w-full"></div>
+                        <div className="h-3 bg-muted-foreground/10 rounded w-5/6"></div>
+                    </div>
+                </div>
+            );
+        }
+        return <InteractiveLessonPlayer payload={lessonData} />;
+    }
+
     if (language === 'interactive-quiz') {
         if (!quizData) {
             return (
@@ -777,7 +844,7 @@ const CodeRenderer = memo((props: any) => {
             );
         }
 
-        return <MiniPracticeUI question={quizData} notePath={notePath} />;
+        return <MiniPracticeUI question={quizData} notePath={activeNotePath} />;
     }
 
     if (language === 'ater-ui') {
@@ -795,7 +862,7 @@ const CodeRenderer = memo((props: any) => {
                 </div>
             );
         }
-        return <AterUIBlock payload={aterUIData} notePath={notePath} onSendMessage={onSendMessage} />;
+        return <AterUIBlock payload={aterUIData} notePath={activeNotePath} onSendMessage={activeOnSendMessage} />;
     }
 
     if (language === 'mermaid') return <MermaidWrapper chart={String(children).replace(/\n$/, '')} />
@@ -807,7 +874,7 @@ const CodeRenderer = memo((props: any) => {
                 <ReactMarkdown 
                     remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
                     rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}
-                    components={components}
+                    components={activeComponents}
                 >
                     {String(children).replace(/\n$/, '')}
                 </ReactMarkdown>
@@ -841,7 +908,7 @@ const CodeRenderer = memo((props: any) => {
                         <ReactMarkdown 
                             remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
                             rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}
-                            components={components}
+                            components={activeComponents}
                         >
                             {mathContent}
                         </ReactMarkdown>
@@ -871,6 +938,7 @@ interface AterMarkdownProps {
 }
 
 export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, className, components }: AterMarkdownProps) => {
+    const displayContent = useMemo(() => stripArtifactMarkup(content), [content]);
     const handleNavigate = useCallback((pageName: string) => {
         if (onNavigate) {
             onNavigate(pageName);
@@ -887,23 +955,43 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
         const comps: any = {
             ...(components || {}),
             p: ({ node, children, ...props }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const activeOnNavigate = context.onNavigate || (() => {});
                 return (
                     <p className="mb-4 leading-relaxed text-[13px] text-foreground/80 antialiased">
                         {React.Children.map(children, (child) => 
-                            typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child
+                            typeof child === 'string' ? renderWikiLinks(child, activeOnNavigate) : child
                         )}
                     </p>
                 )
             },
-            h1: ({ children }: any) => <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground break-words">
-                {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
-            </h1>,
-            h2: ({ children }: any) => <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground break-words">
-                {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
-            </h2>,
-            h3: ({ children }: any) => <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90 break-words">
-                {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, handleNavigate) : child)}
-            </h3>,
+            h1: ({ children }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const activeOnNavigate = context.onNavigate || (() => {});
+                return (
+                    <h1 className="text-2xl font-black mt-10 mb-6 tracking-tighter border-b pb-2 border-border text-foreground break-words">
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, activeOnNavigate) : child)}
+                    </h1>
+                );
+            },
+            h2: ({ children }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const activeOnNavigate = context.onNavigate || (() => {});
+                return (
+                    <h2 className="text-xl font-black mt-8 mb-4 tracking-tight text-foreground break-words">
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, activeOnNavigate) : child)}
+                    </h2>
+                );
+            },
+            h3: ({ children }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const activeOnNavigate = context.onNavigate || (() => {});
+                return (
+                    <h3 className="text-lg font-bold mt-6 mb-3 tracking-tight text-foreground/90 break-words">
+                        {React.Children.map(children, (child) => typeof child === 'string' ? renderWikiLinks(child, activeOnNavigate) : child)}
+                    </h3>
+                );
+            },
             h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
             ul: ({ children, className }: any) => {
                 const isTaskList = className?.includes('contains-task-list');
@@ -911,6 +999,8 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
             },
             ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
             li: ({ children, className }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const activeOnNavigate = context.onNavigate || (() => {});
                 const isTask = className?.includes('task-list-item');
                 
                 const childrenArray = React.Children.toArray(children);
@@ -923,7 +1013,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
                         nestedBlocks.push(child);
                     } else {
                         if (typeof child === 'string') {
-                            inlineContent.push(renderWikiLinks(child, handleNavigate));
+                            inlineContent.push(renderWikiLinks(child, activeOnNavigate));
                         } else {
                             inlineContent.push(child);
                         }
@@ -955,26 +1045,28 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
                 );
             },
             pre: ({ children }: any) => <div className="not-prose">{children}</div>,
-            code: (props: any) => <CodeRenderer {...props} notePath={path} onSendMessage={handleSendMessage} components={comps} />,
+            code: CodeRenderer,
             input: ({ node, type, checked, ...props }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const activePath = context.path;
                 if (type === 'checkbox') {
                     return (
                         <input 
                             type="checkbox" 
                             defaultChecked={checked} 
                             onChange={async (e) => {
-                                if (!path) return;
+                                if (!activePath) return;
                                 const newChecked = e.target.checked;
                                 const line = node?.position?.start?.line;
                                 if (line) {
                                     try {
-                                        const res = await sidecarApi.readObsidianNote(path);
+                                        const res = await sidecarApi.readObsidianNote(activePath);
                                         const lines = res.content.split('\n');
                                         const targetLine = lines[line - 1];
                                         if (targetLine && targetLine.match(/\[[ xX]\]/)) {
                                             lines[line - 1] = targetLine.replace(/\[[ xX]\]/, `[${newChecked ? 'x' : ' '}]`);
                                             const updatedContent = lines.join('\n');
-                                            await sidecarApi.updateObsidianNote(path, updatedContent);
+                                            await sidecarApi.updateObsidianNote(activePath, updatedContent);
                                             
                                             const wikilinkMatch = targetLine.match(/\[\[(.*?)\]\]/);
                                             if (wikilinkMatch) {
@@ -1116,17 +1208,26 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, cl
             )
         };
         return comps;
-    }, [path, handleNavigate, components, handleSendMessage]);
+    }, [components]);
+
+    const contextValue = useMemo(() => ({
+        path,
+        onNavigate: handleNavigate,
+        onSendMessage: handleSendMessage,
+        components: markdownComponents
+    }), [path, handleNavigate, handleSendMessage, markdownComponents]);
 
     return (
         <div className={cn("prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 text-foreground select-text cursor-text content-visibility-auto", className)}>
-            <ReactMarkdown 
-                remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
-                rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any} 
-                components={markdownComponents}
-            >
-                {content}
-            </ReactMarkdown>
+            <MarkdownContext.Provider value={contextValue}>
+                <ReactMarkdown 
+                    remarkPlugins={MARKDOWN_REMARK_PLUGINS as any} 
+                    rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any} 
+                    components={markdownComponents}
+                >
+                    {displayContent}
+                </ReactMarkdown>
+            </MarkdownContext.Provider>
         </div>
     );
 });
@@ -1136,6 +1237,16 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
     useEffect(() => {
         onNavigateRef.current = onNavigate;
     }, [onNavigate]);
+
+    const isInteractiveLesson = useMemo(() => {
+        // Only activate for Ater-generated atomic notes:
+        // Must have both a Mental Model section AND an interactive-quiz block,
+        // or be explicitly flagged with noteMode EDUCATION.
+        const hasAtomicStructure =
+            content.includes('## Mental Model') &&
+            content.includes('```interactive-quiz')
+        return hasAtomicStructure || noteMode === 'EDUCATION'
+    }, [content, noteMode]);
 
     const handleNavigate = useCallback((pageName: string) => {
         if (onNavigateRef.current) {
@@ -1234,7 +1345,16 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
             >
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 relative select-text">
                     <ErrorBoundary>
-                        <AterMarkdown content={content} path={path} onNavigate={handleNavigate} components={components} />
+                        {isInteractiveLesson ? (
+                            <InteractiveLessonRenderer 
+                                content={content} 
+                                path={path || ''} 
+                                onNavigate={handleNavigate} 
+                                noteTitle={noteTitle}
+                            />
+                        ) : (
+                            <AterMarkdown content={content} path={path} onNavigate={handleNavigate} components={components} />
+                        )}
                     </ErrorBoundary>
                 </div>
 

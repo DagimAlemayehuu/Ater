@@ -263,7 +263,17 @@ Instructions:
 1. Explain the core mechanism or concept clearly in professional, elegant Markdown.
 2. Provide a vivid, field-specific real-world analogy to anchor the explanation. Avoid dry clichés (e.g. coffee shops).
 3. Discuss the key implications or why this concept is important.
-4. Keep the formatting beautiful with clear headers, bold text, and bullet points. Use LaTeX block formulas if mathematical concepts are involved."""
+4. Keep the formatting beautiful with clear headers, bold text, and bullet points. Use LaTeX block formulas if mathematical concepts are involved.
+5. When an interactive simulator would materially improve learning, append XML artifact markup after the normal lesson:
+<artifact title="Short simulator title">
+  <chapter title="Concept step">
+    Markdown explanation for this step.
+    <sandbox>
+      Self-contained HTML and JavaScript only. No markdown fences.
+    </sandbox>
+  </chapter>
+</artifact>
+6. If generating code in the same answer would distract from the lesson, use <sandbox-spec>short precise simulator request</sandbox-spec> instead."""
 
         human_prompt = f"""Document Context:
 {context_str}
@@ -289,6 +299,7 @@ async def ater_chat(
     model = secrets.ai_model or "gemini-2.0-flash"
 
     messages = payload.get("messages", [])
+    active_artifact = payload.get("active_artifact") or {}
     selection = payload.get("selection", "")
     selection_context = payload.get("selection_context", "")
     page = payload.get("page")
@@ -303,6 +314,14 @@ async def ater_chat(
         context_str += f"Page: {page}\n"
     if note_title:
         context_str += f"Document Title: {note_title}\n"
+    if active_artifact.get("code"):
+        context_str += (
+            "\nActive artifact state for iterative edits:\n"
+            f"Title: {active_artifact.get('title', 'Untitled artifact')}\n"
+            f"Version: {active_artifact.get('version', 1)}\n"
+            "Current sandbox code:\n"
+            f"{active_artifact.get('code')}\n"
+        )
 
     try:
         llm = ModelFactory.get_model(
@@ -316,7 +335,9 @@ async def ater_chat(
         sys_prompt = f"""You are Ater's Socratic Tutor. You are holding a follow-up conversation with the student about the following document context:
 {context_str}
 
-Guide the student using Socratic dialogue. Help them think deeply, ask guiding questions, check their understanding, and explain complex parts thoroughly but in a highly accessible way. Keep your formatting elegant using Markdown."""
+Guide the student using Socratic dialogue. Help them think deeply, ask guiding questions, check their understanding, and explain complex parts thoroughly but in a highly accessible way. Keep your formatting elegant using Markdown.
+
+If the student asks to modify, fix, expand, or personalize an active simulator, return an updated XML artifact with a complete <sandbox> block. Do not return partial diffs."""
 
         formatted_messages = [("system", sys_prompt)]
         for msg in messages:
@@ -326,6 +347,265 @@ Guide the student using Socratic dialogue. Help them think deeply, ask guiding q
 
         res = await llm.ainvoke(formatted_messages)
         return {"answer": res.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _is_rubiks_sandbox_request(prompt: str) -> bool:
+    normalized = str(prompt or "").lower()
+    return "rubik" in normalized or "rubics" in normalized
+
+
+def _build_rubiks_cube_sandbox() -> str:
+    return """<style>
+  :root{color-scheme:dark}
+  .rubik-shell{height:100%;min-height:620px;background:#0d0d10;color:#f5f5f5;font-family:Outfit,Inter,system-ui,sans-serif;padding:28px;box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:22px}
+  .rubik-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid #2a2a2e;padding-bottom:18px}
+  .rubik-kicker{font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:#a1a1aa}
+  .rubik-title{font-size:30px;line-height:1.05;font-weight:900;letter-spacing:0;text-transform:uppercase;margin-top:7px}
+  .rubik-subtitle{max-width:820px;margin-top:9px;color:#c8c8cf;font-size:15px;line-height:1.55}
+  .rubik-stage{display:grid;grid-template-columns:minmax(480px,1fr) minmax(280px,360px);gap:22px;min-height:0}
+  .cube-card{position:relative;display:grid;place-items:center;overflow:hidden;border:1px solid #28282d;background:radial-gradient(circle at 50% 35%,#24242a 0,#151519 54%,#101013 100%);min-height:430px}
+  .cube-perspective{width:min(50vw,430px);height:min(50vw,430px);min-width:320px;min-height:320px;position:relative;perspective:900px;display:grid;place-items:center}
+  .cube3d{position:relative;width:260px;height:260px;transform-style:preserve-3d;transform:rotateX(-28deg) rotateY(-38deg) rotateZ(0deg);filter:drop-shadow(0 34px 28px rgba(0,0,0,.55))}
+  .cube-face{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px;padding:10px;background:#09090b;border:1px solid #3f3f46;border-radius:12px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.04)}
+  .face-F{transform:translateZ(130px)}
+  .face-R{transform:rotateY(90deg) translateZ(130px)}
+  .face-U{transform:rotateX(90deg) translateZ(130px)}
+  .sticker{border-radius:9px;border:1px solid rgba(0,0,0,.5);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2);transition:transform .16s ease,filter .16s ease,box-shadow .16s ease}
+  .sticker.flash{transform:scale(.86);filter:brightness(1.28);box-shadow:0 0 18px rgba(255,255,255,.24),inset 0 0 0 2px rgba(255,255,255,.35)}
+  .face-tag{position:absolute;left:22px;top:20px;font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#a1a1aa}
+  .lesson-panel{border:1px solid #28282d;background:#151519;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0}
+  .lesson-panel h3{font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;margin:0;color:#f4f4f5}
+  .step{font-size:16px;line-height:1.6;color:#d9d9df;min-height:128px}
+  .moves{display:flex;flex-wrap:wrap;gap:9px}
+  button{min-height:40px;border:1px solid #3f3f46;background:#1f1f24;color:#f7f7f8;border-radius:8px;padding:0 14px;font-size:13px;font-weight:900;letter-spacing:.06em;cursor:pointer}
+  button:hover{background:#2b2b31;border-color:#5a5a64}
+  button:active{transform:translateY(1px)}
+  .primary{background:#f4f4f5;color:#111113;border-color:#f4f4f5}
+  .controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
+  .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #2a2a2e;padding-top:18px}
+  .nav{display:flex;gap:9px}
+  .log{font-size:13px;color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;min-width:0}
+  @media(max-width:900px){.rubik-shell{padding:20px}.rubik-stage{grid-template-columns:1fr}.cube-card{min-height:360px}.cube-perspective{width:330px;height:330px}.cube3d{width:210px;height:210px}.face-F{transform:translateZ(105px)}.face-R{transform:rotateY(90deg) translateZ(105px)}.face-U{transform:rotateX(90deg) translateZ(105px)}.controls{grid-template-columns:repeat(3,1fr)}}
+</style>
+<div class="rubik-shell">
+  <div class="rubik-head">
+    <div>
+      <div class="rubik-kicker">Interactive Lesson Sandbox</div>
+      <div class="rubik-title">Rubik's Cube Beginner Method</div>
+      <div class="rubik-subtitle">Use the lesson buttons to rehearse each algorithm, or use the manual controls to explore face turns. The visible cube updates from the same sticker state used by the move engine.</div>
+    </div>
+    <button id="reset">Reset</button>
+  </div>
+  <div class="rubik-stage">
+    <div class="cube-card">
+      <div class="face-tag">Live Cube State</div>
+      <div class="cube-perspective" aria-label="Rubik's Cube visualization">
+        <div id="cube" class="cube3d" data-face="visible-cube"></div>
+      </div>
+    </div>
+    <div class="lesson-panel">
+      <h3 id="stepTitle">Step 1: Notation</h3>
+      <div id="stepText" class="step"></div>
+      <div id="stepMoves" class="moves"></div>
+      <button id="playStep" class="primary">Play Step Moves</button>
+    </div>
+  </div>
+  <div>
+    <div class="controls" id="manualControls" aria-label="Practice move controls"></div>
+    <div class="footer">
+      <button id="prev">Prev Step</button>
+      <div class="log" id="log">Moves: none</div>
+      <button id="next">Next Step</button>
+    </div>
+  </div>
+</div>
+<script>
+const faceOrder=['U','L','F','R','B','D'];
+const palette={U:'#f8fafc',D:'#facc15',F:'#dc2626',B:'#f97316',L:'#16a34a',R:'#2563eb'};
+const moves=["U","U'","D","D'","R","R'","L","L'","F","F'","B","B'"];
+const cubeState={U:Array(9).fill('U'),D:Array(9).fill('D'),F:Array(9).fill('F'),B:Array(9).fill('B'),L:Array(9).fill('L'),R:Array(9).fill('R')};
+const solved=JSON.stringify(cubeState);
+const steps=[
+  {title:'Step 1: Notation',text:'A move letter names the face to turn. A prime mark means counter-clockwise; 2 means turn the face twice. Start by watching how U, R, U\\', R\\' changes the visible stickers.',seq:["U","R","U'","R'"]},
+  {title:'Step 2: White Daisy',text:'Move the four white edges to the top around the yellow center. The sandbox sequence gives you a simple feel for lifting and repositioning edges without worrying about exact solve state yet.',seq:["F","U","R","U'"]},
+  {title:'Step 3: White Cross',text:'Match each white edge side color with its center, then turn that face twice to send the white sticker to the bottom cross.',seq:["F","F","R","R","B","B","L","L"]},
+  {title:'Step 4: White Corners',text:'Place a white corner above its target slot and repeat the right trigger R U R\\' U\\' until the corner drops into place.',seq:["R","U","R'","U'"]},
+  {title:'Step 5: Middle Layer',text:'Find a top edge with no yellow. Match its front color to the center, then insert it right or left. This sequence demonstrates the right insertion.',seq:["U","R","U'","R'","U'","F'","U","F"]},
+  {title:'Step 6: Yellow Cross',text:'Use F R U R\\' U\\' F\\' to turn the top yellow pattern from dot to angle, angle to line, and line to cross.',seq:["F","R","U","R'","U'","F'"]},
+  {title:'Step 7: Last Layer Edges',text:'Cycle the yellow-cross edges until every side color matches its center. Keep the yellow face on top while applying the sequence.',seq:["R","U","R'","U","R","U","U","R'"]},
+  {title:'Step 8: Last Layer Corners',text:'Position the corners first, then orient each one at front-right with the right trigger while keeping the cube orientation fixed.',seq:["R","U","R'","U'","R","U","R'","U'"]}
+];
+let step=0,history=[],lastTouched='',isPlaying=false;
+const cube=document.getElementById('cube'),log=document.getElementById('log');
+function row(face,r){return [cubeState[face][r*3],cubeState[face][r*3+1],cubeState[face][r*3+2]]}
+function setRow(face,r,v){[0,1,2].forEach((i)=>cubeState[face][r*3+i]=v[i])}
+function col(face,c){return [cubeState[face][c],cubeState[face][c+3],cubeState[face][c+6]]}
+function setCol(face,c,v){[0,1,2].forEach((i)=>cubeState[face][c+i*3]=v[i])}
+function rotateFace(face,prime=false){
+  const old=cubeState[face].slice();
+  const map=prime?[2,5,8,1,4,7,0,3,6]:[6,3,0,7,4,1,8,5,2];
+  cubeState[face]=map.map(i=>old[i]);
+}
+function cycle(getA,setA,getB,setB,getC,setC,getD,setD){const t=getA();setA(getD());setD(getC());setC(getB());setB(t)}
+function applyBaseMove(move){
+  const prime=move.endsWith("'");
+  const face=move[0];
+  rotateFace(face,prime);
+  const times=prime?3:1;
+  for(let n=0;n<times;n++){
+    if(face==='U')cycle(()=>row('F',0),v=>setRow('F',0,v),()=>row('R',0),v=>setRow('R',0,v),()=>row('B',0),v=>setRow('B',0,v),()=>row('L',0),v=>setRow('L',0,v));
+    if(face==='D')cycle(()=>row('F',2),v=>setRow('F',2,v),()=>row('L',2),v=>setRow('L',2,v),()=>row('B',2),v=>setRow('B',2,v),()=>row('R',2),v=>setRow('R',2,v));
+    if(face==='R')cycle(()=>col('U',2),v=>setCol('U',2,v),()=>col('F',2),v=>setCol('F',2,v),()=>col('D',2),v=>setCol('D',2,v),()=>col('B',0).reverse(),v=>setCol('B',0,v.slice().reverse()));
+    if(face==='L')cycle(()=>col('U',0),v=>setCol('U',0,v),()=>col('B',2).reverse(),v=>setCol('B',2,v.slice().reverse()),()=>col('D',0),v=>setCol('D',0,v),()=>col('F',0),v=>setCol('F',0,v));
+    if(face==='F')cycle(()=>row('U',2),v=>setRow('U',2,v),()=>col('L',2).reverse(),v=>setCol('L',2,v.slice().reverse()),()=>row('D',0),v=>setRow('D',0,v),()=>col('R',0),v=>setCol('R',0,v));
+    if(face==='B')cycle(()=>row('U',0),v=>setRow('U',0,v),()=>col('R',2),v=>setCol('R',2,v),()=>row('D',2),v=>setRow('D',2,v),()=>col('L',0).reverse(),v=>setCol('L',0,v.slice().reverse()));
+  }
+}
+function applyMove(move){
+  if(move.endsWith('2')){applyBaseMove(move[0]);applyBaseMove(move[0]);}
+  else applyBaseMove(move);
+  lastTouched=move[0];
+  history.push(move);
+  log.textContent='Moves: '+history.slice(-18).join(' ');
+  renderCube();
+}
+async function applySequence(sequence){
+  if(isPlaying)return;
+  isPlaying=true;
+  for(const move of sequence){
+    applyMove(move);
+    await new Promise(resolve=>setTimeout(resolve,260));
+  }
+  isPlaying=false;
+}
+function renderCube(){
+  cube.innerHTML='';
+  ['U','F','R'].forEach(face=>{
+    const faceEl=document.createElement('div');
+    faceEl.className='cube-face face-'+face;
+    faceEl.dataset.face=face;
+    cubeState[face].forEach(colorKey=>{
+      const cell=document.createElement('div');
+      cell.className='sticker'+(lastTouched===face?' flash':'');
+      cell.style.background=palette[colorKey];
+      faceEl.appendChild(cell);
+    });
+    cube.appendChild(faceEl);
+  });
+  setTimeout(()=>{lastTouched='';document.querySelectorAll('.flash').forEach(el=>el.classList.remove('flash'));},170);
+}
+function renderStep(){
+  const current=steps[step];
+  document.getElementById('stepTitle').textContent=current.title;
+  document.getElementById('stepText').textContent=current.text;
+  document.getElementById('playStep').onclick=()=>applySequence(current.seq);
+  const box=document.getElementById('stepMoves');
+  box.innerHTML='';
+  current.seq.forEach(move=>{
+    const button=document.createElement('button');
+    button.textContent=move;
+    button.dataset.move=move;
+    button.setAttribute('aria-label','Practice move '+move);
+    button.onclick=()=>applyMove(move);
+    box.appendChild(button);
+  });
+}
+const controls=document.getElementById('manualControls');
+moves.forEach(move=>{
+  const button=document.createElement('button');
+  button.textContent=move;
+  button.dataset.move=move;
+  button.setAttribute('aria-label','Practice move '+move);
+  button.onclick=()=>applyMove(move);
+  controls.appendChild(button);
+});
+document.getElementById('prev').onclick=()=>{step=Math.max(0,step-1);renderStep();};
+document.getElementById('next').onclick=()=>{step=Math.min(steps.length-1,step+1);renderStep();};
+document.getElementById('reset').onclick=()=>{const fresh=JSON.parse(solved);Object.keys(fresh).forEach(face=>cubeState[face]=fresh[face]);history=[];log.textContent='Moves: none';renderCube();};
+renderCube();
+renderStep();
+</script>"""
+
+
+@router.post("/ater/artifact/generate")
+async def generate_artifact_code(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Generates raw self-contained HTML/JS code for a sandbox-spec request."""
+    prompt = payload.get("prompt", "")
+    context = payload.get("context", "")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+    if _is_rubiks_sandbox_request(f"{prompt}\n{context}"):
+        return {"code": _build_rubiks_cube_sandbox()}
+
+    ai_key = secrets.ai_key
+    if not ai_key:
+        raise HTTPException(status_code=400, detail="AI API Key missing")
+
+    try:
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-2.0-flash",
+            api_key=ai_key,
+            temperature=0.3,
+            max_tokens=2500,
+        )
+        sys_prompt = """Generate one self-contained browser sandbox snippet.
+Return raw HTML/CSS/JavaScript only. Do not use markdown fences, prose, React, imports, build tools, external files, or privileged APIs.
+Assume Tailwind CDN, the Outfit font, and CSS variables are injected by the host. Prefer compact SVG, Canvas, and vanilla JavaScript."""
+        human_prompt = f"""Sandbox request: {prompt}
+
+Lesson context:
+{context}
+
+Return the code only."""
+        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        return {"code": res.content.strip() if hasattr(res, "content") else str(res).strip()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/artifact/repair")
+async def repair_artifact_code(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """Repairs sandbox code after a client-side runtime error."""
+    ai_key = secrets.ai_key
+    if not ai_key:
+        raise HTTPException(status_code=400, detail="AI API Key missing")
+
+    code = payload.get("code", "")
+    error = payload.get("error", "")
+    stack = payload.get("stack", "")
+    if not code:
+        raise HTTPException(status_code=400, detail="code is required")
+
+    try:
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-2.0-flash",
+            api_key=ai_key,
+            temperature=0.1,
+            max_tokens=2500,
+        )
+        sys_prompt = """Repair a self-contained browser sandbox snippet.
+Return raw corrected HTML/CSS/JavaScript only. Do not explain, use markdown fences, or omit existing intended behavior."""
+        human_prompt = f"""Runtime error:
+{error}
+
+Stack:
+{stack}
+
+Broken code:
+{code}
+
+Return corrected code only."""
+        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        return {"code": res.content.strip() if hasattr(res, "content") else str(res).strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -375,4 +655,3 @@ Provide the questions in a clean, readable Markdown format with bold question nu
         return {"answer": res.content, "questions": res.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

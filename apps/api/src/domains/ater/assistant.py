@@ -224,7 +224,8 @@ class RenderUIInput(BaseModel):
             "- 'assignment_list': Assignment rows. data = list of {name, course, due_date, status, priority}.\n"
             "- 'stats': Summary stats panel. data = {sessions_today, total_notes, due_cards, active_hub, streak}.\n"
             "- 'srs_deck': SRS review cards. data = list of {title, path, due, difficulty, reps}.\n"
-            "- 'semester_list': Semester overview cards. data = list of {name, year, status, course_count}."
+            "- 'semester_list': Semester overview cards. data = list of {name, year, status, course_count}.\n"
+            "- 'interactive_sandbox': Interactive custom UI block. data = {title, type='math-plotter'|'table-explorer'|'node-graph', equation?, sliders?, headers?, rows?, nodes?, links?}."
         )
     )
     data: Any = Field(description="The data payload for the UI block. Must match the structure described for ui_type.")
@@ -1988,7 +1989,8 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                     "ALWAYS use this after fetching data to display it as rich UI cards instead of plain text. "
                     "For courses → ui_type='course_cards'. For notes → 'note_cards'. For hubs → 'hub_cards'. "
                     "For exams → 'exam_list'. For assignments → 'assignment_list'. For SRS → 'srs_deck'. "
-                    "For stats → 'stats'. For semesters → 'semester_list'."
+                    "For stats → 'stats'. For semesters → 'semester_list'. "
+                    "For interactive widgets/sandboxes/graphs/tables → 'interactive_sandbox'."
                 ),
                 args_schema=RenderUIInput),
         ]
@@ -2179,6 +2181,280 @@ def _build_tool_context_hint(tool_name: str, tool_result_str: str, tool_args: di
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Lesson request detection & conversion helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+_LESSON_TRIGGER_PATTERNS = re.compile(
+    r"(teach\s+me|explain\s+how\s+to|how\s+do\s+i|walk\s+me\s+through|show\s+me\s+how\s+to|learn\s+how\s+to|guide\s+me|step.by.step)",
+    re.IGNORECASE,
+)
+
+
+def _is_lesson_request(messages_history: List[Dict[str, Any]]) -> tuple[bool, str]:
+    """Return (is_lesson, topic) based on the last user message."""
+    for msg in reversed(messages_history):
+        if msg.get("role") == "user":
+            text = msg.get("content", "")
+            if _LESSON_TRIGGER_PATTERNS.search(text):
+                return True, text.strip()
+            return False, ""
+    return False, ""
+
+
+def _xml_escape(value: Any) -> str:
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _clean_lesson_title(value: str, fallback: str) -> str:
+    title = (value or fallback or "Interactive Lesson").strip()
+    title = re.sub(r"^LESSON\s*:\s*", "", title, flags=re.IGNORECASE).strip()
+    title = re.sub(r"\s+", " ", title)
+    if title.isupper():
+        title = title.title()
+        title = title.replace("'S", "'s")
+    return title
+
+
+def _lesson_sandbox_spec(topic: str, lesson_title: str) -> str:
+    combined = f"{topic} {lesson_title}".lower()
+    if "rubik" in combined or "rubics" in combined:
+        return (
+            "interactive Rubik's Cube lesson stepper with clickable U, U', D, D', R, R', L, L', F, F', B, B' "
+            "controls, chapter-aware move sequences, reset button, and a simple colored 3D cube visualization"
+        )
+    return f"interactive lesson sandbox for {lesson_title or topic}".strip()
+
+
+def _is_rubiks_lesson_topic(value: str) -> bool:
+    normalized = str(value or "").lower()
+    return "rubik" in normalized or "rubics" in normalized
+
+
+def _rubiks_beginner_payload() -> Dict[str, Any]:
+    return {
+        "title": "Rubik's Cube Beginner Method",
+        "chapters": [
+            {
+                "title": "Step 1: Notation, Pieces, And Orientation",
+                "content": (
+                    "Hold one color as your bottom reference for the whole solve. In this lesson use white on bottom and yellow on top. "
+                    "Centers define each face color and never change relative to each other. Edges have two stickers, corners have three. "
+                    "Move notation names the face you turn: U, D, R, L, F, B. A prime mark means counter-clockwise, and 2 means a half turn."
+                ),
+            },
+            {
+                "title": "Step 2: Make The White Daisy",
+                "content": (
+                    "Find the four white edge pieces and place them around the yellow center, making a daisy. Do not worry about the side colors yet. "
+                    "Use simple face turns to lift each white edge to the top. If a white edge is stuck in the middle or bottom, turn its face until it can move upward."
+                ),
+            },
+            {
+                "title": "Step 3: Turn The Daisy Into The White Cross",
+                "content": (
+                    "For each white petal on top, rotate U until the edge's side color matches the center on the side face. Then turn that face 180 degrees to send the white edge to the bottom. "
+                    "Repeat four times. You should now have a white cross on the bottom, and each cross edge should match its side center."
+                ),
+            },
+            {
+                "title": "Step 4: Solve The White Corners",
+                "content": (
+                    "Find a white corner in the top layer. Place it above the slot between its two side-center colors. Use the Right trigger R U R' U' until the corner drops into the bottom layer correctly. "
+                    "If the corner starts in the bottom but is twisted or in the wrong slot, use R U R' U' once to lift it out, then place it again."
+                ),
+            },
+            {
+                "title": "Step 5: Solve The Middle Layer Edges",
+                "content": (
+                    "Look for a top-layer edge with no yellow sticker. Match its front color to the front center. If the edge must go right, use U R U' R' U' F' U F. "
+                    "If it must go left, use U' L' U L U F U' F'. Repeat until the first two layers are solved."
+                ),
+            },
+            {
+                "title": "Step 6: Make The Yellow Cross",
+                "content": (
+                    "Ignore yellow corners for now. Look only at yellow edges on top. Use F R U R' U' F' to move from dot to angle, angle to line, and line to yellow cross. "
+                    "For the angle, hold it in the back-left. For the line, hold it horizontal."
+                ),
+            },
+            {
+                "title": "Step 7: Position The Yellow Edges",
+                "content": (
+                    "Turn U until at least one yellow-cross edge matches its side center. Use R U R' U R U2 R' to cycle the yellow edges until all four side colors line up. "
+                    "Keep checking the centers, not the corner stickers."
+                ),
+            },
+            {
+                "title": "Step 8: Position The Yellow Corners",
+                "content": (
+                    "Find a yellow corner that is already in the correct location, even if twisted. Hold it at front-right. Use U R U' L' U R' U' L to cycle the other corners. "
+                    "Repeat until every top corner belongs in its slot."
+                ),
+            },
+            {
+                "title": "Step 9: Orient The Yellow Corners",
+                "content": (
+                    "Hold an unsolved yellow corner at front-right. Repeat R U R' U' until yellow faces up on that corner. Then turn only U to bring the next unsolved corner to front-right. "
+                    "Keep the cube orientation fixed. The cube may look scrambled during this step, but it resolves after the last corner."
+                ),
+            },
+        ],
+    }
+
+
+def _lesson_payload_to_artifact(payload: Dict[str, Any], topic: str) -> str:
+    title = _clean_lesson_title(str(payload.get("title") or ""), topic)
+    chapters = payload.get("chapters")
+    if not isinstance(chapters, list) or not chapters:
+        return ""
+
+    chapter_blocks = []
+    for index, chapter in enumerate(chapters, start=1):
+        if not isinstance(chapter, dict):
+            continue
+        chapter_title = str(chapter.get("title") or f"Chapter {index}").strip()
+        content = str(chapter.get("content") or "").strip()
+        chapter_blocks.append(
+            f'  <chapter title="{_xml_escape(chapter_title)}">\n'
+            f"{_xml_escape(content)}\n"
+            "  </chapter>"
+        )
+
+    if not chapter_blocks:
+        return ""
+
+    sandbox_spec = _lesson_sandbox_spec(topic, title)
+    return (
+        f'<artifact title="{_xml_escape(title)}">\n'
+        + "\n".join(chapter_blocks)
+        + "\n"
+        f"  <sandbox-spec>{_xml_escape(sandbox_spec)}</sandbox-spec>\n"
+        "</artifact>"
+    )
+
+
+def _convert_to_lesson_json(text: str, topic: str) -> str:
+    """
+    Convert any LLM response (structured JSON block OR plain markdown chapters)
+    into the interactive artifact XML protocol.
+
+    Priority:
+      1. If the text already has artifact XML → pass through unchanged.
+      2. If the text has a valid ```interactive-lesson block → convert it.
+      3. If the text contains a bare JSON object with "chapters" key → convert it.
+      3. Otherwise parse plain-markdown CHAPTER headings and build the JSON.
+    """
+    stripped = text.strip()
+
+    if _is_rubiks_lesson_topic(f"{topic}\n{stripped}"):
+        return _lesson_payload_to_artifact(_rubiks_beginner_payload(), topic)
+
+    if "<artifact" in stripped or "<sandbox-spec" in stripped:
+        return stripped
+
+    if "```interactive-lesson" in stripped:
+        lesson_match = re.search(r"```interactive-lesson\s*([\s\S]*?)```", stripped, re.IGNORECASE)
+        if lesson_match:
+            try:
+                payload = json.loads(lesson_match.group(1).strip())
+                converted = _lesson_payload_to_artifact(payload, topic)
+                if converted:
+                    return converted
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+
+    # 2. Try bare JSON with "chapters"
+    json_match = re.search(r'(\{[\s\S]*"chapters"[\s\S]*\})', stripped)
+    if json_match:
+        try:
+            payload = json.loads(json_match.group(1))
+            if "chapters" in payload and isinstance(payload["chapters"], list):
+                converted = _lesson_payload_to_artifact(payload, topic)
+                if converted:
+                    return converted
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # 3. Parse plain markdown chapters.
+    # Llama often outputs:
+    #   "CHAPTER 1: ..." / "## Chapter 1: ..." / "1. Chapter 1: ..."
+    # and appends non-chapter numbered sections like "3. PRACTICE TIME!" after.
+    # Strategy: find all CHAPTER N headings, then stop at any non-chapter numbered
+    # section that follows (e.g. "3. PRACTICE TIME!" or "4. WIDGET PAYLOAD:").
+    chapter_pattern = re.compile(
+        r'^(?:#{1,3}\s*)?(?:\*{0,2})?(?:CHAPTER|Chapter)\s*(\d+)[:\s\u2013-]+([^\n*]+)\*{0,2}',
+        re.MULTILINE,
+    )
+
+    matches = list(chapter_pattern.finditer(stripped))
+
+    if not matches:
+        # Nothing to convert — return unchanged so model text still shows
+        return text
+
+    # Find the end boundary: the first non-chapter numbered section
+    # e.g. "3. PRACTICE TIME!" or "4. WIDGET PAYLOAD:"
+    post_chapters_cutoff = len(stripped)
+    non_chapter_section = re.search(
+        r'^\d+\.\s+(?!CHAPTER|Chapter)([A-Z][^\n]{0,60})',
+        stripped[matches[-1].end():],
+        re.MULTILINE,
+    )
+    if non_chapter_section:
+        post_chapters_cutoff = matches[-1].end() + non_chapter_section.start()
+
+    chapters = []
+    for i, m in enumerate(matches):
+        ch_title_raw = m.group(2).strip().rstrip(':')
+        start_content = m.end()
+        if i + 1 < len(matches):
+            end_content = matches[i + 1].start()
+        else:
+            end_content = post_chapters_cutoff
+        raw_content = stripped[start_content:end_content].strip()
+
+        # Remove any sub-heading that is just the same title repeated
+        raw_content = re.sub(r'^\*{0,2}' + re.escape(ch_title_raw) + r'\*{0,2}\s*\n?', '', raw_content).strip()
+
+        # Build chapter title with chapter number prefix
+        ch_title = f"Chapter {m.group(1)}: {ch_title_raw}"
+
+        chapters.append({
+            "title": ch_title,
+            "content": raw_content,
+            "widgetType": "none",
+        })
+
+    if not chapters:
+        return text
+
+    # Derive lesson title: try to extract from preamble before first chapter
+    lesson_title = topic
+    if matches:
+        preamble = stripped[: matches[0].start()].strip()
+        # Look for a markdown heading in the preamble
+        heading_match = re.search(r'^#{1,3}\s*(.+)', preamble, re.MULTILINE)
+        if heading_match:
+            lesson_title = heading_match.group(1).strip()
+        # Look for "LESSON TITLE: ..." pattern (Llama sometimes outputs this)
+        elif re.search(r'LESSON TITLE[:\s]+(.+)', preamble, re.IGNORECASE):
+            m_title = re.search(r'LESSON TITLE[:\s]+(.+)', preamble, re.IGNORECASE)
+            lesson_title = m_title.group(1).strip().strip('*')
+        elif preamble and len(preamble) < 120:
+            lesson_title = preamble.splitlines()[0].strip('# ').strip()
+
+    payload = {"title": lesson_title, "chapters": chapters}
+    converted = _lesson_payload_to_artifact(payload, topic)
+    return converted or text
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main agent loop
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2303,18 +2579,38 @@ async def run_assistant_chat(
             if clean:
                 formatted_messages.append(AIMessage(content=clean))
 
+    # Detect if this is a "teach me" style lesson request
+    _lesson_mode, _lesson_topic = _is_lesson_request(messages_history)
+
     # ── Agentic loop ───────────────────────────────────────────────────────
+    # For lesson requests, bypass tool-binding entirely.
+    # Small models (e.g. Llama 17B) fail when generating large structured
+    # outputs while tools are bound — they attempt tool calls incorrectly.
+    _active_llm = assistant.llm if _lesson_mode else llm_with_tools
+
     for _ in range(8):
         accumulated_chunks = []
         has_tool_calls = False
+        buffered_content: List[str] = []
 
         try:
-            async for chunk in llm_with_tools.astream(formatted_messages):
+            async for chunk in _active_llm.astream(formatted_messages):
                 accumulated_chunks.append(chunk)
                 if hasattr(chunk, "tool_call_chunks") and chunk.tool_call_chunks:
                     has_tool_calls = True
                 elif not has_tool_calls and hasattr(chunk, "content") and chunk.content:
-                    yield f"data: {json.dumps({'type': 'chunk', 'content': chunk.content})}\n\n"
+                    if _lesson_mode:
+                        # Buffer instead of streaming — we need the full response to convert
+                        buffered_content.append(chunk.content)
+                    else:
+                        yield f"data: {json.dumps({'type': 'chunk', 'content': chunk.content})}\n\n"
+
+            # Emit buffered lesson content after conversion
+            if _lesson_mode and buffered_content and not has_tool_calls:
+                full_text = "".join(buffered_content)
+                converted = _convert_to_lesson_json(full_text, _lesson_topic)
+                yield f"data: {json.dumps({'type': 'chunk', 'content': converted})}\n\n"
+                break
 
             if not accumulated_chunks:
                 break
@@ -2326,13 +2622,15 @@ async def run_assistant_chat(
         except Exception as stream_err:
             logger.warning(f"Streaming failed, falling back to invoke: {stream_err}")
             try:
-                response = await llm_with_tools.ainvoke(formatted_messages)
+                response = await _active_llm.ainvoke(formatted_messages)
             except Exception as invoke_err:
                 logger.error(f"[Ater] invoke failed: {invoke_err}", exc_info=True)
                 yield f"data: {json.dumps({'type': 'error', 'message': str(invoke_err)})}\n\n"
                 return
             if not (hasattr(response, "tool_calls") and response.tool_calls):
                 content = response.content or ""
+                if _lesson_mode:
+                    content = _convert_to_lesson_json(content, _lesson_topic)
                 yield f"data: {json.dumps({'type': 'chunk', 'content': content})}\n\n"
                 return
 

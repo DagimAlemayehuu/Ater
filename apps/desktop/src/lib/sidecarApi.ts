@@ -959,6 +959,7 @@ export const sidecarApi = {
         selection: string,
         page?: number,
         messages: { role: string, content: string }[],
+        active_artifact?: { title?: string; code?: string; version?: number } | null,
         scope?: 'selection' | 'page' | 'note',
         source_kind?: 'markdown' | 'pdf',
         selection_context?: string,
@@ -972,6 +973,41 @@ export const sidecarApi = {
             return await invoke<any>('ater_chat', { payload })
         } catch (err) {
             console.error('[Tauri Native RAG] aterChat failed:', err)
+            throw err
+        }
+    },
+
+    generateArtifactCode: async (payload: { prompt: string; context?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        if (await isDemoActive()) {
+            return {
+                code: `<main class="min-h-[260px] rounded-xl border border-white/10 bg-zinc-950 p-6 text-white">
+  <h1 class="text-xl font-black">Interactive Sandbox</h1>
+  <p class="mt-2 text-sm text-zinc-300">${payload.prompt}</p>
+  <button class="mt-4 rounded-md bg-white px-3 py-2 text-xs font-black uppercase tracking-widest text-zinc-950" onclick="this.nextElementSibling.textContent='Exploration started'">Run</button>
+  <p class="mt-3 text-sm text-zinc-400"></p>
+</main>`,
+            }
+        }
+        try {
+            return await invoke<any>('generate_artifact_code', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] generateArtifactCode failed:', err)
+            throw err
+        }
+    },
+
+    repairArtifactCode: async (payload: { code: string; error: string; stack?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        if (await isDemoActive()) {
+            return { code: payload.code }
+        }
+        try {
+            return await invoke<any>('repair_artifact_code', { payload })
+        } catch (err) {
+            console.error('[Tauri Native RAG] repairArtifactCode failed:', err)
             throw err
         }
     },
