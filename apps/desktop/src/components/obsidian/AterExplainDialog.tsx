@@ -156,20 +156,43 @@ export function AterExplainDialog({
 
             const previousCode = previousCodesByArtifact[artifact.id] || ''
 
-            sidecarApi.generateArtifactCode({ 
-              prompt: chapter.sandboxSpec, 
-              context: msg.content,
-              previous_code: previousCode
-            }).then((result) => {
-              const code = result.code || result.answer || ''
-              if (!code) return
-              const chapters = version.chapters.map((item) => (
-                item.id === chapter.id ? { ...item, sandbox: code } : item
-              ))
-              useArtifactStore.getState().addVersion(artifact.id, chapters, code, messageIndex)
-            }).catch(() => {
-              // The placeholder remains visible; the user can continue the chat.
-            })
+            const checkAndGenerate = async () => {
+              const isOnline = navigator.onLine
+              if (!isOnline) {
+                useArtifactStore.getState().recordCompileError(artifact.id, "Browser is offline. Connect to the internet to compile.")
+                return
+              }
+              try {
+                const health = await sidecarApi.health()
+                if (health.status !== 'ok') {
+                  useArtifactStore.getState().recordCompileError(artifact.id, "FastAPI sidecar service is unhealthy.")
+                  return
+                }
+              } catch {
+                useArtifactStore.getState().recordCompileError(artifact.id, "FastAPI sidecar service is unreachable.")
+                return
+              }
+
+              sidecarApi.generateArtifactCode({ 
+                prompt: chapter.sandboxSpec!, 
+                context: msg.content,
+                previous_code: previousCode
+              }).then((result) => {
+                const code = result.code || result.answer || ''
+                if (!code) {
+                  useArtifactStore.getState().recordCompileError(artifact.id, "FastAPI sidecar generated empty code.")
+                  return
+                }
+                const chapters = version.chapters.map((item) => (
+                  item.id === chapter.id ? { ...item, sandbox: code } : item
+                ))
+                useArtifactStore.getState().recordCompileError(artifact.id, null)
+                useArtifactStore.getState().addVersion(artifact.id, chapters, code, messageIndex)
+              }).catch((err) => {
+                useArtifactStore.getState().recordCompileError(artifact.id, err?.message || "Failed to generate sandbox code.")
+              })
+            }
+            checkAndGenerate()
           }
         }
       }
@@ -195,18 +218,41 @@ export function AterExplainDialog({
             }],
           }],
         }])
-        sidecarApi.generateArtifactCode({ prompt: spec.prompt, context: msg.content }).then((result) => {
-          const code = result.code || result.answer || ''
-          if (!code) return
-          useArtifactStore.getState().addVersion(artifactId, [{
-            id: `${artifactId}-chapter-1-generated`,
-            title: 'Generated Sandbox',
-            content: '',
-            sandbox: code,
-          }], code, messageIndex)
-        }).catch(() => {
-          // The placeholder remains visible; the user can continue the chat.
-        })
+        const checkAndGenerateSpec = async () => {
+          const isOnline = navigator.onLine
+          if (!isOnline) {
+            useArtifactStore.getState().recordCompileError(artifactId, "Browser is offline. Connect to the internet to compile.")
+            return
+          }
+          try {
+            const health = await sidecarApi.health()
+            if (health.status !== 'ok') {
+              useArtifactStore.getState().recordCompileError(artifactId, "FastAPI sidecar service is unhealthy.")
+              return
+            }
+          } catch {
+            useArtifactStore.getState().recordCompileError(artifactId, "FastAPI sidecar service is unreachable.")
+            return
+          }
+
+          sidecarApi.generateArtifactCode({ prompt: spec.prompt, context: msg.content }).then((result) => {
+            const code = result.code || result.answer || ''
+            if (!code) {
+              useArtifactStore.getState().recordCompileError(artifactId, "FastAPI sidecar generated empty code.")
+              return
+            }
+            useArtifactStore.getState().recordCompileError(artifactId, null)
+            useArtifactStore.getState().addVersion(artifactId, [{
+              id: `${artifactId}-chapter-1-generated`,
+              title: 'Generated Sandbox',
+              content: '',
+              sandbox: code,
+            }], code, messageIndex)
+          }).catch((err) => {
+            useArtifactStore.getState().recordCompileError(artifactId, err?.message || "Failed to generate sandbox code.")
+          })
+        }
+        checkAndGenerateSpec()
       }
     }
   }, [messages])

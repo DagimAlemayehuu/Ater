@@ -30,6 +30,10 @@ import { useHeader } from '@/context/header-context'
 import React, { lazy, Suspense } from 'react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { updateProperty, deleteProperty, toggleChecklistLink, parseFrontmatter } from '@/lib/markdownHelper'
+import { useArtifactStore } from '@/lib/artifacts/store'
+import { extractArtifacts } from '@/lib/artifacts/parser'
+import { UnifiedSandboxViewer } from '@/components/obsidian/UnifiedSandboxViewer'
+
 
 interface InboxFile {
  name: string
@@ -259,6 +263,56 @@ export default function ObsidianVaultPage() {
 const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
   const noteContentRef = useRef('')
+  const {
+    artifacts,
+    isPanelOpen,
+    panelWidth,
+    setPanelOpen,
+    resetArtifacts
+  } = useArtifactStore()
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false)
+
+  // Dragging split logic for resizing
+  useEffect(() => {
+    if (!isDraggingSplit) return
+
+    const onMove = (event: MouseEvent) => {
+      const viewportWidth = window.innerWidth || 1
+      const rightWidth = viewportWidth - event.clientX
+      useArtifactStore.getState().setPanelWidth((rightWidth / viewportWidth) * 100)
+    }
+    const onUp = () => setIsDraggingSplit(false)
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [isDraggingSplit])
+
+  // Parse artifacts automatically on note content changes
+  useEffect(() => {
+    if (selectedPath && !selectedPath.toLowerCase().endsWith('.pdf') && noteContent) {
+      const extracted = extractArtifacts(noteContent)
+      if (extracted.artifacts.length > 0) {
+        useArtifactStore.getState().registerArtifacts(extracted.artifacts)
+        useArtifactStore.getState().setPanelOpen(true)
+      } else {
+        useArtifactStore.getState().resetArtifacts()
+      }
+    } else {
+      useArtifactStore.getState().resetArtifacts()
+    }
+  }, [noteContent, selectedPath])
+
+  // Reset store on unmount
+  useEffect(() => {
+    return () => {
+      useArtifactStore.getState().resetArtifacts()
+    }
+  }, [])
+
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState('')
 
@@ -1962,10 +2016,12 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         }} />
       </div>
     ) : (
-      <main 
-        data-purpose="main-editor"
-        className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
-      >
+      <div className="flex-1 flex flex-row min-w-0 h-full gap-3 relative">
+        <main 
+          data-purpose="main-editor"
+          className="bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
+          style={{ width: (isPanelOpen && artifacts.length > 0) ? `${100 - panelWidth}%` : '100%', flex: (isPanelOpen && artifacts.length > 0) ? 'none' : '1 1 0%' }}
+        >
         {!selectedPath ? (
           <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground/20 gap-4 mt-32">
             <FileText size={64} strokeWidth={1} />
@@ -2091,7 +2147,28 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             )}
           </div>
         )}
-      </main>
+        </main>
+
+        {(isPanelOpen && artifacts.length > 0) && (
+          <>
+            <button
+              type="button"
+              aria-label="Resize artifact panel"
+              onMouseDown={(event) => {
+                event.preventDefault()
+                setIsDraggingSplit(true)
+              }}
+              className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20 rounded-[6px]"
+            />
+            <div
+              className="min-w-[420px] max-w-[82%] rounded-[12px] overflow-hidden border border-border/40 bg-bento-panel shadow-sm shrink-0"
+              style={{ width: `${panelWidth}%` }}
+            >
+              <UnifiedSandboxViewer shielded={isDraggingSplit} />
+            </div>
+          </>
+        )}
+      </div>
     )}
 
     {/* Map Checklist Sidebar (Right-Contextual) */}

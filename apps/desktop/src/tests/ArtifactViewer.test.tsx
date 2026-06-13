@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ArtifactViewer } from '../components/obsidian/ArtifactViewer'
 import { useArtifactStore } from '../lib/artifacts/store'
+import { MemoryRouter } from 'react-router-dom'
 
 describe('ArtifactViewer', () => {
   beforeEach(() => {
@@ -29,7 +30,11 @@ describe('ArtifactViewer', () => {
       },
     ])
 
-    render(<ArtifactViewer />)
+    render(
+      <MemoryRouter>
+        <ArtifactViewer />
+      </MemoryRouter>
+    )
 
     expect(screen.getByText('Step 1: Notation, Pieces, And Orientation')).toBeInTheDocument()
     expect(screen.getByText(/Hold white on bottom and yellow on top/)).toBeInTheDocument()

@@ -9,6 +9,9 @@ import { Question, QuestionType } from '@/types/practice';
 import { usePracticeSession } from '@/hooks/usePracticeSession';
 import { AterExplainDialog, makePracticeExplainFetchers } from '@/components/obsidian/AterExplainDialog';
 import { toast } from 'sonner';
+import { extractArtifacts } from '@/lib/artifacts/parser';
+import { UnifiedSandboxViewer } from '@/components/obsidian/UnifiedSandboxViewer';
+import { sidecarApi } from '@/lib/sidecarApi';
 
 export const MarkdownBlock = ({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
   if (variant === 'inline') {
@@ -83,6 +86,34 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const showScore = session.showScore;
   const keywordChecks = session.keywordChecks;
   const currentIdx = session.currentQuestionIdx;
+
+  const [localArtifacts, setLocalArtifacts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (currentQ && currentQ.id) {
+      const qText = `${currentQ.question || ''}\n${currentQ.explanation || ''}\n${currentQ.content || ''}`;
+      const extracted = extractArtifacts(qText);
+      if (extracted.artifacts.length > 0) {
+        setLocalArtifacts(extracted.artifacts);
+      } else if (currentQ.note_id || notePath) {
+        const path = currentQ.note_id || notePath;
+        if (path) {
+          sidecarApi.readObsidianNote(path).then((res) => {
+            const noteExtracted = extractArtifacts(res.content || '');
+            setLocalArtifacts(noteExtracted.artifacts);
+          }).catch(() => {
+            setLocalArtifacts([]);
+          });
+        } else {
+          setLocalArtifacts([]);
+        }
+      } else {
+        setLocalArtifacts([]);
+      }
+    } else {
+      setLocalArtifacts([]);
+    }
+  }, [currentQ, notePath]);
 
   if (!rawQ && !showScore) return null;
 
@@ -280,8 +311,9 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
           </Button>
         </div>
       ) : (
-        <div className="p-3 flex flex-col justify-center space-y-2 min-h-[120px]">
-          <div className="space-y-2" key={`header-${currentQ.id}`}>
+        <div className={cn("flex flex-col md:flex-row gap-3 min-h-[120px]", localArtifacts.length > 0 && "p-1.5 bg-muted/5")}>
+          <div className={cn("flex-1 p-3 flex flex-col justify-center space-y-2", localArtifacts.length > 0 && "md:max-w-[50%]")}>
+            <div className="space-y-2" key={`header-${currentQ.id}`}>
             <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
               <Badge variant="outline" className="text-[7px] border-border bg-bento-item text-muted-foreground rounded-[8px] px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
               <div className="w-0.5 h-0.5 rounded-[8px] bg-muted-foreground/20" />
@@ -580,7 +612,13 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               )}
             </div>
           </div>
+          {localArtifacts.length > 0 && (
+            <div className="flex-1 min-w-[360px] border-t md:border-t-0 md:border-l border-border h-[420px] rounded-[8px] overflow-hidden bg-bento-panel flex flex-col shrink-0">
+              <UnifiedSandboxViewer shielded={false} customArtifacts={localArtifacts} onClose={() => {}} />
+            </div>
+          )}
         </div>
+      </div>
       )}
 
       {explainOpen && explainQuestion && (() => {

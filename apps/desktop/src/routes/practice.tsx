@@ -68,6 +68,9 @@ import {AdvancedPracticeConfig, Question} from '@/types/practice'
 import { MarkdownBlock } from '@/components/MiniPracticeUI'
 import { usePracticeSession } from '@/hooks/usePracticeSession'
 import { BlockingLoader, MiniLoader } from '@/components/ui/loading-state'
+import { useArtifactStore } from '@/lib/artifacts/store'
+import { extractArtifacts } from '@/lib/artifacts/parser'
+import { UnifiedSandboxViewer } from '@/components/obsidian/UnifiedSandboxViewer'
 
 interface Hub {
  id: string
@@ -128,6 +131,68 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
  })
  
   const session = usePracticeSession();
+  const {
+    artifacts,
+    isPanelOpen,
+    panelWidth,
+    setPanelOpen,
+    resetArtifacts
+  } = useArtifactStore()
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false)
+
+  // Dragging split logic for resizing
+  useEffect(() => {
+    if (!isDraggingSplit) return
+
+    const onMove = (event: MouseEvent) => {
+      const viewportWidth = window.innerWidth || 1
+      const rightWidth = viewportWidth - event.clientX
+      useArtifactStore.getState().setPanelWidth((rightWidth / viewportWidth) * 100)
+    }
+    const onUp = () => setIsDraggingSplit(false)
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [isDraggingSplit])
+
+  // Parse and register practice question artifacts
+  useEffect(() => {
+    if (view === 'session' && session.currentQuestion) {
+      const qText = `${session.currentQuestion.question || ''}\n${session.currentQuestion.explanation || ''}\n${session.currentQuestion.content || ''}`;
+      const extractedDirect = extractArtifacts(qText);
+      if (extractedDirect.artifacts.length > 0) {
+        useArtifactStore.getState().registerArtifacts(extractedDirect.artifacts);
+        useArtifactStore.getState().setPanelOpen(true);
+      } else if (session.currentQuestion.note_id) {
+        sidecarApi.readObsidianNote(session.currentQuestion.note_id).then((res) => {
+          const extracted = extractArtifacts(res.content || '');
+          if (extracted.artifacts.length > 0) {
+            useArtifactStore.getState().registerArtifacts(extracted.artifacts);
+            useArtifactStore.getState().setPanelOpen(true);
+          } else {
+            useArtifactStore.getState().resetArtifacts();
+          }
+        }).catch(() => {
+          useArtifactStore.getState().resetArtifacts();
+        });
+      } else {
+        useArtifactStore.getState().resetArtifacts();
+      }
+    } else {
+      useArtifactStore.getState().resetArtifacts();
+    }
+  }, [session.currentQuestion, view]);
+
+  // Reset store on unmount
+  useEffect(() => {
+    return () => {
+      useArtifactStore.getState().resetArtifacts()
+    }
+  }, [])
 
   // Route-bound UI and past session telemetry state
   const [pastPractices, setPastPractices] = useState<any[]>([])
@@ -1016,8 +1081,15 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
     const lapses = currentCard ? (currentCard.lapses || 0) : 0;
 
     return (
-      <div data-tour="practice-session-card" className="h-full w-full flex flex-col bg-transparent text-foreground overflow-hidden relative">
-        {/* ── Feynman Gate Locked Overlay ── */}
+      <div data-tour="practice-session-card" className="h-full w-full flex flex-row min-w-0 bg-transparent text-foreground overflow-hidden relative gap-3">
+        <div
+          className="bg-bento-panel rounded-[12px] border border-border/40 shadow-sm relative flex flex-col min-w-0 panel-transition flex-1 h-full min-h-0 overflow-hidden"
+          style={{
+            width: (isPanelOpen && artifacts.length > 0) ? `${100 - panelWidth}%` : '100%',
+            flex: (isPanelOpen && artifacts.length > 0) ? 'none' : '1 1 0%'
+          }}
+        >
+          {/* ── Feynman Gate Locked Overlay ── */}
         {session.isFeynmanLocked && (
           <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-6">
             <div className="max-w-xl w-full border border-border bg-bento-panel p-8 rounded-[12px] space-y-6 shadow-2xl relative">
@@ -1449,6 +1521,27 @@ const DEFAULT_CONFIG: AdvancedPracticeConfig = {
             </div>
           </div>
         </div>
+      </div>
+
+        {(isPanelOpen && artifacts.length > 0) && (
+          <>
+            <button
+              type="button"
+              aria-label="Resize artifact panel"
+              onMouseDown={(event) => {
+                event.preventDefault()
+                setIsDraggingSplit(true)
+              }}
+              className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20 rounded-[6px]"
+            />
+            <div
+              className="min-w-[420px] max-w-[82%] rounded-[12px] overflow-hidden border border-border/40 bg-bento-panel shadow-sm shrink-0 h-full"
+              style={{ width: `${panelWidth}%` }}
+            >
+              <UnifiedSandboxViewer shielded={isDraggingSplit} />
+            </div>
+          </>
+        )}
       </div>
     );
   }

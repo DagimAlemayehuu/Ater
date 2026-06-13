@@ -2,6 +2,7 @@ export interface SandboxSrcDocOptions {
   artifactId?: string
   version?: number
   theme?: 'dark' | 'light'
+  state?: any
 }
 
 function getThemeCss(theme?: 'dark' | 'light') {
@@ -56,12 +57,101 @@ body {
 `
 }
 
+export function injectLoopGuardToJS(js: string): string {
+  let output = '';
+  let i = 0;
+  let guardCount = 0;
+
+  while (i < js.length) {
+    const isLoopKeyword = (
+      (js.substring(i, i + 3) === 'for' && !/[a-zA-Z0-9_$]/.test(js[i - 1] || '') && !/[a-zA-Z0-9_$]/.test(js[i + 3] || '')) ||
+      (js.substring(i, i + 5) === 'while' && !/[a-zA-Z0-9_$]/.test(js[i - 1] || '') && !/[a-zA-Z0-9_$]/.test(js[i + 5] || ''))
+    );
+
+    if (isLoopKeyword) {
+      const keyword = js.substring(i, i + 3) === 'for' ? 'for' : 'while';
+      const start = i;
+      i += keyword.length;
+
+      // Skip whitespace to opening parenthesis
+      while (i < js.length && /\s/.test(js[i])) {
+        i++;
+      }
+
+      if (i < js.length && js[i] === '(') {
+        let parenDepth = 1;
+        i++;
+        while (i < js.length && parenDepth > 0) {
+          if (js[i] === '(') parenDepth++;
+          else if (js[i] === ')') parenDepth--;
+          i++;
+        }
+
+        if (parenDepth === 0) {
+          const header = js.substring(start, i);
+
+          // Skip whitespace to check if next is '{'
+          while (i < js.length && /\s/.test(js[i])) {
+            i++;
+          }
+
+          if (i < js.length && js[i] === '{') {
+            i++; // skip '{'
+            guardCount++;
+            const guardVar = `__guard_${guardCount}`;
+            output += `let ${guardVar} = 0;\n${header} {\n  if (++${guardVar} > 1000000) throw new Error("Infinite loop detected: exceeded 1,000,000 iterations");\n`;
+          } else {
+            // Single statement loop without braces
+            let stmtStart = i;
+            while (i < js.length && js[i] !== ';') {
+              i++;
+            }
+            if (i < js.length && js[i] === ';') {
+              i++; // skip ';'
+              const stmt = js.substring(stmtStart, i);
+              guardCount++;
+              const guardVar = `__guard_${guardCount}`;
+              output += `let ${guardVar} = 0;\n${header} {\n  if (++${guardVar} > 1000000) throw new Error("Infinite loop detected: exceeded 1,000,000 iterations");\n  ${stmt}\n}`;
+            } else {
+              output += js.substring(start, i);
+            }
+          }
+          continue;
+        }
+      }
+
+      i = start + keyword.length;
+      output += keyword;
+    } else {
+      output += js[i];
+      i++;
+    }
+  }
+
+  return output;
+}
+
+export function preprocessSandboxCode(code: string): string {
+  try {
+    return code.replace(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi, (match, openTag, jsContent, closeTag) => {
+      if (openTag.includes(' src=')) {
+        return match;
+      }
+      return openTag + injectLoopGuardToJS(jsContent) + closeTag;
+    });
+  } catch (e) {
+    console.error('Error pre-processing sandbox loop guards, fallback to original code:', e);
+    return code;
+  }
+}
+
 export function buildSandboxSrcDoc(code: string, options: SandboxSrcDocOptions = {}): string {
   const artifactId = JSON.stringify(options.artifactId || '')
   const version = options.version || 1
   const theme = options.theme || 'dark'
   const htmlClass = theme === 'dark' ? 'class="dark"' : 'class="light"'
   const themeCss = getThemeCss(theme)
+  const preprocessedCode = preprocessSandboxCode(code)
 
   return `<!doctype html>
 <html ${htmlClass}>
@@ -74,7 +164,58 @@ export function buildSandboxSrcDoc(code: string, options: SandboxSrcDocOptions =
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>${themeCss}</style>
     <script>
-      window.__ATER_ARTIFACT__ = {"artifactId":${artifactId},"version":${version}};
+      window.__ATER_ARTIFACT__ = {"artifactId":${artifactId},"version":${version},"state":${JSON.stringify(options.state || {})}};
+      
+      // Automatic State Watcher & Serializer
+      function serializeState() {
+        var state = {};
+        var inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(function(input) {
+          var key = input.name || input.id;
+          if (key) {
+            if (input.type === 'checkbox') {
+              state[key] = input.checked;
+            } else if (input.type === 'radio') {
+              if (input.checked) state[key] = input.value;
+            } else {
+              state[key] = isNaN(Number(input.value)) ? input.value : Number(input.value);
+            }
+          }
+        });
+        return state;
+      }
+
+      document.addEventListener('input', function() {
+        var state = serializeState();
+        window.parent.postMessage({
+          "type": "ater:sandbox-state-change",
+          "artifactId": ${artifactId},
+          "version": ${version},
+          "state": state
+        }, "*");
+      });
+
+      // Automatic State Restorer
+      window.addEventListener('DOMContentLoaded', function() {
+        var savedState = window.__ATER_ARTIFACT__.state || {};
+        Object.keys(savedState).forEach(function(key) {
+          var input = document.querySelector('[name="' + key + '"], #' + key);
+          if (input) {
+            if (input.type === 'checkbox') {
+              input.checked = !!savedState[key];
+            } else if (input.type === 'radio') {
+              var radio = document.querySelector('input[type="radio"][name="' + key + '"][value="' + savedState[key] + '"]');
+              if (radio) radio.checked = true;
+            } else {
+              input.value = savedState[key];
+            }
+            // Trigger events to update client code
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      });
+
       window.onerror = function(message, source, lineno, colno, error) {
         window.parent.postMessage({
           "type": "ater:sandbox-error",
@@ -100,7 +241,7 @@ export function buildSandboxSrcDoc(code: string, options: SandboxSrcDocOptions =
     </script>
   </head>
   <body>
-    ${code}
+    ${preprocessedCode}
   </body>
 </html>`
 }

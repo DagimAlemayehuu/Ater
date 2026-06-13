@@ -265,7 +265,28 @@ Instructions:
 2. Provide a vivid, field-specific real-world analogy to anchor the explanation. Avoid dry clichés (e.g. coffee shops).
 3. Discuss the key implications or why this concept is important.
 4. Keep the formatting beautiful with clear headers, bold text, and bullet points. Use LaTeX block formulas if mathematical concepts are involved.
-5. When an interactive simulator would materially improve learning, append XML artifact markup after the normal lesson:
+5. For minor explanations requiring simple visualizations (like mathematical plots, connection graphs, or tables), prefer outputting a lightweight declarative preset using `ater-ui` JSON codeblocks instead of generating full custom `<sandbox>` HTML/JS code.
+Format for `ater-ui` codeblock:
+```ater-ui
+{
+  "ui_type": "interactive_sandbox",
+  "data": {
+    "title": "Math Plotter Example",
+    "type": "math-plotter",
+    "equation": "sine",
+    "sliders": [
+      { "name": "amplitude", "min": 10, "max": 100, "default": 50 },
+      { "name": "frequency", "min": 1, "max": 10, "default": 2 }
+    ]
+  }
+}
+```
+Supported types:
+- `math-plotter` (equations: `sine`, `logistic`, `exponential`, `quadratic`. Sliders: `amplitude`, `frequency`, `phase`, `decay`)
+- `node-graph` (nodes: array of `{ id, label, x, y }`, links: array of `{ source, target }`)
+- `table-explorer` (headers: array of strings, rows: array of objects)
+
+6. For major lessons requiring bespoke simulations, append XML artifact markup after the normal lesson:
 <artifact title="Short simulator title">
   <chapter title="Concept step">
     Markdown explanation for this step.
@@ -274,7 +295,7 @@ Instructions:
     </sandbox>
   </chapter>
 </artifact>
-6. If generating code in the same answer would distract from the lesson, use <sandbox-spec>short precise simulator request</sandbox-spec> instead."""
+7. If generating code in the same answer would distract from the lesson, use <sandbox-spec>short precise simulator request</sandbox-spec> instead."""
 
         human_prompt = f"""Document Context:
 {context_str}
@@ -337,6 +358,23 @@ async def ater_chat(
 {context_str}
 
 Guide the student using Socratic dialogue. Help them think deeply, ask guiding questions, check their understanding, and explain complex parts thoroughly but in a highly accessible way. Keep your formatting elegant using Markdown.
+
+If the explanation would benefit from a minor visualization (e.g. plotting a function, displaying a connection graph, or a table of data), prefer outputting a lightweight declarative preset block inside an `ater-ui` JSON codeblock:
+```ater-ui
+{{
+  "ui_type": "interactive_sandbox",
+  "data": {{
+    "title": "Math Plotter Example",
+    "type": "math-plotter",
+    "equation": "sine",
+    "sliders": [
+      {{ "name": "amplitude", "min": 10, "max": 100, "default": 50 }},
+      {{ "name": "frequency", "min": 1, "max": 10, "default": 2 }}
+    ]
+  }}
+}}
+```
+Supported preset types are `math-plotter` (equations: `sine`, `logistic`, etc.), `node-graph`, or `table-explorer`.
 
 If the student asks to modify, fix, expand, or personalize the interactive simulator, you MUST return an updated XML artifact with all chapters preserved, but replace the <sandbox> block with a <sandbox-spec> tag specifying the requested changes (e.g., <sandbox-spec>change the colors of the rubik's cube simulator to bright neon</sandbox-spec>). Do NOT write or edit the full code inside a <sandbox> block yourself — the system will automatically edit the previous code inline according to your sandbox specification."""
 

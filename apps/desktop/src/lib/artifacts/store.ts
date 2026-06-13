@@ -11,6 +11,7 @@ interface ArtifactStore {
   repairAttemptsByArtifact: Record<string, number>
   iframeErrorsByArtifact: Record<string, SandboxRuntimeError>
   isRepairingByArtifact: Record<string, boolean>
+  compileErrorsByArtifact: Record<string, string>
   registerArtifacts: (artifacts: InteractiveArtifact[]) => void
   addVersion: (artifactId: string, chapters: ArtifactChapter[], raw: string, messageIndex?: number) => void
   setActiveArtifact: (artifactId: string) => void
@@ -22,6 +23,7 @@ interface ArtifactStore {
   incrementRepairAttempts: (artifactId: string) => number
   setRepairing: (artifactId: string, repairing: boolean) => void
   clearRepairState: (artifactId: string) => void
+  recordCompileError: (artifactId: string, error: string | null) => void
   resetArtifacts: () => void
 }
 
@@ -35,6 +37,7 @@ const initialState = {
   repairAttemptsByArtifact: {} as Record<string, number>,
   iframeErrorsByArtifact: {} as Record<string, SandboxRuntimeError>,
   isRepairingByArtifact: {} as Record<string, boolean>,
+  compileErrorsByArtifact: {} as Record<string, string>,
 }
 
 const clampPanelWidth = (width: number) => Math.max(0, Math.min(70, width))
@@ -197,10 +200,22 @@ export const useArtifactStore = create<ArtifactStore>((set, get) => ({
       const repairAttemptsByArtifact = { ...state.repairAttemptsByArtifact }
       const iframeErrorsByArtifact = { ...state.iframeErrorsByArtifact }
       const isRepairingByArtifact = { ...state.isRepairingByArtifact }
+      const compileErrorsByArtifact = { ...state.compileErrorsByArtifact }
       delete repairAttemptsByArtifact[artifactId]
       delete iframeErrorsByArtifact[artifactId]
       delete isRepairingByArtifact[artifactId]
-      return { repairAttemptsByArtifact, iframeErrorsByArtifact, isRepairingByArtifact }
+      delete compileErrorsByArtifact[artifactId]
+      return { repairAttemptsByArtifact, iframeErrorsByArtifact, isRepairingByArtifact, compileErrorsByArtifact }
+    }),
+  recordCompileError: (artifactId, error) =>
+    set((state) => {
+      const compileErrorsByArtifact = { ...state.compileErrorsByArtifact }
+      if (error === null) {
+        delete compileErrorsByArtifact[artifactId]
+      } else {
+        compileErrorsByArtifact[artifactId] = error
+      }
+      return { compileErrorsByArtifact }
     }),
   resetArtifacts: () => set({ ...initialState }),
 }))
