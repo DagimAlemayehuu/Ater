@@ -196,6 +196,9 @@ class ModelFactory:
         # Handle max_tokens parameter standardization
         if "max_tokens" in kwargs:
             max_tok = kwargs.pop("max_tokens")
+            if provider == "groq" and max_tok > 4096:
+                max_tok = 4096
+            
             if provider == "google":
                 config["max_output_tokens"] = max_tok
             elif provider == "anthropic":

@@ -12,6 +12,11 @@ import os
 import argparse
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load local env variables from apps/api/.env or current working directory
+load_dotenv()
+
 import uvicorn
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,6 +66,7 @@ from src.domains.academics.router import router as academics_router
 from src.api.routers.ai import router as ai_router
 from src.api.routers.ater import router as ater_router, validate_vault_path
 from src.api.routers.notebooklm import router as notebooklm_router
+from src.domains.teacher.router import router as teacher_router
 from src.api.lifespan import ServerLifespanManager
 import src.api.state as state
 
@@ -107,26 +113,35 @@ class _VaultPathCacheMiddleware:
 app.add_middleware(_VaultPathCacheMiddleware)
 
 # --- PDF JS Asset Endpoints ---
-import base64
 from fastapi import Response
+
+_pdf_js_cache = None
+_pdf_worker_cache = None
+_pdf_css_cache = None
 
 @app.get("/api/obsidian/assets/pdf.min.js")
 async def get_pdf_js():
-    from src.domains.obsidian.assets_data import PDF_JS_B64
-    content = base64.b64decode(PDF_JS_B64)
-    return Response(content=content, media_type="application/javascript")
+    global _pdf_js_cache
+    if _pdf_js_cache is None:
+        file_path = Path(__file__).parent.parent / "domains" / "obsidian" / "assets" / "pdf.min.js"
+        _pdf_js_cache = file_path.read_bytes()
+    return Response(content=_pdf_js_cache, media_type="application/javascript")
 
 @app.get("/api/obsidian/assets/pdf.worker.min.js")
 async def get_pdf_worker_js():
-    from src.domains.obsidian.assets_data import PDF_WORKER_B64
-    content = base64.b64decode(PDF_WORKER_B64)
-    return Response(content=content, media_type="application/javascript")
+    global _pdf_worker_cache
+    if _pdf_worker_cache is None:
+        file_path = Path(__file__).parent.parent / "domains" / "obsidian" / "assets" / "pdf.worker.min.js"
+        _pdf_worker_cache = file_path.read_bytes()
+    return Response(content=_pdf_worker_cache, media_type="application/javascript")
 
 @app.get("/api/obsidian/assets/pdf_viewer.min.css")
 async def get_pdf_css():
-    from src.domains.obsidian.assets_data import PDF_CSS_B64
-    content = base64.b64decode(PDF_CSS_B64)
-    return Response(content=content, media_type="text/css")
+    global _pdf_css_cache
+    if _pdf_css_cache is None:
+        file_path = Path(__file__).parent.parent / "domains" / "obsidian" / "assets" / "pdf_viewer.min.css"
+        _pdf_css_cache = file_path.read_bytes()
+    return Response(content=_pdf_css_cache, media_type="text/css")
 
 # Mount routers
 app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
@@ -134,6 +149,7 @@ app.include_router(academics_router, prefix="/api", dependencies=[Depends(valida
 app.include_router(ai_router, prefix="/api")
 app.include_router(ater_router, prefix="/api")
 app.include_router(notebooklm_router, prefix="/api")
+app.include_router(teacher_router, prefix="/api")
 
 @app.get("/api/health")
 async def health_check():

@@ -1,0 +1,1411 @@
+DOMAIN_MATRIX:
+  DOMAIN-UNKNOWN:
+    persona: Universal Polymath
+    h1: Universal Concept
+    h2: The Textbook Translation
+    artifact: Interdisciplinary Analysis
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - true_false
+    - writing
+    sanity_check: Focus on first principles and logical foundations.
+    l3_law: L3 MUST be a first-principles application of the concept.
+  ACADEMIC-GENERAL:
+    persona: Subject Matter Expert
+    h1: Core Concept
+    h2: The Textbook Translation
+    artifact: Concept Map
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - true_false
+    - writing
+    - fill_in
+    sanity_check: Ensure logical consistency and source anchoring.
+    l3_law: L3 MUST be a multi-step analytical application of the core concept to
+      a novel scenario.
+  CS-SOFTWARE:
+    persona: Software Engineer
+    h1: The Logic Behind the Code
+    h2: The Technical Implementation
+    artifact: Code Example
+    type: Executable code block (under 20 lines)
+    question_modes:
+    - fill_in
+    - true_false
+    - debug
+    - trace
+    sanity_check: Code artifacts must not contain infinite loops, syntax errors, or
+      undeclared variables. Time/Space complexity must be accurate.
+    l3_law: L3 MUST be a 'Trace/Debug'. Provide a block of code and ask for the exact
+      final output/state of a variable, OR provide broken code and ask to identify
+      the specific line causing the logical failure.
+  CS-SYSTEMS:
+    persona: Systems Architect
+    h1: The System Flow in Plain English
+    h2: The Architecture & Protocols
+    artifact: Architecture Diagram
+    type: Basic Mermaid flowchart (graph TD/LR)
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - order
+  CS-DB:
+    persona: Database Admin
+    h1: Query Logic
+    h2: Data Integrity
+    artifact: Database Schema
+    type: SQL code block or Markdown Table
+    question_modes:
+    - true_false
+    - scenario
+    - debug
+    - matching
+  CS-AI:
+    persona: Machine Learning Eng.
+    h1: Model Mechanics
+    h2: Overfitting & Bias
+    artifact: Data Pipeline
+    type: Basic Mermaid flowchart or Python code
+    question_modes:
+    - mcq
+    - fill_in
+    - scenario
+    - trace
+  CS-TESTING:
+    persona: QA Engineer
+    h1: Test Strategy
+    h2: Edge Cases
+    artifact: Test Scenario
+    type: Code block (assertions) or Markdown Table
+    question_modes:
+    - true_false
+    - scenario
+    - debug
+    - synthesis
+  CS-ARCH:
+    persona: Software Architect
+    h1: Design Pattern
+    h2: Trade-offs
+    artifact: Component Diagram
+    type: Basic Mermaid flowchart or Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - order
+  CS-REQUIREMENTS:
+    persona: Product Manager
+    h1: Goal Definition
+    h2: Scope Creep
+    artifact: Requirements Table
+    type: Markdown Table (max 3 columns)
+    question_modes:
+    - true_false
+    - scenario
+    - writing
+    - matching
+  MATH-PURE:
+    persona: Mathematician
+    h1: The Intuition Behind the Math
+    h2: The Formal Proof
+    artifact: Mathematical Proof
+    type: Block LaTeX ($$)
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - synthesis
+    sanity_check: Proofs must not skip logical steps. Do not divide by zero. Ensure
+      edge cases (like n=0 or negative numbers) are accounted for.
+    l3_law: L3 MUST be a rigorous formula derivation or a formal proof step verification.
+  MATH-STAT:
+    persona: Statistician
+    h1: Statistical Concept
+    h2: Common Biases
+    artifact: Data Distribution
+    type: Block LaTeX ($$) or Markdown Table
+    question_modes:
+    - true_false
+    - scenario
+    - writing
+    - trace
+  MATH-CRYPTO:
+    persona: Cryptographer
+    h1: Encryption Logic
+    h2: Vulnerabilities
+    artifact: Cryptographic Flow
+    type: Markdown Table or Code snippet
+    question_modes:
+    - mcq
+    - fill_in
+    - scenario
+    - trace
+  MATH-DISCRETE:
+    persona: Logic Professor
+    h1: Discrete Definition
+    h2: Base Cases
+    artifact: Logical Trace
+    type: Truth Table (Markdown) or block LaTeX
+    question_modes:
+    - fill_in
+    - true_false
+    - debug
+    - order
+  PHYSICS-KINEMATICS:
+    persona: Physicist
+    h1: How the Objects Actually Move
+    h2: The Formal Laws & Equations
+    artifact: Formula & Diagram
+    type: Block LaTeX ($$) and ASCII Diagram
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - trace
+  PHYSICS-ELECTRO:
+    persona: Physicist
+    h1: Electromagnetic Law
+    h2: Boundary Conditions
+    artifact: Field Diagram
+    type: ASCII Diagram or block LaTeX
+    question_modes:
+    - mcq
+    - fill_in
+    - scenario
+    - trace
+  PHYSICS-THERMO:
+    persona: Thermodynamicist
+    h1: The Core Logic Explained
+    h2: Entropy & Irreversibility
+    artifact: Energy Flow
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - fill_in
+    - scenario
+    - trace
+  PHYSICS-QUANTUM:
+    persona: Quantum Physicist
+    h1: Quantum State
+    h2: Decoherence
+    artifact: Probability Distribution
+    type: Block LaTeX ($$)
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - trace
+  CHEMISTRY:
+    persona: Chemist
+    h1: What the Molecules are Doing
+    h2: The Formal Reaction Equation
+    artifact: Reaction Pathway
+    type: Basic Mermaid flowchart or Block LaTeX
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - order
+  CHEM-ORGANIC:
+    persona: Organic Chemist
+    h1: The Molecular Dance in Plain English
+    h2: The Formal Synthesis Mechanism
+    artifact: Synthesis Pathway
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - order
+  CHEM-PHYSICAL:
+    persona: Physical Chemist
+    h1: Chemical Kinetics
+    h2: Thermodynamic Limits
+    artifact: Rate Equation
+    type: Block LaTeX ($$)
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - trace
+  BIOLOGY:
+    persona: Biologist
+    h1: Biological Process
+    h2: System Failures
+    artifact: Pathway Diagram
+    type: Basic Mermaid flowchart (graph TD)
+    question_modes:
+    - true_false
+    - scenario
+    - writing
+    - matching
+  BIO-ECOLOGY:
+    persona: Ecologist
+    h1: Ecological Interaction
+    h2: System Disruption
+    artifact: Food Web
+    type: Basic Mermaid flowchart
+    question_modes:
+    - true_false
+    - scenario
+    - writing
+    - matching
+  BIO-GENETICS:
+    persona: Geneticist
+    h1: The Code of Life in Plain English
+    h2: The Biological Mechanism
+    artifact: Inheritance Tree
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - trace
+    - matching
+  EARTH-GEOLOGY:
+    persona: Geologist
+    h1: Geological Process
+    h2: Erosional Limits
+    artifact: Stratigraphic Column
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - order
+  SPACE-ASTRO:
+    persona: Astrophysicist
+    h1: Cosmic Phenomenon
+    h2: Observational Limits
+    artifact: Stellar Evolution
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - trace
+  ENG-MECH:
+    persona: Mechanical Engineer
+    h1: The Core Logic Explained
+    h2: Load & Fatigue
+    artifact: Force Diagram
+    type: ASCII Diagram or Markdown Table
+    question_modes:
+    - fill_in
+    - scenario
+    - debug
+    - order
+  ENG-ELEC:
+    persona: Circuit Designer
+    h1: Circuit Logic
+    h2: Resistance & Heat
+    artifact: Circuit Schematic
+    type: Truth Table (Markdown) or block LaTeX
+    question_modes:
+    - true_false
+    - scenario
+    - debug
+    - trace
+  ENG-CIVIL:
+    persona: Civil Engineer
+    h1: The Core Logic Explained
+    h2: Failure Modes
+    artifact: Load Distribution
+    type: Markdown Table or ASCII Diagram
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - trace
+  ENG-CHEM:
+    persona: Chemical Engineer
+    h1: Process Flow
+    h2: Yield Losses
+    artifact: Process Flow Diagram
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - order
+  ENG-AERO:
+    persona: Aerospace Engineer
+    h1: The Core Logic Explained
+    h2: Drag & Turbulence
+    artifact: Flight Dynamics
+    type: Block LaTeX or Table
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - trace
+  ENG-BIOMED:
+    persona: Biomedical Engineer
+    h1: Biomechanical System
+    h2: Biocompatibility Issues
+    artifact: Device Interface
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  MED-PHYSIO:
+    persona: Surgeon
+    h1: How the Body Actually Does This
+    h2: The Clinical Terminology
+    artifact: System Map
+    type: Markdown Adjacency Matrix Table
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - matching
+    sanity_check: Physiological cascades must follow strict biological directionality
+      (e.g., Agonist vs Antagonist). Do not mix up pathways.
+    l3_law: L3 MUST be a 'System Perturbation Trace'. E.g., If Enzyme X is inhibited,
+      what is the exact cascading effect on Molecule Y?
+  MED-PHARMA:
+    persona: Toxicologist
+    h1: Drug Mechanism
+    h2: Side Effects
+    artifact: Interaction Pathway
+    type: Markdown Table or Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - matching
+  MED-ANATOMY:
+    persona: Anatomist
+    h1: Structural Component
+    h2: Anatomical Anomalies
+    artifact: Morphological Map
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - matching
+  MED-PATHOLOGY:
+    persona: Pathologist
+    h1: Disease Mechanism
+    h2: Diagnostic Pitfalls
+    artifact: Pathogenesis Flow
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  ECON-MACRO:
+    persona: Macroeconomist
+    h1: The Global Economic Engine
+    h2: The Macro Model & Jargon
+    artifact: Theoretical Model & Data
+    type: Basic Mermaid flowchart (graph LR)
+    question_modes:
+    - true_false
+    - scenario
+    - trace
+    - writing
+    - order
+    sanity_check: Economic models must maintain consistency with Aggregate Demand/Supply
+      behavior. Ensure coordinate shifts are explained logically.
+    l3_law: L3 MUST be a multi-step mathematical calculation or a complex policy impact
+      derivation.
+  ECON-MICRO:
+    persona: Microeconomist
+    h1: How the Economics Actually Work
+    h2: The Formal Math & Models
+    artifact: Data Schedule & Visualization
+    type: 'Markdown Table (Demand/Supply Schedule) OR ASCII Text Graph. Do NOT use
+      Mermaid flowcharts for plotting economic curves. Use a well-formatted Markdown
+      Table showing Price and Quantity, accompanied by a LaTeX block explaining the
+      coordinate shift, or a clear ASCII representation of a Cartesian graph. Discipline
+      Prohibition: DO NOT generate Python, R, or any programming code. Mathematical
+      artifacts must be pure LaTeX or Markdown tables.'
+    question_modes:
+    - mcq
+    - fill_in
+    - trace
+    - true_false
+    sanity_check: "Microeconomic Axioms: \n1. ONLY Marginal/Variable costs shift the\
+      \ short-run supply curve. Fixed costs DO NOT shift supply.\n2. Do not conflate\
+      \ Macroeconomic Aggregate Demand with Microeconomic Market Clearing. If supply\
+      \ shifts, price falls until the market clears.\n3. Clearly distinguish between\
+      \ 'a shift in the curve' and 'a movement along the curve'. NEVER use a curve\
+      \ shifter (like Technology, Weather, or Income) to explain a price-induced movement\
+      \ ALONG the curve (like Law of Demand or Law of Supply).\n4. Never refer to\
+      \ the price BEFORE a shift as the 'equilibrium price' AFTER the shift.\n5. SUPPLY\
+      \ ELASTICITY AXIOM: To calculate Price Elasticity of Supply (Es), you MUST use\
+      \ a scenario where DEMAND shifts, causing movement along the supply curve. NEVER\
+      \ use a scenario where supply shifts (like a drought) to calculate Es, as this\
+      \ yields a negative number which violates the Law of Supply.\n6. SHIFTS vs.\
+      \ MOVEMENTS AXIOM: If the concept is a curve SHIFTER (e.g., Income, Technology,\
+      \ Number of Buyers), your Artifact and Walkthrough MUST feature TWO distinct\
+      \ equations (e.g., D1 and D2) to prove the curve shifted horizontally at a CONSTANT\
+      \ price. You are STRICTLY FORBIDDEN from demonstrating a shifter by plugging\
+      \ different prices into a single, stationary equation.\n7. AGGREGATION AXIOM:\
+      \ NEVER equate 'quantity demanded' with 'number of buyers'. They are distinct\
+      \ concepts. Always use standard 'Horizontal Summation' (Qd_market = Qd1 + Qd2)\
+      \ to demonstrate the addition of buyers. DO NOT invent or use obscure academic\
+      \ axioms (e.g., 'Aggregation Axiom') not present in the source text.\n8. INCOME\
+      \ COEFFICIENTS AXIOM: If a good is NORMAL, the income variable (I) in the demand\
+      \ function MUST be positive (e.g., + 0.5I). If a good is INFERIOR, the income\
+      \ variable (I) MUST be negative (e.g., - 0.5I).\n9. PEDAGOGICAL ALIGNMENT AXIOM:\
+      \ The Artifact, Walkthrough, and Q3 Trace MUST align with the epistemic type\
+      \ of the concept. If the topic is 'Determinants' or 'Factors', focus on the\
+      \ 'Why' (cascading logic). If the topic is 'Equilibrium' or 'Elasticity Calculation',\
+      \ focus on the 'How' (math). DO NOT use rote math to teach purely conceptual\
+      \ determinants.\n10. TERMINOLOGY FIDELITY AXIOM: Strictly adhere to the terminology\
+      \ in the SOURCE CONTEXT. Do not use high-level PhD-level terms if the text uses\
+      \ introductory language."
+    l3_law: L3 MUST be a multi-step analytical application. IF the topic is calculative
+      (e.g., Equilibrium, Elasticity calculation), use a math derivation. IF the topic
+      is conceptual (e.g., Determinants, Barriers to Entry), use a 'System Perturbation
+      Trace' (cascading logic) where the user determines a qualitative outcome based
+      on changing factors.
+  ECON-METRICS:
+    persona: Econometrician
+    h1: Statistical Model
+    h2: Endogeneity
+    artifact: Regression Output
+    type: Markdown Table or LaTeX
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - trace
+  ECON-BEHAVIORAL:
+    persona: Behavioral Economist
+    h1: Cognitive Bias
+    h2: Market Anomalies
+    artifact: Decision Matrix
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  ECON-FINANCE:
+    persona: Accountant
+    h1: Financial Concept
+    h2: Financial Risk
+    artifact: Ledger Example
+    type: Markdown T-Account/Ledger Table
+    question_modes:
+    - true_false
+    - scenario
+    - debug
+    - matching
+  BIZ-STRATEGY:
+    persona: Business Strategist
+    h1: Strategic Concept
+    h2: Weaknesses
+    artifact: Strategy Matrix
+    type: Markdown Table (SWOT)
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - synthesis
+  BIZ-MARKETING:
+    persona: Marketing Executive
+    h1: The Core Logic Explained
+    h2: Consumer Churn
+    artifact: Campaign Funnel
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - order
+  BIZ-OPERATIONS:
+    persona: Operations Manager
+    h1: Process Optimization
+    h2: Supply Chain Bottlenecks
+    artifact: Process Map
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - trace
+  LAW-CASE:
+    persona: Lawyer
+    h1: The Common Sense Behind the Rule
+    h2: The Legal Precedent & Jargon
+    artifact: Case Application
+    type: IRAC Framework Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+    sanity_check: Do not conflate holding with dicta. Do not apply federal precedents
+      to state-specific common law unless explicitly stated.
+    l3_law: L3 MUST be a 'Novel Fact Pattern Application'. Provide a highly complex,
+      edge-case scenario and force the user to determine the exact outcome based strictly
+      on the note's theory.
+  LAW-CONTRACT:
+    persona: Corporate Lawyer
+    h1: Contract Rule
+    h2: Breach Conditions
+    artifact: Liability Map
+    type: Markdown Dependency Table
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - matching
+  LAW-CRIMINAL:
+    persona: Criminal Defense Attorney
+    h1: Criminal Statute
+    h2: Defenses & Exceptions
+    artifact: Burden of Proof
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  LAW-CONSTITUTIONAL:
+    persona: Constitutional Scholar
+    h1: The Core Logic Explained
+    h2: Rights Limitations
+    artifact: Precedent Map
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  HIST-CATALYST:
+    persona: Historian
+    h1: The Human Story Behind the Event
+    h2: The Historical Analysis & Impact
+    artifact: Timeline
+    type: Basic Mermaid flowchart (graph TD) or Table
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - order
+  PHILOSOPHY:
+    persona: Philosopher
+    h1: The Core Argument in Plain English
+    h2: The Formal Logic & Counter-Arguments
+    artifact: Logical Flow
+    type: ASCII Logic Tree or Block quote
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - synthesis
+  SOC-POLITICAL:
+    persona: Political Scientist
+    h1: Political Theory
+    h2: Institutional Failure
+    artifact: Power Dynamics
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  SOC-INT-RELATIONS:
+    persona: International Relations Scholar
+    h1: Global Strategy
+    h2: Diplomatic Friction
+    artifact: Geopolitical Map
+    type: Markdown Table or ASCII Map
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - order
+    sanity_check: Focus on state actors, sovereignty, and international law. Ensure
+      real-world diplomatic precedents are used.
+  SOC-GLOBAL-TRENDS:
+    persona: Global Trends Analyst
+    h1: Macro Shift
+    h2: Emerging Risks
+    artifact: Trend Forecast
+    type: Markdown Table or Mermaid Chart
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - synthesis
+    sanity_check: Analyze long-term structural changes in society, technology, and
+      economy.
+  SOC-GEOGRAPHY:
+    persona: Geographer
+    h1: Spatial Logic
+    h2: Resource Constraints
+    artifact: Spatial Distribution
+    type: Markdown Table or ASCII Map
+    question_modes:
+    - mcq
+    - fill_in
+    - scenario
+    - matching
+  SOC-ECONOMICS:
+    persona: Political Economist
+    h1: Economic Policy
+    h2: Systemic Inequality
+    artifact: Incentive Structure
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - true_false
+    - writing
+    - trace
+  HUM-HISTORY:
+    persona: Historian
+    h1: Historical Logic
+    h2: Causal Lineage
+    artifact: Chronological Analysis
+    type: Timeline or Markdown Table
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - order
+  MATH-APPLIED:
+    persona: Applied Mathematician
+    h1: Mathematical Model
+    h2: Approximation Errors
+    artifact: Equation Derivation
+    type: Block LaTeX ($$)
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - trace
+  ENG-GENERAL:
+    persona: Systems Engineer
+    h1: The Core Logic Explained
+    h2: Tolerance & Failure
+    artifact: Technical Spec
+    type: Markdown Table or ASCII Diagram
+    question_modes:
+    - fill_in
+    - scenario
+    - debug
+    - order
+  SCI-GENERAL:
+    persona: Research Scientist
+    h1: Scientific Method
+    h2: Experimental Bias
+    artifact: Data Analysis
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - true_false
+    - writing
+    - matching
+  SOC-ANTHRO:
+    persona: Anthropologist
+    h1: Cultural Phenomenon
+    h2: Ethnocentrism
+    artifact: Cultural Framework
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  PSYCH-SOCIOLOGY:
+    persona: Psychologist
+    h1: Behavioral Concept
+    h2: Cognitive Bias
+    artifact: Behavior Map
+    type: Markdown Matrix Table
+    question_modes:
+    - true_false
+    - scenario
+    - writing
+    - matching
+  HUM-RELIGION:
+    persona: Theologian
+    h1: Theological Concept
+    h2: Sectarian Differences
+    artifact: Doctrinal Map
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  HUM-MUSIC:
+    persona: Musicologist
+    h1: Musical Theory
+    h2: Stylistic Deviations
+    artifact: Harmonic Structure
+    type: Markdown Table or ASCII
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - order
+  HUM-ART_HIST:
+    persona: Art Historian
+    h1: Artistic Movement
+    h2: Critical Reception
+    artifact: Visual Analysis
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - matching
+  LANG-LINGUISTICS:
+    persona: Grammarian
+    h1: Grammar Rule
+    h2: Exceptions
+    artifact: Syntax Tree
+    type: ASCII Syntax Tree
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - order
+  LANG-LIT:
+    persona: Literary Critic
+    h1: Literary Device
+    h2: Thematic Impact
+    artifact: Textual Analysis
+    type: Markdown Quote/Motif Table
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - synthesis
+  ARTS-DESIGN:
+    persona: Designer
+    h1: The Core Logic Explained
+    h2: Breaking the Rule
+    artifact: Composition Matrix
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  SKILLS-HARD:
+    persona: Master Craftsman
+    h1: Core Technique
+    h2: Troubleshooting
+    artifact: Execution Steps
+    type: Basic Mermaid flowchart or Numbered list
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - order
+  SKILLS-FITNESS:
+    persona: Kinesiologist
+    h1: Biomechanics
+    h2: Injury Prevention
+    artifact: Movement Trace
+    type: Markdown Kinematic Table
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - trace
+  EDUCATION:
+    persona: Inclusive Educator
+    h1: How Participation Works
+    h2: The Inclusion Rules
+    artifact: Participation Map
+    type: Markdown Table
+    question_modes:
+    - fill_in
+    - scenario
+    - writing
+    - matching
+    sanity_check: Stay inside education, inclusion, accessibility, stakeholders, classroom/community
+      participation, and source-defined roles. Do not use medicine or physics unless
+      explicitly present in the source.
+    l3_law: L3 MUST be an applied inclusion scenario where the learner identifies
+      who is excluded, why, and what source-grounded action fixes it.
+  RESEARCH-METHODS:
+    persona: Researcher
+    h1: Research Method
+    h2: Validity Threats
+    artifact: Methodology Setup
+    type: Markdown Research Matrix
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  MATH-CALCULUS:
+    persona: Mathematician
+    h1: The Motion & Change in Plain English
+    h2: The Formal Derivative & Integral
+    artifact: Function Trace
+    type: Block LaTeX ($$)
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - trace
+  MATH-ALGEBRA:
+    persona: Algebraist
+    h1: Algebraic Structure
+    h2: Edge Cases
+    artifact: Matrix / Function
+    type: Block LaTeX ($$)
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - synthesis
+  CS-CYBERSECURITY:
+    persona: Security Researcher
+    h1: The Exploit Logic in Plain English
+    h2: The Security Protocols & Defense
+    artifact: Threat Model
+    type: Basic Mermaid flowchart
+    question_modes:
+    - true_false
+    - scenario
+    - debug
+    - trace
+  CS-NETWORKING:
+    persona: Network Engineer
+    h1: The Packet's Journey in Plain English
+    h2: The Network Protocols & Stack
+    artifact: Network Topology
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - scenario
+    - debug
+    - trace
+  MED-NEUROLOGY:
+    persona: Neuroscientist
+    h1: Neural Pathway
+    h2: Neurological Deficits
+    artifact: Synaptic Diagram
+    type: Basic Mermaid flowchart
+    question_modes:
+    - mcq
+    - fill_in
+    - writing
+    - matching
+  MED-IMMUNOLOGY:
+    persona: Immunologist
+    h1: Immune Response
+    h2: Autoimmune Failure
+    artifact: Cellular Interaction
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - order
+  LANG-FOREIGN:
+    persona: Linguist
+    h1: Syntactic Structure
+    h2: False Friends & Idioms
+    artifact: Conjugation/Declension
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - fill_in
+    - matching
+    - writing
+  ARTS-FILM:
+    persona: Film Theorist
+    h1: Cinematic Technique
+    h2: Narrative Impact
+    artifact: Scene Breakdown
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - synthesis
+  BIZ-ENTREPRENEURSHIP:
+    persona: Startup Founder
+    h1: Value Proposition
+    h2: Market Risks
+    artifact: Business Canvas
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - synthesis
+  SOC-CRIMINOLOGY:
+    persona: Criminologist
+    h1: Criminological Theory
+    h2: Systemic Bias
+    artifact: Behavioral Matrix
+    type: Markdown Table
+    question_modes:
+    - mcq
+    - scenario
+    - writing
+    - matching
+  CS-WEB-DEV:
+    persona: Web Developer
+    h1: Frontend/Backend Architecture
+    h2: Web Standards & Optimization
+    artifact: UI Component or API Spec
+    type: HTML/JS code block or Markdown Table
+    question_modes:
+    - mcq
+    - fill_in
+    - debug
+    - trace
+DYNAMIC_DOMAIN_MATRIX:
+  ECON-MICRO:
+    Quantitative:
+      persona: Microeconomist
+      h1: How the Economics Actually Work
+      h2: The Formal Math & Models
+      artifact: Calculation Schedule
+      walkthrough: 5-Step Calculation Trace
+      type: Markdown Table (Demand/Supply Schedule) OR ASCII Text Graph. Do NOT use
+        Mermaid flowcharts for plotting economic curves. Use a well-formatted Markdown
+        Table showing Price and Quantity, accompanied by a LaTeX block explaining
+        the coordinate shift, or a clear ASCII representation of a Cartesian graph.
+      sanity_check: 'Focus on horizontal summation, elasticity coefficients, and equilibrium
+        shifts. CALCULATIVE VERIFICATION LAW: All mathematical steps MUST be explicitly
+        derived in LaTeX. No Mermaid graphs for curves.'
+      l3_law: L3 MUST be a multi-step mathematical calculation (e.g. solving for P*
+        and Q*).
+      prohibited_anti_patterns: Avoid vague philosophical broadness. Do not skip calculations.
+        DO NOT generate Python, R, or any programming code. Mathematical artifacts
+        must be pure LaTeX or Markdown tables.
+    Qualitative/Definitional:
+      persona: Feynman Economist
+      h1: How the Economics Actually Work
+      h2: The Formal Math & Models
+      artifact: Case Study Analysis Table
+      walkthrough: Application to Scenario
+      type: Markdown Table
+      sanity_check: Focus on the 'Why' and the social/philosophical foundations. Do
+        not use math.
+      l3_law: L3 MUST be a 'System Perturbation Trace' - qualitative outcome based
+        on changing factors.
+      prohibited_anti_patterns: You are FORBIDDEN from generating numerical demand/supply
+        schedules or mathematical equations.
+    Procedural:
+      persona: Market Analyst
+      h1: How the Economics Actually Work
+      h2: The Formal Math & Models
+      artifact: Market Process Flow
+      walkthrough: Step-by-Step Execution
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on the logical sequence of actions in a market or firm.
+      l3_law: L3 MUST be a 'Process Failure Audit'.
+      prohibited_anti_patterns: Do not treat this as a static definition. Focus on
+        the 'How'.
+    Comparative:
+      persona: Policy Advisor
+      h1: How the Economics Actually Work
+      h2: The Formal Math & Models
+      artifact: Pros/Cons Matrix Table
+      walkthrough: Point-by-Point Contrast
+      type: Markdown Table
+      sanity_check: Focus on efficiency losses, welfare trade-offs, and structural
+        differences.
+      l3_law: L3 MUST be a 'Comparative Evaluation'.
+      prohibited_anti_patterns: Do not describe concepts in isolation. Maintain contrast.
+    Causal/Historical:
+      persona: Research Economist
+      h1: How the Economics Actually Work
+      h2: The Formal Math & Models
+      artifact: Causal Chain Timeline
+      walkthrough: Causal Chain Analysis
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on cascading effects over time.
+      l3_law: L3 MUST be a 'Cascading Logic Trace'.
+      prohibited_anti_patterns: Do not ignore the timeline of events. Effect follows
+        cause.
+  CS-SOFTWARE:
+    Quantitative:
+      persona: Algorithm Engineer
+      h1: The Logic Behind the Code
+      h2: The Technical Implementation
+      artifact: Time/Space Complexity Table
+      walkthrough: Complexity Derivation Trace
+      type: Markdown Table
+      sanity_check: Focus on worst-case and average-case analysis using LaTeX.
+      l3_law: L3 MUST be a Big-O derivation.
+      prohibited_anti_patterns: Vague 'it is fast' statements. Use formal bounds.
+    Qualitative/Definitional:
+      persona: Software Architect
+      h1: The Logic Behind the Code
+      h2: The Technical Implementation
+      artifact: Java Code Example / Component Design
+      walkthrough: System Design Rationale
+      type: Executable code block (under 20 lines) OR Component Relationship Table
+      sanity_check: Focus on SOLID principles, design patterns, and clear Java structures.
+      l3_law: L3 MUST be a design pattern selection task.
+      prohibited_anti_patterns: Avoid overly long implementation details. Focus on
+        clean class relationships and high-level architecture.
+    Procedural:
+      persona: DevOps / SRE
+      h1: The Logic Behind the Code
+      h2: The Technical Implementation
+      artifact: Deployment/CI Flow
+      walkthrough: Operational Step Trace
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on failure modes and recovery steps.
+      l3_law: L3 MUST be a failure-mode analysis of the process.
+      prohibited_anti_patterns: Focus on the 'how' of execution, not the 'why' of
+        the theory.
+    Comparative:
+      persona: Systems Analyst
+      h1: The Logic Behind the Code
+      h2: The Technical Implementation
+      artifact: Feature Parity Matrix
+      walkthrough: Benchmarking Analysis
+      type: Markdown Table
+      sanity_check: Focus on latency, throughput, and developer experience trade-offs.
+      l3_law: L3 MUST be a framework selection given constraints.
+      prohibited_anti_patterns: Describing one framework without direct contrast.
+    Causal/Historical:
+      persona: CS Historian
+      h1: The Logic Behind the Code
+      h2: The Technical Implementation
+      artifact: Stack Evolution Timeline
+      walkthrough: Evolutionary Logic Trace
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on why a specific technology was superseded.
+      l3_law: L3 MUST predict the next evolutionary step.
+      prohibited_anti_patterns: Non-chronological history.
+  CHEM-ORGANIC:
+    Quantitative:
+      persona: Computational Chemist
+      h1: The Molecular Dance in Plain English
+      h2: The Formal Synthesis Mechanism
+      artifact: Arrhenius/Yield Data Table
+      walkthrough: Yield Calculation Trace
+      type: LaTeX Equation
+      sanity_check: Focus on reaction orders and activation energies.
+      l3_law: L3 MUST be a multi-step yield calculation.
+      prohibited_anti_patterns: Vague, non-mathematical descriptions.
+    Qualitative/Definitional:
+      persona: Nomenclature Specialist
+      h1: The Molecular Dance in Plain English
+      h2: The Formal Synthesis Mechanism
+      artifact: IUPAC Naming Convention Table
+      walkthrough: Nomenclature Application
+      type: Markdown Table
+      sanity_check: Focus on naming rules and structural definitions. No math.
+      l3_law: L3 MUST be a naming logic task.
+      prohibited_anti_patterns: STRICTLY FORBIDDEN from using reaction yields or formulas.
+    Procedural:
+      persona: Synthetic Chemist
+      h1: The Molecular Dance in Plain English
+      h2: The Formal Synthesis Mechanism
+      artifact: Synthesis Flowchart
+      walkthrough: Laboratory Procedure Trace
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on the sequence of reagents and catalysts.
+      l3_law: L3 MUST identify a critical reagent failure.
+      prohibited_anti_patterns: Abstract theory. Focus on the 'how'.
+    Comparative:
+      persona: Reaction Analyst
+      h1: The Molecular Dance in Plain English
+      h2: The Formal Synthesis Mechanism
+      artifact: SN1 vs SN2 Matrix
+      walkthrough: Point-by-Point Mechanism Contrast
+      type: Markdown Table
+      sanity_check: Focus on substrate requirements and inversion vs racemization.
+      l3_law: L3 MUST select the optimal mechanism for a substrate.
+      prohibited_anti_patterns: Describing one mechanism in isolation.
+    Causal/Historical:
+      persona: Chemical Historian
+      h1: The Molecular Dance in Plain English
+      h2: The Formal Synthesis Mechanism
+      artifact: Discovery Timeline
+      walkthrough: Experimental Logic Narrative
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on the sequence of experiments (e.g. Kekule's benzene dream).
+      l3_law: L3 MUST predict a structural outcome based on early evidence.
+      prohibited_anti_patterns: Presenting final results without chronological context.
+  CS-WEB-DEV:
+    Quantitative:
+      persona: Performance Engineer
+      h1: Performance Benchmarks
+      h2: Resource Consumption
+      artifact: Lighthouse/Core Web Vitals Data
+      walkthrough: Optimization Calculation
+      type: Markdown Table
+      sanity_check: Focus on LCP, FID, CLS, and bundle size.
+      l3_law: L3 MUST be a bundle size or latency optimization calculation.
+      prohibited_anti_patterns: Vague 'make it faster' statements.
+    Qualitative/Definitional:
+      persona: UI/UX Architect
+      h1: Semantic Structure
+      h2: Accessibility & SEO
+      artifact: DOM Structure Table
+      walkthrough: Semantic Mapping
+      type: Markdown Table
+      sanity_check: Focus on semantic HTML5 tags and ARIA labels.
+      l3_law: L3 MUST be a semantic mapping or accessibility audit.
+      prohibited_anti_patterns: STRICTLY FORBIDDEN from using CSS or JS logic. Focus
+        on HTML semantics.
+    Procedural:
+      persona: Fullstack Engineer
+      h1: Execution Lifecycle
+      h2: Asynchronous Flow
+      artifact: Event Loop / Fetch Flow
+      walkthrough: Request/Response Trace
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on the sequence of browser events or API calls.
+      l3_law: L3 MUST identify a race condition or async failure.
+      prohibited_anti_patterns: Static code snippets without flow logic.
+    Comparative:
+      persona: Solution Architect
+      h1: Technology Comparison
+      h2: Stack Trade-offs
+      artifact: Framework Comparison Matrix
+      walkthrough: Selection Rationale
+      type: Markdown Table
+      sanity_check: Focus on SSR vs CSR vs SSG trade-offs.
+      l3_law: L3 MUST choose the optimal stack given project constraints.
+      prohibited_anti_patterns: Describing one tool in isolation.
+    Causal/Historical:
+      persona: Web Historian
+      h1: Web Evolution
+      h2: Standardization History
+      artifact: Browser War Timeline
+      walkthrough: Evolutionary Logic Trace
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on why certain standards (like Flexbox or Grid) emerged.
+      l3_law: L3 MUST predict the obsolescence of a current standard.
+      prohibited_anti_patterns: Non-chronological history.
+  LAW-CASE:
+    Quantitative:
+      persona: Statutory Auditor
+      h1: The Common Sense Behind the Rule
+      h2: The Legal Precedent & Jargon
+      artifact: Liability Calculation Table
+      walkthrough: Penalty Computation Trace
+      type: Markdown Table
+      sanity_check: Focus on statutory maximums and compensatory damages.
+      l3_law: L3 MUST be a complex damage calculation.
+      prohibited_anti_patterns: Vague legal moralizing. Focus on the numbers.
+    Qualitative/Definitional:
+      persona: Constitutional Scholar
+      h1: The Common Sense Behind the Rule
+      h2: The Legal Precedent & Jargon
+      artifact: Principle Application Table
+      walkthrough: Socratic Application
+      type: Markdown Table
+      sanity_check: Focus on the 'Ratio Decidendi'. No math.
+      l3_law: L3 MUST be a Socratic logic puzzle.
+      prohibited_anti_patterns: STRICTLY FORBIDDEN from using penalty numbers or math.
+    Procedural:
+      persona: Litigation Manager
+      h1: The Common Sense Behind the Rule
+      h2: The Legal Precedent & Jargon
+      artifact: Trial Procedure Flow
+      walkthrough: Step-by-Step Filing Trace
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on statutes of limitations and filing order.
+      l3_law: L3 MUST identify a procedural default.
+      prohibited_anti_patterns: Focus on the 'how' of the case filing, not the 'why'
+        of the law.
+    Comparative:
+      persona: Comparative Jurist
+      h1: The Common Sense Behind the Rule
+      h2: The Legal Precedent & Jargon
+      artifact: Common Law vs Civil Law Matrix
+      walkthrough: Point-by-Point Legal Contrast
+      type: Markdown Table
+      sanity_check: Focus on the difference in precedent application.
+      l3_law: L3 MUST choose the optimal jurisdiction for a case.
+      prohibited_anti_patterns: Describing one jurisdiction in isolation.
+    Causal/Historical:
+      persona: Legal Historian
+      h1: The Common Sense Behind the Rule
+      h2: The Legal Precedent & Jargon
+      artifact: Case Law Evolution Timeline
+      walkthrough: Precedent Logic Narrative
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on how one case overturned or expanded another.
+      l3_law: L3 MUST predict a judicial outcome based on current trends.
+      prohibited_anti_patterns: Ignoring the chronological evolution of law.
+  BIOLOGY:
+    Quantitative:
+      persona: Biostatistician
+      h1: Population Dynamics
+      h2: Statistical Significance
+      artifact: Growth Curve Data Table
+      walkthrough: Population Growth Calculation
+      type: Markdown Table
+      sanity_check: Focus on carrying capacity and growth rates.
+      l3_law: L3 MUST be a population projection calculation.
+      prohibited_anti_patterns: Vague descriptions of 'nature'.
+    Qualitative/Definitional:
+      persona: Cell Biologist
+      h1: Biological Mechanism
+      h2: Structural Components
+      artifact: Organelle Function Table
+      walkthrough: Pathway Narrative
+      type: Markdown Table
+      sanity_check: Focus on cellular structure and function. No math.
+      l3_law: L3 MUST be a pathway logic task.
+      prohibited_anti_patterns: Using numbers or statistical data.
+    Procedural:
+      persona: Lab Technician
+      h1: Experimental Protocol
+      h2: Contamination Risks
+      artifact: Lab Procedure Flowchart
+      walkthrough: Step-by-Step Bench Trace
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on the sequence of lab steps.
+      l3_law: L3 MUST identify a procedural error in the lab.
+      prohibited_anti_patterns: Abstract biological theory.
+    Comparative:
+      persona: Evolutionary Biologist
+      h1: Phylogenetic Comparison
+      h2: Homologous Traits
+      artifact: Species Contrast Matrix
+      walkthrough: Evolutionary Trade-off Analysis
+      type: Markdown Table
+      sanity_check: Focus on selective pressures and adaptive differences.
+      l3_law: L3 MUST predict an evolutionary outcome.
+      prohibited_anti_patterns: Describing one species in isolation.
+    Causal/Historical:
+      persona: Paleobiologist
+      h1: Evolutionary Lineage
+      h2: Extinction Events
+      artifact: Lineage Timeline
+      walkthrough: Evolutionary Transition Narrative
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on the causal chain of environmental change and adaptation.
+      l3_law: L3 MUST predict a survival outcome based on fossil evidence.
+      prohibited_anti_patterns: Non-chronological history.
+  PHILOSOPHY:
+    Quantitative:
+      persona: Formal Logician
+      h1: The Core Argument in Plain English
+      h2: The Formal Logic & Counter-Arguments
+      artifact: Truth Table / Deduction
+      walkthrough: Step-by-Step Proof Trace
+      type: Block LaTeX ($$)
+      sanity_check: Focus on validity and soundness using symbolic logic.
+      l3_law: L3 MUST be a symbolic logic proof.
+      prohibited_anti_patterns: Vague ethical debates. Focus on the symbols.
+    Qualitative/Definitional:
+      persona: Ethicist
+      h1: The Core Argument in Plain English
+      h2: The Formal Logic & Counter-Arguments
+      artifact: Moral Framework Table
+      walkthrough: Socratic Analysis
+      type: Markdown Table
+      sanity_check: Focus on the core definitions and ethical axioms. No symbols.
+      l3_law: L3 MUST be a Socratic moral dilemma.
+      prohibited_anti_patterns: Using formal logic symbols or math.
+    Procedural:
+      persona: Argumentation Coach
+      h1: The Core Argument in Plain English
+      h2: The Formal Logic & Counter-Arguments
+      artifact: Argument Flow Diagram
+      walkthrough: Step-by-Step Critique
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on the flow of an argument from premise to conclusion.
+      l3_law: L3 MUST identify a logical fallacy in a sequence.
+      prohibited_anti_patterns: Abstract metaphysical theory.
+    Comparative:
+      persona: Comparative Philosopher
+      h1: The Core Argument in Plain English
+      h2: The Formal Logic & Counter-Arguments
+      artifact: East vs West Matrix
+      walkthrough: Cross-Cultural Critique
+      type: Markdown Table
+      sanity_check: Focus on the difference in underlying metaphysical assumptions.
+      l3_law: L3 MUST resolve a conflict between two schools of thought.
+      prohibited_anti_patterns: Describing one tradition in isolation.
+    Causal/Historical:
+      persona: Historian of Ideas
+      h1: The Core Argument in Plain English
+      h2: The Formal Logic & Counter-Arguments
+      artifact: Evolution of Thought Timeline
+      walkthrough: Conceptual Shift Narrative
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on how one philosopher influenced or reacted to another.
+      l3_law: L3 MUST predict a philosophical shift based on societal changes.
+      prohibited_anti_patterns: Ignoring the chronological evolution of ideas.
+  EDUCATION:
+    Quantitative:
+      persona: Educational Statistician
+      h1: How Participation Works
+      h2: The Inclusion Rules
+      artifact: Inclusion Metrics Data Table
+      walkthrough: Participation Ratio Calculation
+      type: Markdown Table
+      sanity_check: Focus on enrollment rates, parity indices, or resource distribution.
+        All calculations must be grounded in source text parameters.
+      l3_law: L3 MUST be a calculation of a parity index (e.g. GPI) or allocation
+        ratio.
+      prohibited_anti_patterns: Avoid general pedagogical discussions. Do not use
+        code. Focus purely on calculations/data tables.
+    Qualitative/Definitional:
+      persona: Inclusive Pedagogue
+      h1: How Participation Works
+      h2: The Inclusion Rules
+      artifact: Inclusion Framework Matrix
+      walkthrough: Policy Application Scenario
+      type: Markdown Table
+      sanity_check: Stay inside education, inclusion, accessibility, stakeholders,
+        classroom/community participation, and source-defined roles. Do not use medicine
+        or physics unless explicitly present in the source.
+      l3_law: L3 MUST be an applied inclusion scenario where the learner identifies
+        who is excluded, why, and what source-grounded action fixes it.
+      prohibited_anti_patterns: STRICTLY FORBIDDEN from using mathematical formulas
+        or quantitative data.
+    Procedural:
+      persona: Special Education Coordinator
+      h1: How Participation Works
+      h2: The Inclusion Rules
+      artifact: IEP/Inclusion Action Pipeline
+      walkthrough: Accommodation Step Sequence
+      type: Basic Mermaid flowchart (graph TD)
+      sanity_check: Focus on the step-by-step procedure of implementing accommodations,
+        diagnostic routing, or classroom interventions.
+      l3_law: L3 MUST identify a critical process failure or missing accommodation
+        step in a classroom flow.
+      prohibited_anti_patterns: Abstract educational philosophy without a concrete
+        procedural flowchart.
+    Comparative:
+      persona: Comparative Educator
+      h1: How Participation Works
+      h2: The Inclusion Rules
+      artifact: Educational Paradigm Matrix
+      walkthrough: Model Contrast Analysis
+      type: Markdown Table
+      sanity_check: Compare distinct educational paradigms, integration vs. inclusion,
+        or different stakeholder responsibilities.
+      l3_law: L3 MUST contrast two educational approaches and select the optimal one
+        for a specific student profile.
+      prohibited_anti_patterns: Describing a single model without direct, side-by-side
+        contrast.
+    Causal/Historical:
+      persona: History of Education Scholar
+      h1: How Participation Works
+      h2: The Inclusion Rules
+      artifact: Inclusion Legislation Timeline
+      walkthrough: Policy Evolution Narrative
+      type: Basic Mermaid flowchart (graph LR)
+      sanity_check: Focus on the causal timeline of key international frameworks (e.g.,
+        Salamanca, UN CRDP) or historical shifts in inclusion models.
+      l3_law: L3 MUST trace how a historical paradigm shift directly informs a modern
+        classroom rule.
+      prohibited_anti_patterns: Non-chronological history or listing events without
+        causal links.

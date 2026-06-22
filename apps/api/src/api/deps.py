@@ -83,6 +83,16 @@ async def get_app_secrets(
     
     # Sanitize all incoming keys to prevent quotes, newlines, and non-ascii from crashing httpx
     clean_ai_key = sanitize_api_key(x_ai_key)
+    if not clean_ai_key:
+        if primary_provider == "google":
+            clean_ai_key = sanitize_api_key(os.environ.get("GEMINI_KEY") or os.environ.get("GEMINI_API_KEY"))
+        elif primary_provider == "openai":
+            clean_ai_key = sanitize_api_key(os.environ.get("OPENAI_API_KEY"))
+        elif primary_provider == "groq":
+            clean_ai_key = sanitize_api_key(os.environ.get("GROQ_KEY"))
+        elif primary_provider == "openrouter":
+            clean_ai_key = sanitize_api_key(os.environ.get("OPENROUTER_KEY"))
+
     clean_planner_key = sanitize_api_key(x_planner_key) or clean_ai_key
     clean_utility_key = sanitize_api_key(x_utility_key) or clean_ai_key
 

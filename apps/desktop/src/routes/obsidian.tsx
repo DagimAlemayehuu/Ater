@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { PanelLoader } from '@/components/ui/loading-state'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
+import { HtmlLessonViewer } from '@/components/obsidian/HtmlLessonViewer'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
 import { ObsidianEditor } from '@/components/obsidian/ObsidianEditor'
 import { NoteProperties } from '@/components/obsidian/NoteProperties'
@@ -378,6 +379,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     setCenterContent(null)
  
      // Right Content (Actions)
+     const selectedIsHtml = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.html')
      setRightContent(
        <div className="flex items-center gap-1.5">
          {selectedPath && (
@@ -399,13 +401,15 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                </div>
              ) : (
                <div className="flex items-center gap-1">
-                 <button 
-                   onClick={() => setIsEditing(true)}
-                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
-                   title="Edit Note"
-                 >
-                    <Edit3 size={14} />
-                 </button>
+                 {!selectedIsHtml && (
+                   <button 
+                     onClick={() => setIsEditing(true)}
+                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
+                     title="Edit Note"
+                   >
+                      <Edit3 size={14} />
+                   </button>
+                 )}
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
                    <button 
                       data-tour="btn-jump-pdf"
@@ -1780,6 +1784,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   files
 ]);
 
+  const selectedIsPdf = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')
+  const selectedIsHtml = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.html')
+
   return (
   <div className="flex flex-row h-full w-full select-none bg-transparent gap-3 overflow-hidden font-sans relative">
     <style dangerouslySetInnerHTML={{__html: `
@@ -2028,13 +2035,20 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
           </div>
         ) : (
-          <div className={cn("mx-auto w-full max-w-full relative flex-1 flex flex-col", (typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? "p-0 overflow-hidden" : "py-4 px-6 max-w-full")}>
+          <div className={cn("mx-auto w-full max-w-full relative flex-1 flex flex-col", (selectedIsPdf || selectedIsHtml) ? "p-0 overflow-hidden" : "py-4 px-6 max-w-full")}>
             {loadingNote && (
               <PanelLoader label="Loading Document" />
             )}
             
             {/* Note details */}
-            {!(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) ? (
+            {selectedIsHtml ? (
+              <div className="flex-1 min-h-0 h-full overflow-hidden p-3">
+                <HtmlLessonViewer
+                  title={(selectedPath.split(/[/\\]/).pop() || 'Interactive Lesson').replace(/\.html$/i, '').replace(/_/g, ' ')}
+                  content={noteContent}
+                />
+              </div>
+            ) : !selectedIsPdf ? (
               <div className="editor-content px-2 mx-auto max-w-[95%] w-full">
                 <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
                   {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
@@ -2172,7 +2186,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     )}
 
     {/* Map Checklist Sidebar (Right-Contextual) */}
-    {selectedPath && !(typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')) && !isFullscreen && (
+    {selectedPath && !selectedIsPdf && !selectedIsHtml && !isFullscreen && (
       <aside 
         data-purpose="map-checklist"
         onMouseEnter={() => window.focus()}

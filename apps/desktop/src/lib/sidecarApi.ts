@@ -1187,6 +1187,68 @@ export const sidecarApi = {
         }
     },
 
+    teacherChatStream: async (payload: {
+        history: { role: string; content: string }[],
+    }): Promise<Response> => {
+        if (await isDemoActive()) {
+            const latest = payload.history[payload.history.length - 1]?.content || 'Focused lesson';
+            const stream = new ReadableStream({
+                async start(controller) {
+                    const encoder = new TextEncoder();
+                    const demoHtml = `<!doctype html><html><body style="margin:0;background:#111113;color:#ebebeb;font-family:sans-serif;padding:32px"><h1>Demo Teacher Lesson</h1><p>This preview appears inside Ater.</p><button onclick="document.querySelector('p').textContent='Interactive check passed.'">Run check</button></body></html>`;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Preparing teaching workspace...' })}\n\n`));
+                    await new Promise(r => setTimeout(r, 100));
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content: `I created a demo lesson workspace for **${latest.replace(/</g, '&lt;')}**.` })}\n\n`));
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'lesson_created',
+                        title: 'Demo Teacher Lesson',
+                        lesson_path: 'Lessons/demo/lessons/0001-demo.html',
+                        preview_url: 'data:text/html;charset=utf-8,' + encodeURIComponent(demoHtml)
+                    })}\n\n`));
+                    controller.close();
+                }
+            });
+            return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+        }
+
+        try {
+            if (useSecurityStore.getState().isFeatureLocked('oracle-chat')) {
+                throw new Error("ACCESS_DENIED: Module [oracle-chat] restricted by controller.");
+            }
+            const store = await getAppStore();
+            const port = await invoke<number>('get_sidecar_port');
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const inboxPath = await store.get<string>('inboxPath');
+            const academicFolderPath = await store.get<string>('academicFolderPath');
+
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            if (inboxPath) headers['X-Inbox-Path'] = inboxPath;
+            if (academicFolderPath) headers['X-Academic-Path'] = academicFolderPath;
+
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            headers['X-Ater-Token'] = sidecarToken;
+
+            return await fetch(`http://127.0.0.1:${port}/api/teacher/chat`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+            });
+        } catch (err) {
+            console.error('[Teacher] teacherChatStream failed:', err);
+            throw err;
+        }
+    },
+
     aterInteractiveQuiz: async (payload: { selection: string }) => {
         try {
             return await invoke<any>('ater_interactive_quiz', { payload })

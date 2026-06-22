@@ -300,19 +300,8 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
     return () => window.removeEventListener('message', onMessage)
   }, [addVersion, artifacts, incrementRepairAttempts, recordIframeError, setRepairing, isNoteRoute, notePath])
 
-  if (!activeArtifact || !activeVersion || !activeChapter) {
-    return (
-      <div className="flex h-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 bg-bento-bg border-l border-border">
-        No simulator active
-      </div>
-    )
-  }
-
-  const goToChapter = (direction: -1 | 1) => {
-    setActiveChapter(activeArtifact.id, Math.max(0, Math.min(chapters.length - 1, activeChapterIndex + direction)))
-  }
-
   const srcDoc = useMemo(() => {
+    if (!activeArtifact || !activeVersion || !activeChapter) return ''
     return buildSandboxSrcDoc(sandboxCode, {
       artifactId: activeArtifact.id,
       version: activeVersion.version,
@@ -320,7 +309,7 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
       state: savedState
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sandboxCode, activeArtifact.id, activeVersion.version, savedState])
+  }, [sandboxCode, activeArtifact?.id, activeVersion?.version, savedState, resolvedTheme, activeArtifact, activeVersion, activeChapter])
 
   // Synchronize theme state instantly with the iframe
   useEffect(() => {
@@ -332,6 +321,18 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
       }, '*')
     }
   }, [resolvedTheme])
+
+  if (!activeArtifact || !activeVersion || !activeChapter) {
+    return (
+      <div className="flex h-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 bg-bento-bg border-l border-border">
+        No simulator active
+      </div>
+    )
+  }
+
+  const goToChapter = (direction: -1 | 1) => {
+    setActiveChapter(activeArtifact.id, Math.max(0, Math.min(chapters.length - 1, activeChapterIndex + direction)))
+  }
 
   const handleOfflineRetry = async () => {
     setIsOnline(navigator.onLine)

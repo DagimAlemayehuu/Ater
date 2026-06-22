@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Settings, User, GraduationCap, Book, Library } from 'lucide-react'
+import { Settings, User, GraduationCap, Book, Library, BookOpenCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function AppSidebar() {
@@ -35,6 +35,14 @@ export function AppSidebar() {
                     <>
                       {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
                       <GraduationCap className="size-5" strokeWidth={2.5} />
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/teacher" className={({ isActive }) => linkClass(isActive)} title="Teacher" data-tour="sidebar-teacher">
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className="absolute left-[-12px] top-0 w-[2px] h-10 bg-foreground" />}
+                      <BookOpenCheck className="size-5" strokeWidth={2.5} />
                     </>
                   )}
                 </NavLink>
