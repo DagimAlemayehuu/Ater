@@ -21,6 +21,20 @@ const parseOptionalNumber = (value: any) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
+const cleanModel = (modelName: string, keyVal: string) => {
+  if (!modelName) return ''
+  let cleaned = modelName.trim()
+  if (keyVal && keyVal.trim()) {
+    const trimmedKey = keyVal.trim()
+    if (cleaned.endsWith(trimmedKey)) {
+      cleaned = cleaned.slice(0, -trimmedKey.length).trim()
+    } else if (cleaned.includes(trimmedKey)) {
+      cleaned = cleaned.replace(trimmedKey, '').trim()
+    }
+  }
+  return cleaned
+}
+
 export default function Onboarding() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
@@ -336,12 +350,21 @@ export default function Onboarding() {
 
   const handleAddNewKey = () => {
     if (!newKeyName || !newKeyValue) return
+    let cleanedModel = cleanModel(newKeyModel, newKeyValue)
+    if (!cleanedModel) {
+      if (newKeyProvider === 'google') cleanedModel = 'gemini-2.0-flash'
+      else if (newKeyProvider === 'openai') cleanedModel = 'gpt-4o'
+      else if (newKeyProvider === 'anthropic') cleanedModel = 'claude-3-5-sonnet-latest'
+      else if (newKeyProvider === 'groq') cleanedModel = 'llama-3.3-70b-versatile'
+      else if (newKeyProvider === 'openrouter') cleanedModel = 'google/gemini-2.0-flash-001'
+    }
+
     const newKey: SavedApiKey = {
       id: Math.random().toString(36).substring(2),
       name: newKeyName,
       provider: newKeyProvider,
       key: newKeyValue,
-      model: newKeyModel || undefined,
+      model: cleanedModel || undefined,
       baseUrl: newKeyProvider === 'custom' ? newKeyBaseUrl : undefined,
       maxTpm: parseOptionalNumber(newKeyLimits.maxTpm),
       maxRpm: parseOptionalNumber(newKeyLimits.maxRpm),
@@ -939,8 +962,10 @@ export default function Onboarding() {
                     />
                   )}
 
+                  <input type="text" name="username" style={{ display: 'none' }} autoComplete="username" />
                   <input 
                     type="password"
+                    autoComplete="new-password"
                     placeholder="API Key"
                     value={newKeyValue}
                     onChange={(e) => setNewKeyValue(e.target.value)}

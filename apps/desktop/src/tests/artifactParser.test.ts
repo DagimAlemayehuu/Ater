@@ -90,4 +90,22 @@ Intro text.
       sandboxSpec: "interactive Rubik's Cube stepper",
     })
   })
+
+  it('dedents chapter content and sandbox specs', () => {
+    const result = extractArtifacts(`
+<artifact title="Indent Test">
+  <chapter title="Intro">
+    Line 1.
+    Line 2.
+    <sandbox-spec>
+      Spec line 1.
+      Spec line 2.
+    </sandbox-spec>
+  </chapter>
+</artifact>
+`)
+
+    expect(result.artifacts[0].versions[0].chapters[0].content).toBe('Line 1.\nLine 2.')
+    expect(result.artifacts[0].versions[0].chapters[0].sandboxSpec).toBe('Spec line 1.\nSpec line 2.')
+  })
 })

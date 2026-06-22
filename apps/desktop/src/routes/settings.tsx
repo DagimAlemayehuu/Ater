@@ -15,7 +15,7 @@ import { open as openUrl } from '@tauri-apps/plugin-shell'
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
-  <div className={cn("border border-border bg-bento-panel rounded-[12px] transition-colors", className)}>
+  <div className={cn("border border-border bg-bento-card rounded-[12px] transition-colors", className)}>
     {children}
   </div>
 )
@@ -34,7 +34,7 @@ const CardContent = ({children, className}: any) => (
 )
 
 const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCancel}: any) => (
-  <Card className="bg-bento-panel rounded-[12px] border border-border">
+  <Card className="bg-bento-card rounded-[12px] border border-border">
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -64,6 +64,20 @@ const parseOptionalNumber = (value: any) => {
   if (!trimmed) return undefined
   const parsed = Number(trimmed)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+const cleanModel = (modelName: string, keyVal: string) => {
+  if (!modelName) return ''
+  let cleaned = modelName.trim()
+  if (keyVal && keyVal.trim()) {
+    const trimmedKey = keyVal.trim()
+    if (cleaned.endsWith(trimmedKey)) {
+      cleaned = cleaned.slice(0, -trimmedKey.length).trim()
+    } else if (cleaned.includes(trimmedKey)) {
+      cleaned = cleaned.replace(trimmedKey, '').trim()
+    }
+  }
+  return cleaned
 }
 
 export default function Settings() {
@@ -298,10 +312,19 @@ export default function Settings() {
   const handleSave = async () => {
     try {
       if (editingKey === 'primary_engine') {
+        let cleanedModel = cleanModel(aiEdit.model, aiEdit.key)
+        if (!cleanedModel) {
+          if (aiEdit.provider === 'google') cleanedModel = 'gemini-2.0-flash'
+          else if (aiEdit.provider === 'openai') cleanedModel = 'gpt-4o'
+          else if (aiEdit.provider === 'anthropic') cleanedModel = 'claude-3-5-sonnet-latest'
+          else if (aiEdit.provider === 'groq') cleanedModel = 'llama-3.3-70b-versatile'
+          else if (aiEdit.provider === 'openrouter') cleanedModel = 'google/gemini-2.0-flash-001'
+        }
+
         const updatedConfig: any = {
           aiProvider: aiEdit.provider,
           aiApiKey: aiEdit.key,
-          aiModel: aiEdit.model,
+          aiModel: cleanedModel,
           aiBaseUrl: aiEdit.baseUrl,
           aiMaxTpm: parseOptionalNumber(aiEdit.maxTpm),
           aiMaxRpm: parseOptionalNumber(aiEdit.maxRpm),
@@ -319,7 +342,7 @@ export default function Settings() {
                 ...k,
                 provider: aiEdit.provider,
                 key: aiEdit.key,
-                model: aiEdit.model || undefined,
+                model: cleanedModel || undefined,
                 baseUrl: aiEdit.provider === 'custom' ? aiEdit.baseUrl : undefined,
                 maxTpm: parseOptionalNumber(aiEdit.maxTpm),
                 maxRpm: parseOptionalNumber(aiEdit.maxRpm),
@@ -501,12 +524,21 @@ export default function Settings() {
 
   const handleAddNewKey = async () => {
     if (!newKeyName || !newKeyValue) return
+    let cleanedModel = cleanModel(newKeyModel, newKeyValue)
+    if (!cleanedModel) {
+      if (newKeyProvider === 'google') cleanedModel = 'gemini-2.0-flash'
+      else if (newKeyProvider === 'openai') cleanedModel = 'gpt-4o'
+      else if (newKeyProvider === 'anthropic') cleanedModel = 'claude-3-5-sonnet-latest'
+      else if (newKeyProvider === 'groq') cleanedModel = 'llama-3.3-70b-versatile'
+      else if (newKeyProvider === 'openrouter') cleanedModel = 'google/gemini-2.0-flash-001'
+    }
+
     const newKey: SavedApiKey = {
       id: Math.random().toString(36).substring(2),
       name: newKeyName,
       provider: newKeyProvider,
       key: newKeyValue,
-      model: newKeyModel || undefined,
+      model: cleanedModel || undefined,
       baseUrl: newKeyProvider === 'custom' ? newKeyBaseUrl : undefined,
       maxTpm: parseOptionalNumber(newKeyLimits.maxTpm),
       maxRpm: parseOptionalNumber(newKeyLimits.maxRpm),
@@ -546,9 +578,10 @@ export default function Settings() {
     if (deletedKey && config?.aiApiKey === deletedKey.key) {
       if (remainingKeys.length > 0) {
         const fallback = remainingKeys[0]
+        const fallbackCleanedModel = cleanModel(fallback.model || '', fallback.key)
         updates.aiProvider = fallback.provider
         updates.aiApiKey = fallback.key
-        updates.aiModel = fallback.model || (fallback.provider === 'google' ? 'gemini-2.0-flash' : '')
+        updates.aiModel = fallbackCleanedModel || (fallback.provider === 'google' ? 'gemini-2.0-flash' : '')
         updates.aiBaseUrl = fallback.baseUrl || ''
         updates.aiMaxTpm = fallback.maxTpm
         updates.aiMaxRpm = fallback.maxRpm
@@ -642,7 +675,7 @@ export default function Settings() {
                     disabled={editingKey !== 'folder_settings'}
                     value={editingKey === 'folder_settings' ? vaultEdit.academicPath : config?.academicFolderPath || 'Notes'}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVaultEdit({...vaultEdit, academicPath: e.target.value})}
-                    className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px] text-foreground"
                     placeholder="e.g. Notes"
                   />
                 </div>
@@ -719,7 +752,7 @@ export default function Settings() {
                       type="text"
                       value={profileEdit.name}
                       onChange={(e) => setProfileEdit({...profileEdit, name: e.target.value})}
-                      className="w-full bg-bento-item/30 border border-border px-4 py-2.5 text-[12px] font-black uppercase tracking-widest focus:outline-none focus:border-primary rounded-[8px]"
+                      className="w-full bg-background border border-border px-4 py-2.5 text-[12px] font-black uppercase tracking-widest focus:outline-none focus:border-primary rounded-[8px] text-foreground"
                       placeholder="Your Name"
                     />
                   </div>
@@ -889,12 +922,13 @@ export default function Settings() {
                         <button
                           key={k.id}
                           onClick={async () => {
+                            const cleanedModel = cleanModel(k.model || '', k.key);
                             if (editingKey === 'primary_engine') {
                               setSelectedVaultKeyId(k.id);
                               setAiEdit({
                                 provider: k.provider,
                                 key: k.key,
-                                model: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
+                                model: cleanedModel || (k.provider === 'google' ? 'gemini-2.0-flash' : aiEdit.model),
                                 baseUrl: k.baseUrl || '',
                                 maxTpm: k.maxTpm?.toString() || '',
                                 maxRpm: k.maxRpm?.toString() || '',
@@ -906,7 +940,7 @@ export default function Settings() {
                               await saveConfig({
                                 aiProvider: k.provider,
                                 aiApiKey: k.key,
-                                aiModel: k.model || (k.provider === 'google' ? 'gemini-2.0-flash' : (config.aiModel || '')),
+                                aiModel: cleanedModel || (k.provider === 'google' ? 'gemini-2.0-flash' : (config.aiModel || '')),
                                 aiBaseUrl: k.baseUrl || '',
                                 aiMaxTpm: k.maxTpm,
                                 aiMaxRpm: k.maxRpm,
@@ -952,28 +986,32 @@ export default function Settings() {
                         if (provider === 'custom') defaultModel = aiEdit.model || 'openai-compatible-model';
                         setAiEdit({...aiEdit, provider, model: defaultModel});
                       }}
-                      className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                      className="w-full bg-background border border-border px-4 py-3 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                     >
-                      <option value="google" className="bg-bento-panel">Google Gemini</option>
-                      <option value="openai" className="bg-bento-panel">OpenAI</option>
-                      <option value="anthropic" className="bg-bento-panel">Anthropic</option>
-                      <option value="groq" className="bg-bento-panel">Groq (Fast)</option>
-                      <option value="openrouter" className="bg-bento-panel">OpenRouter</option>
-                      <option value="custom" className="bg-bento-panel">Custom Provider</option>
+                      <option value="google" className="bg-bento-panel text-foreground">Google Gemini</option>
+                      <option value="openai" className="bg-bento-panel text-foreground">OpenAI</option>
+                      <option value="anthropic" className="bg-bento-panel text-foreground">Anthropic</option>
+                      <option value="groq" className="bg-bento-panel text-foreground">Groq (Fast)</option>
+                      <option value="openrouter" className="bg-bento-panel text-foreground">OpenRouter</option>
+                      <option value="custom" className="bg-bento-panel text-foreground">Custom Provider</option>
                     </select>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">API Key</label>
                     {editingKey === 'primary_engine' ? (
-                      <input
-                        type="password"
-                        value={aiEdit.key}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, key: e.target.value})}
-                        className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] focus:outline-none focus:border-primary font-mono rounded-[8px]"
-                        autoFocus
-                        placeholder={`Enter ${aiEdit.provider.toUpperCase()} Key`}
-                      />
+                      <>
+                        <input type="text" name="username" style={{ display: 'none' }} autoComplete="username" />
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          value={aiEdit.key}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, key: e.target.value})}
+                          className="w-full bg-background border border-border px-4 py-3 text-[13px] focus:outline-none focus:border-primary font-mono rounded-[8px] text-foreground"
+                          autoFocus
+                          placeholder={`Enter ${aiEdit.provider.toUpperCase()} Key`}
+                        />
+                      </>
                     ) : (
                       <div className="px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px]">
                         <span>
@@ -990,7 +1028,7 @@ export default function Settings() {
                       disabled={editingKey !== 'primary_engine'}
                       value={editingKey === 'primary_engine' ? aiEdit.model : config?.aiModel || ''}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, model: e.target.value})}
-                      className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                      className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                     />
                   </div>
 
@@ -1003,7 +1041,7 @@ export default function Settings() {
                         value={editingKey === 'primary_engine' ? aiEdit.baseUrl : config?.aiBaseUrl || ''}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, baseUrl: e.target.value})}
                         placeholder="https://provider.example.com/v1"
-                        className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                        className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                       />
                     </div>
                   )}
@@ -1029,7 +1067,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxTpm : config?.aiMaxTpm || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpm: e.target.value})}
                               placeholder="Max tokens per minute"
-                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                             />
                             <input
                               type="number"
@@ -1038,7 +1076,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxRpm : config?.aiMaxRpm || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpm: e.target.value})}
                               placeholder="Max requests per minute"
-                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                             />
                             <input
                               type="number"
@@ -1047,7 +1085,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxTpd : config?.aiMaxTpd || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxTpd: e.target.value})}
                               placeholder="Max tokens per day"
-                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                             />
                             <input
                               type="number"
@@ -1056,7 +1094,7 @@ export default function Settings() {
                               value={editingKey === 'primary_engine' ? aiEdit.maxRpd : config?.aiMaxRpd || ''}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxRpd: e.target.value})}
                               placeholder="Max requests per day"
-                              className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50"
+                              className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 text-foreground"
                             />
                           </div>
                           <input
@@ -1066,7 +1104,7 @@ export default function Settings() {
                             value={editingKey === 'primary_engine' ? aiEdit.maxConcurrency : config?.aiMaxConcurrency || ''}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAiEdit({...aiEdit, maxConcurrency: e.target.value})}
                             placeholder="Max simultaneous requests"
-                            className="w-full bg-bento-item/30 border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 mt-2"
+                            className="w-full bg-background border border-border px-4 py-3 text-[13px] font-mono focus:outline-none focus:border-primary rounded-[8px] disabled:opacity-50 mt-2 text-foreground"
                           />
                         </div>
                       </div>
@@ -1139,7 +1177,7 @@ export default function Settings() {
                         placeholder="Name (e.g. My Gemini Key)"
                         value={newKeyName}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyName(e.target.value)}
-                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                        className="w-full bg-background border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] text-foreground"
                         autoFocus
                       />
                       <select
@@ -1155,35 +1193,37 @@ export default function Settings() {
                             if (provider === 'openrouter') setNewKeyModel('google/gemini-2.0-flash-001')
                           }
                         }}
-                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px]"
+                        className="w-full bg-background border border-border px-3 py-2 text-[11px] font-bold uppercase focus:outline-none focus:border-primary rounded-[8px] text-foreground"
                       >
-                        <option value="google" className="bg-bento-panel">Google</option>
-                        <option value="openai" className="bg-bento-panel">OpenAI</option>
-                        <option value="anthropic" className="bg-bento-panel">Anthropic</option>
-                        <option value="groq" className="bg-bento-panel">Groq</option>
-                        <option value="openrouter" className="bg-bento-panel">OpenRouter</option>
-                        <option value="custom" className="bg-bento-panel">Custom Provider</option>
+                        <option value="google" className="bg-bento-panel text-foreground">Google</option>
+                        <option value="openai" className="bg-bento-panel text-foreground">OpenAI</option>
+                        <option value="anthropic" className="bg-bento-panel text-foreground">Anthropic</option>
+                        <option value="groq" className="bg-bento-panel text-foreground">Groq</option>
+                        <option value="openrouter" className="bg-bento-panel text-foreground">OpenRouter</option>
+                        <option value="custom" className="bg-bento-panel text-foreground">Custom Provider</option>
                       </select>
                       <input
                         placeholder="Model Name"
                         value={newKeyModel}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyModel(e.target.value)}
-                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                        className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground"
                       />
                       {newKeyProvider === 'custom' && (
                         <input
                           placeholder="Base URL (Advanced)"
                           value={newKeyBaseUrl}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyBaseUrl(e.target.value)}
-                          className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                          className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground"
                         />
                       )}
+                      <input type="text" name="username" style={{ display: 'none' }} autoComplete="username" />
                       <input 
                         type="password"
+                        autoComplete="new-password"
                         placeholder="API Key"
                         value={newKeyValue}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyValue(e.target.value)}
-                        className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                        className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground"
                       />
                       
                       <div className="space-y-3 pt-1">
@@ -1197,16 +1237,16 @@ export default function Settings() {
                         {showAddKeyAdvanced && (
                           <div className="space-y-3 pt-3 border-t border-border/60">
                             <div className="grid grid-cols-2 gap-2">
-                              <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                              <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                              <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
-                              <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]" />
+                              <input placeholder="TPM limit" value={newKeyLimits.maxTpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpm: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground" />
+                              <input placeholder="RPM limit" value={newKeyLimits.maxRpm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpm: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground" />
+                              <input placeholder="TPD limit" value={newKeyLimits.maxTpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxTpd: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground" />
+                              <input placeholder="RPD limit" value={newKeyLimits.maxRpd} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxRpd: e.target.value})} className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground" />
                             </div>
                             <input
                               placeholder="Max simultaneous requests"
                               value={newKeyLimits.maxConcurrency}
                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewKeyLimits({...newKeyLimits, maxConcurrency: e.target.value})}
-                              className="w-full bg-bento-item/30 border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px]"
+                              className="w-full bg-background border border-border px-3 py-2 text-[11px] focus:outline-none font-mono focus:border-primary rounded-[8px] text-foreground"
                             />
                           </div>
                         )}
@@ -1262,7 +1302,7 @@ export default function Settings() {
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.work : config?.pomodoroWorkDuration}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, work: parseInt(e.target.value) || 0})}
-                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-background border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px] text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1272,7 +1312,7 @@ export default function Settings() {
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.short : config?.pomodoroShortBreakDuration}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, short: parseInt(e.target.value) || 0})}
-                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-background border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px] text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1282,7 +1322,7 @@ export default function Settings() {
                     disabled={editingKey !== 'timer_settings'}
                     value={editingKey === 'timer_settings' ? pomodoroEdit.long : config?.pomodoroLongBreakDuration}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPomodoroEdit({...pomodoroEdit, long: parseInt(e.target.value) || 0})}
-                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-background border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px] text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1301,7 +1341,7 @@ export default function Settings() {
                         setPomodoroEdit({...pomodoroEdit, sessions: 1});
                       }
                     }}
-                    className="w-full px-4 py-3 bg-bento-item/30 border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px]"
+                    className="w-full px-4 py-3 bg-background border border-border text-[13px] font-mono focus:outline-none focus:border-primary disabled:opacity-50 rounded-[8px] text-foreground"
                   />
                 </div>
               </div>

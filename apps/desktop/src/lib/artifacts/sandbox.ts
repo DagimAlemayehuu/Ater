@@ -5,9 +5,8 @@ export interface SandboxSrcDocOptions {
   state?: any
 }
 
-function getThemeCss(theme?: 'dark' | 'light') {
-  if (theme === 'light') {
-    return `
+function getThemeCss() {
+  return `
 :root {
   --background: 0 0% 98%;
   --foreground: 0 0% 15%;
@@ -16,24 +15,7 @@ function getThemeCss(theme?: 'dark' | 'light') {
   --border: 0 0% 85%;
   --primary: 0 0% 25%;
 }
-html, body {
-  margin: 0;
-  min-height: 100%;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: "Outfit", ui-sans-serif, system-ui, sans-serif;
-}
-body {
-  padding: 16px;
-}
-* {
-  box-sizing: border-box;
-}
-`
-  }
-
-  return `
-:root {
+html.dark {
   --background: 240 10% 4%;
   --foreground: 0 0% 96%;
   --muted: 240 4% 16%;
@@ -150,7 +132,7 @@ export function buildSandboxSrcDoc(code: string, options: SandboxSrcDocOptions =
   const version = options.version || 1
   const theme = options.theme || 'dark'
   const htmlClass = theme === 'dark' ? 'class="dark"' : 'class="light"'
-  const themeCss = getThemeCss(theme)
+  const themeCss = getThemeCss()
   const preprocessedCode = preprocessSandboxCode(code)
 
   return `<!doctype html>
@@ -159,12 +141,34 @@ export function buildSandboxSrcDoc(code: string, options: SandboxSrcDocOptions =
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class'
+      };
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>${themeCss}</style>
     <script>
       window.__ATER_ARTIFACT__ = {"artifactId":${artifactId},"version":${version},"state":${JSON.stringify(options.state || {})}};
+      
+      // Listen for instant theme changes
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'ater:set-theme') {
+          var theme = event.data.theme;
+          var html = document.documentElement;
+          if (theme === 'dark') {
+            html.classList.add('dark');
+            html.classList.remove('light');
+            html.setAttribute('class', 'dark');
+          } else {
+            html.classList.add('light');
+            html.classList.remove('dark');
+            html.setAttribute('class', 'light');
+          }
+        }
+      });
       
       // Automatic State Watcher & Serializer
       function serializeState() {

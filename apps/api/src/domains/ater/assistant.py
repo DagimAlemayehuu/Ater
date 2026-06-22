@@ -2337,14 +2337,22 @@ def _clean_lesson_title(value: str, fallback: str) -> str:
     return title
 
 
-def _lesson_sandbox_spec(topic: str, lesson_title: str) -> str:
-    combined = f"{topic} {lesson_title}".lower()
+def _chapter_sandbox_spec(topic: str, lesson_title: str, chapter_title: str) -> str:
+    combined = f"{topic} {lesson_title} {chapter_title}".lower()
     if "rubik" in combined or "rubics" in combined:
+        step_match = re.search(r"step\s*(\d+)", chapter_title, re.IGNORECASE)
+        step_num = step_match.group(1) if step_match else "1"
         return (
-            "interactive Rubik's Cube lesson stepper with clickable U, U', D, D', R, R', L, L', F, F', B, B' "
-            "controls, chapter-aware move sequences, reset button, and a flat 2D net cube visualization showing all 6 sides"
+            f"interactive Rubik's Cube flat net simulator focusing specifically on Step {step_num} ({chapter_title}). "
+            "Show the 2D face net of U, L, F, R, B, D faces. Provide move buttons, reset, and highlight the stickers to change. "
+            "Ensure the design has a dark theme background that blends with the app."
         )
-    return f"interactive lesson sandbox for {lesson_title or topic}".strip()
+    return (
+        f"interactive visual simulator demonstrating {chapter_title} for {lesson_title or topic}. "
+        "The interface must be fully interactive, elegant, and modern with clean animations. "
+        "Support both light and dark themes using CSS variables or Tailwind dark: utilities. "
+        "Render the visualization immediately on load without any mock 'Launch simulator' or 'Start' screen."
+    )
 
 
 def _is_rubiks_lesson_topic(value: str) -> bool:
@@ -2436,22 +2444,24 @@ def _lesson_payload_to_artifact(payload: Dict[str, Any], topic: str) -> str:
             continue
         chapter_title = str(chapter.get("title") or f"Chapter {index}").strip()
         content = str(chapter.get("content") or "").strip()
+        
+        # Build chapter-specific sandbox spec
+        ch_spec = _chapter_sandbox_spec(topic, title, chapter_title)
+        
         chapter_blocks.append(
             f'  <chapter title="{_xml_escape(chapter_title)}">\n'
             f"{_xml_escape(content)}\n"
+            f"    <sandbox-spec>{_xml_escape(ch_spec)}</sandbox-spec>\n"
             "  </chapter>"
         )
 
     if not chapter_blocks:
         return ""
 
-    sandbox_spec = _lesson_sandbox_spec(topic, title)
     return (
         f'<artifact title="{_xml_escape(title)}">\n'
         + "\n".join(chapter_blocks)
-        + "\n"
-        f"  <sandbox-spec>{_xml_escape(sandbox_spec)}</sandbox-spec>\n"
-        "</artifact>"
+        + "\n</artifact>"
     )
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, ChevronRight, Code2, Eye, Loader2, PanelRightClose, RotateCcw, WifiOff } from 'lucide-react'
 import { AterMarkdown } from './MarkdownViewer'
 import { cn } from '@/lib/utils'
@@ -56,6 +56,8 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [isSidecarHealthy, setIsSidecarHealthy] = useState(true)
   const [savedState, setSavedState] = useState<any>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
 
   const artifacts = customArtifacts || storeArtifacts
   
@@ -310,12 +312,26 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
     setActiveChapter(activeArtifact.id, Math.max(0, Math.min(chapters.length - 1, activeChapterIndex + direction)))
   }
 
-  const srcDoc = buildSandboxSrcDoc(sandboxCode, {
-    artifactId: activeArtifact.id,
-    version: activeVersion.version,
-    theme: resolvedTheme,
-    state: savedState
-  })
+  const srcDoc = useMemo(() => {
+    return buildSandboxSrcDoc(sandboxCode, {
+      artifactId: activeArtifact.id,
+      version: activeVersion.version,
+      theme: resolvedTheme,
+      state: savedState
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sandboxCode, activeArtifact.id, activeVersion.version, savedState])
+
+  // Synchronize theme state instantly with the iframe
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'ater:set-theme',
+        theme: resolvedTheme
+      }, '*')
+    }
+  }, [resolvedTheme])
 
   const handleOfflineRetry = async () => {
     setIsOnline(navigator.onLine)
@@ -400,80 +416,85 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
                 Chapter {activeChapterIndex + 1} / {chapters.length}
               </div>
               <h4 className="mt-1 text-[15px] font-black uppercase tracking-wide text-foreground">{activeChapter.title}</h4>
-              {isSandboxChapter && activeChapter.content && (
-                <div className="mt-2 max-h-32 overflow-y-auto text-[12px] text-foreground/75">
-                  <AterMarkdown content={activeChapter.content} />
-                </div>
-              )}
             </div>
-            <div className="min-h-0 flex-1 relative bg-bento-bg">
-              {compileError ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-bento-bg space-y-4">
-                  <div className="p-4 rounded-full bg-destructive/10 border border-destructive/20 text-destructive">
-                    <AlertTriangle size={32} />
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-8 py-7 custom-scrollbar bg-background">
+              <div className="mx-auto max-w-3xl space-y-6">
+                {/* 1. Explanation Text */}
+                {activeChapter.content ? (
+                  <div className="text-[15px] leading-relaxed text-foreground/90 font-outfit">
+                    <AterMarkdown content={activeChapter.content} />
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black uppercase tracking-widest text-foreground">Compilation Failed</h4>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-xs leading-relaxed">
-                      {compileError}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleOfflineRetry}
-                    className="h-8 px-4 rounded-[6px] border border-border bg-bento-card hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground transition-none shadow-md"
-                  >
-                    Retry Connection
-                  </button>
-                </div>
-              ) : showOfflineWarning ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-bento-bg space-y-4">
-                  <div className="p-4 rounded-full bg-destructive/10 border border-destructive/20 text-destructive">
-                    <WifiOff size={32} />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black uppercase tracking-widest text-foreground">Offline Connection Required</h4>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-xs leading-relaxed">
-                      Internet connectivity and a running sidecar service are required to compile and generate new interactive simulators.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleOfflineRetry}
-                    className="h-8 px-4 rounded-[6px] border border-border bg-bento-card hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground transition-none shadow-md"
-                  >
-                    Retry Connection
-                  </button>
-                </div>
-              ) : sandboxCode ? (
-                <div className="relative h-full min-h-[260px] bg-bento-bg">
-                  {shielded && <div className="absolute inset-0 z-10 cursor-col-resize bg-transparent" />}
-                  <iframe
-                    title="Interactive sandbox"
-                    srcDoc={srcDoc}
-                    sandbox="allow-scripts"
-                    className="h-full w-full border-0 bg-bento-bg"
-                  />
-                </div>
-              ) : activeChapter.sandboxSpec ? (
-                <div className="flex h-full flex-col items-center justify-center p-8 bg-bento-bg">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary/40 mb-3" />
-                  <div className="text-center max-w-sm space-y-1">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-foreground">Compiling simulator...</div>
-                    <div className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground/60 truncate italic">
-                      "{activeChapter.sandboxSpec}"
+                ) : (
+                  <p className="text-muted-foreground/70 text-[10px] font-black uppercase tracking-widest">No lesson text available for this chapter.</p>
+                )}
+
+                {/* 2. Inline Visual Simulator */}
+                {isSandboxChapter && (
+                  <div className="mt-8 space-y-4">
+                    <div className="border-t border-border/40 pt-6">
+                      <div className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/50 mb-4">
+                        Interactive Visual Simulator
+                      </div>
+
+                      {compileError ? (
+                        <div className="flex flex-col items-center justify-center p-6 text-center border border-border bg-bento-card rounded-[8px] space-y-3">
+                          <AlertTriangle className="text-destructive" size={24} />
+                          <div className="space-y-1">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Compilation Failed</h4>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-md leading-relaxed">
+                              {compileError}
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleOfflineRetry}
+                            className="h-8 px-4 rounded-[6px] border border-border bg-bento-card hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground transition-none shadow-sm"
+                          >
+                            Retry Connection
+                          </button>
+                        </div>
+                      ) : showOfflineWarning ? (
+                        <div className="flex flex-col items-center justify-center p-6 text-center border border-border bg-bento-card rounded-[8px] space-y-3">
+                          <WifiOff className="text-destructive" size={24} />
+                          <div className="space-y-1">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Offline Connection Required</h4>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-md leading-relaxed">
+                              Internet connectivity and a running sidecar service are required to compile and generate new interactive simulators.
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleOfflineRetry}
+                            className="h-8 px-4 rounded-[6px] border border-border bg-bento-card hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground transition-none shadow-sm"
+                          >
+                            Retry Connection
+                          </button>
+                        </div>
+                      ) : sandboxCode ? (
+                        <div className="relative border border-border rounded-[8px] overflow-hidden bg-bento-bg h-[520px] w-full shadow-sm">
+                          {shielded && <div className="absolute inset-0 z-10 cursor-col-resize bg-transparent" />}
+                          <iframe
+                            ref={iframeRef}
+                            title="Interactive sandbox"
+                            srcDoc={srcDoc}
+                            sandbox="allow-scripts"
+                            className="h-full w-full border-0 bg-bento-bg"
+                          />
+                        </div>
+                      ) : activeChapter.sandboxSpec ? (
+                        <div className="flex flex-col items-center justify-center p-8 border border-border bg-bento-card rounded-[8px] min-h-[200px]">
+                          <Loader2 className="w-6 h-6 animate-spin text-primary/40 mb-3" />
+                          <div className="text-center max-w-sm space-y-1">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-foreground">Compiling simulator...</div>
+                            <div className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground/60 truncate italic">
+                              "{activeChapter.sandboxSpec}"
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
-                </div>
-              ) : (
-                <article className="h-full overflow-y-auto px-8 py-7 text-[17px] leading-8 text-foreground/85">
-                  <div className="mx-auto max-w-4xl">
-                    {activeChapter.content ? (
-                      <AterMarkdown content={activeChapter.content} />
-                    ) : (
-                      <p className="text-muted-foreground/70">No lesson text available for this chapter.</p>
-                    )}
-                  </div>
-                </article>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ) : (

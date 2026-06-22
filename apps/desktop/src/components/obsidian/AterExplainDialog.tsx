@@ -67,6 +67,19 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
+function AssistantCopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+      className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/75 hover:text-foreground transition-none"
+    >
+      {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} />}
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  )
+}
+
 /* ── Main Dialog ─────────────────────────────────────────────────────────── */
 export function AterExplainDialog({
   isOpen,
@@ -378,6 +391,9 @@ export function AterExplainDialog({
           >
             {messages.map((msg, i) => {
               const displayContent = msg.role === 'assistant' ? stripArtifactMarkup(msg.content) : msg.content
+              const extracted = msg.role === 'assistant' ? extractArtifacts(msg.content) : null
+              const hasArtifact = extracted && (extracted.artifacts.length > 0 || extracted.sandboxSpecs.length > 0)
+
               return (
                 <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   {msg.role === 'user' ? (
@@ -389,7 +405,31 @@ export function AterExplainDialog({
                       <div className="prose prose-sm dark:prose-invert max-w-none">
                         <AterMarkdown content={displayContent} />
                       </div>
-                      <CopyButton text={msg.content} />
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/20">
+                        {hasArtifact ? (
+                          <button
+                            onClick={() => {
+                              artifactState.setPanelOpen(true)
+                              const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+                              const artId = extracted.artifacts[0]
+                                ? `explain-topic-${slugify(extracted.artifacts[0].title)}`
+                                : `message-${i}-${extracted.sandboxSpecs[0]?.placeholderId}`
+                              if (artId) {
+                                artifactState.setActiveArtifact(artId)
+                              }
+                            }}
+                            className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-none"
+                          >
+                            <PanelRightOpen size={11} />
+                            Open Interactive Lesson
+                          </button>
+                        ) : (
+                          <div />
+                        )}
+                        <div className="shrink-0">
+                          <AssistantCopyButton text={msg.content} />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

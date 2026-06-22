@@ -134,7 +134,9 @@ class ModelFactory:
         if provider == "google":
             model_lower = model_name.lower()
             if not (model_lower.startswith("models/") or model_lower.startswith("tunedmodels/")):
-                model_name = f"models/{model_name}"
+                model_name = f"models/{model_name.lower()}"
+            elif model_lower.startswith("models/"):
+                model_name = f"models/{model_name[7:].lower()}"
 
         governor.configure(
             provider,

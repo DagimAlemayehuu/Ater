@@ -17,8 +17,7 @@ const decodeEntities = (value: string): string => {
 
 const stripTags = (value: string): string => {
   return decodeEntities(value
-    .replace(/<\/?(artifact|chapter|sandbox|sandbox-spec)\b[^>]*>/gi, '')
-    .trim())
+    .replace(/<\/?(artifact|chapter|sandbox|sandbox-spec)\b[^>]*>/gi, ''))
 }
 
 const completeForParsing = (source: string): string => {
@@ -36,6 +35,42 @@ const completeForParsing = (source: string): string => {
   return value
 }
 
+const dedent = (text: string): string => {
+  const lines = text.split('\n')
+  let minIndent = Infinity
+  for (const line of lines) {
+    if (line.trim().length === 0) continue
+    const match = line.match(/^(\s*)/)
+    if (match) {
+      const indent = match[1].length
+      if (indent < minIndent) {
+        minIndent = indent
+      }
+    }
+  }
+
+  let result = text
+  if (minIndent !== Infinity && minIndent > 0) {
+    result = lines
+      .map((line) => {
+        if (line.trim().length === 0) return ''
+        let count = 0
+        let i = 0
+        while (i < line.length && count < minIndent) {
+          if (line[i] === ' ' || line[i] === '\t') {
+            count++
+            i++
+          } else {
+            break
+          }
+        }
+        return line.slice(i)
+      })
+      .join('\n')
+  }
+  return result.trim()
+}
+
 const extractSandbox = (chapterBody: string): { content: string; sandbox?: string; sandboxSpec?: string } => {
   const sandboxMatch = chapterBody.match(/<sandbox\b[^>]*>([\s\S]*?)<\/sandbox>/i)
   const sandboxSpecMatch = chapterBody.match(/<sandbox-spec\b[^>]*>([\s\S]*?)<\/sandbox-spec>/i)
@@ -44,9 +79,9 @@ const extractSandbox = (chapterBody: string): { content: string; sandbox?: strin
     .replace(/<sandbox-spec\b[^>]*>[\s\S]*?<\/sandbox-spec>/gi, '')
 
   return {
-    content: stripTags(withoutSandbox),
-    sandbox: sandboxMatch?.[1]?.trim(),
-    sandboxSpec: sandboxSpecMatch?.[1]?.trim(),
+    content: dedent(stripTags(withoutSandbox)),
+    sandbox: sandboxMatch?.[1] ? dedent(sandboxMatch[1]) : undefined,
+    sandboxSpec: sandboxSpecMatch?.[1] ? dedent(sandboxSpecMatch[1]) : undefined,
   }
 }
 
@@ -84,7 +119,7 @@ const parseChapters = (artifactBody: string, artifactIndex: number): ArtifactCha
     })
   }
 
-  if (chapters.length === 0 && stripTags(artifactBody)) {
+  if (chapters.length === 0 && stripTags(artifactBody).trim()) {
     const { content, sandbox, sandboxSpec } = extractSandbox(artifactBody)
     chapters.push({
       id: `artifact-${artifactIndex}-chapter-1`,
