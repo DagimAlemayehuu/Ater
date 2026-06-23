@@ -36,6 +36,7 @@ dependencies = [
     "onnx>=1.21.0",
     "onnxruntime>=1.26.0",
     "notebooklm-mcp-cli>=0.7.1",
+    "duckduckgo-search",
 ]
 
 [project.scripts]

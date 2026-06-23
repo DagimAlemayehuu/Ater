@@ -264,6 +264,62 @@ export default function ObsidianVaultPage() {
 const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
   const noteContentRef = useRef('')
+
+  // Companion files states & memos for hybrid lessons
+  const [viewMode, setViewMode] = useState<'notes' | 'lesson'>('notes')
+  const [companionContent, setCompanionContent] = useState<string>('')
+
+  const hasMatchingHtml = useMemo(() => {
+    if (!selectedPath || !selectedPath.toLowerCase().endsWith('.md')) return false
+    const htmlPath = selectedPath.replace(/\.md$/i, '.html')
+    return files.some(f => f.path === htmlPath)
+  }, [selectedPath, files])
+
+  const hasMatchingMd = useMemo(() => {
+    if (!selectedPath || !selectedPath.toLowerCase().endsWith('.html')) return false
+    const mdPath = selectedPath.replace(/\.html$/i, '.md')
+    return files.some(f => f.path === mdPath)
+  }, [selectedPath, files])
+
+  useEffect(() => {
+    if (selectedPath) {
+      if (selectedPath.toLowerCase().endsWith('.html')) {
+        setViewMode('lesson')
+      } else if (!hasMatchingHtml) {
+        setViewMode('notes')
+      }
+    }
+  }, [selectedPath, hasMatchingHtml])
+
+  useEffect(() => {
+    let active = true
+    if (selectedPath && hasMatchingHtml) {
+      const htmlPath = selectedPath.replace(/\.md$/i, '.html')
+      sidecarApi.readObsidianNote(htmlPath)
+        .then(res => {
+          if (active) setCompanionContent(res.content || '')
+        })
+        .catch(err => console.error('Failed to load companion HTML', err))
+    } else if (selectedPath && hasMatchingMd) {
+      const mdPath = selectedPath.replace(/\.html$/i, '.md')
+      sidecarApi.readObsidianNote(mdPath)
+        .then(res => {
+          if (active) {
+            setCompanionContent(res.content || '')
+            if (res.metadata) {
+              setNoteMetadata(res.metadata)
+            }
+          }
+        })
+        .catch(err => console.error('Failed to load companion MD', err))
+    } else {
+      setCompanionContent('')
+    }
+    return () => {
+      active = false
+    }
+  }, [selectedPath, hasMatchingHtml, hasMatchingMd])
+
   const {
     artifacts,
     isPanelOpen,
@@ -1529,7 +1585,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  const fileTree = useMemo(() => {
  const root: FileNode[] = []
  
- files.forEach(file => {
+ files.filter(file => !file.path.endsWith('.html')).forEach(file => {
  const parts = file.path.split(/[/\\]/).filter(p => p.length > 0)
  let currentLevel = root
  
@@ -2035,59 +2091,108 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
           </div>
         ) : (
-          <div className={cn("mx-auto w-full max-w-full relative flex-1 flex flex-col", (selectedIsPdf || selectedIsHtml) ? "p-0 overflow-hidden" : "py-4 px-6 max-w-full")}>
+          <div className={cn(
+            "mx-auto w-full max-w-full relative flex-1 flex flex-col min-h-0",
+            (selectedIsHtml || selectedIsPdf) ? "p-0 overflow-hidden" : "py-4 px-6 h-full",
+            (selectedIsHtml || selectedIsPdf || viewMode === 'lesson') && "overflow-hidden"
+          )}>
             {loadingNote && (
               <PanelLoader label="Loading Document" />
             )}
             
             {/* Note details */}
-            {selectedIsHtml ? (
+            {selectedIsHtml && !hasMatchingMd ? (
               <div className="flex-1 min-h-0 h-full overflow-hidden p-3">
                 <HtmlLessonViewer
                   title={(selectedPath.split(/[/\\]/).pop() || 'Interactive Lesson').replace(/\.html$/i, '').replace(/_/g, ' ')}
                   content={noteContent}
+                  onNavigate={handleWikiLinkClick}
+                  activePath={selectedPath}
+                  files={files}
+                  tree={studyTree}
                 />
               </div>
             ) : !selectedIsPdf ? (
-              <div className="editor-content px-2 mx-auto max-w-[95%] w-full">
-                <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
-                  {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
-                </h1>
+              <div className="editor-content px-2 mx-auto max-w-[95%] w-full flex-1 flex flex-col min-h-0">
+                <div className="shrink-0">
+                  <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
+                    {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
+                  </h1>
 
-                {/* Metadata Pills */}
-                <div className="flex items-center gap-2 mb-10 border-b border-border pb-6">
-                  {noteMetadata?.semester && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {cleanTitle(noteMetadata.semester)}
-                    </button>
+                  {/* Metadata Pills */}
+                  <div className="flex items-center gap-2 mb-6 border-b border-border pb-6">
+                    {noteMetadata?.semester && (
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {cleanTitle(noteMetadata.semester)}
+                      </button>
+                    )}
+                    {noteMetadata?.course && (
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        {cleanTitle(noteMetadata.course)}
+                      </button>
+                    )}
+                    {noteMetadata?.unit && (
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
+                        <Hash className="w-3.5 h-3.5" />
+                        Unit {cleanTitle(noteMetadata.unit)}
+                      </button>
+                    )}
+                  </div>
+
+                  {config?.showProperties && (
+                    <NoteProperties 
+                      metadata={noteMetadata} 
+                      onNavigate={handleWikiLinkClick} 
+                      onAddProperty={handleAddProperty}
+                      onUpdateProperty={handleUpdateProperty}
+                      onDeleteProperty={handleDeleteProperty}
+                    />
                   )}
-                  {noteMetadata?.course && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      {cleanTitle(noteMetadata.course)}
-                    </button>
-                  )}
-                  {noteMetadata?.unit && (
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
-                      <Hash className="w-3.5 h-3.5" />
-                      Unit {cleanTitle(noteMetadata.unit)}
-                    </button>
+
+                  {/* View Switcher Tabs (Only if companion HTML or Markdown exists) */}
+                  {(hasMatchingHtml || hasMatchingMd) && (
+                    <div className="flex border-b border-border/40 gap-6 mb-6">
+                      <button
+                        onClick={() => setViewMode('notes')}
+                        className={cn(
+                          "pb-3 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all",
+                          viewMode === 'notes'
+                            ? "border-foreground text-foreground"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Notes
+                      </button>
+                      <button
+                        onClick={() => setViewMode('lesson')}
+                        className={cn(
+                          "pb-3 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all",
+                          viewMode === 'lesson'
+                            ? "border-foreground text-foreground"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Interactive Lesson
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {config?.showProperties && (
-                  <NoteProperties 
-                    metadata={noteMetadata} 
-                    onNavigate={handleWikiLinkClick} 
-                    onAddProperty={handleAddProperty}
-                    onUpdateProperty={handleUpdateProperty}
-                    onDeleteProperty={handleDeleteProperty}
-                  />
-                )}
-
-                <div className="mt-8">
-                  {isEditing ? (
+                <div className="flex-1 min-h-0">
+                  {viewMode === 'lesson' ? (
+                    <div className="h-full overflow-hidden p-1">
+                      <HtmlLessonViewer
+                        title={(selectedPath.split(/[/\\]/).pop() || 'Interactive Lesson').replace(/\.html$/i, '').replace(/\.md$/i, '').replace(/_/g, ' ')}
+                        content={selectedPath.endsWith('.html') ? noteContent : companionContent}
+                        onNavigate={handleWikiLinkClick}
+                        tree={studyTree}
+                        activePath={selectedPath}
+                        files={files}
+                      />
+                    </div>
+                  ) : isEditing ? (
                     <ObsidianEditor
                       value={editedContent}
                       onChange={setEditedContent}
@@ -2102,7 +2207,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   ) : (
                     <MarkdownViewer 
                       key={selectedPath}
-                      content={noteContent} 
+                      content={selectedPath.endsWith('.md') ? noteContent : companionContent} 
                       onNavigate={handleWikiLinkClick} 
                       path={selectedPath || undefined}
                       noteMode={String(noteMetadata?.mode || '')}

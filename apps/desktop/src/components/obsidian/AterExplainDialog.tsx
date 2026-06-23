@@ -578,6 +578,8 @@ export function makePracticeExplainFetchers(params: {
   explanation?: string
   context?: string
   userAnswer?: string
+  isCorrect?: boolean
+  notePath?: string
 }) {
   const formatAnswer = (a: any): string => {
     if (Array.isArray(a)) return a.join(', ')
@@ -593,8 +595,10 @@ export function makePracticeExplainFetchers(params: {
       explanation: params.explanation ?? '',
       context: params.context ?? '',
       userAnswer: params.userAnswer ?? '',
+      is_correct: params.isCorrect,
+      note_path: params.notePath,
     })
-    return res.lesson
+    return res.lesson || res.explanation
   }
 
   // Follow-up uses aterChat with the question as the "selection" anchor

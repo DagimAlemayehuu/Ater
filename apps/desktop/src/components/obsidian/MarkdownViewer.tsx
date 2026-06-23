@@ -54,7 +54,8 @@ import {
     ConfirmActionBlock,
     SummaryCard,
     PracticeConfigCard,
-    InteractiveSandboxBlock
+    InteractiveSandboxBlock,
+    CurriculumPlannerCard
 } from '../intelligence/OracleUIBlocks'
 
 const MARKDOWN_REMARK_PLUGINS = [remarkGfm, remarkMath]
@@ -806,6 +807,15 @@ const CodeRenderer = memo((props: any) => {
         }
     }, [children, language]);
 
+    const curriculumPlannerData = useMemo(() => {
+        if (language !== 'curriculum_planner') return null;
+        try {
+            return JSON.parse(String(children).trim());
+        } catch (e) {
+            return null;
+        }
+    }, [children, language]);
+
     if (language === 'rubiks-cube') {
         if (!rubiksData) {
             return (
@@ -833,6 +843,19 @@ const CodeRenderer = memo((props: any) => {
             );
         }
         return <InteractiveLessonPlayer payload={lessonData} />;
+    }
+    if (language === 'curriculum_planner') {
+        if (!curriculumPlannerData) {
+            return (
+                <div className="p-6 border border-border bg-bento-card my-4 rounded-[12px] animate-pulse space-y-4">
+                    <div className="h-4 bg-muted-foreground/10 rounded w-1/3"></div>
+                    <div className="space-y-2">
+                        <div className="h-3 bg-muted-foreground/10 rounded w-full"></div>
+                    </div>
+                </div>
+            );
+        }
+        return <CurriculumPlannerCard payload={curriculumPlannerData} />;
     }
 
     if (language === 'interactive-quiz') {
@@ -1255,13 +1278,9 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
     }, [onNavigate]);
 
     const isInteractiveLesson = useMemo(() => {
-        // Only activate for Ater-generated atomic notes:
-        // Must have both a Mental Model section AND an interactive-quiz block,
-        // or be explicitly flagged with noteMode EDUCATION.
-        const hasAtomicStructure =
-            content.includes('## Mental Model') &&
-            content.includes('```interactive-quiz')
-        return hasAtomicStructure || noteMode === 'EDUCATION'
+        // Atomic notes should render as normal notes. Only the explicit
+        // interactive-lesson format uses the bespoke React lesson renderer.
+        return content.includes('```interactive-lesson') || noteMode === 'EDUCATION'
     }, [content, noteMode]);
 
     const handleNavigate = useCallback((pageName: string) => {

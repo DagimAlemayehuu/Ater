@@ -26,6 +26,14 @@ from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 
+try:
+    from ddgs import DDGS
+except ImportError:
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        DDGS = None
+
 from src.api.deps import AppSecrets
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.factory import ModelFactory
@@ -198,6 +206,7 @@ class TriggerNotificationInput(BaseModel):
 
 class GetSrsCardsInput(BaseModel):
     hub_id: Optional[str] = Field(default=None, description="Filter due cards by hub name. Leave empty for all cards.")
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'cards'.")
 
 class OverrideSrsStabilityInput(BaseModel):
     note_path: str = Field(description="Relative vault path to the note whose FSRS stability should be overridden.")
@@ -205,13 +214,27 @@ class OverrideSrsStabilityInput(BaseModel):
 
 class GetStudyHistoryInput(BaseModel):
     limit: int = Field(default=10, description="Max number of recent sessions to return.")
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'history'.")
 
 class PomodoroStartInput(BaseModel):
     duration_minutes: int = Field(default=25, description="Focus session duration in minutes (5-60). Default is 25.")
     hub_id: Optional[str] = Field(default=None, description="Study hub to focus on during the session.")
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'pomodoro'.")
 
 class PomodoroSetHubInput(BaseModel):
     hub_id: str = Field(description="Study hub name to set as the current focus target.")
+
+class PausePomodoroInput(BaseModel):
+    dummy: str = Field(description="Dummy parameter to satisfy Groq. Must be 'pomodoro'.")
+
+class StopPomodoroInput(BaseModel):
+    dummy: str = Field(description="Dummy parameter to satisfy Groq. Must be 'pomodoro'.")
+
+class GetFocusHudInput(BaseModel):
+    dummy: str = Field(description="Dummy parameter to satisfy Groq. Must be 'hud'.")
+
+class GetAcademicCalendarInput(BaseModel):
+    dummy: str = Field(description="Dummy parameter to satisfy Groq. Must be 'calendar'.")
 
 class RenderUIInput(BaseModel):
     ui_type: str = Field(
@@ -236,9 +259,10 @@ class GetVaultStatsInput(BaseModel):
         default=None,
         description="Filter to get count only for a specific category (e.g., 'atomic_notes', 'hubs', 'pdfs', 'courses', 'exams', 'assignments', 'semesters', 'years', 'total_notes'). If provided, the tool returns a simple text statement of the count instead of rendering the dashboard grid UI."
     )
+    dummy: str = Field(description="Dummy parameter to satisfy Groq. Must be 'stats'.")
 
 class ListHubsInput(BaseModel):
-    pass  # No params needed
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'hubs'.")
 
 class GetHubNotesInput(BaseModel):
     hub_id: str = Field(description="Name or ID of the study hub (e.g., '1_Understanding_International_Relations_Hub' or '1 Understanding International Relations Hub').")
@@ -251,17 +275,17 @@ class DeleteNoteInput(BaseModel):
     path: str = Field(description="Relative vault path to the note to delete.")
 
 class GetInboxFilesInput(BaseModel):
-    pass
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'inbox'.")
 
 class GetQueueStatusInput(BaseModel):
-    pass
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'status'.")
 
 class ToggleAutoDeployInput(BaseModel):
     state: bool = Field(description="True to enable auto-deploy, False to disable.")
 
 
 class GetAppConfigInput(BaseModel):
-    pass
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'config'.")
 
 
 class UpdateAppConfigInput(BaseModel):
@@ -275,10 +299,10 @@ class UpdateAppConfigInput(BaseModel):
     )
 
 class FactoryResetInput(BaseModel):
-    pass
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'reset'.")
 
 class ClearStudyHistoryInput(BaseModel):
-    pass
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'history'.")
 
 class ValidateFeynmanExplanationInput(BaseModel):
     note_path: str = Field(description="Relative vault path to the note being explained.")
@@ -301,7 +325,7 @@ class GradeExamInput(BaseModel):
     student_answers: Dict[str, Any] = Field(description="A dictionary mapping question IDs to the student's answers, e.g. {'eq_1': 'A', 'eq_2': 'True', 'eq_3': 'Written response...'.}")
 
 class GetGeneratedFilesInput(BaseModel):
-    pass
+    dummy: str = Field(description="Dummy parameter to satisfy Groq requirements. Must be 'files'.")
 
 class GenerateSummaryInput(BaseModel):
     target_id: str = Field(description="Name/ID of the study hub or relative vault path to the atomic note to summarize.")
@@ -335,6 +359,11 @@ class NotebookLMStudioCreateInput(BaseModel):
     notebook_id: str = Field(description="UUID of the Google NotebookLM notebook.")
     artifact_type: str = Field(description="Type of studio artifact to generate: 'audio', 'video', 'report', 'quiz', 'flashcards', 'mind_map', 'slide_deck', 'infographic', 'data_table'.")
     options: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Optional parameters for generation: audio_format, audio_length, question_count, difficulty, report_format, custom_prompt, focus_prompt, etc.")
+
+
+class SearchWebInput(BaseModel):
+    query: str = Field(description="The search query to look up on the web (e.g. 'recent news on Python 3.12 release date').")
+
 
 
 def get_fallback_display_name() -> str:
@@ -593,6 +622,45 @@ class AterAssistant:
 
         # Return rich search navigator UI
         return self.render_ui("search_navigator", {"query": query, "results": matches})
+
+    def search_web(self, query: str) -> str:
+        """
+        Search the internet using DuckDuckGo. Falls back to local search if offline.
+        """
+        logger.info(f"search_web called with query: '{query}'")
+        
+        # 1. Fallback if DDGS is not available
+        if DDGS is None:
+            local_res = self._fallback_local_search(query)
+            return f"*(Offline: falling back to local vault RAG)*\n\n{local_res}"
+            
+        try:
+            # Query DuckDuckGo text search
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=5))
+                
+            if not results:
+                return f"No search results found on the web for: '{query}'."
+                
+            formatted = [f"### Web Search Results for: \"{query}\"\n"]
+            for idx, r in enumerate(results, 1):
+                title = r.get("title", "No Title")
+                url = r.get("href", "#")
+                snippet = r.get("body", "")
+                formatted.append(f"{idx}. **[{title}]({url})**\n   {snippet}\n")
+                
+            return "\n".join(formatted)
+            
+        except Exception as e:
+            logger.warning(f"search_web failed, falling back to local search: {e}")
+            local_res = self._fallback_local_search(query)
+            return f"*(Offline: falling back to local vault RAG)*\n\n{local_res}"
+
+    def _fallback_local_search(self, query: str) -> str:
+        local_results = self.search_notes_fulltext(query)
+        if "No notes matched" in local_results:
+            return f"No results found in your local Obsidian Vault for: '{query}'."
+        return local_results
 
     def search_notes_by_tag(self, tag: str) -> str:
         if not self.vault_path:
@@ -1944,6 +2012,10 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
 
     def get_tools(self) -> List[StructuredTool]:
         return [
+            # Web Search
+            StructuredTool.from_function(name="search_web", func=self.search_web,
+                description="Search the web (internet) using DuckDuckGo for general knowledge, recent facts, or queries outside the local vault.",
+                args_schema=SearchWebInput),
             # Vault
             StructuredTool.from_function(name="search_notes_fulltext", func=self.search_notes_fulltext,
                 description="Search vault notes for keywords. Returns matching files. Always call render_ui after with the results.",
@@ -2017,19 +2089,19 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
                 args_schema=PomodoroStartInput),
             StructuredTool.from_function(name="pause_pomodoro", func=self.pause_pomodoro,
                 description="Pause or resume the Pomodoro timer.",
-                args_schema=BaseModel),
+                args_schema=PausePomodoroInput),
             StructuredTool.from_function(name="stop_pomodoro", func=self.stop_pomodoro,
                 description="Stop and reset the Pomodoro timer.",
-                args_schema=BaseModel),
+                args_schema=StopPomodoroInput),
             StructuredTool.from_function(name="set_pomodoro_hub", func=self.set_pomodoro_hub,
                 description="Set the study hub for the current Pomodoro session.",
                 args_schema=PomodoroSetHubInput),
             StructuredTool.from_function(name="get_focus_hud", func=self.get_focus_hud,
                 description="Show the interactive Pomodoro Focus HUD for timer control.",
-                args_schema=BaseModel),
+                args_schema=GetFocusHudInput),
             StructuredTool.from_function(name="get_academic_calendar", func=self.get_academic_calendar,
                 description="Show the academic calendar bar with upcoming exams and assignments.",
-                args_schema=BaseModel),
+                args_schema=GetAcademicCalendarInput),
             # Navigation
             StructuredTool.from_function(name="navigate_to_route", func=self.navigate_to_route,
                 description=(
@@ -2111,6 +2183,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
     async def execute_tool(self, name: str, args: dict) -> str:
         try:
             dispatch = {
+                "search_web": lambda: self.search_web(**args),
                 "search_notes_fulltext": lambda: self.search_notes_fulltext(**args),
                 "search_notes_by_tag": lambda: self.search_notes_by_tag(**args),
                 "read_note": lambda: self.read_note(**args),
@@ -2177,6 +2250,7 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
 
 def get_tool_status_message(name: str, args: dict) -> str:
     msgs = {
+        "search_web": lambda: f"Searching the web for '{args.get('query', '')}'...",
         "search_notes_fulltext": lambda: f"Searching vault for '{args.get('query', '')}'...",
         "search_notes_by_tag": lambda: f"Finding notes tagged #{args.get('tag', '')}...",
         "read_note": lambda: f"Reading '{args.get('path', '')}'...",
@@ -2307,13 +2381,14 @@ _LESSON_TRIGGER_PATTERNS = re.compile(
 
 
 def _is_lesson_request(messages_history: List[Dict[str, Any]]) -> tuple[bool, str]:
-    """Return (is_lesson, topic) based on the last user message."""
-    for msg in reversed(messages_history):
+    """Return (is_lesson, topic) based on whether any user message in history is a lesson request."""
+    for msg in messages_history:
         if msg.get("role") == "user":
             text = msg.get("content", "")
+            if text.strip().lower() in ["confirm", "proceed", "yes", "y", "ok", "start", "proceed with lesson", "start lesson"]:
+                continue
             if _LESSON_TRIGGER_PATTERNS.search(text):
                 return True, text.strip()
-            return False, ""
     return False, ""
 
 
@@ -2589,7 +2664,8 @@ async def run_assistant_chat(
     messages_history: List[Dict[str, Any]],
     rag_context: Optional[str] = None,
     user_context: Optional[Dict[str, Any]] = None,
-    active_artifact: Optional[Dict[str, Any]] = None
+    active_artifact: Optional[Dict[str, Any]] = None,
+    request: Optional[Any] = None
 ):
     """
     Ater agent loop. Yields SSE events:
@@ -2680,11 +2756,14 @@ async def run_assistant_chat(
         )
 
     # Perform substitutions
+    import datetime
+    current_time_str = datetime.datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+
     program_info_str = f" They are enrolled in: {program_info}.\n" if program_info else "\n"
     active_hub_str = f"- Current focus hub: {to_underscore_title_case(user_context.get('active_hub'))}\n" if user_context and user_context.get("active_hub") else ""
     rag_context_str = f"\n<rag_context>\n{rag_context}\n</rag_context>\n" if rag_context else ""
 
-    sys_prompt = template
+    sys_prompt = f"=== CURRENT ENVIRONMENT TIME ===\n- Current date/time: {current_time_str}\n\n" + template
     sys_prompt = sys_prompt.replace("{{user_identity}}", user_identity)
     sys_prompt = sys_prompt.replace("{{program_info}}", program_info_str)
     sys_prompt = sys_prompt.replace("{{top_level_folders}}", ', '.join(sorted(top_level_folders)) if top_level_folders else 'None found')
@@ -2720,11 +2799,36 @@ async def run_assistant_chat(
     # Detect if this is a "teach me" style lesson request
     _lesson_mode, _lesson_topic = _is_lesson_request(messages_history)
 
-    # ── Agentic loop ───────────────────────────────────────────────────────
-    # For lesson requests, bypass tool-binding entirely.
-    # Small models (e.g. Llama 17B) fail when generating large structured
-    # outputs while tools are bound — they attempt tool calls incorrectly.
-    _active_llm = assistant.llm if _lesson_mode else llm_with_tools
+    if _lesson_mode:
+        from src.domains.teacher.service import TeacherService
+        from src.domains.teacher.router import _register_lesson_preview
+        
+        teacher_service = TeacherService(Path(secrets.vault_path))
+        try:
+            async for event in teacher_service.chat(history=messages_history, secrets=secrets):
+                if event.get("type") == "lesson_created":
+                    token = _register_lesson_preview(Path(secrets.vault_path), Path(event["absolute_lesson_path"]))
+                    if request:
+                        try:
+                            preview_url = str(request.url_for("teacher_lesson", token=token))
+                        except Exception:
+                            preview_url = f"/api/teacher/lesson/{token}"
+                    else:
+                        preview_url = f"/api/teacher/lesson/{token}"
+                    
+                    event = {
+                        **event,
+                        "preview_url": preview_url
+                    }
+                    event.pop("absolute_lesson_path", None)
+                yield f"data: {json.dumps(event)}\n\n"
+            return
+        except Exception as e:
+            logger.error(f"[Assistant Lesson Stream] Teacher Service error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            return
+
+    _active_llm = llm_with_tools
 
     for _ in range(8):
         accumulated_chunks = []
@@ -2758,13 +2862,35 @@ async def run_assistant_chat(
                 response = response + c
 
         except Exception as stream_err:
-            logger.warning(f"Streaming failed, falling back to invoke: {stream_err}")
-            try:
-                response = await _active_llm.ainvoke(formatted_messages)
-            except Exception as invoke_err:
-                logger.error(f"[Ater] invoke failed: {invoke_err}", exc_info=True)
-                yield f"data: {json.dumps({'type': 'error', 'message': str(invoke_err)})}\n\n"
-                return
+            logger.warning(f"Streaming failed, checking fallback: {stream_err}")
+            err_str = str(stream_err)
+            is_tool_error = "Failed to call a function" in err_str or "tool_use_failed" in err_str or "400" in err_str
+            
+            if is_tool_error:
+                logger.warning("[Ater] Stream failed on tool-bound LLM. Falling back to raw LLM without tools directly.")
+                try:
+                    response = await assistant.llm.ainvoke(formatted_messages)
+                except Exception as raw_err:
+                    logger.error(f"[Ater] raw LLM invoke failed: {raw_err}", exc_info=True)
+                    yield f"data: {json.dumps({'type': 'error', 'message': str(raw_err)})}\n\n"
+                    return
+            else:
+                try:
+                    response = await _active_llm.ainvoke(formatted_messages)
+                except Exception as invoke_err:
+                    invoke_err_str = str(invoke_err)
+                    if "Failed to call a function" in invoke_err_str or "tool_use_failed" in invoke_err_str or "400" in invoke_err_str:
+                        logger.warning(f"[Ater] invoke failed on tool-bound LLM. Falling back to raw LLM without tools: {invoke_err}")
+                        try:
+                            response = await assistant.llm.ainvoke(formatted_messages)
+                        except Exception as raw_err:
+                            logger.error(f"[Ater] raw LLM invoke failed: {raw_err}", exc_info=True)
+                            yield f"data: {json.dumps({'type': 'error', 'message': str(raw_err)})}\n\n"
+                            return
+                    else:
+                        logger.error(f"[Ater] invoke failed: {invoke_err}", exc_info=True)
+                        yield f"data: {json.dumps({'type': 'error', 'message': str(invoke_err)})}\n\n"
+                        return
             if not (hasattr(response, "tool_calls") and response.tool_calls):
                 content = response.content or ""
                 if _lesson_mode:

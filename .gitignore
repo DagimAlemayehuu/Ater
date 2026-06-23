@@ -1,86 +1,81 @@
-# Node
+# Dependencies
 node_modules/
-**/node_modules/
-dist/
-**/dist/
-.next/
-**/.next/
-.turbo/
-**/.turbo/
-
-# pnpm
 .pnpm-store/
+.yarn/
+jspm_packages/
+web_modules/
 
-# Python
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
+# Build & Output
 dist/
+dist-ssr/
 build/
-*.spec
-!apps/api/ater-api.spec
+out/
+.next/
+.turbo/
+target/
 
-# Rust / Tauri
-apps/desktop/src-tauri/target/
-*.rs.bk
-
-# Environment
-.env
-.env.local
-.env.production
-
-# OS
+# Cache & Temporary files
+.turbo
+.pytest_cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.pnp
+.pnp.*
+.yarn-integrity
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 .DS_Store
 Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# IDE
+# IDE & Editor files
 .vscode/
+!.vscode/extensions.json
 .idea/
-*.swp
-*.swo
+*.sublime-project
+*.sublime-workspace
 
-# Logs
-*.log
-logs/
+# Env & Configuration Files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
 
-# Tauri
-apps/desktop/src-tauri/target/
-apps/desktop/src-tauri/binaries/
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+.python-version
 
-# Build
-dist/
-build/
-apps/api/dist/
-apps/api/build/
-
-# Scratch
-scratch/
-
-# Ater Volatile
-Obsidian_Vault/5-Pdf Store/ater_queue.db
-apps/api/mock_inbox/
-Vault_Test/
-Obsidian_Vault/
-
-# Local Databases
-*.db
-*.db-journal
-*.db-wal
+# Local SQLite databases/journals (from tests or runs)
 *.db-shm
+*.db-wal
 
-# Tauri sidecar binaries
-apps/desktop/src-tauri/ater-api-*
-
-# Large PDFs, screenshots, and local scripts
-Test/**/*.pdf
-*.png
-/scripts/
-
-# Antigravity Session Symlinks
+# Antigravity/Gemini local session logs & state
 .active_artifacts
 .active_chat_history
 .all_sessions
+.antigravitycli/
+.system/
+
+# Personal screenshot or temp files
+CleanShot *.png
+CleanShot*.png
+scratch/
+mock_inbox/
+apps/api/mock_inbox/

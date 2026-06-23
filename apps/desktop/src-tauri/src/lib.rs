@@ -264,6 +264,7 @@ pub fn run() {
                 locked_features: std::sync::Mutex::new(Vec::new()),
                 sidecar_pid: Arc::clone(&sidecar_pid),
                 sidecar_token: sidecar_token.clone(),
+                watcher: std::sync::Mutex::new(None),
             });
             let mut port = 8765;
             let mut should_spawn = true;
@@ -586,7 +587,9 @@ pub fn run() {
             commands::update_vault_path,
             commands::get_sidecar_token,
             commands::silo_test,
-            commands::log_from_js
+            commands::log_from_js,
+            commands::start_watching_directory,
+            commands::stop_watching_directory
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

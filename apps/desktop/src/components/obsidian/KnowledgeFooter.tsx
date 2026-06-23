@@ -38,11 +38,11 @@ export const KnowledgeFooter = React.memo(({
   // Find current index with robust matching
   const currentIndex = useMemo(() => {
     if (!activePath || typeof activePath !== 'string') return -1;
-    const activeNoteName = activePath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '';
+    const activeNoteName = activePath.split(/[/\\]/).pop()?.replace('.md', '').replace('.html', '').replace('.pdf', '') || '';
     
     return flattened.findIndex(n => {
       if (!n.target) return false;
-      const targetName = n.target.split(/[/\\]/).pop()?.replace('.md', '') || n.target;
+      const targetName = n.target.split(/[/\\]/).pop()?.replace('.md', '').replace('.html', '') || n.target;
       return targetName === activeNoteName || n.target === activePath;
     });
   }, [flattened, activePath]);
@@ -51,7 +51,7 @@ export const KnowledgeFooter = React.memo(({
   const nextNode = currentIndex < flattened.length - 1 && currentIndex !== -1 ? flattened[currentIndex + 1] : null;
 
   const isHub = typeof activePath === 'string' && activePath.toLowerCase().includes('_hub.md');
-  const hubId = typeof activePath === 'string' ? activePath.split(/[/\\]/).pop()?.replace('.md', '') : '';
+  const hubId = typeof activePath === 'string' ? activePath.split(/[/\\]/).pop()?.replace('.md', '').replace('.html', '') : '';
 
   if (!activePath) return null;
 

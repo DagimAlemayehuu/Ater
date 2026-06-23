@@ -253,6 +253,124 @@ async def ater_confirm_plan(
         error_details = traceback.format_exc()
         raise HTTPException(status_code=500, detail=f"Ater Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
 
+@router.post("/ater/curriculum/plan")
+async def ater_curriculum_plan(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    concept = payload.get("concept")
+    target_hub_id = payload.get("target_hub_id")
+    if not concept:
+        raise HTTPException(status_code=400, detail="concept is required")
+    
+    try:
+        service = AterService(secrets)
+        search_context = ""
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                results = list(ddgs.text(concept, max_results=3))
+            if results:
+                search_context = "\n".join([r.get("body", "") for r in results])
+        except Exception as e:
+            logger.warning(f"DuckDuckGo search failed for curriculum: {e}")
+            
+        ai_key = secrets.planner_key or secrets.ai_key
+        if not ai_key:
+            raise HTTPException(status_code=400, detail="AI API Key is required")
+            
+        provider = secrets.planner_provider or secrets.ai_provider or "google"
+        model = secrets.planner_model or secrets.ai_model or "gemini-2.0-flash"
+        
+        llm = service._build_model(provider, model, ai_key, temperature=0.2)
+        
+        sys_prompt = """You are an elite academic curriculum architect.
+Your task is to design a logical, progressive curriculum (syllabus) for a given study concept.
+You must return your output strictly in JSON format matching the schema below. No other text, no markdown block wrappers around the JSON, just the JSON string.
+
+Schema:
+{
+  "course": "Course code and title (e.g. CS 301: ColBERT Retrieval Systems)",
+  "unit": "Unit number/name (e.g. 1)",
+  "semester": "Semester term (e.g. Semester V)",
+  "hub_title": "Clean hub title for Obsidian (e.g. ColBERT Systems)",
+  "atomic_notes": [
+    {
+      "title": "Name of the note (e.g. ColBERT Introduction)",
+      "summary": "Brief 1-2 sentence description of what the note will cover."
+    }
+  ]
+}
+"""
+        user_prompt = f"Design a curriculum for the concept: '{concept}'\n\nWeb Search Reference:\n{search_context}"
+        
+        res = await llm.ainvoke([("system", sys_prompt), ("human", user_prompt)])
+        json_text = res.content.strip()
+        if json_text.startswith("```"):
+            lines = json_text.splitlines()
+            if lines[0].startswith("```json") or lines[0].startswith("```"):
+                json_text = "\n".join(lines[1:-1]).strip()
+                
+        curriculum_data = json.loads(json_text)
+        return {"status": "success", "concept": concept, "curriculum": curriculum_data}
+    except Exception as e:
+        error_details = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Curriculum planning failed: {str(e)}\n\nTraceback:\n{error_details}")
+
+@router.post("/ater/curriculum/confirm")
+async def ater_curriculum_confirm(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    concept = payload.get("concept")
+    curriculum = payload.get("curriculum")
+    target_hub_id = payload.get("target_hub_id")
+    
+    if not curriculum:
+        raise HTTPException(status_code=400, detail="curriculum is required")
+        
+    try:
+        service = AterService(secrets)
+        session_id = f"text_{uuid.uuid4()}"
+        
+        session_metadata = {
+            "course": curriculum.get("course", "General Knowledge"),
+            "unit": str(curriculum.get("unit", "1")),
+            "semester": curriculum.get("semester", "General"),
+            "hub_title": curriculum.get("hub_title", "Concept Hub"),
+            "atomic_notes": [
+                {
+                    "title": n["title"],
+                    "description": n["summary"],
+                    "source_context": f"Concept explanation: {n['summary']}",
+                    "concept_modality": "Qualitative/Definitional",
+                    "mode": "Definitional"
+                } for n in curriculum.get("atomic_notes", [])
+            ],
+            "batches": [
+                {
+                    "id": i // 3 + 1,
+                    "type": "atomic",
+                    "notes": [n["title"] for n in curriculum.get("atomic_notes", [])[i:i+3]]
+                } for i in range(0, len(curriculum.get("atomic_notes", [])), 3)
+            ]
+        }
+        
+        session_data = {
+            "path": "",
+            "metadata": session_metadata,
+            "current_batch": 0,
+            "total_batches": len(session_metadata["batches"]),
+            "target_hub": None
+        }
+        service._persist_session(session_id, session_data)
+        
+        results = await service.run_full_cascade(session_id)
+        return {"status": "success", "session_id": session_id, "results": results}
+    except Exception as e:
+        error_details = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Curriculum confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
+
 @router.get("/ater/paused-sessions")
 async def ater_get_paused_sessions(
     secrets: AppSecrets = Depends(get_app_secrets)

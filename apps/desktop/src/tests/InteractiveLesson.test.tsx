@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InteractiveLessonPlayer from '../components/obsidian/InteractiveLessonPlayer';
-import { AterMarkdown } from '../components/obsidian/MarkdownViewer';
+import { AterMarkdown, MarkdownViewer } from '../components/obsidian/MarkdownViewer';
 
 describe('InteractiveLessonPlayer Component', () => {
   const mockPayload = {
@@ -88,5 +88,53 @@ describe('MarkdownViewer code block registration', () => {
     expect(screen.getByText('Markdown Solving Lesson')).toBeInTheDocument();
     expect(screen.getByText('Step 1')).toBeInTheDocument();
     expect(screen.getByText('Perform the first step.')).toBeInTheDocument();
+  });
+
+  it('renders atomic notes as normal markdown instead of the special lesson renderer', () => {
+    const atomicNote = `---
+title: What Is Git?
+type: Atomic Note
+---
+
+## Mental Model
+
+Git is a durable project history model.
+
+## How It Works
+
+Git stores commits and links them through parents.
+
+## Formal Model
+
+The repository is a directed acyclic graph.
+
+## The Proving Grounds
+
+\`\`\`interactive-quiz
+[
+  {
+    "id": "q1",
+    "type": "multiple-choice",
+    "difficulty": "L1",
+    "question": "What does Git store?",
+    "options": ["Commits", "Only folders"],
+    "answer": "Commits",
+    "explanation": "Git stores commit objects."
+  }
+]
+\`\`\`
+`;
+
+    render(
+      <MemoryRouter>
+        <MarkdownViewer content={atomicNote} path="Lessons/git/lessons/0001-what-is-git.md" />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Mental Model')).toBeInTheDocument();
+    expect(screen.getByText('How It Works')).toBeInTheDocument();
+    expect(screen.getByText('Formal Model')).toBeInTheDocument();
+    expect(screen.getByText('Git is a durable project history model.')).toBeInTheDocument();
+    expect(screen.queryByText(/Start Final Practice/i)).not.toBeInTheDocument();
   });
 });

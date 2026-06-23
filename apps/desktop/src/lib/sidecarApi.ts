@@ -1464,7 +1464,7 @@ export const sidecarApi = {
         }
     },
  
-    explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string; userAnswer?: string }) => {
+    explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string; userAnswer?: string; is_correct?: boolean; note_path?: string }) => {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
@@ -1476,6 +1476,121 @@ export const sidecarApi = {
             return await invoke<any>('explain_question', { payload })
         } catch (err) {
             console.error('[Tauri Native RAG] explainQuestion failed:', err)
+            throw err
+        }
+    },
+    planCurriculum: async (payload: { concept: string; target_hub_id?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        if (await isDemoActive()) {
+            return {
+                status: 'success',
+                concept: payload.concept,
+                curriculum: {
+                    course: 'CS 301: ColBERT Retrieval Systems',
+                    unit: '1',
+                    semester: 'Semester V',
+                    hub_title: 'ColBERT Systems',
+                    atomic_notes: [
+                        { title: 'ColBERT Introduction', summary: 'Understand the late interaction paradigm.' },
+                        { title: 'MaxSim Operator', summary: 'Learn how token-level dot-product vectors are aligned.' },
+                        { title: 'Index Compression with PLA', summary: 'Compress embeddings using residual vector quantization.' }
+                    ]
+                }
+            }
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/curriculum/plan`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to plan curriculum (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] planCurriculum failed:', err);
+            throw err;
+        }
+    },
+    confirmCurriculum: async (payload: { concept: string; curriculum: any; target_hub_id?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        if (await isDemoActive()) {
+            return {
+                status: 'success',
+                notes_created: ['ColBERT Introduction.md', 'MaxSim Operator.md', 'Index Compression with PLA.md']
+            }
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/curriculum/confirm`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to confirm curriculum (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] confirmCurriculum failed:', err);
+            throw err;
+        }
+    },
+    startWatchingDirectory: async (path: string) => {
+        try {
+            await invoke('start_watching_directory', { path })
+        } catch (err) {
+            console.error('[Tauri Native RAG] startWatchingDirectory failed:', err)
+            throw err
+        }
+    },
+    stopWatchingDirectory: async () => {
+        try {
+            await invoke('stop_watching_directory')
+        } catch (err) {
+            console.error('[Tauri Native RAG] stopWatchingDirectory failed:', err)
             throw err
         }
     },

@@ -5,7 +5,7 @@ import logging
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request
 from fastapi.responses import StreamingResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
@@ -118,6 +118,7 @@ async def test_ai_connection(
 
 @router.post("/ater/assistant/chat")
 async def assistant_chat(
+    request: Request,
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
@@ -135,7 +136,7 @@ async def assistant_chat(
         
     async def sse_generator():
         try:
-            async for event in run_assistant_chat(secrets, messages_history, rag_context, user_context, active_artifact):
+            async for event in run_assistant_chat(secrets, messages_history, rag_context, user_context, active_artifact, request=request):
                 yield event
         except Exception as e:
             logger.error(f"[Assistant Stream] Generator error: {e}", exc_info=True)
@@ -202,6 +203,10 @@ Your lesson MUST follow this strict structure:
 
 Format your response in flawless, readable Markdown. Use headers, bullet points, blockquotes, and bold text effectively to organize information."""
 
+        is_correct = payload.get("is_correct", True)
+        if not is_correct:
+            sys_prompt += "\n\nAdditionally, at the very end of your response, you MUST append a line:\n---MISCONCEPTION---\nfollowed by a 1-sentence summary of the student's specific misconception, starting with a bolded category prefix. For example:\n---MISCONCEPTION---\n**Incorrect Model**: Confused late interaction MaxSim token alignment with standard cross-encoder scoring."
+
         human_prompt = f"""Quiz Question: {question}
 
 Question Type: {q_type}
@@ -213,7 +218,24 @@ Correct Answer: {answer}
 Generate the mini-lesson now."""
 
         res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
-        return {"lesson": res.content}
+        lesson_content = res.content
+        
+        misconception = None
+        if "---MISCONCEPTION---" in lesson_content:
+            parts = lesson_content.split("---MISCONCEPTION---")
+            lesson_content = parts[0].strip()
+            misconception = parts[1].strip()
+
+        note_path = payload.get("note_path")
+        if misconception and note_path and secrets.vault_path:
+            try:
+                from src.domains.ater.service import AterService
+                service = AterService(secrets)
+                service.append_misconception_to_note(note_path, misconception)
+            except Exception as ex:
+                logger.error(f"Failed to append misconception to note: {ex}")
+
+        return {"lesson": lesson_content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

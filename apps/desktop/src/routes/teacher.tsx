@@ -39,6 +39,36 @@ export default function Teacher() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const [panelWidth, setPanelWidth] = useState(520)
+  const [isResizing, setIsResizing] = useState(false)
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return
+      const newWidth = Math.max(380, Math.min(window.innerWidth * 0.7, window.innerWidth - e.clientX))
+      setPanelWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing])
+
   useEffect(() => {
     localStorage.setItem('ater_teacher_chat_history', JSON.stringify(messages))
   }, [messages])
@@ -60,11 +90,13 @@ export default function Teacher() {
     toast.success('Teacher history cleared.')
   }
 
-  const handleSend = async () => {
-    const text = input.trim()
+  const handleSend = async (customText?: string) => {
+    const text = (customText ?? input).trim()
     if (!text || isLoading) return
 
-    setInput('')
+    if (!customText) {
+      setInput('')
+    }
     const nextMessages = [...messages, { role: 'user' as const, content: text }]
     setMessages(nextMessages)
     setIsLoading(true)
@@ -165,23 +197,42 @@ export default function Teacher() {
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-8">
-              {messages.map((message, index) => (
-                <div key={index} className={cn('flex w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  {message.role === 'user' ? (
-                    <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">
-                      {message.content}
-                    </div>
-                  ) : (
-                    message.content && (
-                      <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <AterMarkdown content={message.content} />
-                        </div>
+              {messages.map((message, index) => {
+                const isLastMessage = index === messages.length - 1
+                const hasRoadmap = message.content.includes('```mermaid') || message.content.includes('graph TD') || message.content.includes('graph LR')
+                const showStartButton = message.role === 'assistant' && isLastMessage && hasRoadmap
+
+                return (
+                  <div key={index} className={cn('flex w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                    {message.role === 'user' ? (
+                      <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">
+                        {message.content}
                       </div>
-                    )
-                  )}
-                </div>
-              ))}
+                    ) : (
+                      message.content && (
+                        <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto flex flex-col gap-4">
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <AterMarkdown content={message.content} />
+                          </div>
+                          {showStartButton && (
+                            <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleSend('Start Lesson')}
+                                disabled={isLoading}
+                                className="h-9 px-5 bg-foreground text-background font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                              >
+                                <BookOpenCheck size={12} />
+                                Start Lesson
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )
+              })}
               {isLoading && (
                 <div className="flex justify-start w-full animate-pulse">
                   <div className="border border-border bg-bento-card px-5 py-4 rounded-[12px] flex items-center gap-3">
@@ -220,7 +271,7 @@ export default function Teacher() {
               <button
                 type="button"
                 aria-label="Send"
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={isLoading || !input.trim()}
                 className={cn(
                   'h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150',
@@ -237,7 +288,18 @@ export default function Teacher() {
       </div>
 
       {preview && panelOpen && (
-        <aside className="w-[44%] min-w-[420px] max-w-[760px] border-l border-border/40 bg-bento-bg flex flex-col">
+        <aside 
+          style={{ width: `${panelWidth}px` }}
+          className="relative min-w-[380px] max-w-[70%] border-l border-border/40 bg-bento-bg flex flex-col shrink-0 select-none"
+        >
+          {/* Resize Handle */}
+          <div
+            className={cn(
+              "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-foreground/20 transition-colors",
+              isResizing ? "bg-foreground w-1" : "bg-transparent"
+            )}
+            onMouseDown={startResizing}
+          />
           <div className="h-12 shrink-0 border-b border-border/40 px-4 flex items-center justify-between">
             <div className="min-w-0">
               <p className="truncate text-[11px] font-black uppercase tracking-widest text-foreground">{preview.title}</p>
@@ -257,6 +319,7 @@ export default function Teacher() {
             src={preview.previewUrl}
             sandbox="allow-scripts allow-forms"
             className="flex-1 w-full bg-background"
+            style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
           />
         </aside>
       )}

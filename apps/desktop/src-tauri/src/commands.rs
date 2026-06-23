@@ -68,6 +68,7 @@ pub struct AppState {
     pub locked_features: Mutex<Vec<String>>,
     pub sidecar_pid: std::sync::Arc<Mutex<Option<u32>>>,
     pub sidecar_token: String,
+    pub watcher: Mutex<Option<notify::RecommendedWatcher>>,
 }
 
 fn find_model_dir(app_handle: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -2496,6 +2497,9 @@ fn get_ater_dir_from_config(app_handle: &tauri::AppHandle) -> Result<std::path::
 }
 
 fn terminate_sidecar_and_watchers(state: &AppState) {
+    if let Ok(mut watcher_guard) = state.watcher.lock() {
+        *watcher_guard = None;
+    }
     if let Ok(mut pid_guard) = state.sidecar_pid.lock() {
         if let Some(pid) = *pid_guard {
             println!("[Sidecar Management] Terminating FastAPI sidecar PID: {}", pid);
@@ -4230,6 +4234,77 @@ pub fn silo_test() -> Result<String, String> {
 #[tauri::command]
 pub fn log_from_js(msg: String) {
     println!("[JS Webview Log] {}", msg);
+}
+
+#[tauri::command]
+pub async fn start_watching_directory(
+    directory_path: String,
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<String, String> {
+    use notify::{Watcher, RecursiveMode, Event};
+    use std::path::Path;
+    use tauri::Emitter;
+
+    // 1. Stop any existing watcher
+    {
+        if let Ok(mut watcher_guard) = state.watcher.lock() {
+            *watcher_guard = None;
+        }
+    }
+
+    let app_handle_clone = app_handle.clone();
+    let dir_path_buf = Path::new(&directory_path).to_path_buf();
+
+    // 2. Create the recommended watcher
+    let mut watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
+        match res {
+            Ok(event) => {
+                for path in event.paths {
+                    if path.extension().map_or(false, |ext| ext == "md") {
+                        if let Ok(abs_path) = path.canonicalize() {
+                            #[derive(Clone, serde::Serialize)]
+                            struct NoteCreatedPayload {
+                                path: String,
+                            }
+                            let payload = NoteCreatedPayload {
+                                path: abs_path.to_string_lossy().to_string(),
+                            };
+                            let _ = app_handle_clone.emit("note-created", payload);
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("[Watcher] Error: {:?}", e);
+            }
+        }
+    }).map_err(|e| format!("Failed to create watcher: {}", e))?;
+
+    // 3. Watch the directory recursively
+    watcher.watch(&dir_path_buf, RecursiveMode::Recursive)
+        .map_err(|e| format!("Failed to watch path: {}", e))?;
+
+    // 4. Save the watcher in AppState
+    {
+        if let Ok(mut watcher_guard) = state.watcher.lock() {
+            *watcher_guard = Some(watcher);
+        }
+    }
+
+    println!("[Watcher] Started watching directory: {}", directory_path);
+    Ok("Watcher started".to_string())
+}
+
+#[tauri::command]
+pub fn stop_watching_directory(
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    if let Ok(mut watcher_guard) = state.watcher.lock() {
+        *watcher_guard = None;
+    }
+    println!("[Watcher] Stopped watching directory");
+    Ok("Watcher stopped".to_string())
 }
 
 

@@ -18,7 +18,12 @@ import {
   Database,
   Sliders,
   Table,
-  Network
+  Network,
+  Edit,
+  Trash2,
+  Plus,
+  Loader2,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -1671,5 +1676,370 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
         </div>
     );
 };
+
+interface CurriculumPlannerCardProps {
+    payload: {
+        concept: string;
+        curriculum?: {
+            course: string;
+            unit: string;
+            semester: string;
+            hub_title: string;
+            atomic_notes: { title: string; summary: string }[];
+        };
+    };
+}
+
+export function CurriculumPlannerCard({ payload }: CurriculumPlannerCardProps) {
+    const [status, setStatus] = useState<'SEARCHING' | 'PROPOSED' | 'GENERATING' | 'COMPLETED'>(
+        payload.curriculum ? 'PROPOSED' : 'SEARCHING'
+    );
+    const [concept, setConcept] = useState(payload.concept);
+    const [course, setCourse] = useState(payload.curriculum?.course || '');
+    const [unit, setUnit] = useState(payload.curriculum?.unit || '1');
+    const [semester, setSemester] = useState(payload.curriculum?.semester || '');
+    const [hubTitle, setHubTitle] = useState(payload.curriculum?.hub_title || '');
+    const [syllabus, setSyllabus] = useState<{ title: string; summary: string }[]>(
+        payload.curriculum?.atomic_notes || []
+    );
+
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editSummary, setEditSummary] = useState('');
+
+    const [newTitle, setNewTitle] = useState('');
+    const [newSummary, setNewSummary] = useState('');
+    const [showAddForm, setShowAddForm] = useState(false);
+
+    useEffect(() => {
+        if (status === 'SEARCHING') {
+            const planCurriculum = async () => {
+                try {
+                    const res = await sidecarApi.planCurriculum({ concept });
+                    if (res && res.curriculum) {
+                        setCourse(res.curriculum.course || '');
+                        setUnit(res.curriculum.unit || '1');
+                        setSemester(res.curriculum.semester || '');
+                        setHubTitle(res.curriculum.hub_title || '');
+                        setSyllabus(res.curriculum.atomic_notes || []);
+                        setStatus('PROPOSED');
+                    } else {
+                        throw new Error('No curriculum proposed by AI');
+                    }
+                } catch (err: any) {
+                    toast.error(err.message || 'Failed to plan curriculum');
+                    setStatus('PROPOSED');
+                }
+            };
+            planCurriculum();
+        }
+    }, [status, concept]);
+
+    const handleEdit = (index: number) => {
+        setEditingIndex(index);
+        setEditTitle(syllabus[index].title);
+        setEditSummary(syllabus[index].summary);
+    };
+
+    const handleSaveEdit = (index: number) => {
+        if (!editTitle.trim()) {
+            toast.error('Title is required');
+            return;
+        }
+        const updated = [...syllabus];
+        updated[index] = { title: editTitle, summary: editSummary };
+        setSyllabus(updated);
+        setEditingIndex(null);
+    };
+
+    const handleDelete = (index: number) => {
+        const updated = syllabus.filter((_, i) => i !== index);
+        setSyllabus(updated);
+    };
+
+    const handleAddNote = () => {
+        if (!newTitle.trim()) {
+            toast.error('Title is required');
+            return;
+        }
+        setSyllabus([...syllabus, { title: newTitle, summary: newSummary }]);
+        setNewTitle('');
+        setNewSummary('');
+        setShowAddForm(false);
+    };
+
+    const handleConfirm = async () => {
+        if (syllabus.length === 0) {
+            toast.error('Please add at least one note to the curriculum');
+            return;
+        }
+        setStatus('GENERATING');
+        try {
+            const res = await sidecarApi.confirmCurriculum({
+                concept,
+                curriculum: {
+                    course,
+                    unit,
+                    semester,
+                    hub_title: hubTitle,
+                    atomic_notes: syllabus
+                }
+            });
+            if (res.status === 'success') {
+                toast.success('Curriculum generated successfully!');
+                setStatus('COMPLETED');
+            } else {
+                throw new Error('Curriculum confirmation failed');
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to confirm curriculum');
+            setStatus('PROPOSED');
+        }
+    };
+
+    if (status === 'SEARCHING') {
+        return (
+            <div className="p-6 border border-border/40 bg-bento-card my-4 rounded-[12px] flex flex-col items-center justify-center text-center space-y-4 shadow-sm min-h-[200px]">
+                <Loader2 className="animate-spin text-muted-foreground/60" size={32} />
+                <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Analyzing Concept</h3>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">
+                        Searching web & RAG context to plan syllabus...
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (status === 'GENERATING') {
+        return (
+            <div className="p-6 border border-border/40 bg-bento-card my-4 rounded-[12px] flex flex-col items-center justify-center text-center space-y-4 shadow-sm min-h-[200px]">
+                <div className="w-10 h-10 border-2 border-muted/20 border-t-foreground rounded-full animate-spin" />
+                <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Ingesting Knowledge Assets</h3>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1 animate-pulse">
+                        Creating hub note and generating atomic lesson note files...
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (status === 'COMPLETED') {
+        return (
+            <div className="p-6 border border-border/40 bg-bento-card my-4 rounded-[12px] flex flex-col items-center justify-center text-center space-y-4 shadow-sm min-h-[200px]">
+                <div className="p-3 bg-muted/10 border border-border/40 rounded-full text-foreground flex items-center justify-center">
+                    <CheckCircle2 size={32} />
+                </div>
+                <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Syllabus Ingested</h3>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">
+                        All planned notes have been generated in your Obsidian Vault.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 border border-border/40 bg-bento-card my-4 rounded-[12px] space-y-6 shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-border/40 pb-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xs font-black uppercase tracking-widest text-foreground">Curriculum Planner</h3>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-0.5">
+                            Verify and customize note syllabus
+                        </p>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] border-border bg-bento-item text-muted-foreground uppercase font-black tracking-widest rounded-[8px] px-2 py-0.5">
+                        Proposed
+                    </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
+                    <div className="p-2 bg-bento-item border border-border/30 rounded-[8px] flex flex-col gap-0.5">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Course</span>
+                        <input
+                            type="text"
+                            value={course}
+                            onChange={(e) => setCourse(e.target.value)}
+                            className="bg-transparent border-0 p-0 text-[11px] font-bold text-foreground focus:ring-0 focus:outline-none placeholder:text-muted-foreground/20"
+                            placeholder="e.g. CS 301"
+                        />
+                    </div>
+                    <div className="p-2 bg-bento-item border border-border/30 rounded-[8px] flex flex-col gap-0.5">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Unit</span>
+                        <input
+                            type="text"
+                            value={unit}
+                            onChange={(e) => setUnit(e.target.value)}
+                            className="bg-transparent border-0 p-0 text-[11px] font-bold text-foreground focus:ring-0 focus:outline-none placeholder:text-muted-foreground/20"
+                            placeholder="e.g. 1"
+                        />
+                    </div>
+                    <div className="p-2 bg-bento-item border border-border/30 rounded-[8px] flex flex-col gap-0.5">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Semester</span>
+                        <input
+                            type="text"
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            className="bg-transparent border-0 p-0 text-[11px] font-bold text-foreground focus:ring-0 focus:outline-none placeholder:text-muted-foreground/20"
+                            placeholder="e.g. Semester V"
+                        />
+                    </div>
+                    <div className="p-2 bg-bento-item border border-border/30 rounded-[8px] flex flex-col gap-0.5">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Hub Title</span>
+                        <input
+                            type="text"
+                            value={hubTitle}
+                            onChange={(e) => setHubTitle(e.target.value)}
+                            className="bg-transparent border-0 p-0 text-[11px] font-bold text-foreground focus:ring-0 focus:outline-none placeholder:text-muted-foreground/20"
+                            placeholder="e.g. ColBERT"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Planned Notes ({syllabus.length})</span>
+                    {!showAddForm && (
+                        <button
+                            onClick={() => setShowAddForm(true)}
+                            className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground/80 hover:text-foreground transition-colors"
+                        >
+                            <Plus size={10} /> Add Note
+                        </button>
+                    )}
+                </div>
+
+                {showAddForm && (
+                    <div className="p-4 border border-border/40 bg-bento-item/50 rounded-[10px] space-y-3">
+                        <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Note Title</label>
+                            <input
+                                type="text"
+                                value={newTitle}
+                                onChange={(e) => setNewTitle(e.target.value)}
+                                className="w-full p-2 bg-bento-item border border-border/30 rounded-[6px] text-xs font-semibold focus:outline-none focus:border-foreground/30 text-foreground"
+                                placeholder="e.g. ColBERT MaxSim Operation"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Summary / Scope</label>
+                            <textarea
+                                value={newSummary}
+                                onChange={(e) => setNewSummary(e.target.value)}
+                                rows={2}
+                                className="w-full p-2 bg-bento-item border border-border/30 rounded-[6px] text-xs font-semibold focus:outline-none focus:border-foreground/30 text-foreground resize-none"
+                                placeholder="Describe what this note covers..."
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowAddForm(false)}
+                                className="px-3 py-1.5 border border-border bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-bento-item/75 text-muted-foreground"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddNote}
+                                className="px-3 py-1.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-foreground/90"
+                            >
+                                Add Note
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-2">
+                    {syllabus.map((item, idx) => {
+                        const isEditing = editingIndex === idx;
+                        return (
+                            <div key={idx} className="p-4 border border-border/30 bg-bento-item/30 rounded-[10px] hover:bg-bento-item/50 transition-colors">
+                                {isEditing ? (
+                                    <div className="space-y-3">
+                                        <div className="space-y-1">
+                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Note Title</label>
+                                            <input
+                                                type="text"
+                                                value={editTitle}
+                                                onChange={(e) => setEditTitle(e.target.value)}
+                                                className="w-full p-2 bg-bento-item border border-border/30 rounded-[6px] text-xs font-semibold focus:outline-none focus:border-foreground/30 text-foreground"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Summary</label>
+                                            <textarea
+                                                value={editSummary}
+                                                onChange={(e) => setEditSummary(e.target.value)}
+                                                rows={2}
+                                                className="w-full p-2 bg-bento-item border border-border/30 rounded-[6px] text-xs font-semibold focus:outline-none focus:border-foreground/30 text-foreground resize-none"
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => setEditingIndex(null)}
+                                                className="px-3 py-1 bg-bento-item border border-border text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-bento-item/70 text-muted-foreground"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveEdit(idx)}
+                                                className="px-3 py-1 bg-foreground text-background text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-foreground/90"
+                                            >
+                                                Save
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="space-y-1 min-w-0">
+                                            <h4 className="text-xs font-black uppercase tracking-wide text-foreground truncate">{item.title}</h4>
+                                            <p className="text-[10px] text-muted-foreground/80 leading-relaxed font-medium">{item.summary}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                onClick={() => handleEdit(idx)}
+                                                className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
+                                                title="Edit Note"
+                                            >
+                                                <Edit size={12} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(idx)}
+                                                className="p-1 hover:bg-destructive/10 rounded-[6px] text-muted-foreground hover:text-destructive transition-colors"
+                                                title="Delete Note"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {syllabus.length === 0 && (
+                        <div className="text-center py-6 border border-dashed border-border/40 rounded-[12px] bg-bento-item/10 text-muted-foreground/30 text-[9px] font-black uppercase tracking-widest">
+                            No notes planned
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/40 flex justify-end">
+                <Button
+                    onClick={handleConfirm}
+                    disabled={syllabus.length === 0}
+                    className="h-10 px-6 bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest rounded-[8px] hover:bg-primary/90 transition-all flex items-center gap-2"
+                >
+                    <Sparkles size={12} />
+                    Confirm & Ingest
+                </Button>
+            </div>
+        </div>
+    );
+}
 
 

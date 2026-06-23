@@ -568,3 +568,38 @@ def test_read_pdf_integration(tmp_path):
     # which proves it reached the PDF parsing branch!
     assert "Error reading" in res or "pypdf" in res.lower()
 
+def test_search_web_and_schemas(tmp_path):
+    from src.domains.ater.assistant import AterAssistant, SearchWebInput
+    from types import SimpleNamespace
+    from unittest.mock import patch, MagicMock
+
+    secrets = SimpleNamespace(
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path),
+        academic_path="Notes",
+        ai_provider="groq",
+        ai_model="llama3-8b-8192",
+        ai_key="mock",
+        ai_base_url=None,
+        ai_max_tpm=None,
+        ai_max_rpm=None,
+        ai_max_tpd=None,
+        ai_max_rpd=None,
+        ai_max_concurrency=None
+    )
+    
+    assistant = AterAssistant(secrets)
+    
+    # 1. Verify schema integration in get_tools
+    tools = assistant.get_tools()
+    tool_names = [t.name for t in tools]
+    assert "search_web" in tool_names
+    
+    # 2. Test search_web offline fallback (when DDGS throws)
+    with patch("src.domains.ater.assistant.DDGS") as mock_ddgs:
+        # Simulate DDGS instance throwing exception on context manager enter
+        mock_ddgs.return_value.__enter__.side_effect = Exception("No internet")
+        res = assistant.search_web("quantum computing")
+        assert "*(Offline: falling back to local vault RAG)*" in res
+
+

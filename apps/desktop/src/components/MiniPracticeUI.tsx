@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, RotateCcw, BookOpen, BrainCircuit } from 'lucide-react';
+import { Check, ArrowRight, RotateCcw, BookOpen, BrainCircuit, Loader2 } from 'lucide-react';
 import { AterMarkdown } from './obsidian/MarkdownViewer';
 import { usePomodoroStore } from '@/lib/pomodoroStore';
 import { Question, QuestionType } from '@/types/practice';
@@ -47,6 +47,11 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainQuestion, setExplainQuestion] = useState<Question | null>(null);
 
+  // Mistake Diagnostic States
+  const [diagnosticFeedback, setDiagnosticFeedback] = useState<string | null>(null);
+  const [diagnosticLoading, setDiagnosticLoading] = useState<boolean>(false);
+  const [fetchedDiagnosticQId, setFetchedDiagnosticQId] = useState<string | null>(null);
+
   // Initialize the session hook with the questions prop
   useEffect(() => {
     session.startSession(questions, {}, notePath);
@@ -86,6 +91,58 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const showScore = session.showScore;
   const keywordChecks = session.keywordChecks;
   const currentIdx = session.currentQuestionIdx;
+
+  // Reset diagnostic feedback when active question changes
+  useEffect(() => {
+    setDiagnosticFeedback(null);
+    setDiagnosticLoading(false);
+    setFetchedDiagnosticQId(null);
+  }, [currentQ?.id]);
+
+  // Trigger active recall mistake diagnostics on incorrect answers
+  useEffect(() => {
+    if (isRevealed && currentQ && currentQ.id) {
+      const isCorrect = scores[currentQ.id];
+      if (isCorrect === false && fetchedDiagnosticQId !== currentQ.id) {
+        setFetchedDiagnosticQId(currentQ.id);
+        setDiagnosticLoading(true);
+        setDiagnosticFeedback(null);
+        
+        const rawAns = userAnswers[currentQ.id];
+        const formattedUserAnswer = Array.isArray(rawAns)
+          ? rawAns.join(', ')
+          : typeof rawAns === 'object' && rawAns !== null
+            ? JSON.stringify(rawAns)
+            : rawAns !== undefined && rawAns !== null ? String(rawAns) : '';
+
+        sidecarApi.explainQuestion({
+          question: currentQ.question,
+          type: currentQ.type,
+          answer: Array.isArray(currentQ.answer) 
+            ? currentQ.answer.join(', ') 
+            : typeof currentQ.answer === 'object' && currentQ.answer !== null
+              ? JSON.stringify(currentQ.answer)
+              : String(currentQ.answer),
+          explanation: currentQ.explanation || '',
+          context: (currentQ as any).content || (currentQ as any).codeSnippet || '',
+          userAnswer: formattedUserAnswer,
+          is_correct: false,
+          note_path: currentQ.note_id || notePath,
+        }).then((res) => {
+          if (res && res.explanation) {
+            setDiagnosticFeedback(res.explanation);
+          } else if (res && res.lesson) {
+            setDiagnosticFeedback(res.lesson);
+          }
+        }).catch((err) => {
+          console.error('[Diagnostics] Failed to fetch explanation:', err);
+          setDiagnosticFeedback("Failed to load diagnostic breakdown.");
+        }).finally(() => {
+          setDiagnosticLoading(false);
+        });
+      }
+    }
+  }, [isRevealed, currentQ, scores, fetchedDiagnosticQId, userAnswers, notePath]);
 
   const [localArtifacts, setLocalArtifacts] = useState<any[]>([]);
 
@@ -514,6 +571,25 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                     </div>
                   </div>
 
+                  {(diagnosticLoading || diagnosticFeedback) && (
+                    <div className="space-y-1 pt-3 border-t border-border/40 mt-3 animate-in fade-in duration-300">
+                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500 flex items-center gap-1.5 font-bold">
+                        <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span>Active Mistake Diagnostic</span>
+                      </div>
+                      <div className="text-xs font-medium leading-relaxed text-foreground/80 border border-amber-500/20 bg-amber-500/5 p-3.5 rounded-[8px] mt-1">
+                        {diagnosticLoading ? (
+                          <div className="flex items-center gap-2 text-muted-foreground/60 text-[10px] font-black uppercase tracking-widest py-1">
+                            <Loader2 size={12} className="animate-spin text-amber-500" />
+                            <span>Diagnosing misconception...</span>
+                          </div>
+                        ) : (
+                          <MarkdownBlock content={diagnosticFeedback || ''} />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {currentQ.type === 'trace' && currentQ.steps && (
                     <div className="space-y-2 pt-3 border-t border-border">
                       <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 mb-2">Causal Chain Logic</div>
@@ -635,6 +711,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
           explanation: explainQuestion.explanation,
           context: (explainQuestion as any).content || (explainQuestion as any).codeSnippet || '',
           userAnswer: formattedUserAnswer,
+          isCorrect: scores[explainQuestion.id] ?? false,
+          notePath: explainQuestion.note_id || notePath,
         });
         return (
           <AterExplainDialog

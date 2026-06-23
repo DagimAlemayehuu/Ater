@@ -4,11 +4,37 @@ import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
  Zap, Search, GraduationCap,
- User, BookOpen, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen
+ User, BookOpen, BookOpenCheck, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen
 } from 'lucide-react'
+
+interface LessonPreview {
+  title: string
+  lessonPath: string
+  previewUrl: string
+}
+
+interface SavedConversation {
+  id: string
+  title: string
+  messages: Message[]
+  preview: LessonPreview | null
+  panelOpen: boolean
+  timestamp: number
+}
+
+function resolvePreviewUrl(url: string): string {
+  if (!url) return ''
+  if (/^(https?:|data:|blob:)/.test(url)) return url
+  return `http://127.0.0.1:8765${url.startsWith('/') ? url : `/${url}`}`
+}
 import {sidecarApi} from '@/lib/sidecarApi'
+import { invoke } from '@tauri-apps/api/core'
+import { getAppStore } from '@/lib/store'
+import { fetchSidecarJson } from '@/lib/sidecarHttp'
 import {cn} from '@/lib/utils'
-import {useConfig} from '@/lib/ConfigContext'
+import { listen } from '@tauri-apps/api/event'
+import { NoteCanvas } from '@/components/intelligence/NoteCanvas'
+import { useConfig} from '@/lib/ConfigContext'
 import {useHeader} from '@/context/header-context'
 import {useNavigate} from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
@@ -35,13 +61,46 @@ const cleanTitle = (val: any): string => {
   return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
 }
 
+interface OracleViewProps {
+  isHistoryOpen: boolean;
+  setIsHistoryOpen: (open: boolean) => void;
+  onStateChange?: (state: {
+    hasMessages: boolean;
+    hasPreview: boolean;
+    isPanelOpen: boolean;
+    isLessonOpen: boolean;
+  }) => void;
+  onNoteSelect?: (path: string | null) => void;
+}
+
 /* ─── Oracle Chat View ─── */
-function OracleView() {
+function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSelect }: OracleViewProps) {
   const navigate = useNavigate();
   const { currentHub, history: studyHistory } = usePomodoroStore();
   const { config, saveConfig } = useConfig();
 
+  // Load conversation list
+  const [conversations, setConversations] = useState<SavedConversation[]>(() => {
+    try {
+      const saved = localStorage.getItem('ater_oracle_conversations');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Active conversation ID
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    return localStorage.getItem('ater_oracle_active_conversation_id') || null;
+  });
+
+  const activeConv = useMemo(() => {
+    if (!activeConversationId) return null;
+    return conversations.find(c => c.id === activeConversationId) || null;
+  }, [activeConversationId, conversations]);
+
   const [messages, setMessages] = useState<Message[]>(() => {
+    if (activeConv) return activeConv.messages;
     try {
       const saved = localStorage.getItem('ater_oracle_chat_history');
       return saved ? JSON.parse(saved) : [];
@@ -59,7 +118,186 @@ function OracleView() {
   const generatedSpecRef = useRef<Set<string>>(new Set());
   const artifactState = useArtifactStore();
 
-  // Save messages to localStorage
+  const [preview, setPreview] = useState<LessonPreview | null>(() => {
+    if (activeConv) return activeConv.preview;
+    try {
+      const saved = localStorage.getItem('ater_lesson_preview');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [panelOpen, setPanelOpen] = useState(() => {
+    if (activeConv) return activeConv.panelOpen;
+    try {
+      const saved = localStorage.getItem('ater_lesson_panel_open');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+
+  // Listen for NEXT_NOTE events from the iframe to transition to the next chapter/lesson
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NEXT_NOTE' && preview) {
+        try {
+          const currentPath = preview.lessonPath.replace(/\\/g, '/');
+          const parts = currentPath.split('/');
+          parts.pop();
+          const parentDir = parts.join('/');
+          
+          const res = await sidecarApi.listObsidianFiles();
+          const siblingLessons = res.files
+            .filter((f: any) => {
+              const fPath = f.path.replace(/\\/g, '/');
+              const fParent = fPath.split('/').slice(0, -1).join('/');
+              return fParent === parentDir && f.name.endsWith('.html');
+            })
+            .sort((a: any, b: any) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+          const currentIndex = siblingLessons.findIndex((f: any) => f.path.replace(/\\/g, '/') === currentPath);
+          const nextFile = currentIndex >= 0 ? siblingLessons[currentIndex + 1] : null;
+            
+          if (nextFile) {
+            const sidecarPort = await invoke<number>('get_sidecar_port').catch(() => 8765);
+            const sidecarToken = await invoke<string>('get_sidecar_token').catch(() => '');
+              
+            const store = await getAppStore();
+            const vaultPath = await store.get<string>('obsidianVaultPath') || config?.obsidianVaultPath || '';
+              
+            const registerUrl = `http://127.0.0.1:${sidecarPort}/api/teacher/register`;
+            const response = await fetchSidecarJson(registerUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken,
+                'X-Vault-Path': vaultPath
+              },
+              body: JSON.stringify({ lesson_path: nextFile.path })
+            });
+              
+            if (response && response.preview_url) {
+              const nextTitleMatch = nextFile.name.match(/^\d{4}-(.*)\.html$/);
+              const nextTitleRaw = nextTitleMatch ? nextTitleMatch[1] : nextFile.name;
+              const nextTitle = cleanTitle(nextTitleRaw);
+                
+              const newPreview = {
+                title: nextTitle || 'Next Lesson Section',
+                lessonPath: nextFile.path,
+                previewUrl: `${resolvePreviewUrl(response.preview_url)}?t=${Date.now()}`,
+              };
+                
+              setPreview(newPreview);
+              setPanelOpen(true);
+              if (onNoteSelect) {
+                onNoteSelect(newPreview.previewUrl);
+              }
+              toast.success(`Transitioning to ${newPreview.title}`);
+            }
+          } else {
+            toast.info('You have reached the end of the learning path!');
+          }
+        } catch (err: any) {
+          console.error('[Agents] Failed to transition to next chapter:', err);
+          toast.error(`Failed to load next chapter: ${err.message || err}`);
+        }
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [preview, config?.obsidianVaultPath]);
+
+  // If activeConversationId is null and we have messages, initialize activeConversationId
+  useEffect(() => {
+    if (!activeConversationId && messages.length > 0) {
+      const newId = `ater-conv-${Date.now()}`;
+      setActiveConversationId(newId);
+      localStorage.setItem('ater_oracle_active_conversation_id', newId);
+      
+      const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
+      const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
+      
+      const newConv: SavedConversation = {
+        id: newId,
+        title,
+        messages,
+        preview,
+        panelOpen,
+        timestamp: Date.now()
+      };
+      
+      setConversations(prev => {
+        const updated = [newConv, ...prev];
+        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [activeConversationId, messages]);
+
+  // Sync active conversation changes to the list
+  useEffect(() => {
+    if (!activeConversationId) return;
+    
+    setConversations(prev => {
+      const index = prev.findIndex(c => c.id === activeConversationId);
+      const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
+      const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
+      
+      if (index > -1) {
+        const existing = prev[index];
+        if (
+          JSON.stringify(existing.messages) === JSON.stringify(messages) &&
+          JSON.stringify(existing.preview) === JSON.stringify(preview) &&
+          existing.panelOpen === panelOpen
+        ) {
+          return prev;
+        }
+        
+        const updated = [...prev];
+        updated[index] = {
+          ...existing,
+          title: existing.title === 'New Chat' ? title : existing.title,
+          messages,
+          preview,
+          panelOpen,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
+        return updated;
+      } else {
+        const newConv: SavedConversation = {
+          id: activeConversationId,
+          title,
+          messages,
+          preview,
+          panelOpen,
+          timestamp: Date.now()
+        };
+        const updated = [newConv, ...prev];
+        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
+        return updated;
+      }
+    });
+  }, [messages, preview, panelOpen, activeConversationId]);
+
+  useEffect(() => {
+    if (preview) {
+      localStorage.setItem('ater_lesson_preview', JSON.stringify(preview));
+    } else {
+      localStorage.removeItem('ater_lesson_preview');
+    }
+  }, [preview]);
+
+  useEffect(() => {
+    localStorage.setItem('ater_lesson_panel_open', JSON.stringify(panelOpen));
+  }, [panelOpen]);
+
+  // Save messages to localStorage for backward compatibility
   useEffect(() => {
     localStorage.setItem('ater_oracle_chat_history', JSON.stringify(messages));
   }, [messages]);
@@ -81,11 +319,133 @@ function OracleView() {
     }
   }, [input]);
 
+  const handleClearCurrentChat = useCallback(() => {
+    setMessages([]);
+    setPreview(null);
+    setPanelOpen(false);
+    useArtifactStore.getState().resetArtifacts();
+    generatedSpecRef.current.clear();
+    
+    if (onNoteSelect) {
+      onNoteSelect(null);
+    }
+    
+    if (activeConversationId) {
+      setConversations(prev => {
+        const updated = prev.map(c => 
+          c.id === activeConversationId 
+            ? { ...c, title: 'New Chat', messages: [], preview: null, panelOpen: false, timestamp: Date.now() }
+            : c
+        );
+        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
+        return updated;
+      });
+    }
+    toast.success('Chat cleared.');
+  }, [activeConversationId, onNoteSelect]);
+
+  // Listen to the custom clear event from header
+  useEffect(() => {
+    window.addEventListener('ater-clear-chat', handleClearCurrentChat);
+    return () => window.removeEventListener('ater-clear-chat', handleClearCurrentChat);
+  }, [handleClearCurrentChat]);
+
+  const handleSelectConversation = useCallback((convId: string) => {
+    if (isLoading) {
+      toast.warning("Please wait until response is complete.");
+      return;
+    }
+    const conv = conversations.find(c => c.id === convId);
+    if (!conv) return;
+    
+    setActiveConversationId(convId);
+    localStorage.setItem('ater_oracle_active_conversation_id', convId);
+    
+    useArtifactStore.getState().resetArtifacts();
+    
+    setMessages(conv.messages);
+    setPreview(conv.preview);
+    setPanelOpen(conv.panelOpen);
+    if (onNoteSelect) {
+      onNoteSelect(conv.preview ? conv.preview.previewUrl : null);
+    }
+  }, [conversations, isLoading, onNoteSelect]);
+
+  const handleNewChat = useCallback(() => {
+    if (isLoading) {
+      toast.warning("Please wait until response is complete.");
+      return;
+    }
+    const newId = `ater-conv-${Date.now()}`;
+    setActiveConversationId(newId);
+    localStorage.setItem('ater_oracle_active_conversation_id', newId);
+    
+    setMessages([]);
+    setPreview(null);
+    setPanelOpen(false);
+    useArtifactStore.getState().resetArtifacts();
+    generatedSpecRef.current.clear();
+    if (onNoteSelect) {
+      onNoteSelect(null);
+    }
+  }, [isLoading, onNoteSelect]);
+
+  const handleDeleteConversation = useCallback((e: React.MouseEvent, convId: string) => {
+    e.stopPropagation();
+    if (isLoading) {
+      toast.warning("Please wait until response is complete.");
+      return;
+    }
+    
+    setConversations(prev => {
+      const updated = prev.filter(c => c.id !== convId);
+      localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
+      return updated;
+    });
+    
+    if (activeConversationId === convId) {
+      // Find what's left
+      const saved = localStorage.getItem('ater_oracle_conversations');
+      const list = saved ? JSON.parse(saved) : [];
+      if (list.length > 0) {
+        setActiveConversationId(list[0].id);
+        localStorage.setItem('ater_oracle_active_conversation_id', list[0].id);
+        setMessages(list[0].messages);
+        setPreview(list[0].preview);
+        setPanelOpen(list[0].panelOpen);
+        if (onNoteSelect) {
+          onNoteSelect(list[0].preview ? list[0].preview.previewUrl : null);
+        }
+      } else {
+        setActiveConversationId(null);
+        localStorage.removeItem('ater_oracle_active_conversation_id');
+        setMessages([]);
+        setPreview(null);
+        setPanelOpen(false);
+        useArtifactStore.getState().resetArtifacts();
+        generatedSpecRef.current.clear();
+        if (onNoteSelect) {
+          onNoteSelect(null);
+        }
+      }
+    }
+    toast.success('Conversation deleted.');
+  }, [activeConversationId, isLoading, onNoteSelect]);
+
   const handleClearHistory = () => {
+    setConversations([]);
+    localStorage.removeItem('ater_oracle_conversations');
+    setActiveConversationId(null);
+    localStorage.removeItem('ater_oracle_active_conversation_id');
     setMessages([]);
     useArtifactStore.getState().resetArtifacts();
     generatedSpecRef.current.clear();
-    toast.success('Conversation history cleared.');
+    setPreview(null);
+    setPanelOpen(false);
+    if (onNoteSelect) {
+      onNoteSelect(null);
+    }
+    toast.success('All conversation history cleared.');
   };
 
   useEffect(() => {
@@ -271,18 +631,29 @@ function OracleView() {
     try {
       const searchRes = await sidecarApi.findVaultPage(pageName);
       if (searchRes.found && searchRes.path) {
-        navigate(`/obsidian?path=${encodeURIComponent(searchRes.path)}`);
+        if (onNoteSelect) {
+          onNoteSelect(searchRes.path);
+        } else {
+          navigate(`/obsidian?path=${encodeURIComponent(searchRes.path)}`);
+        }
       } else {
         navigate(`/obsidian?search=${encodeURIComponent(pageName)}`);
       }
     } catch (err) {
       toast.error('Could not navigate to note.');
     }
-  }, [navigate]);
+  }, [navigate, onNoteSelect]);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
     if (!text) return;
+
+    let currentId = activeConversationId;
+    if (!currentId) {
+      currentId = `ater-conv-${Date.now()}`;
+      setActiveConversationId(currentId);
+      localStorage.setItem('ater_oracle_active_conversation_id', currentId);
+    }
 
     if (!textToSend) {
       setInput('');
@@ -406,6 +777,19 @@ function OracleView() {
                 }
                 return next;
               });
+            } else if (parsed.type === 'lesson_created') {
+              const resolvedUrl = resolvePreviewUrl(parsed.preview_url || '');
+              if (onNoteSelect && resolvedUrl) {
+                onNoteSelect(resolvedUrl);
+              }
+              setPreview({
+                title: parsed.title || 'Teacher Lesson',
+                lessonPath: parsed.lesson_path || '',
+                previewUrl: resolvePreviewUrl(parsed.preview_url || ''),
+              });
+              if (!onNoteSelect) {
+                setPanelOpen(true);
+              }
             } else if (parsed.type === 'action') {
               if (parsed.action === 'navigate' && parsed.route) {
                 navigate(parsed.route);
@@ -502,6 +886,40 @@ function OracleView() {
     handleSendMessageRef.current(textToSend);
   }, []);
 
+  // Report state to parent dashboard for header buttons
+  useEffect(() => {
+    onStateChange?.({
+      hasMessages: messages.length > 0,
+      hasPreview: !!preview,
+      isPanelOpen: panelOpen || artifactState.isPanelOpen,
+      isLessonOpen: panelOpen
+    });
+  }, [messages.length, preview, panelOpen, artifactState.isPanelOpen, onStateChange]);
+
+  // Listen to custom window events for header actions
+  useEffect(() => {
+    const handleNewChatEvent = () => {
+      handleNewChat();
+    };
+    const handleTogglePanelEvent = () => {
+      if (preview) {
+        setPanelOpen((prev: boolean) => {
+          const next = !prev;
+          localStorage.setItem('ater_lesson_panel_open', JSON.stringify(next));
+          return next;
+        });
+      } else if (artifactState.artifacts.length > 0) {
+        artifactState.setPanelOpen(!artifactState.isPanelOpen);
+      }
+    };
+    window.addEventListener('ater-new-chat', handleNewChatEvent);
+    window.addEventListener('ater-toggle-panel', handleTogglePanelEvent);
+    return () => {
+      window.removeEventListener('ater-new-chat', handleNewChatEvent);
+      window.removeEventListener('ater-toggle-panel', handleTogglePanelEvent);
+    };
+  }, [handleNewChat, preview, artifactState]);
+
   const quickActions = [
     { title: "Search Vault", prompt: "What are my notes about...?", icon: Search, description: "Semantic search content." },
     { title: "Generate Quiz", prompt: "Generate a quiz about...", icon: GraduationCap, description: "Active recall test." },
@@ -509,121 +927,249 @@ function OracleView() {
   ];
 
   return (
-    <div className="flex-1 flex min-h-0">
-      <div
-        className="flex min-h-0 flex-col"
-        style={{ width: artifactState.isPanelOpen ? `${100 - artifactState.panelWidth}%` : '100%' }}
-      >
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0 custom-scrollbar">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center -mt-12">
-            <h1 className="text-[32px] font-black uppercase tracking-tighter text-foreground">Welcome back, {config?.displayName || 'User'}</h1>
-          </div>
-        ) : (
-          <div className="max-w-3xl mx-auto space-y-8">
-            {messages.map((msg, index) => (
-              <div key={index} className="space-y-2">
-                {msg.role === 'user' ? (
-                  <div className="flex justify-end w-full">
-                    <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">{msg.content}</div>
-                  </div>
-                ) : (
-                  msg.content ? (
-                    <div className="flex justify-start w-full">
-                      <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto">
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={stableSendMessage} />
-                        </div>
-                      </div>
-                    </div>
-                  ) : null
-                )}
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start w-full animate-pulse">
-                <div className="border border-border bg-bento-card px-5 py-4 rounded-[12px] flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{activeStatus || 'Thinking...'}</span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
-
-      <div className="p-6 border-t border-border/40 bg-muted/10 shrink-0">
-        <div className="max-w-3xl mx-auto">
-          <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
-            <textarea 
-              ref={textareaRef} 
-              data-tour="oracle-input"
-              value={input} 
-              onChange={(e) => setInput(e.target.value)} 
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
-              placeholder="Ask Ater..." 
-              className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground" 
-              rows={1} 
-              disabled={isLoading} 
-            />
-            <button 
-              onClick={() => handleSendMessage()} 
-              disabled={isLoading || !input.trim()} 
-              className={cn(
-                "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150", 
-                input.trim() && !isLoading 
-                  ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40" 
-                  : "text-muted-foreground/30 cursor-not-allowed"
-              )}
+    <div className="flex-1 flex min-h-0 relative">
+      {/* History Sidebar */}
+      {isHistoryOpen && (
+        <div className="w-[240px] shrink-0 border-r border-border/40 bg-bento-bg flex flex-col min-h-0">
+          <div className="h-14 border-b border-border/40 px-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setIsHistoryOpen(false);
+                  localStorage.setItem('ater_oracle_history_sidebar_open', JSON.stringify(false));
+                }}
+                className="p-1.5 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
+                title="Hide History"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conversations</span>
+            </div>
+            <button
+              onClick={handleNewChat}
+              className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
+              title="New Chat"
             >
-              <Send size={14} />
+              <Plus size={16} />
             </button>
           </div>
-        </div>
-      </div>
-      </div>
-
-      {artifactState.artifacts.length > 0 && (
-        <>
-          <button
-            type="button"
-            aria-label="Resize artifact panel"
-            onMouseDown={(event) => {
-              event.preventDefault();
-              setIsDraggingSplit(true);
-            }}
-            className={cn(
-              "w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20",
-              !artifactState.isPanelOpen && "hidden"
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {conversations.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest">
+                No past chats
+              </div>
+            ) : (
+              conversations.map((conv) => {
+                const isActive = conv.id === activeConversationId;
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => handleSelectConversation(conv.id)}
+                    className={cn(
+                      "group relative flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer transition-all text-left",
+                      isActive 
+                        ? "bg-muted/80 text-foreground font-semibold" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    )}
+                  >
+                    <span className="text-[11px] truncate max-w-[170px] select-none">
+                      {conv.title || 'Untitled Chat'}
+                    </span>
+                    <button
+                      onClick={(e) => handleDeleteConversation(e, conv.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded-[4px] transition-all ml-1 shrink-0"
+                      title="Delete Chat"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                );
+              })
             )}
-          />
-          <div
-            className={cn(
-              "min-w-[420px] max-w-[82%]",
-              !artifactState.isPanelOpen && "hidden"
-            )}
-            style={{ width: `${artifactState.panelWidth}%` }}
-          >
-            <ArtifactViewer shielded={isDraggingSplit} />
           </div>
-        </>
+        </div>
       )}
-      {shouldShowArtifactReopenButton(artifactState.artifacts.length, artifactState.isPanelOpen) && (
-        <button
-          type="button"
-          onClick={() => useArtifactStore.getState().setPanelOpen(true)}
-          className="fixed right-5 top-24 z-50 flex h-9 items-center gap-2 rounded-[6px] border border-border bg-muted px-3 text-[10px] font-black uppercase tracking-widest text-foreground shadow-lg hover:bg-accent"
-          title="Open artifact panel"
+
+      {/* Main Chat & Side Panel Wrapper */}
+      <div className="flex-1 flex min-h-0 relative">
+        <div
+          className="flex min-h-0 flex-col flex-1"
+          style={{ width: artifactState.isPanelOpen ? `${100 - artifactState.panelWidth}%` : '100%' }}
         >
-          <PanelRightOpen size={14} />
-          Artifact
-        </button>
-      )}
+        <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0 custom-scrollbar">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center -mt-12">
+              <h1 className="text-[32px] font-black uppercase tracking-tighter text-foreground">Welcome back, {config?.displayName || 'User'}</h1>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-8">
+              {messages.map((msg, index) => (
+                <div key={index} className="space-y-2">
+                  {msg.role === 'user' ? (
+                    <div className="flex justify-end w-full">
+                      <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">{msg.content}</div>
+                    </div>
+                  ) : (
+                    msg.content ? (
+                      <div className="flex justify-start w-full">
+                        <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto flex flex-col gap-4">
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={stableSendMessage} />
+                          </div>
+                          {(() => {
+                            const isLastMessage = index === messages.length - 1;
+                            const hasRoadmap = msg.content.includes('```mermaid') || msg.content.includes('graph TD') || msg.content.includes('graph LR');
+                            const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap;
+                            if (showStartButton) {
+                              return (
+                                <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendMessage('Start Lesson')}
+                                    disabled={isLoading}
+                                    className="h-9 px-5 bg-foreground text-background font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                  >
+                                    <BookOpenCheck size={12} />
+                                    Start Lesson
+                                  </button>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex justify-start w-full animate-pulse">
+                  <div className="border border-border bg-bento-card px-5 py-4 rounded-[12px] flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{activeStatus || 'Thinking...'}</span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 border-t border-border/40 bg-muted/10 shrink-0">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
+              <textarea 
+                ref={textareaRef} 
+                data-tour="oracle-input"
+                value={input} 
+                onChange={(e) => setInput(e.target.value)} 
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
+                placeholder="Ask Ater..." 
+                className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground" 
+                rows={1} 
+                disabled={isLoading} 
+              />
+              <button 
+                onClick={() => handleSendMessage()} 
+                disabled={isLoading || !input.trim()} 
+                className={cn(
+                  "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150", 
+                  input.trim() && !isLoading 
+                    ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40" 
+                    : "text-muted-foreground/30 cursor-not-allowed"
+                )}
+              >
+                <Send size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {/* Unified Side Panel */}
+        {((preview && panelOpen && !onNoteSelect) || (artifactState.artifacts.length > 0 && artifactState.isPanelOpen)) ? (
+          <>
+            <button
+              type="button"
+              aria-label="Resize side panel"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                setIsDraggingSplit(true);
+              }}
+              className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20"
+            />
+            <div
+              className="min-w-[420px] max-w-[82%] flex flex-col bg-bento-bg border-l border-border/40 min-h-0"
+              style={{ width: `${artifactState.panelWidth}%` }}
+            >
+              {preview && panelOpen && !onNoteSelect ? (
+                <aside className="relative flex-1 flex flex-col min-h-0 select-none">
+                  <div className="h-12 shrink-0 border-b border-border/40 px-4 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-black uppercase tracking-widest text-foreground">{preview.title}</p>
+                      <p className="truncate text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">{preview.lessonPath}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {artifactState.artifacts.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setPanelOpen(false);
+                            artifactState.setPanelOpen(true);
+                          }}
+                          className="px-2 py-1 bg-muted hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground border border-border rounded-[4px] transition-colors"
+                          title="Show compiled sandbox artifact"
+                        >
+                          Artifact
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPanelOpen(false)}
+                        className="size-8 rounded-[6px] border border-border/40 bg-muted/10 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                        aria-label="Close lesson preview"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <iframe
+                    key={`${preview.lessonPath}:${preview.previewUrl}`}
+                    title={preview.title}
+                    src={preview.previewUrl}
+                    sandbox="allow-scripts allow-forms"
+                    className="flex-1 w-full bg-background border-none"
+                    style={{ pointerEvents: isDraggingSplit ? 'none' : 'auto' }}
+                  />
+                </aside>
+              ) : (
+                <div className="flex-1 flex flex-col min-h-0 relative">
+                  {preview && !onNoteSelect && (
+                    <div className="absolute top-2 left-2 z-50">
+                      <button
+                        onClick={() => {
+                          artifactState.setPanelOpen(false);
+                          setPanelOpen(true);
+                        }}
+                        className="px-2 py-1 bg-muted hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground border border-border rounded-[4px] transition-colors"
+                        title="Show active lesson preview"
+                      >
+                        Show Lesson
+                      </button>
+                    </div>
+                  )}
+                  <ArtifactViewer shielded={isDraggingSplit} />
+                </div>
+              )}
+            </div>
+          </>
+        ) : null}
+
+      </div>
     </div>
   );
 }
@@ -1040,14 +1586,149 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  const [aterError, setAterError] = useState<string | null>(null)
  const [isAwaitingNextBatch, setIsAwaitingNextBatch] = useState(false)
 
- const {setCenterContent, setRightContent} = useHeader()
- const parentRef = useRef<HTMLDivElement>(null)
- const virtualizer = useVirtualizer({
-  count: batchFeed.length,
-  getScrollElement: () => parentRef.current,
-  estimateSize: () => 300, 
-  overscan: 5,
- })
+ const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('ater_oracle_history_sidebar_open');
+      return saved ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [oracleState, setOracleState] = useState({
+    hasMessages: false,
+    hasPreview: false,
+    isPanelOpen: false,
+    isLessonOpen: false
+  });
+
+  const artifactState = useArtifactStore();
+
+  // Split-Pane Layout States
+  const [leftPaneWidth, setLeftPaneWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('ater_study_split_width');
+      return saved ? JSON.parse(saved) : 50;
+    } catch {
+      return 50;
+    }
+  });
+
+  const [lastUnsnappedWidth, setLastUnsnappedWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('ater_study_split_last_width');
+      return saved ? JSON.parse(saved) : 50;
+    } catch {
+      return 50;
+    }
+  });
+
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('ater_study_split_left_collapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const [isRightCollapsed, setIsRightCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('ater_study_split_right_collapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeNotePath, setActiveNotePath] = useState<string | null>(() => {
+    return localStorage.getItem('ater_study_active_note_path') || null;
+  });
+  const [hasNewNoteAlert, setHasNewNoteAlert] = useState(false);
+
+  const studyContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!studyContainerRef.current) return;
+      const rect = studyContainerRef.current.getBoundingClientRect();
+      const widthPx = rect.width;
+      if (widthPx <= 0) return;
+      
+      const relativeX = e.clientX - rect.left;
+      let pct = (relativeX / widthPx) * 100;
+      
+      if (pct < 20) {
+        setIsLeftCollapsed(true);
+        setIsRightCollapsed(false);
+        localStorage.setItem('ater_study_split_left_collapsed', 'true');
+        localStorage.setItem('ater_study_split_right_collapsed', 'false');
+      } else if (pct > 80) {
+        setIsLeftCollapsed(false);
+        setIsRightCollapsed(true);
+        localStorage.setItem('ater_study_split_left_collapsed', 'false');
+        localStorage.setItem('ater_study_split_right_collapsed', 'true');
+      } else {
+        setIsLeftCollapsed(false);
+        setIsRightCollapsed(false);
+        setLeftPaneWidth(pct);
+        setLastUnsnappedWidth(pct);
+        localStorage.setItem('ater_study_split_left_collapsed', 'false');
+        localStorage.setItem('ater_study_split_right_collapsed', 'false');
+        localStorage.setItem('ater_study_split_width', JSON.stringify(pct));
+        localStorage.setItem('ater_study_split_last_width', JSON.stringify(pct));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Listen to note-created Tauri events
+  useEffect(() => {
+    let unlistenFn: (() => void) | null = null;
+    const setupListener = async () => {
+      try {
+        const u = await listen<any>('note-created', (event) => {
+          const path = event.payload?.path || event.payload?.note_path || (typeof event.payload === 'string' ? event.payload : null);
+          if (path && typeof path === 'string') {
+            setActiveNotePath(path);
+            localStorage.setItem('ater_study_active_note_path', path);
+            
+            // Trigger a pulse alert to notify user without expanding
+            setHasNewNoteAlert(true);
+          }
+        });
+        unlistenFn = u;
+      } catch (err) {
+        console.error('Failed to setup note-created listener:', err);
+      }
+    };
+    setupListener();
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
+  }, []);
+
+  const {setCenterContent, setRightContent} = useHeader()
+  const parentRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+   count: batchFeed.length,
+   getScrollElement: () => parentRef.current,
+   estimateSize: () => 300, 
+   overscan: 5,
+  })
 
  // Sync Header Actions
  useEffect(() => {
@@ -1079,19 +1760,8 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     );
     setRightContent(HeaderActions);
   } else {
-    // Oracle View Actions
-    setRightContent(
-      <button 
-        onClick={() => {
-          localStorage.removeItem('ater_oracle_chat_history');
-          window.location.reload(); // Refresh to clear state easily
-        }}
-        className="h-8 px-3 border border-border/40 bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]"
-        title="Clear Conversation"
-      >
-        <Trash2 size={12} /> CLEAR
-      </button>
-    );
+    // Oracle View Actions are in sub-header now, so top right is empty
+    setRightContent(null);
   }
   return () => setRightContent(null);
  }, [config?.autoDeploy, queueStatus, activeTab]);
@@ -1242,35 +1912,253 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  return (
  <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
     {/* Tab Navigation Bento Box */}
-    <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center justify-center gap-1 shadow-sm z-30">
-      <button 
-        data-tour="tab-oracle-chat"
-        onClick={() => setSearchParams({ tab: 'ater' })}
-        className={cn(
-          "relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
-          activeTab === 'ater' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
+    <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center justify-between gap-1 shadow-sm z-30">
+      {/* Left Slot: History Toggle */}
+      <div className="w-[150px] flex justify-start">
+        {activeTab === 'ater' && (
+          <button
+            onClick={() => {
+              setIsHistoryOpen(!isHistoryOpen);
+              localStorage.setItem('ater_oracle_history_sidebar_open', JSON.stringify(!isHistoryOpen));
+            }}
+            className={cn(
+              "h-8 px-3 border border-border/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]",
+              isHistoryOpen 
+                ? "bg-foreground text-background hover:bg-foreground/90" 
+                : "bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground"
+            )}
+            title={isHistoryOpen ? "Hide History" : "Show History"}
+          >
+            <Layers size={12} />
+            History
+          </button>
         )}
-      >
-        Ater
-        {activeTab === 'ater' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
-      </button>
-      <button 
-        data-tour="tab-pipeline"
-        onClick={() => setSearchParams({ tab: 'pipeline' })}
-        className={cn(
-          "relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
-          activeTab === 'pipeline' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
+      </div>
+
+      {/* Center Slot: Tabs */}
+      <div className="flex items-center gap-1">
+        <button 
+          data-tour="tab-oracle-chat"
+          onClick={() => setSearchParams({ tab: 'ater' })}
+          className={cn(
+            "relative h-12 px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
+            activeTab === 'ater' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
+          )}
+        >
+          Ater
+          {activeTab === 'ater' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
+        </button>
+        <button 
+          data-tour="tab-pipeline"
+          onClick={() => setSearchParams({ tab: 'pipeline' })}
+          className={cn(
+            "relative h-12 px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
+            activeTab === 'pipeline' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
+          )}
+        >
+          Pipeline
+          {activeTab === 'pipeline' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
+        </button>
+      </div>
+
+      {/* Right Slot: Actions */}
+      <div className="w-[300px] flex justify-end items-center gap-2">
+        {activeTab === 'ater' && (
+          <>
+            {oracleState.hasMessages && (
+              <>
+                <button
+                  onClick={() => window.dispatchEvent(new Event('ater-clear-chat'))}
+                  className="h-8 px-3 border border-border/40 bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]"
+                  title="Clear Active Chat"
+                >
+                  <Trash2 size={12} /> Clear
+                </button>
+                <button
+                  onClick={() => window.dispatchEvent(new Event('ater-new-chat'))}
+                  className="h-8 px-3 border border-border/40 bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]"
+                  title="Start New Chat"
+                >
+                  <Plus size={12} /> New Chat
+                </button>
+              </>
+            )}
+
+            {/* Artifact Panel Toggle */}
+            {(() => {
+              const hasArtifact = artifactState.artifacts.length > 0 || oracleState.hasPreview;
+              if (!hasArtifact) return null;
+              
+              const label = oracleState.hasPreview ? "Lesson" : "Artifact";
+              return (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event('ater-toggle-panel'))}
+                  className={cn(
+                    "h-8 px-3 border border-border/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]",
+                    oracleState.isPanelOpen 
+                      ? "bg-foreground text-background hover:bg-foreground/90" 
+                      : "bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground"
+                  )}
+                  title={`Toggle ${label.toLowerCase()} panel`}
+                >
+                  <PanelRightOpen size={12} />
+                  {label}
+                </button>
+              );
+            })()}
+          </>
         )}
-      >
-        Pipeline
-        {activeTab === 'pipeline' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
-      </button>
+      </div>
     </div>
 
     <div className="flex-1 overflow-hidden">
       {activeTab === 'ater' ? (
-        <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden flex flex-col">
-          <OracleView />
+        <div ref={studyContainerRef} className="h-full w-full flex overflow-hidden relative bg-bento-panel rounded-[12px] border border-border/40 shadow-sm">
+          <style>{`
+            @keyframes grayPulse {
+              0%, 100% { background-color: rgba(120, 120, 120, 0.15); }
+              50% { background-color: rgba(120, 120, 120, 0.45); }
+            }
+            .animate-gray-pulse {
+              animation: grayPulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+          `}</style>
+
+          {/* Left Margin Tab (shows when left pane is collapsed) */}
+          {isLeftCollapsed && (
+            <button
+              onClick={() => {
+                setIsLeftCollapsed(false);
+                setLeftPaneWidth(lastUnsnappedWidth);
+                setHasNewNoteAlert(false); // clear alert when opening
+                localStorage.setItem('ater_study_split_left_collapsed', 'false');
+                localStorage.setItem('ater_study_split_width', JSON.stringify(lastUnsnappedWidth));
+              }}
+              className={cn(
+                "w-4 h-full bg-muted/20 border-r border-border/40 hover:bg-muted/40 transition-colors flex items-center justify-center shrink-0 cursor-pointer relative",
+                hasNewNoteAlert && "animate-gray-pulse bg-muted/60"
+              )}
+              title="Restore Chat Panel"
+            >
+              <div className="rotate-90 origin-center whitespace-nowrap text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                Chat
+              </div>
+            </button>
+          )}
+
+          {/* Left Pane (Oracle View) */}
+          <div
+            className={cn("h-full overflow-hidden flex flex-col relative", isLeftCollapsed && "hidden")}
+            style={{ width: isRightCollapsed ? '100%' : `${leftPaneWidth}%` }}
+          >
+            <OracleView 
+              isHistoryOpen={isHistoryOpen}
+              setIsHistoryOpen={setIsHistoryOpen}
+              onStateChange={setOracleState}
+              onNoteSelect={(path) => {
+                setActiveNotePath(path);
+                if (path) {
+                  localStorage.setItem('ater_study_active_note_path', path);
+                } else {
+                  localStorage.removeItem('ater_study_active_note_path');
+                }
+              }}
+            />
+          </div>
+
+          {/* Vertical Divider / Drag Handle */}
+          {!isLeftCollapsed && !isRightCollapsed && (
+            <div className="w-1.5 shrink-0 flex flex-col relative bg-muted/50 border-x border-border/40 group/divider">
+              {/* Invisible touch target for drag handle */}
+              <div
+                className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize z-20"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+              />
+              {/* Control Buttons Container at the very top of the handle */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex flex-col gap-1 items-center bg-bento-card border border-border/40 p-1 rounded-full shadow-md">
+                <button
+                  onClick={() => {
+                    setIsLeftCollapsed(true);
+                    setIsRightCollapsed(false);
+                    localStorage.setItem('ater_study_split_left_collapsed', 'true');
+                    localStorage.setItem('ater_study_split_right_collapsed', 'false');
+                  }}
+                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  title="Collapse Left (Chat)"
+                >
+                  <ChevronLeft size={10} />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsLeftCollapsed(false);
+                    setIsRightCollapsed(false);
+                    setLeftPaneWidth(50);
+                    setLastUnsnappedWidth(50);
+                    localStorage.setItem('ater_study_split_left_collapsed', 'false');
+                    localStorage.setItem('ater_study_split_right_collapsed', 'false');
+                    localStorage.setItem('ater_study_split_width', '50');
+                    localStorage.setItem('ater_study_split_last_width', '50');
+                  }}
+                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  title="Reset to 50/50"
+                >
+                  <div className="size-1.5 rounded-full bg-foreground" />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsLeftCollapsed(false);
+                    setIsRightCollapsed(true);
+                    localStorage.setItem('ater_study_split_left_collapsed', 'false');
+                    localStorage.setItem('ater_study_split_right_collapsed', 'true');
+                  }}
+                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  title="Collapse Right (Note Canvas)"
+                >
+                  <ChevronRight size={10} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Right Pane (Note Canvas) */}
+          <div
+            className={cn("h-full overflow-hidden flex flex-col relative", isRightCollapsed && "hidden")}
+            style={{ width: isLeftCollapsed ? '100%' : `${100 - leftPaneWidth}%` }}
+          >
+            <NoteCanvas
+              notePath={activeNotePath}
+              onNavigate={(path) => {
+                setActiveNotePath(path);
+                localStorage.setItem('ater_study_active_note_path', path);
+              }}
+            />
+          </div>
+
+          {/* Right Margin Tab (shows when right pane is collapsed) */}
+          {isRightCollapsed && (
+            <button
+              onClick={() => {
+                setIsRightCollapsed(false);
+                setLeftPaneWidth(lastUnsnappedWidth);
+                setHasNewNoteAlert(false); // clear alert when opening
+                localStorage.setItem('ater_study_split_right_collapsed', 'false');
+                localStorage.setItem('ater_study_split_width', JSON.stringify(lastUnsnappedWidth));
+              }}
+              className={cn(
+                "w-4 h-full bg-muted/20 border-l border-border/40 hover:bg-muted/40 transition-colors flex items-center justify-center shrink-0 cursor-pointer relative",
+                hasNewNoteAlert && "animate-gray-pulse bg-muted/60"
+              )}
+              title="Restore Note Panel"
+            >
+              <div className="-rotate-90 origin-center whitespace-nowrap text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                Notes
+              </div>
+            </button>
+          )}
         </div>
       ) : (
         <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar p-6">

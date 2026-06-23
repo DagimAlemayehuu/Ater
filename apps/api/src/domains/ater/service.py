@@ -3146,3 +3146,76 @@ generated: true"""
                 return res
         
         return res
+
+    def append_misconception_to_note(self, note_path: str, misconception: str) -> bool:
+        """
+        Appends a misconception bullet point to the '## My Common Misconceptions' section in the note.
+        """
+        import re
+        try:
+            target_path = Path(note_path)
+            if not target_path.is_absolute():
+                target_path = self.vm.vault_path / note_path
+
+            if not target_path.exists():
+                # Search recursively
+                found = list(self.vm.vault_path.rglob(target_path.name))
+                if not found and not target_path.name.endswith(".md"):
+                    found = list(self.vm.vault_path.rglob(f"{target_path.name}.md"))
+                if found:
+                    target_path = found[0]
+                else:
+                    print(f"[Ater Service] Target note not found: {note_path}")
+                    return False
+
+            with open(target_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            meta, body, err = self.vm.extract_yaml_and_content(content)
+            if err:
+                print(f"[Ater Service] YAML parse error: {err}")
+                return False
+
+            # Prevent duplicate misconceptions
+            normalized_new = misconception.strip().lower()
+            if normalized_new in body.lower():
+                print(f"[Ater Service] Misconception '{misconception}' already exists in note '{target_path.name}'. Skipping append.")
+                return True
+
+            header_pattern = r"(##\s+My\s+Common\s+Misconceptions)"
+            match = re.search(header_pattern, body, re.IGNORECASE)
+            new_bullet = f"- {misconception.strip()}"
+
+            if match:
+                parts = re.split(header_pattern, body, maxsplit=1, flags=re.IGNORECASE)
+                header_text = parts[1]
+                after_text = parts[2]
+                
+                lines = after_text.split("\n")
+                insert_idx = 0
+                for idx, line in enumerate(lines):
+                    if line.strip().startswith("-") or line.strip() == "":
+                        insert_idx = idx + 1
+                    else:
+                        break
+                lines.insert(insert_idx, new_bullet)
+                body = parts[0] + header_text + "\n" + "\n".join(lines)
+            else:
+                quiz_pattern = r"(```interactive-quiz)"
+                quiz_match = re.search(quiz_pattern, body, re.IGNORECASE)
+                misconceptions_section = f"\n## My Common Misconceptions\n{new_bullet}\n"
+
+                if quiz_match:
+                    parts = re.split(quiz_pattern, body, maxsplit=1, flags=re.IGNORECASE)
+                    body = parts[0].rstrip() + "\n" + misconceptions_section + "\n" + parts[1] + parts[2]
+                else:
+                    body = body.rstrip() + "\n\n" + misconceptions_section
+
+            yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
+            full_content = f"---\n{yaml_content}\n---\n\n{body.strip()}\n"
+            self.vm.write_note(target_path, full_content)
+            print(f"[Ater Service] Successfully appended misconception to: {target_path.name}")
+            return True
+        except Exception as e:
+            print(f"[Ater Service] Failed to append misconception: {e}")
+            return False

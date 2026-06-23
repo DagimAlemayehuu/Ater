@@ -77,3 +77,24 @@ async def teacher_lesson(
         raise HTTPException(status_code=404, detail="Lesson not found")
 
     return FileResponse(requested, media_type="text/html")
+
+
+@router.post("/register")
+async def register_lesson(
+    request: Request,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets),
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    
+    lesson_path_str = payload.get("lesson_path")
+    if not lesson_path_str:
+        raise HTTPException(status_code=400, detail="Lesson path missing")
+        
+    lesson_path = Path(secrets.vault_path) / lesson_path_str
+    token = _register_lesson_preview(Path(secrets.vault_path), lesson_path)
+    return {
+        "token": token,
+        "preview_url": str(request.url_for("teacher_lesson", token=token)),
+    }

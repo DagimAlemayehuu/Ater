@@ -1,0 +1,4 @@
+Syllabus for Distributed Systems:
+Unit 1: Introduction to Distributed Systems and Consistency
+- Atomic note: Consistency_Models
+- Atomic note: Replication_Protocols
