@@ -41,5 +41,11 @@ This file tracks the outstanding gaps, missing test coverages, and design issues
 - [ ] **Lesson Variant Compilation Integration**: Cram mode assumes that the compiler is capable of generating `lessons/<Atomic_Note>.cram.html` correctly once the SyntaxError in compiler_service is resolved.
 - [ ] **Offline Execution**: Cram mode's phase scheduler and weakness ranker must run locally without relying on remote or active AI services, utilizing mock providers or local heuristics when telemetry or LLMs are unavailable.
 
+## Phase 7: source-driven-learning Assumptions
+
+- [ ] **PDF Extraction Robustness**: The ingestion service assumes the robust PyPDF/pypdf loader defined in `pdf_extractor.py` is stable and returns structured pages with valid metadata.
+- [ ] **Web Search Mocking**: Web search augmentation assumes that in a headless test environment, search API calls can be mocked to return predictable markdown mock pages, preventing live network calls.
+
+
 
 

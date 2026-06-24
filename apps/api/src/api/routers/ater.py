@@ -2196,3 +2196,40 @@ async def advance_tutor_session_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/cram/start")
+async def start_cram_session_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    session_id = payload.get("session_id")
+    topic = payload.get("topic")
+    if not session_id or not topic:
+        raise HTTPException(status_code=400, detail="session_id and topic are required")
+    # Stub implementation for now
+    return {"session_id": session_id, "topic": topic, "status": "started"}
+
+@router.get("/ater/cram/status")
+async def get_cram_status_endpoint(
+    session_id: str = Query(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    return {"session_id": session_id, "status": "active"}
+
+@router.post("/ater/cram/submit")
+async def submit_cram_answer_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    session_id = payload.get("session_id")
+    question_id = payload.get("question_id")
+    if not session_id or not question_id:
+        raise HTTPException(status_code=400, detail="session_id and question_id are required")
+    return {"status": "submitted", "question_id": question_id}
+
+

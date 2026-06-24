@@ -2025,6 +2025,75 @@ export const sidecarApi = {
             console.error('[Tauri Native RAG] advanceTutorSession failed:', err);
             throw err;
         }
+    },
+    startCramSession: async (payload: any) => {
+        try {
+            const port = await TauriNativeRAG.getSidecarPort();
+            const obsidianVaultPath = await Store.getObsidianVaultPath();
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/start`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to start cram session (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] startCramSession failed:', err);
+            throw err;
+        }
+    },
+    getCramStatus: async (sessionId: string) => {
+        try {
+            const port = await TauriNativeRAG.getSidecarPort();
+            const obsidianVaultPath = await Store.getObsidianVaultPath();
+            const headers: Record<string, string> = {};
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/status?session_id=${encodeURIComponent(sessionId)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to get cram status (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getCramStatus failed:', err);
+            throw err;
+        }
+    },
+    submitCramAnswer: async (payload: any) => {
+        try {
+            const port = await TauriNativeRAG.getSidecarPort();
+            const obsidianVaultPath = await Store.getObsidianVaultPath();
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/submit`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to submit cram answer (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] submitCramAnswer failed:', err);
+            throw err;
+        }
     }
-}
+};
 
