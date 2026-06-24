@@ -1,5 +1,4 @@
 ---
-
 title: Stakeholder_Partnerships
 tags: [atomic-note, education, global_trends]
 course: Global_Trends
@@ -15,7 +14,11 @@ prerequisites:
 source_pages: [12]
 generated: true
 read: false
-
+lesson_variants:
+  simple: lessons/Stakeholder_Partnerships.simple.html
+  deep: lessons/Stakeholder_Partnerships.deep.html
+  cram: lessons/Stakeholder_Partnerships.cram.html
+  exam: lessons/Stakeholder_Partnerships.exam.html
 ---
 
 ## Mental Model

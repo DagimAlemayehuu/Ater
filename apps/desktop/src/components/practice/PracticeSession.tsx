@@ -549,7 +549,21 @@ export function PracticeSession({
               {currentQuestion.type === 'fill_in' && (
                 <div className="p-5 bg-bento-panel border border-border rounded-[8px] text-base font-medium leading-relaxed flex flex-wrap items-center gap-y-3">
                   {(() => {
-                    const parts = (currentQuestion.textWithBlanks || '').split(/\[\[.*?\]\]/)
+                    let text = currentQuestion.textWithBlanks || currentQuestion.text_with_blanks || ''
+                    const rawAnswer = currentQuestion.answer || []
+                    const ansArr = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer]
+
+                    if (!text && currentQuestion.question) {
+                      let tempText = currentQuestion.question
+                      let argIdx = 0
+                      tempText = tempText.replace(/_{3,}/g, () => {
+                        const val = ansArr[argIdx++] || ''
+                        return `[[${val}]]`
+                      })
+                      text = tempText
+                    }
+
+                    const parts = text.split(/\[\[.*?\]\]/)
                     return parts.map((part: string, i: number) => (
                       <React.Fragment key={i}>
                         <div className="inline-block align-middle">
@@ -572,7 +586,7 @@ export function PracticeSession({
                                   ? String((userAnswers[currentQuestion.id] || [])[i] || '')
                                       .trim()
                                       .toLowerCase() ===
-                                    String((currentQuestion.answer || [])[i] || '')
+                                    String(ansArr[i] || '')
                                       .trim()
                                       .toLowerCase()
                                     ? 'border-primary bg-primary/10 text-primary'
@@ -584,11 +598,11 @@ export function PracticeSession({
                               String((userAnswers[currentQuestion.id] || [])[i] || '')
                                 .trim()
                                 .toLowerCase() !==
-                                String((currentQuestion.answer || [])[i] || '')
+                                String(ansArr[i] || '')
                                   .trim()
                                   .toLowerCase() && (
                                 <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 font-black uppercase mt-1 tracking-wider whitespace-nowrap">
-                                  Correct: {String((currentQuestion.answer || [])[i] || '')}
+                                  Correct: {String(ansArr[i] || '')}
                                 </div>
                               )}
                           </div>

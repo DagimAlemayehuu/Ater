@@ -271,10 +271,8 @@
       padding: 16px;
       margin-top: 14px;
     }
-    textarea {
+    textarea, .fill-input {
       width: 100%;
-      min-height: 150px;
-      resize: vertical;
       border: 1px solid var(--line);
       background: #101011;
       color: var(--text);
@@ -283,7 +281,14 @@
       font: inherit;
       outline: none;
     }
-    textarea:focus {
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    .fill-input {
+      padding: 10px 12px;
+    }
+    textarea:focus, .fill-input:focus {
       border-color: var(--line-strong);
     }
     .checklist {
@@ -371,10 +376,10 @@
                 <div class="section-body">
                   <h2>Cram Sheet: Merging Branches</h2>
                   <h3>Mental Model Summary</h3>
-                  <p>Imagine you're working on a project with multiple features. You want to develop each feature separately without affecting the main project. This is where Git branching comes in. You create a new branch for each feature, and when you're done, you merge it back into the main branch. Merging branches is like combining the changes from one branch into another. Think of it like folding a new piece of paper into your main notebook. You're taking the new work and adding it to the existing work.</p>
+                  <p>Imagine you're working on a project with many features. You want to add a new feature, but you're not sure if it will work well with the current version. Branching in Git helps you create a separate line of development for this new feature. When you're ready, you can merge this new branch back into the main project. Merging branches combines the changes from one branch into another. Think of it like combining two sets of papers into one organized stack.</p>
 
                   <h3>High-Yield Bullet Highlights</h3>
-                  <ul><li>The `git merge` command is used to merge changes from one branch into another.</li><li>The branch you're merging into is called the target branch, and the branch you're merging from is called the source branch.</li><li>Git uses a simple 3-way merge algorithm to combine changes. It finds the common base between the two branches, then applies the changes from both branches.</li><li>You can use `git merge --no-ff` to create a merge commit even if a fast-forward merge is possible.</li><li>Not pulling the latest changes from the target branch before merging, which can lead to conflicts.</li><li>Not resolving conflicts properly, which can cause changes to be lost.</li></ul>
+                  <ul><li>Fast-forward merge**: When the branch you're merging from has no new commits that aren't already in the branch you're merging into, Git simply moves the pointer of the branch you're merging into to the tip of the branch you're merging from.</li><li>True merge**: If there are new commits in both branches, Git creates a new merge commit that combines both sets of changes. This creates a new snapshot that has two parent commits.</li><li>Merge conflicts**: Sometimes, changes in both branches affect the same lines of code. Git can't automatically merge these changes, so you have to resolve them manually.</li><li>Not pulling the latest changes before merging, which can lead to merge conflicts or unexpected behavior.</li><li>Not using `git status` to check the status of the merge after conflicts are resolved.</li><li>Forgetting to commit the merge with a meaningful message.</li></ul>
                 </div>
                 <div class="nav-row">
                   <span></span>
@@ -442,7 +447,9 @@
             
             <div class="nav-row">
               <button class='nav-btn' onclick='navigateToPreviousPage()'>&larr; Back to Lesson</button>
-              <button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button>
+              
+            <a class="nav-btn primary" href="./Resolving_Conflicts.cram.html">Next Lesson &rarr;</a>
+            
             </div>
           </div>
         </section>
@@ -459,23 +466,24 @@ hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/Merging_Branches.simple.html
   deep: lessons/Merging_Branches.deep.html
+  cram: lessons/Merging_Branches.cram.html
+  exam: lessons/Merging_Branches.exam.html
 artifact_pack: database/General/Git/04_Branching_And_Merging/artifacts/Merging_Branches.artifacts.json
 ---
 
 ## Mental Model
-Imagine you're working on a project with multiple features. You want to develop each feature separately without affecting the main project. This is where Git branching comes in. You create a new branch for each feature, and when you're done, you merge it back into the main branch. Merging branches is like combining the changes from one branch into another. Think of it like folding a new piece of paper into your main notebook. You're taking the new work and adding it to the existing work.
+Imagine you're working on a project with many features. You want to add a new feature, but you're not sure if it will work well with the current version. Branching in Git helps you create a separate line of development for this new feature. When you're ready, you can merge this new branch back into the main project. Merging branches combines the changes from one branch into another. Think of it like combining two sets of papers into one organized stack.
 
 ## What You Must Know
-To merge branches in Git, you need to understand the following:
-- The `git merge` command is used to merge changes from one branch into another.
-- The branch you're merging into is called the target branch, and the branch you're merging from is called the source branch.
-- Git uses a simple 3-way merge algorithm to combine changes. It finds the common base between the two branches, then applies the changes from both branches.
-- You can use `git merge --no-ff` to create a merge commit even if a fast-forward merge is possible.
+To merge branches in Git, you need to understand a few key concepts:
+- **Fast-forward merge**: When the branch you're merging from has no new commits that aren't already in the branch you're merging into, Git simply moves the pointer of the branch you're merging into to the tip of the branch you're merging from.
+- **True merge**: If there are new commits in both branches, Git creates a new merge commit that combines both sets of changes. This creates a new snapshot that has two parent commits.
+- **Merge conflicts**: Sometimes, changes in both branches affect the same lines of code. Git can't automatically merge these changes, so you have to resolve them manually.
 
 ## Common Mistakes
-- Not pulling the latest changes from the target branch before merging, which can lead to conflicts.
-- Not resolving conflicts properly, which can cause changes to be lost.
-- Merging into the wrong branch, which can cause chaos in your project.
+- Not pulling the latest changes before merging, which can lead to merge conflicts or unexpected behavior.
+- Not using `git status` to check the status of the merge after conflicts are resolved.
+- Forgetting to commit the merge with a meaningful message.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -532,23 +540,24 @@ hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/Merging_Branches.simple.html
   deep: lessons/Merging_Branches.deep.html
+  cram: lessons/Merging_Branches.cram.html
+  exam: lessons/Merging_Branches.exam.html
 artifact_pack: database/General/Git/04_Branching_And_Merging/artifacts/Merging_Branches.artifacts.json
 ---
 
 ## Mental Model
-Imagine you're working on a project with multiple features. You want to develop each feature separately without affecting the main project. This is where Git branching comes in. You create a new branch for each feature, and when you're done, you merge it back into the main branch. Merging branches is like combining the changes from one branch into another. Think of it like folding a new piece of paper into your main notebook. You're taking the new work and adding it to the existing work.
+Imagine you're working on a project with many features. You want to add a new feature, but you're not sure if it will work well with the current version. Branching in Git helps you create a separate line of development for this new feature. When you're ready, you can merge this new branch back into the main project. Merging branches combines the changes from one branch into another. Think of it like combining two sets of papers into one organized stack.
 
 ## What You Must Know
-To merge branches in Git, you need to understand the following:
-- The `git merge` command is used to merge changes from one branch into another.
-- The branch you're merging into is called the target branch, and the branch you're merging from is called the source branch.
-- Git uses a simple 3-way merge algorithm to combine changes. It finds the common base between the two branches, then applies the changes from both branches.
-- You can use `git merge --no-ff` to create a merge commit even if a fast-forward merge is possible.
+To merge branches in Git, you need to understand a few key concepts:
+- **Fast-forward merge**: When the branch you're merging from has no new commits that aren't already in the branch you're merging into, Git simply moves the pointer of the branch you're merging into to the tip of the branch you're merging from.
+- **True merge**: If there are new commits in both branches, Git creates a new merge commit that combines both sets of changes. This creates a new snapshot that has two parent commits.
+- **Merge conflicts**: Sometimes, changes in both branches affect the same lines of code. Git can't automatically merge these changes, so you have to resolve them manually.
 
 ## Common Mistakes
-- Not pulling the latest changes from the target branch before merging, which can lead to conflicts.
-- Not resolving conflicts properly, which can cause changes to be lost.
-- Merging into the wrong branch, which can cause chaos in your project.
+- Not pulling the latest changes before merging, which can lead to merge conflicts or unexpected behavior.
+- Not using `git status` to check the status of the merge after conflicts are resolved.
+- Forgetting to commit the merge with a meaningful message.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -683,7 +692,7 @@ To merge branches in Git, you need to understand the following:
     async function runSqlQuery(qId) {
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -711,9 +720,9 @@ To merge branches in Git, you need to understand the following:
           if (data.dataset && data.dataset.length > 0) {
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>\${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${h}</th>`).join('')}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>\${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${row[h]}</td>`).join('')}</tr>`
+              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
             ).join('');
           }
         } else {
@@ -740,7 +749,7 @@ To merge branches in Git, you need to understand the following:
     // 2. Simulation Predict
     const simStates = {};
     function initSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
@@ -761,8 +770,8 @@ To merge branches in Git, you need to understand the following:
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step \${sim.currentStep}:</strong><br>` + 
-        Object.entries(currState.vars || {}).map(([k, v]) => `\${k} = \${v}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
+        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
       
       inputArea.innerHTML = '';
       
@@ -771,8 +780,8 @@ To merge branches in Git, you need to understand the following:
       if (checkpoint) {
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>\${checkpoint.question}</p>
-            <input type="number" id="sim-pred-\${qId}" placeholder="Enter prediction for \${checkpoint.target_var}">
+            <p>${checkpoint.question}</p>
+            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
@@ -793,7 +802,7 @@ To merge branches in Git, you need to understand the following:
         if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected \${checkpoint.expected_value} for \${checkpoint.target_var}.`;
+          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
           feedback.style.color = 'var(--bad)';
           return;
         } else {
@@ -826,7 +835,7 @@ To merge branches in Git, you need to understand the following:
     // 3. Proof Step
     const proofStates = {};
     function initProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -855,16 +864,16 @@ To merge branches in Git, you need to understand the following:
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">\${stepText}</span>
+            <span style="font-size: 14px;">${stepText}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-\${qId}-\${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              \${proof.reasons.map((r, rIdx) => `<option value="\${rIdx}">\${r}</option>`).join('')}
+              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
             </select>
           </div>
         `;
@@ -877,8 +886,8 @@ To merge branches in Git, you need to understand the following:
       const targetIdx = renderIdx + direction;
       if (targetIdx >= 0 && targetIdx < proof.order.length) {
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const targetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -888,15 +897,15 @@ To merge branches in Git, you need to understand the following:
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const newTargetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
       }
     }
 
     function checkProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
@@ -909,7 +918,7 @@ To merge branches in Git, you need to understand the following:
           correct = false;
         }
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
+        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
         if (selectedReasonIdx !== reasonMappings[stepIdx]) {
           correct = false;
@@ -942,7 +951,7 @@ To merge branches in Git, you need to understand the following:
     }
 
     function checkEvidence(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -974,7 +983,7 @@ To merge branches in Git, you need to understand the following:
     // 5. Case Simulation
     const caseStates = {};
     function initCaseSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
@@ -1004,10 +1013,10 @@ To merge branches in Git, you need to understand the following:
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: \${val * 100}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>\${name.toUpperCase()}</strong>: \${displayVal}\${progressHtml}</div>`;
+        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
       }).join('');
 
       const stage = c.stages[c.currentStage];

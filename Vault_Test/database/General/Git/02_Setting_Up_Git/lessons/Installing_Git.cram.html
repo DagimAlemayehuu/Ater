@@ -271,10 +271,8 @@
       padding: 16px;
       margin-top: 14px;
     }
-    textarea {
+    textarea, .fill-input {
       width: 100%;
-      min-height: 150px;
-      resize: vertical;
       border: 1px solid var(--line);
       background: #101011;
       color: var(--text);
@@ -283,7 +281,14 @@
       font: inherit;
       outline: none;
     }
-    textarea:focus {
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    .fill-input {
+      padding: 10px 12px;
+    }
+    textarea:focus, .fill-input:focus {
       border-color: var(--line-strong);
     }
     .checklist {
@@ -371,10 +376,10 @@
                 <div class="section-body">
                   <h2>Cram Sheet: Installing Git</h2>
                   <h3>Mental Model Summary</h3>
-                  <p>When you start using Git, the first thing you need to do is install it on your computer. Git is a software that helps you manage changes to your code, and it's used by millions of developers around the world. Imagine you're working on a project with your friends, and you're all making changes to the same document. Git helps you keep track of who made what changes, and when, so you can easily go back to a previous version if something goes wrong. To use Git, you need to install it on your computer, and that's what we're going to do in this lesson.</p>
+                  <p>When you start using Git, the first thing you need to do is install it on your computer. Think of Git like a tool that helps you keep track of changes in your project files. Just like how you need a screwdriver to drive screws, you need Git to manage your project's files. Installing Git is like putting the right tool in your toolbox so you can start building and tracking changes.</p>
 
                   <h3>High-Yield Bullet Highlights</h3>
-                  <ul><li>Check if Git is already installed**: Open your terminal or command prompt and type `git --version`. If Git is installed, you'll see the version number. If not, you'll get an error message.</li><li>Download and install Git**: Go to the official Git website and download the installer for your operating system. Follow the installation instructions to install Git.</li><li>Verify the installation**: After installation, open a new terminal or command prompt and type `git --version` again to verify that Git is installed correctly.</li></ul>
+                  <ul><li>For Windows**: Download the Git installer from the official Git website. Run the installer and follow the prompts. Make sure to select the option to install Git Bash, which is a command-line interface that makes it easier to use Git.</li><li>For macOS (with Homebrew)**: If you have Homebrew installed, you can simply run `brew install git` in your terminal.</li><li>For Linux**: You can install Git using your distribution's package manager. For example, on Ubuntu or Debian, run `sudo apt-get install git`.</li></ul>
                 </div>
                 <div class="nav-row">
                   <span></span>
@@ -442,7 +447,9 @@
             
             <div class="nav-row">
               <button class='nav-btn' onclick='navigateToPreviousPage()'>&larr; Back to Lesson</button>
-              <button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button>
+              
+            <a class="nav-btn primary" href="./Configuring_Git.cram.html">Next Lesson &rarr;</a>
+            
             </div>
           </div>
         </section>
@@ -459,20 +466,22 @@ hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/Installing_Git.simple.html
   deep: lessons/Installing_Git.deep.html
+  cram: lessons/Installing_Git.cram.html
+  exam: lessons/Installing_Git.exam.html
 artifact_pack: database/General/Git/02_Setting_Up_Git/artifacts/Installing_Git.artifacts.json
 ---
 
 ## Mental Model
-When you start using Git, the first thing you need to do is install it on your computer. Git is a software that helps you manage changes to your code, and it's used by millions of developers around the world. Imagine you're working on a project with your friends, and you're all making changes to the same document. Git helps you keep track of who made what changes, and when, so you can easily go back to a previous version if something goes wrong. To use Git, you need to install it on your computer, and that's what we're going to do in this lesson.
+When you start using Git, the first thing you need to do is install it on your computer. Think of Git like a tool that helps you keep track of changes in your project files. Just like how you need a screwdriver to drive screws, you need Git to manage your project's files. Installing Git is like putting the right tool in your toolbox so you can start building and tracking changes.
 
 ## What You Must Know
 To install Git, you need to follow these steps:
-*   **Check if Git is already installed**: Open your terminal or command prompt and type `git --version`. If Git is installed, you'll see the version number. If not, you'll get an error message.
-*   **Download and install Git**: Go to the official Git website and download the installer for your operating system. Follow the installation instructions to install Git.
-*   **Verify the installation**: After installation, open a new terminal or command prompt and type `git --version` again to verify that Git is installed correctly.
+- **For Windows**: Download the Git installer from the official Git website. Run the installer and follow the prompts. Make sure to select the option to install Git Bash, which is a command-line interface that makes it easier to use Git.
+- **For macOS (with Homebrew)**: If you have Homebrew installed, you can simply run `brew install git` in your terminal.
+- **For Linux**: You can install Git using your distribution's package manager. For example, on Ubuntu or Debian, run `sudo apt-get install git`.
 
 ## Common Mistakes
-One common mistake people make is not checking if Git is already installed before trying to install it. This can lead to confusion if you have multiple versions of Git on your computer. Another mistake is not following the installation instructions carefully, which can result in Git not being installed correctly.
+One common mistake is not verifying that Git was installed correctly. After installation, open a new command-line interface (like Command Prompt on Windows or Terminal on macOS/Linux) and type `git --version`. If Git is installed correctly, you should see the version number. If not, you might need to add Git to your system's PATH or reinstall it.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -527,20 +536,22 @@ hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/Installing_Git.simple.html
   deep: lessons/Installing_Git.deep.html
+  cram: lessons/Installing_Git.cram.html
+  exam: lessons/Installing_Git.exam.html
 artifact_pack: database/General/Git/02_Setting_Up_Git/artifacts/Installing_Git.artifacts.json
 ---
 
 ## Mental Model
-When you start using Git, the first thing you need to do is install it on your computer. Git is a software that helps you manage changes to your code, and it's used by millions of developers around the world. Imagine you're working on a project with your friends, and you're all making changes to the same document. Git helps you keep track of who made what changes, and when, so you can easily go back to a previous version if something goes wrong. To use Git, you need to install it on your computer, and that's what we're going to do in this lesson.
+When you start using Git, the first thing you need to do is install it on your computer. Think of Git like a tool that helps you keep track of changes in your project files. Just like how you need a screwdriver to drive screws, you need Git to manage your project's files. Installing Git is like putting the right tool in your toolbox so you can start building and tracking changes.
 
 ## What You Must Know
 To install Git, you need to follow these steps:
-*   **Check if Git is already installed**: Open your terminal or command prompt and type `git --version`. If Git is installed, you'll see the version number. If not, you'll get an error message.
-*   **Download and install Git**: Go to the official Git website and download the installer for your operating system. Follow the installation instructions to install Git.
-*   **Verify the installation**: After installation, open a new terminal or command prompt and type `git --version` again to verify that Git is installed correctly.
+- **For Windows**: Download the Git installer from the official Git website. Run the installer and follow the prompts. Make sure to select the option to install Git Bash, which is a command-line interface that makes it easier to use Git.
+- **For macOS (with Homebrew)**: If you have Homebrew installed, you can simply run `brew install git` in your terminal.
+- **For Linux**: You can install Git using your distribution's package manager. For example, on Ubuntu or Debian, run `sudo apt-get install git`.
 
 ## Common Mistakes
-One common mistake people make is not checking if Git is already installed before trying to install it. This can lead to confusion if you have multiple versions of Git on your computer. Another mistake is not following the installation instructions carefully, which can result in Git not being installed correctly.
+One common mistake is not verifying that Git was installed correctly. After installation, open a new command-line interface (like Command Prompt on Windows or Terminal on macOS/Linux) and type `git --version`. If Git is installed correctly, you should see the version number. If not, you might need to add Git to your system's PATH or reinstall it.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -675,7 +686,7 @@ One common mistake people make is not checking if Git is already installed befor
     async function runSqlQuery(qId) {
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -703,9 +714,9 @@ One common mistake people make is not checking if Git is already installed befor
           if (data.dataset && data.dataset.length > 0) {
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>\${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${h}</th>`).join('')}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>\${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${row[h]}</td>`).join('')}</tr>`
+              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
             ).join('');
           }
         } else {
@@ -732,7 +743,7 @@ One common mistake people make is not checking if Git is already installed befor
     // 2. Simulation Predict
     const simStates = {};
     function initSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
@@ -753,8 +764,8 @@ One common mistake people make is not checking if Git is already installed befor
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step \${sim.currentStep}:</strong><br>` + 
-        Object.entries(currState.vars || {}).map(([k, v]) => `\${k} = \${v}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
+        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
       
       inputArea.innerHTML = '';
       
@@ -763,8 +774,8 @@ One common mistake people make is not checking if Git is already installed befor
       if (checkpoint) {
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>\${checkpoint.question}</p>
-            <input type="number" id="sim-pred-\${qId}" placeholder="Enter prediction for \${checkpoint.target_var}">
+            <p>${checkpoint.question}</p>
+            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
@@ -785,7 +796,7 @@ One common mistake people make is not checking if Git is already installed befor
         if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected \${checkpoint.expected_value} for \${checkpoint.target_var}.`;
+          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
           feedback.style.color = 'var(--bad)';
           return;
         } else {
@@ -818,7 +829,7 @@ One common mistake people make is not checking if Git is already installed befor
     // 3. Proof Step
     const proofStates = {};
     function initProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -847,16 +858,16 @@ One common mistake people make is not checking if Git is already installed befor
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">\${stepText}</span>
+            <span style="font-size: 14px;">${stepText}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-\${qId}-\${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              \${proof.reasons.map((r, rIdx) => `<option value="\${rIdx}">\${r}</option>`).join('')}
+              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
             </select>
           </div>
         `;
@@ -869,8 +880,8 @@ One common mistake people make is not checking if Git is already installed befor
       const targetIdx = renderIdx + direction;
       if (targetIdx >= 0 && targetIdx < proof.order.length) {
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const targetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -880,15 +891,15 @@ One common mistake people make is not checking if Git is already installed befor
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const newTargetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
       }
     }
 
     function checkProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
@@ -901,7 +912,7 @@ One common mistake people make is not checking if Git is already installed befor
           correct = false;
         }
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
+        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
         if (selectedReasonIdx !== reasonMappings[stepIdx]) {
           correct = false;
@@ -934,7 +945,7 @@ One common mistake people make is not checking if Git is already installed befor
     }
 
     function checkEvidence(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -966,7 +977,7 @@ One common mistake people make is not checking if Git is already installed befor
     // 5. Case Simulation
     const caseStates = {};
     function initCaseSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
@@ -996,10 +1007,10 @@ One common mistake people make is not checking if Git is already installed befor
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: \${val * 100}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>\${name.toUpperCase()}</strong>: \${displayVal}\${progressHtml}</div>`;
+        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
       }).join('');
 
       const stage = c.stages[c.currentStage];

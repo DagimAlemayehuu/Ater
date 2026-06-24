@@ -1,5 +1,4 @@
 ---
-
 title: Community_Involvement_Strategies
 tags: [atomic-note, education, global_trends]
 course: Global_Trends
@@ -16,7 +15,11 @@ source_pages: [19, 17]
 generated: true
 skeleton_fallback: true
 read: false
-
+lesson_variants:
+  simple: lessons/Community_Involvement_Strategies.simple.html
+  deep: lessons/Community_Involvement_Strategies.deep.html
+  cram: lessons/Community_Involvement_Strategies.cram.html
+  exam: lessons/Community_Involvement_Strategies.exam.html
 ---
 
 ## Mental Model

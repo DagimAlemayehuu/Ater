@@ -271,10 +271,8 @@
       padding: 16px;
       margin-top: 14px;
     }
-    textarea {
+    textarea, .fill-input {
       width: 100%;
-      min-height: 150px;
-      resize: vertical;
       border: 1px solid var(--line);
       background: #101011;
       color: var(--text);
@@ -283,7 +281,14 @@
       font: inherit;
       outline: none;
     }
-    textarea:focus {
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    .fill-input {
+      padding: 10px 12px;
+    }
+    textarea:focus, .fill-input:focus {
       border-color: var(--line-strong);
     }
     .checklist {
@@ -370,16 +375,16 @@
               <div class="lesson-card">
                 <div class="section-body">
                   <h2>Mental Model</h2>
-                  <p>Git is a system that helps you keep track of changes you make to your files and projects over time. Imagine you have a folder full of papers, and you want to make sure you can always find the latest version of each paper. Git works like a super-smart filing system that not only keeps your papers organized but also remembers every change you make to them. This way, you can easily go back to any previous version of a paper if you need to.</p>
+                  <p>Git is a system that helps you track changes in your files and projects over time. Imagine you have a folder full of papers, and you want to keep a record of every version of those papers as you make changes to them. You could make a photocopy of the papers every time you change them, but that would take up a lot of space and be hard to manage. Instead, Git acts like a super-smart assistant that keeps track of all your changes for you. It does this by creating a special kind of file called a "repository" (or "repo" for short) that stores all your files and a record of every change you make.</p>
 
                   <h2>What You Must Know</h2>
-                  <p>Git is a version control system. This means it helps you manage changes to your code, documents, or any other digital content. Here are key points about Git:
-- Git is decentralized, meaning you don't need a central server to use it; every user has a full copy of the project history.
-- It allows multiple people to work on the same project simultaneously without conflicts.
-- Git tracks changes in a project over time, allowing you to revert to previous states.</p>
+                  <p>To understand Git, you need to know that it is a <strong>version control system</strong>. This means it helps you manage different versions of your project. Here are some key points:
+- Git is used by developers to work on software projects together.
+- It allows multiple people to make changes to the same project without messing each other's work.
+- Git is not a backup system, although it can be used to keep a backup of your work.</p>
 
                   <h2>Common Mistakes</h2>
-                  <p>A common mistake is thinking that Git is only for programmers. While it's widely used in software development, Git can be used for any type of project where you want to track changes over time. Another mistake is not understanding that Git is not a backup system. Although it can help you recover previous versions of your files, it's not a substitute for proper backups.</p>
+                  <p>A common mistake people make when first learning about Git is thinking it's only for programmers. However, Git can be used for any kind of project where you want to track changes over time, like writing a book, making art, or even managing recipes.</p>
 
                 </div>
                 <div class="nav-row">
@@ -448,7 +453,9 @@
             
             <div class="nav-row">
               <button class='nav-btn' onclick='navigateToPreviousPage()'>&larr; Back to Lesson</button>
-              <button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button>
+              
+            <a class="nav-btn primary" href="./Brief_History_Of_Git.deep.html">Next Lesson &rarr;</a>
+            
             </div>
           </div>
         </section>
@@ -464,20 +471,23 @@ chapter: "[[Chapter_01_Introduction_To_Git]]"
 hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/What_Is_Git.simple.html
+  deep: lessons/What_Is_Git.deep.html
+  cram: lessons/What_Is_Git.cram.html
+  exam: lessons/What_Is_Git.exam.html
 artifact_pack: database/General/Git/01_Introduction_To_Git/artifacts/What_Is_Git.artifacts.json
 ---
 
 ## Mental Model
-Git is a system that helps you keep track of changes you make to your files and projects over time. Imagine you have a folder full of papers, and you want to make sure you can always find the latest version of each paper. Git works like a super-smart filing system that not only keeps your papers organized but also remembers every change you make to them. This way, you can easily go back to any previous version of a paper if you need to.
+Git is a system that helps you track changes in your files and projects over time. Imagine you have a folder full of papers, and you want to keep a record of every version of those papers as you make changes to them. You could make a photocopy of the papers every time you change them, but that would take up a lot of space and be hard to manage. Instead, Git acts like a super-smart assistant that keeps track of all your changes for you. It does this by creating a special kind of file called a "repository" (or "repo" for short) that stores all your files and a record of every change you make.
 
 ## What You Must Know
-Git is a version control system. This means it helps you manage changes to your code, documents, or any other digital content. Here are key points about Git:
-- Git is decentralized, meaning you don't need a central server to use it; every user has a full copy of the project history.
-- It allows multiple people to work on the same project simultaneously without conflicts.
-- Git tracks changes in a project over time, allowing you to revert to previous states.
+To understand Git, you need to know that it is a **version control system**. This means it helps you manage different versions of your project. Here are some key points:
+- Git is used by developers to work on software projects together.
+- It allows multiple people to make changes to the same project without messing each other's work.
+- Git is not a backup system, although it can be used to keep a backup of your work.
 
 ## Common Mistakes
-A common mistake is thinking that Git is only for programmers. While it's widely used in software development, Git can be used for any type of project where you want to track changes over time. Another mistake is not understanding that Git is not a backup system. Although it can help you recover previous versions of your files, it's not a substitute for proper backups.
+A common mistake people make when first learning about Git is thinking it's only for programmers. However, Git can be used for any kind of project where you want to track changes over time, like writing a book, making art, or even managing recipes.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -531,20 +541,23 @@ chapter: "[[Chapter_01_Introduction_To_Git]]"
 hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/What_Is_Git.simple.html
+  deep: lessons/What_Is_Git.deep.html
+  cram: lessons/What_Is_Git.cram.html
+  exam: lessons/What_Is_Git.exam.html
 artifact_pack: database/General/Git/01_Introduction_To_Git/artifacts/What_Is_Git.artifacts.json
 ---
 
 ## Mental Model
-Git is a system that helps you keep track of changes you make to your files and projects over time. Imagine you have a folder full of papers, and you want to make sure you can always find the latest version of each paper. Git works like a super-smart filing system that not only keeps your papers organized but also remembers every change you make to them. This way, you can easily go back to any previous version of a paper if you need to.
+Git is a system that helps you track changes in your files and projects over time. Imagine you have a folder full of papers, and you want to keep a record of every version of those papers as you make changes to them. You could make a photocopy of the papers every time you change them, but that would take up a lot of space and be hard to manage. Instead, Git acts like a super-smart assistant that keeps track of all your changes for you. It does this by creating a special kind of file called a "repository" (or "repo" for short) that stores all your files and a record of every change you make.
 
 ## What You Must Know
-Git is a version control system. This means it helps you manage changes to your code, documents, or any other digital content. Here are key points about Git:
-- Git is decentralized, meaning you don't need a central server to use it; every user has a full copy of the project history.
-- It allows multiple people to work on the same project simultaneously without conflicts.
-- Git tracks changes in a project over time, allowing you to revert to previous states.
+To understand Git, you need to know that it is a **version control system**. This means it helps you manage different versions of your project. Here are some key points:
+- Git is used by developers to work on software projects together.
+- It allows multiple people to make changes to the same project without messing each other's work.
+- Git is not a backup system, although it can be used to keep a backup of your work.
 
 ## Common Mistakes
-A common mistake is thinking that Git is only for programmers. While it's widely used in software development, Git can be used for any type of project where you want to track changes over time. Another mistake is not understanding that Git is not a backup system. Although it can help you recover previous versions of your files, it's not a substitute for proper backups.
+A common mistake people make when first learning about Git is thinking it's only for programmers. However, Git can be used for any kind of project where you want to track changes over time, like writing a book, making art, or even managing recipes.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -679,7 +692,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
     async function runSqlQuery(qId) {
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -707,9 +720,9 @@ A common mistake is thinking that Git is only for programmers. While it's widely
           if (data.dataset && data.dataset.length > 0) {
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>\${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${h}</th>`).join('')}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>\${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${row[h]}</td>`).join('')}</tr>`
+              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
             ).join('');
           }
         } else {
@@ -736,7 +749,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
     // 2. Simulation Predict
     const simStates = {};
     function initSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
@@ -757,8 +770,8 @@ A common mistake is thinking that Git is only for programmers. While it's widely
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step \${sim.currentStep}:</strong><br>` + 
-        Object.entries(currState.vars || {}).map(([k, v]) => `\${k} = \${v}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
+        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
       
       inputArea.innerHTML = '';
       
@@ -767,8 +780,8 @@ A common mistake is thinking that Git is only for programmers. While it's widely
       if (checkpoint) {
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>\${checkpoint.question}</p>
-            <input type="number" id="sim-pred-\${qId}" placeholder="Enter prediction for \${checkpoint.target_var}">
+            <p>${checkpoint.question}</p>
+            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
@@ -789,7 +802,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
         if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected \${checkpoint.expected_value} for \${checkpoint.target_var}.`;
+          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
           feedback.style.color = 'var(--bad)';
           return;
         } else {
@@ -822,7 +835,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
     // 3. Proof Step
     const proofStates = {};
     function initProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -851,16 +864,16 @@ A common mistake is thinking that Git is only for programmers. While it's widely
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">\${stepText}</span>
+            <span style="font-size: 14px;">${stepText}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-\${qId}-\${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              \${proof.reasons.map((r, rIdx) => `<option value="\${rIdx}">\${r}</option>`).join('')}
+              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
             </select>
           </div>
         `;
@@ -873,8 +886,8 @@ A common mistake is thinking that Git is only for programmers. While it's widely
       const targetIdx = renderIdx + direction;
       if (targetIdx >= 0 && targetIdx < proof.order.length) {
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const targetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -884,15 +897,15 @@ A common mistake is thinking that Git is only for programmers. While it's widely
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const newTargetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
       }
     }
 
     function checkProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
@@ -905,7 +918,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
           correct = false;
         }
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
+        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
         if (selectedReasonIdx !== reasonMappings[stepIdx]) {
           correct = false;
@@ -938,7 +951,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
     }
 
     function checkEvidence(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -970,7 +983,7 @@ A common mistake is thinking that Git is only for programmers. While it's widely
     // 5. Case Simulation
     const caseStates = {};
     function initCaseSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
@@ -1000,10 +1013,10 @@ A common mistake is thinking that Git is only for programmers. While it's widely
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: \${val * 100}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>\${name.toUpperCase()}</strong>: \${displayVal}\${progressHtml}</div>`;
+        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
       }).join('');
 
       const stage = c.stages[c.currentStage];

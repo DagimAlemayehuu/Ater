@@ -202,7 +202,20 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   };
 
   const renderFillInBlanks = () => {
-    const text = currentQ.textWithBlanks || currentQ.text_with_blanks || '';
+    let text = currentQ.textWithBlanks || currentQ.text_with_blanks || '';
+    const rawAnswer = currentQ.answer || '';
+    const ansArr = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
+
+    if (!text && currentQ.question) {
+      let tempText = currentQ.question;
+      let argIdx = 0;
+      tempText = tempText.replace(/_{3,}/g, () => {
+        const val = ansArr[argIdx++] || '';
+        return `[[${val}]]`;
+      });
+      text = tempText;
+    }
+
     const parts = text.split(/\[\[.*?\]\]/);
     return parts.map((part: string, i: number) => (
       <React.Fragment key={i}>
@@ -226,8 +239,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                   : "border-primary/40 focus:border-primary text-foreground"
               )}
             />
-            {isRevealed && Array.isArray(currentQ.answer) && String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() !== String((currentQ.answer)[i] || '').toLowerCase() && (
-               <div className="text-[10px] text-foreground font-black mt-1 uppercase tracking-widest bg-muted/30 px-1 rounded-[8px]">Correct: {String((currentQ.answer as string[])[i] || '')}</div>
+            {isRevealed && String((userAnswers[currentQ.id] || [])[i] || '').toLowerCase() !== String(ansArr[i] || '').toLowerCase() && (
+               <div className="text-[10px] text-foreground font-black mt-1 uppercase tracking-widest bg-muted/30 px-1 rounded-[8px]">Correct: {String(ansArr[i] || '')}</div>
             )}
           </div>
         )}

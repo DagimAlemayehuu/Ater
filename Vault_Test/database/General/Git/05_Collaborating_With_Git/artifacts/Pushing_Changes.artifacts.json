@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "note_title": "Pushing_Changes",
+  "note_path": "database/General/Git/05_Collaborating_With_Git/Pushing_Changes.md",
+  "active_version": 2,
+  "pinned_artifact_types": [],
+  "versions": [
+    {
+      "version": 1,
+      "created_at": "2026-06-24T15:43:28.421300+00:00",
+      "artifacts": []
+    },
+    {
+      "version": 2,
+      "created_at": "2026-06-24T15:43:56.026670+00:00",
+      "artifacts": [
+        {
+          "type": "reveal_card",
+          "front": "What is the core concept of Pushing_Changes?",
+          "back": "Details about Pushing_Changes can be found in the note content."
+        }
+      ]
+    }
+  ]
+}

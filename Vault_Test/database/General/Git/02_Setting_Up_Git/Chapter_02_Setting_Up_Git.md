@@ -5,7 +5,7 @@ order: 2
 atomic_notes:
 - "[[Installing_Git]]"
 - "[[Configuring_Git]]"
-- "[[Basic_Git_Commands]]"
+- "[[Creating_A_GitHub_Account]]"
 ---
 
 # Chapter 02 Setting up Git
@@ -14,4 +14,4 @@ atomic_notes:
 
 - [[Installing_Git]]
 - [[Configuring_Git]]
-- [[Basic_Git_Commands]]
+- [[Creating_A_GitHub_Account]]

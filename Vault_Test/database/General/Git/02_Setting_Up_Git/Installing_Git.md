@@ -11,16 +11,16 @@ artifact_pack: database/General/Git/02_Setting_Up_Git/artifacts/Installing_Git.a
 ---
 
 ## Mental Model
-When you start using Git, the first thing you need to do is install it on your computer. Git is a software that helps you manage changes to your code, and it's used by millions of developers around the world. Imagine you're working on a project with your friends, and you're all making changes to the same document. Git helps you keep track of who made what changes, and when, so you can easily go back to a previous version if something goes wrong. To use Git, you need to install it on your computer, and that's what we're going to do in this lesson.
+When you start using Git, the first thing you need to do is install it on your computer. Think of Git like a tool that helps you keep track of changes in your project files. Just like how you need a screwdriver to drive screws, you need Git to manage your project's files. Installing Git is like putting the right tool in your toolbox so you can start building and tracking changes.
 
 ## What You Must Know
 To install Git, you need to follow these steps:
-*   **Check if Git is already installed**: Open your terminal or command prompt and type `git --version`. If Git is installed, you'll see the version number. If not, you'll get an error message.
-*   **Download and install Git**: Go to the official Git website and download the installer for your operating system. Follow the installation instructions to install Git.
-*   **Verify the installation**: After installation, open a new terminal or command prompt and type `git --version` again to verify that Git is installed correctly.
+- **For Windows**: Download the Git installer from the official Git website. Run the installer and follow the prompts. Make sure to select the option to install Git Bash, which is a command-line interface that makes it easier to use Git.
+- **For macOS (with Homebrew)**: If you have Homebrew installed, you can simply run `brew install git` in your terminal.
+- **For Linux**: You can install Git using your distribution's package manager. For example, on Ubuntu or Debian, run `sudo apt-get install git`.
 
 ## Common Mistakes
-One common mistake people make is not checking if Git is already installed before trying to install it. This can lead to confusion if you have multiple versions of Git on your computer. Another mistake is not following the installation instructions carefully, which can result in Git not being installed correctly.
+One common mistake is not verifying that Git was installed correctly. After installation, open a new command-line interface (like Command Prompt on Windows or Terminal on macOS/Linux) and type `git --version`. If Git is installed correctly, you should see the version number. If not, you might need to add Git to your system's PATH or reinstall it.
 
 ## The Proving Grounds
 ```interactive-quiz

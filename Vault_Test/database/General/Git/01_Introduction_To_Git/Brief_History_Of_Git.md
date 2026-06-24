@@ -11,15 +11,13 @@ artifact_pack: database/General/Git/01_Introduction_To_Git/artifacts/Brief_Histo
 ---
 
 ## Mental Model
-Git is a version control system that helps you track changes in your code over time. Imagine you're working on a big project with many pages, and you want to keep track of changes you make to each page. You could make a copy of the whole project every time you make a change, but that would take up a lot of space and be hard to manage. Instead, Git helps you keep a record of all the changes you make, so you can easily go back to a previous version if something goes wrong.
-
-Git was created by Linus Torvalds in 2005. Torvalds is a well-known computer programmer who also created the Linux operating system. He needed a version control system for his Linux project, and he wanted one that was free, open-source, and could handle large projects. He based Git on an earlier system called BitKeeper, but he made significant changes to create a new system that was more powerful and flexible.
+Git is a version control system that helps you track changes in your code over time. Imagine you're working on a big project with many people, and you all need to make changes to the same files. Without a system to keep track of changes, it can get very confusing. That's where Git comes in. It was created by Linus Torvalds in 2005 to help manage the Linux kernel source code. Torvalds, the creator of Linux, wanted a system that was fast, flexible, and easy to use. He was inspired by other version control systems like BitKeeper and Subversion, but he wanted something that was more powerful and efficient.
 
 ## What You Must Know
-Git is a distributed version control system. This means that every person working on a project has a complete copy of the project's history on their own computer. This makes it easy to work on a project even when you're not connected to the internet. Git also allows multiple people to work on a project at the same time, and it helps you manage conflicts that arise when different people make changes to the same code.
+Git is a distributed version control system, which means that every developer working on a project has a full copy of the entire project history on their local machine. This makes it easy to work offline and collaborate with others. Git stores changes in a series of commits, which are like snapshots of your code at a particular point in time. Each commit has a unique ID and includes information like the author's name and email, the date and time of the commit, and a brief description of the changes made.
 
 ## Common Mistakes
-One common mistake people make when using Git is not understanding that it's a local system. This means that changes you make to your code aren't automatically saved to a central server. You need to use Git commands to save your changes and share them with others. Another mistake is not using meaningful commit messages. When you save changes with Git, you should write a clear message explaining what changes you made. This helps you and others understand the project's history.
+One common mistake people make when learning Git is thinking that it's only for big projects or teams. However, Git is useful for anyone who works on code, even if it's just a personal project. Another mistake is not understanding that Git is a local system, meaning that you can use it even without an internet connection. You can make changes, commit them, and then sync with a remote repository later.
 
 ## The Proving Grounds
 ```interactive-quiz

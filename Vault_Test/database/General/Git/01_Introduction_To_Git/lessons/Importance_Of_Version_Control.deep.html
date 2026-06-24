@@ -271,10 +271,8 @@
       padding: 16px;
       margin-top: 14px;
     }
-    textarea {
+    textarea, .fill-input {
       width: 100%;
-      min-height: 150px;
-      resize: vertical;
       border: 1px solid var(--line);
       background: #101011;
       color: var(--text);
@@ -283,7 +281,14 @@
       font: inherit;
       outline: none;
     }
-    textarea:focus {
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    .fill-input {
+      padding: 10px 12px;
+    }
+    textarea:focus, .fill-input:focus {
       border-color: var(--line-strong);
     }
     .checklist {
@@ -380,7 +385,10 @@
 * Experiment with new ideas without affecting the original work</p>
 
                   <h2>Common Mistakes</h2>
-                  <p>One common mistake is not using version control at all. This can lead to lost work, conflicts with team members, and a lot of stress. Another mistake is not making regular commits, which are like snapshots of your project at a particular point in time. This makes it hard to track changes and revert back to previous versions.</p>
+                  <p>Many people think they can manage their projects without version control, only to realize later that it's much harder than they thought. Without version control, you might:
+* Lose track of changes and end up with multiple versions of your project
+* Have to redo work because you can't remember what changes you made
+* Struggle to collaborate with others</p>
 
                 </div>
                 <div class="nav-row">
@@ -449,7 +457,9 @@
             
             <div class="nav-row">
               <button class='nav-btn' onclick='navigateToPreviousPage()'>&larr; Back to Lesson</button>
-              <button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button>
+              
+            <button class="nav-btn primary" onclick="window.parent.postMessage({ type: 'NEXT_NOTE' }, '*')">Next Chapter</button>
+            
             </div>
           </div>
         </section>
@@ -465,6 +475,9 @@ chapter: "[[Chapter_01_Introduction_To_Git]]"
 hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/Importance_Of_Version_Control.simple.html
+  deep: lessons/Importance_Of_Version_Control.deep.html
+  cram: lessons/Importance_Of_Version_Control.cram.html
+  exam: lessons/Importance_Of_Version_Control.exam.html
 artifact_pack: database/General/Git/01_Introduction_To_Git/artifacts/Importance_Of_Version_Control.artifacts.json
 ---
 
@@ -479,7 +492,10 @@ Version control is essential when working on projects, especially with teams. It
 * Experiment with new ideas without affecting the original work
 
 ## Common Mistakes
-One common mistake is not using version control at all. This can lead to lost work, conflicts with team members, and a lot of stress. Another mistake is not making regular commits, which are like snapshots of your project at a particular point in time. This makes it hard to track changes and revert back to previous versions.
+Many people think they can manage their projects without version control, only to realize later that it's much harder than they thought. Without version control, you might:
+* Lose track of changes and end up with multiple versions of your project
+* Have to redo work because you can't remember what changes you made
+* Struggle to collaborate with others
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -535,6 +551,9 @@ chapter: "[[Chapter_01_Introduction_To_Git]]"
 hub: "[[Git_Hub]]"
 lesson_variants:
   simple: lessons/Importance_Of_Version_Control.simple.html
+  deep: lessons/Importance_Of_Version_Control.deep.html
+  cram: lessons/Importance_Of_Version_Control.cram.html
+  exam: lessons/Importance_Of_Version_Control.exam.html
 artifact_pack: database/General/Git/01_Introduction_To_Git/artifacts/Importance_Of_Version_Control.artifacts.json
 ---
 
@@ -549,7 +568,10 @@ Version control is essential when working on projects, especially with teams. It
 * Experiment with new ideas without affecting the original work
 
 ## Common Mistakes
-One common mistake is not using version control at all. This can lead to lost work, conflicts with team members, and a lot of stress. Another mistake is not making regular commits, which are like snapshots of your project at a particular point in time. This makes it hard to track changes and revert back to previous versions.
+Many people think they can manage their projects without version control, only to realize later that it's much harder than they thought. Without version control, you might:
+* Lose track of changes and end up with multiple versions of your project
+* Have to redo work because you can't remember what changes you made
+* Struggle to collaborate with others
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -684,7 +706,7 @@ One common mistake is not using version control at all. This can lead to lost wo
     async function runSqlQuery(qId) {
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -712,9 +734,9 @@ One common mistake is not using version control at all. This can lead to lost wo
           if (data.dataset && data.dataset.length > 0) {
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>\${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${h}</th>`).join('')}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>\${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${row[h]}</td>`).join('')}</tr>`
+              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
             ).join('');
           }
         } else {
@@ -741,7 +763,7 @@ One common mistake is not using version control at all. This can lead to lost wo
     // 2. Simulation Predict
     const simStates = {};
     function initSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
@@ -762,8 +784,8 @@ One common mistake is not using version control at all. This can lead to lost wo
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step \${sim.currentStep}:</strong><br>` + 
-        Object.entries(currState.vars || {}).map(([k, v]) => `\${k} = \${v}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
+        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
       
       inputArea.innerHTML = '';
       
@@ -772,8 +794,8 @@ One common mistake is not using version control at all. This can lead to lost wo
       if (checkpoint) {
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>\${checkpoint.question}</p>
-            <input type="number" id="sim-pred-\${qId}" placeholder="Enter prediction for \${checkpoint.target_var}">
+            <p>${checkpoint.question}</p>
+            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
@@ -794,7 +816,7 @@ One common mistake is not using version control at all. This can lead to lost wo
         if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected \${checkpoint.expected_value} for \${checkpoint.target_var}.`;
+          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
           feedback.style.color = 'var(--bad)';
           return;
         } else {
@@ -827,7 +849,7 @@ One common mistake is not using version control at all. This can lead to lost wo
     // 3. Proof Step
     const proofStates = {};
     function initProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -856,16 +878,16 @@ One common mistake is not using version control at all. This can lead to lost wo
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">\${stepText}</span>
+            <span style="font-size: 14px;">${stepText}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-\${qId}-\${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              \${proof.reasons.map((r, rIdx) => `<option value="\${rIdx}">\${r}</option>`).join('')}
+              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
             </select>
           </div>
         `;
@@ -878,8 +900,8 @@ One common mistake is not using version control at all. This can lead to lost wo
       const targetIdx = renderIdx + direction;
       if (targetIdx >= 0 && targetIdx < proof.order.length) {
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const targetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -889,15 +911,15 @@ One common mistake is not using version control at all. This can lead to lost wo
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const newTargetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
       }
     }
 
     function checkProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
@@ -910,7 +932,7 @@ One common mistake is not using version control at all. This can lead to lost wo
           correct = false;
         }
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
+        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
         if (selectedReasonIdx !== reasonMappings[stepIdx]) {
           correct = false;
@@ -943,7 +965,7 @@ One common mistake is not using version control at all. This can lead to lost wo
     }
 
     function checkEvidence(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -975,7 +997,7 @@ One common mistake is not using version control at all. This can lead to lost wo
     // 5. Case Simulation
     const caseStates = {};
     function initCaseSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
@@ -1005,10 +1027,10 @@ One common mistake is not using version control at all. This can lead to lost wo
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: \${val * 100}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>\${name.toUpperCase()}</strong>: \${displayVal}\${progressHtml}</div>`;
+        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
       }).join('');
 
       const stage = c.stages[c.currentStage];

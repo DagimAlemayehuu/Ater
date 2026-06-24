@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "note_title": "Pulling_Changes",
+  "note_path": "database/General/Git/05_Collaborating_With_Git/Pulling_Changes.md",
+  "active_version": 2,
+  "pinned_artifact_types": [],
+  "versions": [
+    {
+      "version": 1,
+      "created_at": "2026-06-24T15:43:28.420738+00:00",
+      "artifacts": []
+    },
+    {
+      "version": 2,
+      "created_at": "2026-06-24T15:43:53.903241+00:00",
+      "artifacts": [
+        {
+          "type": "reveal_card",
+          "front": "What is the core concept of Pulling_Changes?",
+          "back": "Details about Pulling_Changes can be found in the note content."
+        }
+      ]
+    }
+  ]
+}

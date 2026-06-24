@@ -1,5 +1,4 @@
 ---
-
 title: Collaboration_And_Partnership
 tags: [atomic-note, education, global_trends]
 course: Global_Trends
@@ -18,7 +17,11 @@ source_pages: [3, 4, 11]
 generated: true
 skeleton_fallback: true
 read: false
-
+lesson_variants:
+  simple: lessons/Collaboration_And_Partnership.simple.html
+  deep: lessons/Collaboration_And_Partnership.deep.html
+  cram: lessons/Collaboration_And_Partnership.cram.html
+  exam: lessons/Collaboration_And_Partnership.exam.html
 ---
 
 ## Mental Model

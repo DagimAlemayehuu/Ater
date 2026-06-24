@@ -1,5 +1,4 @@
 ---
-
 title: Characteristics_Of_Successful_Partnerships
 tags: [atomic-note, education, global_trends]
 course: Global_Trends
@@ -17,7 +16,11 @@ prerequisites:
 source_pages: [12, 14]
 generated: true
 read: false
-
+lesson_variants:
+  simple: lessons/Characteristics_Of_Successful_Partnerships.simple.html
+  deep: lessons/Characteristics_Of_Successful_Partnerships.deep.html
+  cram: lessons/Characteristics_Of_Successful_Partnerships.cram.html
+  exam: lessons/Characteristics_Of_Successful_Partnerships.exam.html
 ---
 
 ## Mental Model

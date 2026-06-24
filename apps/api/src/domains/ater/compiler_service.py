@@ -554,7 +554,12 @@ class AterLessonCompiler:
                             """
                         quiz_html += '</div>'
                     elif q_type in ["fill_in", "fill-in", "fill_blank", "fill-in-the-blank"]:
-                        answer = str(q.get("answer") or "").replace("'", "\\'")
+                        ans = q.get("answer") or ""
+                        if isinstance(ans, list):
+                            ans_str = ans[0] if ans else ""
+                        else:
+                            ans_str = str(ans)
+                        answer = ans_str.replace("'", "\\'")
                         quiz_html += f"""
                         <div style="margin-top: 10px;">
                           <input id="quiz-fill-{q_id}" class="fill-input" placeholder="Type the missing word or phrase..." data-answer="{answer}" />
@@ -577,6 +582,25 @@ class AterLessonCompiler:
                     </div>
                     """
 
+        # Navigation Header/Footer
+        prev_btn_html = ""
+        if nav["prev_note_path"]:
+            prev_btn_html = f"""
+            <a class="nav-btn" href="{nav["prev_note_path"]}.{variant}.html">&larr; Prev Lesson</a>
+            """
+        else:
+            prev_btn_html = "<span></span>"
+
+        next_btn_html = ""
+        if nav["next_note_path"]:
+            next_btn_html = f"""
+            <a class="nav-btn primary" href="{nav["next_note_path"]}.{variant}.html">Next Lesson &rarr;</a>
+            """
+        else:
+            next_btn_html = f"""
+            <button class="nav-btn primary" onclick="window.parent.postMessage({{ type: 'NEXT_NOTE' }}, '*')">Next Chapter</button>
+            """
+
         # For exam variant, page 1 is the quiz page directly!
         quiz_page_active = "active" if variant == "exam" else ""
         
@@ -597,30 +621,11 @@ class AterLessonCompiler:
             
             <div class="nav-row">
               {"<button class='nav-btn' onclick='navigateToPreviousPage()'>&larr; Back to Lesson</button>" if variant != "exam" else "<span></span>"}
-              <button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button>
+              {next_btn_html}
             </div>
           </div>
         </section>
         """
-
-        # Navigation Header/Footer
-        prev_btn_html = ""
-        if nav["prev_note_path"]:
-            prev_btn_html = f"""
-            <a class="nav-btn" href="{nav["prev_note_path"]}.{variant}.html">&larr; Prev Lesson</a>
-            """
-        else:
-            prev_btn_html = "<span></span>"
-
-        next_btn_html = ""
-        if nav["next_note_path"]:
-            next_btn_html = f"""
-            <a class="nav-btn primary" href="{nav["next_note_path"]}.{variant}.html">Next Lesson &rarr;</a>
-            """
-        else:
-            next_btn_html = f"""
-            <button class="nav-btn primary" onclick="window.parent.postMessage({{ type: 'NEXT_NOTE' }}, '*')">Next Chapter</button>
-            """
 
         hub_link_html = ""
         if nav["hub_path"]:
@@ -902,10 +907,8 @@ class AterLessonCompiler:
       padding: 16px;
       margin-top: 14px;
     }}
-    textarea {{
+    textarea, .fill-input {{
       width: 100%;
-      min-height: 150px;
-      resize: vertical;
       border: 1px solid var(--line);
       background: #101011;
       color: var(--text);
@@ -914,7 +917,14 @@ class AterLessonCompiler:
       font: inherit;
       outline: none;
     }}
-    textarea:focus {{
+    textarea {{
+      min-height: 150px;
+      resize: vertical;
+    }}
+    .fill-input {{
+      padding: 10px 12px;
+    }}
+    textarea:focus, .fill-input:focus {{
       border-color: var(--line-strong);
     }}
     .checklist {{
@@ -1117,7 +1127,7 @@ class AterLessonCompiler:
     async function runSqlQuery(qId) {{
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
+      const card = document.querySelector(`[data-quiz-id="${{qId}}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -1145,9 +1155,9 @@ class AterLessonCompiler:
           if (data.dataset && data.dataset.length > 0) {{
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>\${{headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${{h}}</th>`).join('')}}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>${{headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${{h}}</th>`).join('')}}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>\${{headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${{row[h]}}</td>`).join('')}}</tr>`
+              `<tr>${{headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${{row[h]}}</td>`).join('')}}</tr>`
             ).join('');
           }}
         }} else {{
@@ -1174,7 +1184,7 @@ class AterLessonCompiler:
     // 2. Simulation Predict
     const simStates = {{}};
     function initSimulation(qId) {{
-      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
+      const card = document.querySelector(`[data-quiz-id="${{qId}}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
@@ -1195,8 +1205,8 @@ class AterLessonCompiler:
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step \${{sim.currentStep}}:</strong><br>` + 
-        Object.entries(currState.vars || {{}}).map(([k, v]) => `\${{k}} = \${{v}}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step ${{sim.currentStep}}:</strong><br>` + 
+        Object.entries(currState.vars || {{}}).map(([k, v]) => `${{k}} = ${{v}}`).join('<br>');
       
       inputArea.innerHTML = '';
       
@@ -1205,8 +1215,8 @@ class AterLessonCompiler:
       if (checkpoint) {{
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>\${{checkpoint.question}}</p>
-            <input type="number" id="sim-pred-\${{qId}}" placeholder="Enter prediction for \${{checkpoint.target_var}}">
+            <p>${{checkpoint.question}}</p>
+            <input type="number" id="sim-pred-${{qId}}" placeholder="Enter prediction for ${{checkpoint.target_var}}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
@@ -1227,7 +1237,7 @@ class AterLessonCompiler:
         if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {{
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected \${{checkpoint.expected_value}} for \${{checkpoint.target_var}}.`;
+          feedback.textContent = `Incorrect prediction! Expected ${{checkpoint.expected_value}} for ${{checkpoint.target_var}}.`;
           feedback.style.color = 'var(--bad)';
           return;
         }} else {{
@@ -1260,7 +1270,7 @@ class AterLessonCompiler:
     // 3. Proof Step
     const proofStates = {{}};
     function initProof(qId) {{
-      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
+      const card = document.querySelector(`[data-quiz-id="${{qId}}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -1289,16 +1299,16 @@ class AterLessonCompiler:
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">\${{stepText}}</span>
+            <span style="font-size: 14px;">${{stepText}}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${{qId}}', \${{renderIdx}}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${{qId}}', \${{renderIdx}}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${{qId}}', ${{renderIdx}}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${{qId}}', ${{renderIdx}}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-\${{qId}}-\${{renderIdx}}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-${{qId}}-${{renderIdx}}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              \${{proof.reasons.map((r, rIdx) => `<option value="\${{rIdx}}">\${{r}}</option>`).join('')}}
+              ${{proof.reasons.map((r, rIdx) => `<option value="${{rIdx}}">${{r}}</option>`).join('')}}
             </select>
           </div>
         `;
@@ -1311,8 +1321,8 @@ class AterLessonCompiler:
       const targetIdx = renderIdx + direction;
       if (targetIdx >= 0 && targetIdx < proof.order.length) {{
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-\${{qId}}-\${{renderIdx}}`);
-        const targetSelect = document.getElementById(`proof-reason-\${{qId}}-\${{targetIdx}}`);
+        const currentSelect = document.getElementById(`proof-reason-${{qId}}-${{renderIdx}}`);
+        const targetSelect = document.getElementById(`proof-reason-${{qId}}-${{targetIdx}}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -1322,15 +1332,15 @@ class AterLessonCompiler:
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-\${{qId}}-\${{renderIdx}}`);
-        const newTargetSelect = document.getElementById(`proof-reason-\${{qId}}-\${{targetIdx}}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-${{qId}}-${{renderIdx}}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${{qId}}-${{targetIdx}}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
       }}
     }}
 
     function checkProof(qId) {{
-      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
+      const card = document.querySelector(`[data-quiz-id="${{qId}}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
@@ -1343,7 +1353,7 @@ class AterLessonCompiler:
           correct = false;
         }}
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-\${{qId}}-\${{renderIdx}}`);
+        const select = document.getElementById(`proof-reason-${{qId}}-${{renderIdx}}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
         if (selectedReasonIdx !== reasonMappings[stepIdx]) {{
           correct = false;
@@ -1376,7 +1386,7 @@ class AterLessonCompiler:
     }}
 
     function checkEvidence(qId) {{
-      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
+      const card = document.querySelector(`[data-quiz-id="${{qId}}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -1408,7 +1418,7 @@ class AterLessonCompiler:
     // 5. Case Simulation
     const caseStates = {{}};
     function initCaseSimulation(qId) {{
-      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
+      const card = document.querySelector(`[data-quiz-id="${{qId}}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
@@ -1438,10 +1448,10 @@ class AterLessonCompiler:
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: \${{val * 100}}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: ${{val * 100}}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>\${{name.toUpperCase()}}</strong>: \${{displayVal}}\${{progressHtml}}</div>`;
+        return `<div><strong>${{name.toUpperCase()}}</strong>: ${{displayVal}}${{progressHtml}}</div>`;
       }}).join('');
 
       const stage = c.stages[c.currentStage];

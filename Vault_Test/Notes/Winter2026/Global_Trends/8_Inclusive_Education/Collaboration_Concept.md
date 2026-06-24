@@ -1,5 +1,4 @@
 ---
-
 title: Collaboration_Concept
 tags: [atomic-note, education, global_trends]
 course: Global_Trends
@@ -18,7 +17,11 @@ prerequisites:
 source_pages: [3]
 generated: true
 read: false
-
+lesson_variants:
+  simple: lessons/Collaboration_Concept.simple.html
+  deep: lessons/Collaboration_Concept.deep.html
+  cram: lessons/Collaboration_Concept.cram.html
+  exam: lessons/Collaboration_Concept.exam.html
 ---
 
 ## Mental Model

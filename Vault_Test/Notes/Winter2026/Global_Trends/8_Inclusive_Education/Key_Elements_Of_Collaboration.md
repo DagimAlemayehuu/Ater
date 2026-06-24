@@ -1,5 +1,4 @@
 ---
-
 title: Key_Elements_Of_Collaboration
 tags: [atomic-note, education, global_trends]
 course: Global_Trends
@@ -15,7 +14,11 @@ prerequisites:
 source_pages: [5, 11]
 generated: true
 read: false
-
+lesson_variants:
+  simple: lessons/Key_Elements_Of_Collaboration.simple.html
+  deep: lessons/Key_Elements_Of_Collaboration.deep.html
+  cram: lessons/Key_Elements_Of_Collaboration.cram.html
+  exam: lessons/Key_Elements_Of_Collaboration.exam.html
 ---
 
 ## Mental Model

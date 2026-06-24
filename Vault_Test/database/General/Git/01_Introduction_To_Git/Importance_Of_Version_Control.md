@@ -21,7 +21,10 @@ Version control is essential when working on projects, especially with teams. It
 * Experiment with new ideas without affecting the original work
 
 ## Common Mistakes
-One common mistake is not using version control at all. This can lead to lost work, conflicts with team members, and a lot of stress. Another mistake is not making regular commits, which are like snapshots of your project at a particular point in time. This makes it hard to track changes and revert back to previous versions.
+Many people think they can manage their projects without version control, only to realize later that it's much harder than they thought. Without version control, you might:
+* Lose track of changes and end up with multiple versions of your project
+* Have to redo work because you can't remember what changes you made
+* Struggle to collaborate with others
 
 ## The Proving Grounds
 ```interactive-quiz

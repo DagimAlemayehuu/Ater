@@ -11,13 +11,13 @@ artifact_pack: database/General/Git/04_Branching_And_Merging/artifacts/Resolving
 ---
 
 ## Mental Model
-When you're working with Git, you might make changes to your code in one branch, and someone else might make changes to the same part of the code in another branch. When you try to merge these branches together, Git might get confused and not know which changes to keep. This is called a conflict. Resolving conflicts is like being a referee in a disagreement between two people. You have to look at both sets of changes and decide which ones make the most sense to keep. Git helps you by marking the areas where the changes don't match, and then you can decide what to do.
+When you're working with Git, you might make changes to your code in one branch, and someone else might make changes to the same part of the code in another branch. When you try to merge these branches together, Git might get confused and create a conflict. A conflict happens when Git can't automatically combine the changes from both branches. Imagine you and a friend are both writing a story on the same page. You write a sentence, and your friend writes another sentence on the same line. When you try to put both stories together, you need to decide which sentence to keep and which one to throw away. Resolving conflicts in Git is similar, but instead of sentences, you're working with code.
 
 ## What You Must Know
-To resolve conflicts in Git, you need to understand how Git identifies conflicts and how to use its tools to fix them. When Git can't automatically merge changes, it will pause the merge process and let you know where the conflicts are. You'll see special markers in your code: `<<<<<<<`, `=======`, and `>>>>>>>`. These markers show where the conflicting changes start and end. You'll need to manually edit the code to choose which changes to keep.
+To resolve conflicts in Git, you need to understand how Git identifies conflicts and the steps to take to resolve them. When Git tries to merge two branches and finds a conflict, it will pause the merge process and alert you to the conflict. You'll see conflict markers in your code, like `<<<<<<<`, `=======`, and `>>>>>>>`, which show where the conflict is. These markers separate the changes from both branches. To fix the conflict, you need to decide which changes to keep or if you want to combine them.
 
 ## Common Mistakes
-One common mistake is trying to merge branches without pulling the latest changes from the remote repository. This can lead to unexpected conflicts. Another mistake is not using `git status` to check which files are causing conflicts. Without this information, you might try to resolve conflicts in the wrong files or miss some conflicts altogether.
+A common mistake when resolving conflicts is not understanding which changes are coming from which branch. This can lead to accidentally deleting someone else's work or overwriting your own changes. Another mistake is not testing the code after resolving the conflict, which can lead to bugs or broken functionality. It's also easy to forget to remove the conflict markers, which can cause confusion for others working on the project.
 
 ## The Proving Grounds
 ```interactive-quiz

@@ -203,7 +203,8 @@ def _ensure_interactive_quiz_block(content: str, topic: str, note_title: str) ->
             "id": f"{slug}_fill",
             "type": "fill_in",
             "question": f"{note_title} is useful because it helps you track the important ______ in {topic}.",
-            "answer": "change",
+            "textWithBlanks": f"{note_title} is useful because it helps you track the important [[change]] in {topic}.",
+            "answer": ["change"],
             "explanation": "Learning becomes useful when you can explain what changes and why it matters.",
         },
         {

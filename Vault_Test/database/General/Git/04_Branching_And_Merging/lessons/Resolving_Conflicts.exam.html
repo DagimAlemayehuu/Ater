@@ -271,10 +271,8 @@
       padding: 16px;
       margin-top: 14px;
     }
-    textarea {
+    textarea, .fill-input {
       width: 100%;
-      min-height: 150px;
-      resize: vertical;
       border: 1px solid var(--line);
       background: #101011;
       color: var(--text);
@@ -283,7 +281,14 @@
       font: inherit;
       outline: none;
     }
-    textarea:focus {
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    .fill-input {
+      padding: 10px 12px;
+    }
+    textarea:focus, .fill-input:focus {
       border-color: var(--line-strong);
     }
     .checklist {
@@ -425,7 +430,9 @@
             
             <div class="nav-row">
               <span></span>
-              <button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button>
+              
+            <button class="nav-btn primary" onclick="window.parent.postMessage({ type: 'NEXT_NOTE' }, '*')">Next Chapter</button>
+            
             </div>
           </div>
         </section>
@@ -443,17 +450,18 @@ lesson_variants:
   simple: lessons/Resolving_Conflicts.simple.html
   deep: lessons/Resolving_Conflicts.deep.html
   cram: lessons/Resolving_Conflicts.cram.html
+  exam: lessons/Resolving_Conflicts.exam.html
 artifact_pack: database/General/Git/04_Branching_And_Merging/artifacts/Resolving_Conflicts.artifacts.json
 ---
 
 ## Mental Model
-When you're working with Git, you might make changes to your code in one branch, and someone else might make changes to the same part of the code in another branch. When you try to merge these branches together, Git might get confused and not know which changes to keep. This is called a conflict. Resolving conflicts is like being a referee in a disagreement between two people. You have to look at both sets of changes and decide which ones make the most sense to keep. Git helps you by marking the areas where the changes don't match, and then you can decide what to do.
+When you're working with Git, you might make changes to your code in one branch, and someone else might make changes to the same part of the code in another branch. When you try to merge these branches together, Git might get confused and create a conflict. A conflict happens when Git can't automatically combine the changes from both branches. Imagine you and a friend are both writing a story on the same page. You write a sentence, and your friend writes another sentence on the same line. When you try to put both stories together, you need to decide which sentence to keep and which one to throw away. Resolving conflicts in Git is similar, but instead of sentences, you're working with code.
 
 ## What You Must Know
-To resolve conflicts in Git, you need to understand how Git identifies conflicts and how to use its tools to fix them. When Git can't automatically merge changes, it will pause the merge process and let you know where the conflicts are. You'll see special markers in your code: `<<<<<<<`, `=======`, and `>>>>>>>`. These markers show where the conflicting changes start and end. You'll need to manually edit the code to choose which changes to keep.
+To resolve conflicts in Git, you need to understand how Git identifies conflicts and the steps to take to resolve them. When Git tries to merge two branches and finds a conflict, it will pause the merge process and alert you to the conflict. You'll see conflict markers in your code, like `<<<<<<<`, `=======`, and `>>>>>>>`, which show where the conflict is. These markers separate the changes from both branches. To fix the conflict, you need to decide which changes to keep or if you want to combine them.
 
 ## Common Mistakes
-One common mistake is trying to merge branches without pulling the latest changes from the remote repository. This can lead to unexpected conflicts. Another mistake is not using `git status` to check which files are causing conflicts. Without this information, you might try to resolve conflicts in the wrong files or miss some conflicts altogether.
+A common mistake when resolving conflicts is not understanding which changes are coming from which branch. This can lead to accidentally deleting someone else's work or overwriting your own changes. Another mistake is not testing the code after resolving the conflict, which can lead to bugs or broken functionality. It's also easy to forget to remove the conflict markers, which can cause confusion for others working on the project.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -511,17 +519,18 @@ lesson_variants:
   simple: lessons/Resolving_Conflicts.simple.html
   deep: lessons/Resolving_Conflicts.deep.html
   cram: lessons/Resolving_Conflicts.cram.html
+  exam: lessons/Resolving_Conflicts.exam.html
 artifact_pack: database/General/Git/04_Branching_And_Merging/artifacts/Resolving_Conflicts.artifacts.json
 ---
 
 ## Mental Model
-When you're working with Git, you might make changes to your code in one branch, and someone else might make changes to the same part of the code in another branch. When you try to merge these branches together, Git might get confused and not know which changes to keep. This is called a conflict. Resolving conflicts is like being a referee in a disagreement between two people. You have to look at both sets of changes and decide which ones make the most sense to keep. Git helps you by marking the areas where the changes don't match, and then you can decide what to do.
+When you're working with Git, you might make changes to your code in one branch, and someone else might make changes to the same part of the code in another branch. When you try to merge these branches together, Git might get confused and create a conflict. A conflict happens when Git can't automatically combine the changes from both branches. Imagine you and a friend are both writing a story on the same page. You write a sentence, and your friend writes another sentence on the same line. When you try to put both stories together, you need to decide which sentence to keep and which one to throw away. Resolving conflicts in Git is similar, but instead of sentences, you're working with code.
 
 ## What You Must Know
-To resolve conflicts in Git, you need to understand how Git identifies conflicts and how to use its tools to fix them. When Git can't automatically merge changes, it will pause the merge process and let you know where the conflicts are. You'll see special markers in your code: `<<<<<<<`, `=======`, and `>>>>>>>`. These markers show where the conflicting changes start and end. You'll need to manually edit the code to choose which changes to keep.
+To resolve conflicts in Git, you need to understand how Git identifies conflicts and the steps to take to resolve them. When Git tries to merge two branches and finds a conflict, it will pause the merge process and alert you to the conflict. You'll see conflict markers in your code, like `<<<<<<<`, `=======`, and `>>>>>>>`, which show where the conflict is. These markers separate the changes from both branches. To fix the conflict, you need to decide which changes to keep or if you want to combine them.
 
 ## Common Mistakes
-One common mistake is trying to merge branches without pulling the latest changes from the remote repository. This can lead to unexpected conflicts. Another mistake is not using `git status` to check which files are causing conflicts. Without this information, you might try to resolve conflicts in the wrong files or miss some conflicts altogether.
+A common mistake when resolving conflicts is not understanding which changes are coming from which branch. This can lead to accidentally deleting someone else's work or overwriting your own changes. Another mistake is not testing the code after resolving the conflict, which can lead to bugs or broken functionality. It's also easy to forget to remove the conflict markers, which can cause confusion for others working on the project.
 
 ## The Proving Grounds
 ```interactive-quiz
@@ -656,7 +665,7 @@ One common mistake is trying to merge branches without pulling the latest change
     async function runSqlQuery(qId) {
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -684,9 +693,9 @@ One common mistake is trying to merge branches without pulling the latest change
           if (data.dataset && data.dataset.length > 0) {
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>\${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${h}</th>`).join('')}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>\${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${row[h]}</td>`).join('')}</tr>`
+              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
             ).join('');
           }
         } else {
@@ -713,7 +722,7 @@ One common mistake is trying to merge branches without pulling the latest change
     // 2. Simulation Predict
     const simStates = {};
     function initSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
@@ -734,8 +743,8 @@ One common mistake is trying to merge branches without pulling the latest change
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step \${sim.currentStep}:</strong><br>` + 
-        Object.entries(currState.vars || {}).map(([k, v]) => `\${k} = \${v}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
+        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
       
       inputArea.innerHTML = '';
       
@@ -744,8 +753,8 @@ One common mistake is trying to merge branches without pulling the latest change
       if (checkpoint) {
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>\${checkpoint.question}</p>
-            <input type="number" id="sim-pred-\${qId}" placeholder="Enter prediction for \${checkpoint.target_var}">
+            <p>${checkpoint.question}</p>
+            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
@@ -766,7 +775,7 @@ One common mistake is trying to merge branches without pulling the latest change
         if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected \${checkpoint.expected_value} for \${checkpoint.target_var}.`;
+          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
           feedback.style.color = 'var(--bad)';
           return;
         } else {
@@ -799,7 +808,7 @@ One common mistake is trying to merge branches without pulling the latest change
     // 3. Proof Step
     const proofStates = {};
     function initProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -828,16 +837,16 @@ One common mistake is trying to merge branches without pulling the latest change
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">\${stepText}</span>
+            <span style="font-size: 14px;">${stepText}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${qId}', \${renderIdx}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-\${qId}-\${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              \${proof.reasons.map((r, rIdx) => `<option value="\${rIdx}">\${r}</option>`).join('')}
+              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
             </select>
           </div>
         `;
@@ -850,8 +859,8 @@ One common mistake is trying to merge branches without pulling the latest change
       const targetIdx = renderIdx + direction;
       if (targetIdx >= 0 && targetIdx < proof.order.length) {
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const targetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -861,15 +870,15 @@ One common mistake is trying to merge branches without pulling the latest change
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
-        const newTargetSelect = document.getElementById(`proof-reason-\${qId}-\${targetIdx}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
       }
     }
 
     function checkProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
@@ -882,7 +891,7 @@ One common mistake is trying to merge branches without pulling the latest change
           correct = false;
         }
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-\${qId}-\${renderIdx}`);
+        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
         if (selectedReasonIdx !== reasonMappings[stepIdx]) {
           correct = false;
@@ -915,7 +924,7 @@ One common mistake is trying to merge branches without pulling the latest change
     }
 
     function checkEvidence(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -947,7 +956,7 @@ One common mistake is trying to merge branches without pulling the latest change
     // 5. Case Simulation
     const caseStates = {};
     function initCaseSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="\${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
@@ -977,10 +986,10 @@ One common mistake is trying to merge branches without pulling the latest change
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: \${val * 100}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>\${name.toUpperCase()}</strong>: \${displayVal}\${progressHtml}</div>`;
+        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
       }).join('');
 
       const stage = c.stages[c.currentStage];

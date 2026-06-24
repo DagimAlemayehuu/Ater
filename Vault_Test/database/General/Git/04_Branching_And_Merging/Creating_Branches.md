@@ -11,13 +11,13 @@ artifact_pack: database/General/Git/04_Branching_And_Merging/artifacts/Creating_
 ---
 
 ## Mental Model
-Imagine you're working on a big project, like building a treehouse. You want to try out a new idea, like adding a secret passage, but you're not sure if it will work. A branch in Git is like a separate blueprint for your treehouse. You can make changes to the blueprint without affecting the main plan. This way, you can experiment with your new idea without messing up the original treehouse. When you're happy with your changes, you can merge your new blueprint back into the main plan.
+Imagine you're working on a big project, like building a treehouse. You want to try out a new idea, like adding a secret passage, but you're not sure if it will work. A branch in Git is like a separate area where you can build your secret passage without affecting the main treehouse. You can work on your new idea, test it, and if it doesn't work out, you can just close that area and go back to the main treehouse. But if it does work out, you can bring it back to the main treehouse and add it in. This way, you can try out new things without risking your main project.
 
 ## What You Must Know
-To create a branch in Git, you use the command `git branch <branch-name>`. This creates a new branch that points to the current commit. You can then switch to the new branch using `git checkout <branch-name>`. Any changes you make will be stored in this new branch. It's like creating a new folder for your treehouse blueprints.
+To create a branch in Git, you use the command `git branch <branch-name>`. This creates a new branch that starts at the current commit. You can then switch to that branch using `git checkout <branch-name>`. Once you're on the new branch, any commits you make will be on that branch, not on the main branch (usually called `main` or `master`). 
 
 ## Common Mistakes
-One common mistake is not switching to the new branch after creating it. You might make changes, but they won't be saved in the new branch. Always remember to use `git checkout <branch-name>` to switch to the branch you want to work on. Another mistake is not committing changes before switching back to the main branch. This can cause problems when you try to merge the branches later.
+A common mistake is to think that creating a branch automatically switches you to that branch. However, you still need to use `git checkout` or `git switch` to start working on the new branch. Another mistake is not realizing that branches are lightweight and easy to create, so don't be afraid to create a new branch for a new feature or bug fix.
 
 ## The Proving Grounds
 ```interactive-quiz

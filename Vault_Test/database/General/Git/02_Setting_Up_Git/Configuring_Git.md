@@ -11,16 +11,16 @@ artifact_pack: database/General/Git/02_Setting_Up_Git/artifacts/Configuring_Git.
 ---
 
 ## Mental Model
-When you start using Git, it's like setting up a new notebook. You need to tell Git who you are so it can label your work correctly. This is done by configuring Git with your name and email address. Think of it like writing your name and address on the first page of your notebook, so anyone who finds it knows who it belongs to. When you configure Git, you're creating a global configuration that applies to all your Git projects. This configuration is stored in a file on your computer, and it's used by Git to identify you as the author of your commits.
+When you start using Git, it's like setting up a new notebook. You need to tell Git who you are so it can label your work correctly. This is done by configuring Git with your name and email address. Think of it like writing your name and address on the first page of your notebook, so anyone who finds it knows who it belongs to. When you configure Git, you're creating a global configuration that applies to all your Git projects. This configuration includes your name, email, and other settings that help Git track your changes.
 
 ## What You Must Know
-To configure Git, you need to use the `git config` command. This command allows you to set your name and email address, which are used to identify you as the author of your commits. You can configure Git in two ways: globally or locally. Global configuration applies to all your Git projects, while local configuration applies only to a specific project. To set your global configuration, use the `--global` option with the `git config` command. For example, to set your name and email address globally, you would use the following commands:
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "youremail@example.com"
-```
+To configure Git, you'll need to use the `git config` command. This command lets you set your name, email, and other preferences. Here are the basic steps:
+- Set your name using `git config --global user.name "Your Name"`.
+- Set your email using `git config --global user.email "youremail@example.com"`.
+You can check your configuration using `git config --global --list`. This will show you all your current settings.
+
 ## Common Mistakes
-One common mistake is not configuring Git correctly, which can lead to commits being labeled with the wrong name or email address. Another mistake is not understanding the difference between global and local configurations. Make sure to use the `--global` option carefully, as it can affect all your Git projects.
+One common mistake is not using the `--global` option when setting your configuration. Without `--global`, your settings only apply to the current repository. If you want your name and email to be used across all your projects, make sure to include `--global`. Another mistake is not checking your configuration after setting it. Always use `git config --global --list` to verify that your settings are correct.
 
 ## The Proving Grounds
 ```interactive-quiz

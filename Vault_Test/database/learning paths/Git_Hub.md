@@ -5,9 +5,9 @@ learning_mode: learn_from_scratch
 chapters:
 - "[[Chapter_01_Introduction_To_Git]]"
 - "[[Chapter_02_Setting_Up_Git]]"
-- "[[Chapter_03_Basic_Git_Operations]]"
+- "[[Chapter_03_Basic_Git_Commands]]"
 - "[[Chapter_04_Branching_And_Merging]]"
-- "[[Chapter_05_Advanced_Git_Topics]]"
+- "[[Chapter_05_Collaborating_With_Git]]"
 ---
 
 # Git Hub
@@ -21,16 +21,17 @@ chapters:
 - [[Chapter_02_Setting_Up_Git]]
   - [[Installing_Git]]
   - [[Configuring_Git]]
-  - [[Basic_Git_Commands]]
-- [[Chapter_03_Basic_Git_Operations]]
-  - [[Creating_A_Repository]]
-  - [[Adding_Files_To_A_Repository]]
-  - [[Committing_Changes]]
+  - [[Creating_A_GitHub_Account]]
+- [[Chapter_03_Basic_Git_Commands]]
+  - [[Git_Init]]
+  - [[Git_Add]]
+  - [[Git_Commit]]
+  - [[Git_Log]]
 - [[Chapter_04_Branching_And_Merging]]
   - [[Creating_Branches]]
   - [[Merging_Branches]]
   - [[Resolving_Conflicts]]
-- [[Chapter_05_Advanced_Git_Topics]]
-  - [[Git_Hooks]]
-  - [[Git_Submodules]]
-  - [[Git_Best_Practices]]
+- [[Chapter_05_Collaborating_With_Git]]
+  - [[Cloning_A_Repository]]
+  - [[Pulling_Changes]]
+  - [[Pushing_Changes]]
