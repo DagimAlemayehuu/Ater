@@ -1996,5 +1996,104 @@ async def compile_lesson_endpoint(
         logger.error(f"[Compiler] Error compiling note: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/artifact/generate")
+async def generate_artifacts_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    note_title = payload.get("note_title")
+    note_path_rel = payload.get("note_path")
+    if not note_title or not note_path_rel:
+        raise HTTPException(status_code=400, detail="note_title and note_path are required")
 
+    # Read frontmatter and content of note
+    full_note_path = Path(secrets.vault_path) / note_path_rel
+    if not full_note_path.exists():
+        raise HTTPException(status_code=404, detail=f"Note file not found: {note_path_rel}")
 
+    try:
+        import frontmatter
+        post = frontmatter.loads(full_note_path.read_text(encoding="utf-8"))
+        from src.domains.ater.artifact_service import ArtifactService
+        from src.domains.ai.factory import ModelFactory
+        
+        # Build LLM client
+        provider = secrets.ai_provider or "openai"
+        model_name = secrets.ai_model or "gpt-4o-mini"
+        api_key = secrets.ai_api_key or "mock-key"
+        if not api_key:
+            api_key = "mock-key"
+        
+        llm = ModelFactory.get_model(
+            provider=provider,
+            model_name=model_name,
+            api_key=api_key,
+            base_url=secrets.ai_base_url
+        )
+        
+        service = ArtifactService(llm=llm, vault_path=secrets.vault_path)
+        pack = await service.generate_artifacts(
+            note_title=note_title,
+            note_path_rel=note_path_rel,
+            frontmatter=post.metadata,
+            content=post.content
+        )
+        return pack
+    except Exception as e:
+        import traceback
+        logger.error(f"[ArtifactRouter] Error generating artifacts: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/artifact/rollback")
+async def rollback_artifact_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    note_title = payload.get("note_title")
+    note_path_rel = payload.get("note_path")
+    target_version = payload.get("target_version")
+    if not note_title or not note_path_rel or target_version is None:
+        raise HTTPException(status_code=400, detail="note_title, note_path, and target_version are required")
+
+    try:
+        from src.domains.ater.artifact_service import ArtifactService
+        service = ArtifactService(vault_path=secrets.vault_path)
+        pack = service.rollback_version(
+            note_title=note_title,
+            note_path_rel=note_path_rel,
+            target_version=int(target_version)
+        )
+        return pack
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/artifact/pin")
+async def pin_artifact_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    note_title = payload.get("note_title")
+    note_path_rel = payload.get("note_path")
+    pinned_types = payload.get("pinned_artifact_types")
+    if not note_title or not note_path_rel or pinned_types is None:
+        raise HTTPException(status_code=400, detail="note_title, note_path, and pinned_artifact_types are required")
+
+    try:
+        from src.domains.ater.artifact_service import ArtifactService
+        service = ArtifactService(vault_path=secrets.vault_path)
+        pack = service.pin_artifact_types(
+            note_title=note_title,
+            note_path_rel=note_path_rel,
+            pinned_types=list(pinned_types)
+        )
+        return pack
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

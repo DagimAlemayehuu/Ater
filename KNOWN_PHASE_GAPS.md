@@ -22,3 +22,13 @@ This file tracks the outstanding gaps, missing test coverages, and design issues
 - [ ] **Hardcoded Theme Styling**: The compiled HTML lesson uses a static CSS block with `@media (prefers-color-scheme)` to determine dark/light mode. It does not integrate with Ater's active theme selection state if the user manually overrides their system preferences.
 - [ ] **Relative Path Resolution in Tauri**: Navigation links in compiled lessons use relative paths (e.g. `./Prev_Note.simple.html`). We need to verify if these paths resolve correctly inside the Tauri webview and file protocol context.
 
+## Phase 4: artifact-pack-v1 Gaps
+
+- [ ] **Mismatched Artifact Pack Paths**: The path resolution for artifact packs is inconsistent across modules and doesn't match the roadmap:
+  - `planner.write_curriculum` writes to `self.vault_path / "database" / lo.get_artifact_pack_path(note_title)` -> `database/artifacts/`.
+  - `ArtifactService` reads/writes from `self.vault_path / "artifacts/"`.
+  - `LEARNING_RUNTIME_ROADMAP.md` specifies that `artifacts/` should be a chapter-specific folder nested inside the chapter directory.
+  This path discrepancy must be unified so that the generator reads the correct files initialized by the planner.
+- [ ] **Pydantic Validation Coercion Limits**: Structuring code execution steps or concept maps requires highly specific JSON formats. Weak models might return types (e.g., integers instead of strings in variables) that fail strict Pydantic validation, causing the generator to fallback to a generic `reveal_card` too frequently.
+
+

@@ -1741,4 +1741,135 @@ export const sidecarApi = {
             console.error('[Tauri Native RAG] logFromJs failed:', err)
         }
     },
+    generateArtifacts: async (payload: { note_title: string; note_path: string }) => {
+        if (isSimulationMode()) {
+            return {
+                schema_version: 1,
+                note_title: payload.note_title,
+                note_path: payload.note_path,
+                active_version: 1,
+                pinned_artifact_types: [],
+                versions: [
+                    {
+                        version: 1,
+                        created_at: new Date().toISOString(),
+                        artifacts: [
+                            {
+                                type: "reveal_card",
+                                front: `What is the core concept of ${payload.note_title}?`,
+                                back: "This is a mock artifact generated in simulation mode."
+                            }
+                        ]
+                    }
+                ]
+            };
+        }
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/artifact/generate`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to generate artifacts (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] generateArtifacts failed:', err);
+            throw err;
+        }
+    },
+    rollbackArtifactVersion: async (payload: { note_title: string; note_path: string; target_version: number }) => {
+        if (isSimulationMode()) {
+            return {
+                schema_version: 1,
+                note_title: payload.note_title,
+                note_path: payload.note_path,
+                active_version: payload.target_version,
+                pinned_artifact_types: [],
+                versions: [
+                    {
+                        version: payload.target_version,
+                        created_at: new Date().toISOString(),
+                        artifacts: []
+                    }
+                ]
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/artifact/rollback`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to rollback artifact version (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] rollbackArtifactVersion failed:', err);
+            throw err;
+        }
+    },
+    pinArtifactTypes: async (payload: { note_title: string; note_path: string; pinned_artifact_types: string[] }) => {
+        if (isSimulationMode()) {
+            return {
+                schema_version: 1,
+                note_title: payload.note_title,
+                note_path: payload.note_path,
+                active_version: 1,
+                pinned_artifact_types: payload.pinned_artifact_types,
+                versions: []
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/artifact/pin`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to pin artifact types (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] pinArtifactTypes failed:', err);
+            throw err;
+        }
+    },
 }
