@@ -1973,4 +1973,28 @@ async def restore_note_version(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/lesson/compile")
+async def compile_lesson_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    note_path = payload.get("note_path")
+    variant = payload.get("variant", "deep")
+    if not note_path:
+        raise HTTPException(status_code=400, detail="note_path is required")
+        
+    try:
+        from src.domains.ater.compiler_service import AterLessonCompiler
+        compiler = AterLessonCompiler(secrets.vault_path)
+        output_path = compiler.compile_lesson(Path(note_path), variant)
+        rel_output = os.path.relpath(output_path, compiler.vault_path)
+        return {"success": True, "output_path": rel_output}
+    except Exception as e:
+        import traceback
+        logger.error(f"[Compiler] Error compiling note: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 

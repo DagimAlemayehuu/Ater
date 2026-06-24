@@ -15,3 +15,10 @@ This file tracks the outstanding gaps, missing test coverages, and design issues
 - [ ] **Fragile Title Normalization**: `normalize_title` does not sanitize or escape unsafe filename characters (e.g. `\`, `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`).
 - [ ] **Coursework Route Shape**: Need final confirmation of the coursework route directory structure and mapping invariants.
 - [ ] **Task Status Integrity**: Tasks were checked off too aggressively in the implementation phase before ensuring full edge case coverage and deep test suite validation.
+
+## Phase 3: atomic-note-lesson-compiler Gaps
+
+- [ ] **YAML Serialization Inconsistency**: In `compiler_service.py:L860`, the compiler updates the note's frontmatter using `frontmatter.dumps(post)` instead of `VaultManager.dump_obsidian_yaml`. This bypasses custom formatting rules (such as double-quoting wikilinks) and may corrupt note metadata.
+- [ ] **Hardcoded Theme Styling**: The compiled HTML lesson uses a static CSS block with `@media (prefers-color-scheme)` to determine dark/light mode. It does not integrate with Ater's active theme selection state if the user manually overrides their system preferences.
+- [ ] **Relative Path Resolution in Tauri**: Navigation links in compiled lessons use relative paths (e.g. `./Prev_Note.simple.html`). We need to verify if these paths resolve correctly inside the Tauri webview and file protocol context.
+
