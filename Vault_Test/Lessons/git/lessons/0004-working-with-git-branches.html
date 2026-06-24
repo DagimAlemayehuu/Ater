@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Basic Git Operations</title>
+  <title>Working With Git Branches</title>
   <style>
     :root {
       color-scheme: dark;
@@ -85,7 +85,7 @@
       margin: 0 0 22px;
     }
     .progress-fill {
-      width: 37%;
+      width: 50%;
       height: 100%;
       background: var(--soft);
     }
@@ -331,20 +331,20 @@
       <header class="lesson-topbar">
         <div>
           <p class="lesson-kicker">Ater Teacher · Atomic Lesson</p>
-          <h1>Basic Git Operations</h1>
+          <h1>Working With Git Branches</h1>
         </div>
-        <div class="chapter-chip">Chapter 3 / 8</div>
+        <div class="chapter-chip">Chapter 4 / 8</div>
       </header>
       <div class="progress-track" aria-hidden="true"><div class="progress-fill"></div></div>
 
       <section class="page-container active">
         <div class="lesson-card">
           <div class="section-body"><h2>Mental Model</h2>
-<p>Learning Basic Git Operations is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.</p>
+<p>Learning Working With Git Branches is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.</p>
 <h2>How It Works</h2>
-<p>Basic Git Operations starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects <span class="wiki-link">Basic Git Operations Mental Model</span>, <span class="wiki-link">Basic Git Operations Mechanics</span>, <span class="wiki-link">Basic Git Operations Practice</span>, and <span class="wiki-link">Basic Git Operations Failure Modes</span> so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.</p>
+<p>Working With Git Branches starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects <span class="wiki-link">Working With Git Branches Mental Model</span>, <span class="wiki-link">Working With Git Branches Mechanics</span>, <span class="wiki-link">Working With Git Branches Practice</span>, and <span class="wiki-link">Working With Git Branches Failure Modes</span> so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.</p>
 <h2>Formal Model</h2>
-<p>Formally, Basic Git Operations can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.</p>
+<p>Formally, Working With Git Branches can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.</p>
 <pre class="code-block" data-lang="mermaid"><code>graph TD
     A[Prompt] --&gt; B[Mental Model]
     B --&gt; C[Mechanism]
@@ -372,7 +372,7 @@
 </div>
 <div class="quiz-card">
 <h3>Question 2</h3>
-<p>What should you be able to do after studying Basic Git Operations?</p>
+<p>What should you be able to do after studying Working With Git Branches?</p>
 <div class="quiz-options" data-quiz>
 <button class="option" onclick="selectOption(this, true)" data-explanation="Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.">Predict the next state and explain the trade-off from memory</button>
 <button class="option" onclick="selectOption(this, false)" data-explanation="Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.">Only recognize the title when it appears</button>
@@ -394,31 +394,31 @@
           <h2>Markdown Source</h2>
           <p>This is the complete vault note used to generate the lesson. If the Markdown is weak, the lesson is weak, so the source remains visible and reviewable.</p>
           <pre class="markdown-source" data-markdown-source>---
-title: Basic Git Operations
+title: Working With Git Branches
 type: Atomic Note
-course: Basic Git Operations
+course: Working With Git Branches
 semester: Semester 1
-unit: &quot;3&quot;
-hub: &quot;[[Basic Git Operations_Hub]]&quot;
+unit: &quot;4&quot;
+hub: &quot;[[Working With Git Branches_Hub]]&quot;
 source: &quot;[[Interactive_Lessons]]&quot;
 mode: CS
 read: false
 generated: true
-lesson_index: 3
+lesson_index: 4
 lesson_total: 8
 ---
 
 ## Mental Model
 
-Learning Basic Git Operations is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.
+Learning Working With Git Branches is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.
 
 ## How It Works
 
-Basic Git Operations starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects [[Basic Git Operations Mental Model]], [[Basic Git Operations Mechanics]], [[Basic Git Operations Practice]], and [[Basic Git Operations Failure Modes]] so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.
+Working With Git Branches starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects [[Working With Git Branches Mental Model]], [[Working With Git Branches Mechanics]], [[Working With Git Branches Practice]], and [[Working With Git Branches Failure Modes]] so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.
 
 ## Formal Model
 
-Formally, Basic Git Operations can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.
+Formally, Working With Git Branches can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.
 
 ```mermaid
 graph TD
@@ -446,7 +446,7 @@ graph TD
     &quot;id&quot;: &quot;q2&quot;,
     &quot;type&quot;: &quot;multiple-choice&quot;,
     &quot;difficulty&quot;: &quot;L2&quot;,
-    &quot;question&quot;: &quot;What should you be able to do after studying Basic Git Operations?&quot;,
+    &quot;question&quot;: &quot;What should you be able to do after studying Working With Git Branches?&quot;,
     &quot;options&quot;: [&quot;Predict the next state and explain the trade-off from memory&quot;, &quot;Only recognize the title when it appears&quot;, &quot;Skip the formal model because the example felt intuitive&quot;],
     &quot;answer&quot;: &quot;Predict the next state and explain the trade-off from memory&quot;,
     &quot;explanation&quot;: &quot;Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.&quot;

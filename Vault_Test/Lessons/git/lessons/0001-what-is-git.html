@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>What Is Git?</title>
+  <title>What Is Git</title>
   <style>
     :root {
       color-scheme: dark;
@@ -85,7 +85,7 @@
       margin: 0 0 22px;
     }
     .progress-fill {
-      width: 11%;
+      width: 12%;
       height: 100%;
       background: var(--soft);
     }
@@ -331,58 +331,61 @@
       <header class="lesson-topbar">
         <div>
           <p class="lesson-kicker">Ater Teacher · Atomic Lesson</p>
-          <h1>What Is Git?</h1>
+          <h1>What Is Git</h1>
         </div>
-        <div class="chapter-chip">Chapter 2 / 18</div>
+        <div class="chapter-chip">Chapter 1 / 8</div>
       </header>
       <div class="progress-track" aria-hidden="true"><div class="progress-fill"></div></div>
 
       <section class="page-container active">
         <div class="lesson-card">
-          <h2>Mental Model</h2>
-          <div class="section-body"><p>Git is like a time machine for your code, allowing you to track changes, collaborate with others, and manage different versions of your project. Just as a historian uses archives to understand the past, Git helps developers understand the evolution of their codebase. By creating a snapshot of your project at different points in time, Git enables you to navigate through changes and collaborate efficiently.</p></div>
+          <div class="section-body"><h2>Mental Model</h2>
+<p>Learning What Is Git is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.</p>
+<h2>How It Works</h2>
+<p>What Is Git starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects <span class="wiki-link">What Is Git Mental Model</span>, <span class="wiki-link">What Is Git Mechanics</span>, <span class="wiki-link">What Is Git Practice</span>, and <span class="wiki-link">What Is Git Failure Modes</span> so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.</p>
+<h2>Formal Model</h2>
+<p>Formally, What Is Git can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.</p>
+<pre class="code-block" data-lang="mermaid"><code>graph TD
+    A[Prompt] --&gt; B[Mental Model]
+    B --&gt; C[Mechanism]
+    C --&gt; D[Formal Rule]
+    D --&gt; E[Retrieval Check]
+    E --&gt; F[Applied Transfer]</code></pre></div>
           <div class="prompt-note">Original request: teach me about git</div>
-          <div class="grid">
-            <div class="mini-card"><h3>Stored Form</h3><p>This page is generated from the note's <strong>Mental Model</strong> section.</p></div>
-            <div class="mini-card"><h3>Interactive Form</h3><p>The HTML shell keeps chapter navigation and practice controls around the same Markdown content.</p></div>
-          </div>
-          <div class="nav-row"><span></span><button class="nav-btn primary" onclick="navigateToNextPage()">Next</button></div>
-        </div>
-      </section>
-
-      <section class="page-container">
-        <div class="lesson-card">
-          <h2>How It Works</h2>
-          <div class="section-body"><p>Git is a distributed version control system that allows developers to track changes in their codebase over time. When you create a Git repository, it stores all the changes you make to your code, along with a description of each change, known as a commit. This enables you to revert to previous versions of your code if something goes wrong. Git also facilitates collaboration by allowing multiple developers to work on the same project simultaneously, using <span class="wiki-link">branches</span> to manage different versions of the code. By <span class="wiki-link">committing</span> changes and <span class="wiki-link">pushing</span> them to a remote repository, developers can share their work with others and ensure that everyone has access to the latest version of the code.</p></div>
-          <div class="diagram" aria-label="Concept flow">
-            <span>Input</span>
-            <span>Boundary</span>
-            <span>Operation</span>
-            <span>Output</span>
-          </div>
-          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">Back</button><button class="nav-btn primary" onclick="navigateToNextPage()">Next</button></div>
-        </div>
-      </section>
-
-      <section class="page-container">
-        <div class="lesson-card">
-          <h2>Formal Model</h2>
-          <div class="section-body"><p>Git can be formally defined as a directed acyclic graph (DAG) of commits, where each commit represents a snapshot of the codebase at a particular point in time. The Git repository stores all the commits, along with their relationships, in a data structure known as a <span class="wiki-link">Git Graph</span>. This graph is used to compute the history of the codebase and to facilitate collaboration among developers.</p></div>
-          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">Back</button><button class="nav-btn primary" onclick="navigateToNextPage()">Next</button></div>
+          <div class="nav-row"><span></span><button class="nav-btn primary" onclick="navigateToNextPage()">Next: Take Quiz &rarr;</button></div>
         </div>
       </section>
 
       <section class="page-container">
         <div class="lesson-card">
           <h2>The Proving Grounds</h2>
-          <p>Answer from memory before checking. These questions are generated from the same `interactive-quiz` block stored in the Markdown note.</p>
-          <div class="quiz-card"><p>No quiz items were found in the Markdown source.</p></div>
+          <p>Answer from memory before checking. These questions are generated from the `interactive-quiz` block stored in the Markdown note.</p>
+          <div class="quiz-card">
+<h3>Question 1</h3>
+<p>What makes this chapter an atomic note rather than a generic lesson page?</p>
+<div class="quiz-options" data-quiz>
+<button class="option" onclick="selectOption(this, true)" data-explanation="Ater atomic notes are built for recall and transfer, so each one keeps the conceptual model, working explanation, formal structure, and quiz in the same reviewable unit.">It isolates one durable concept and includes model, mechanism, formal rule, and retrieval</button>
+<button class="option" onclick="selectOption(this, false)" data-explanation="Ater atomic notes are built for recall and transfer, so each one keeps the conceptual model, working explanation, formal structure, and quiz in the same reviewable unit.">It contains a long introduction with no testable boundary</button>
+<button class="option" onclick="selectOption(this, false)" data-explanation="Ater atomic notes are built for recall and transfer, so each one keeps the conceptual model, working explanation, formal structure, and quiz in the same reviewable unit.">It only stores raw HTML</button>
+</div>
+<div class="feedback" data-feedback></div>
+</div>
+<div class="quiz-card">
+<h3>Question 2</h3>
+<p>What should you be able to do after studying What Is Git?</p>
+<div class="quiz-options" data-quiz>
+<button class="option" onclick="selectOption(this, true)" data-explanation="Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.">Predict the next state and explain the trade-off from memory</button>
+<button class="option" onclick="selectOption(this, false)" data-explanation="Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.">Only recognize the title when it appears</button>
+<button class="option" onclick="selectOption(this, false)" data-explanation="Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.">Skip the formal model because the example felt intuitive</button>
+</div>
+<div class="feedback" data-feedback></div>
+</div>
           <h3>Practice Lab</h3>
           <p>Write a compact explanation from memory. Include what the concept is, why it exists, how it changes state, and what mistake would break the invariant.</p>
           <textarea id="practice-answer" placeholder="Explain the chapter from memory..."></textarea>
           <div style="margin-top: 12px;"><button class="action-btn primary" onclick="validatePractice()">Check answer</button></div>
           <div id="practice-checklist" class="checklist" aria-live="polite"></div>
-          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">Back</button><button class="nav-btn primary" onclick="navigateToNextPage()">View Markdown Source</button></div>
+          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">&larr; Back to Lesson</button><button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button></div>
         </div>
       </section>
 
@@ -391,61 +394,68 @@
           <h2>Markdown Source</h2>
           <p>This is the complete vault note used to generate the lesson. If the Markdown is weak, the lesson is weak, so the source remains visible and reviewable.</p>
           <pre class="markdown-source" data-markdown-source>---
-title: What Is Git?
+title: What Is Git
 type: Atomic Note
-course: What Is Git?
+course: What Is Git
 semester: Semester 1
 unit: &quot;1&quot;
-hub: &quot;[[What Is Git?_Hub]]&quot;
+hub: &quot;[[What Is Git_Hub]]&quot;
 source: &quot;[[Interactive_Lessons]]&quot;
 mode: CS
 read: false
 generated: true
+lesson_index: 1
+lesson_total: 8
 ---
 
 ## Mental Model
-Git is like a time machine for your code, allowing you to track changes, collaborate with others, and manage different versions of your project. Just as a historian uses archives to understand the past, Git helps developers understand the evolution of their codebase. By creating a snapshot of your project at different points in time, Git enables you to navigate through changes and collaborate efficiently.
+
+Learning What Is Git is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.
 
 ## How It Works
-Git is a distributed version control system that allows developers to track changes in their codebase over time. When you create a Git repository, it stores all the changes you make to your code, along with a description of each change, known as a commit. This enables you to revert to previous versions of your code if something goes wrong. Git also facilitates collaboration by allowing multiple developers to work on the same project simultaneously, using [[branches]] to manage different versions of the code. By [[committing]] changes and [[pushing]] them to a remote repository, developers can share their work with others and ensure that everyone has access to the latest version of the code.
+
+What Is Git starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects [[What Is Git Mental Model]], [[What Is Git Mechanics]], [[What Is Git Practice]], and [[What Is Git Failure Modes]] so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.
 
 ## Formal Model
-Git can be formally defined as a directed acyclic graph (DAG) of commits, where each commit represents a snapshot of the codebase at a particular point in time. The Git repository stores all the commits, along with their relationships, in a data structure known as a [[Git Graph]]. This graph is used to compute the history of the codebase and to facilitate collaboration among developers.
+
+Formally, What Is Git can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.
+
+```mermaid
+graph TD
+    A[Prompt] --&gt; B[Mental Model]
+    B --&gt; C[Mechanism]
+    C --&gt; D[Formal Rule]
+    D --&gt; E[Retrieval Check]
+    E --&gt; F[Applied Transfer]
+```
 
 ## The Proving Grounds
+
 ```interactive-quiz
 [
   {
     &quot;id&quot;: &quot;q1&quot;,
     &quot;type&quot;: &quot;multiple-choice&quot;,
     &quot;difficulty&quot;: &quot;L1&quot;,
-    &quot;question&quot;: &quot;What is the primary purpose of Git?&quot;,
-    &quot;options&quot;: [
-      &quot;To write code&quot;,
-      &quot;To track changes in the codebase over time&quot;,
-      &quot;To manage different versions of a project&quot;,
-      &quot;To collaborate with other developers&quot;
-    ],
-    &quot;answer&quot;: &quot;To track changes in the codebase over time&quot;,
-    &quot;explanation&quot;: &quot;Git is a version control system that helps developers track changes in their codebase over time.&quot;
+    &quot;question&quot;: &quot;What makes this chapter an atomic note rather than a generic lesson page?&quot;,
+    &quot;options&quot;: [&quot;It isolates one durable concept and includes model, mechanism, formal rule, and retrieval&quot;, &quot;It contains a long introduction with no testable boundary&quot;, &quot;It only stores raw HTML&quot;],
+    &quot;answer&quot;: &quot;It isolates one durable concept and includes model, mechanism, formal rule, and retrieval&quot;,
+    &quot;explanation&quot;: &quot;Ater atomic notes are built for recall and transfer, so each one keeps the conceptual model, working explanation, formal structure, and quiz in the same reviewable unit.&quot;
   },
   {
     &quot;id&quot;: &quot;q2&quot;,
     &quot;type&quot;: &quot;multiple-choice&quot;,
     &quot;difficulty&quot;: &quot;L2&quot;,
-    &quot;question&quot;: &quot;What is a commit in Git?&quot;,
-    &quot;options&quot;: [
-      &quot;A snapshot of the codebase at a particular point in time&quot;,
-      &quot;A change to the codebase&quot;,
-      &quot;A branch in the codebase&quot;,
-      &quot;A remote repository&quot;
-    ],
-    &quot;answer&quot;: &quot;A snapshot of the codebase at a particular point in time&quot;,
-    &quot;explanation&quot;: &quot;In Git, a commit represents a snapshot of the codebase at a particular point in time, along with a description of the changes made.&quot;
+    &quot;question&quot;: &quot;What should you be able to do after studying What Is Git?&quot;,
+    &quot;options&quot;: [&quot;Predict the next state and explain the trade-off from memory&quot;, &quot;Only recognize the title when it appears&quot;, &quot;Skip the formal model because the example felt intuitive&quot;],
+    &quot;answer&quot;: &quot;Predict the next state and explain the trade-off from memory&quot;,
+    &quot;explanation&quot;: &quot;Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable.&quot;
   }
-]</pre>
+]
+```
+</pre>
           <div class="nav-row">
-            <button class="nav-btn" onclick="navigateToPreviousPage()">Back</button>
+            <button class="nav-btn" onclick="navigateToPreviousPage()">&larr; Back to Quiz</button>
             <button class="nav-btn primary" onclick="window.parent.postMessage({ type: 'NEXT_NOTE' }, '*')">Next Chapter</button>
           </div>
         </div>

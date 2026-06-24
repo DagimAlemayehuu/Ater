@@ -66,7 +66,7 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
   const mutedClass = 'text-muted-foreground'
 
   return (
-    <div className={cn('rounded-[8px] border p-5 space-y-5 my-6 max-w-2xl mx-auto shadow-sm', borderClass, panelClass)}>
+    <div className={cn('rounded-[8px] border p-5 space-y-5 my-6 w-full mx-auto shadow-sm', borderClass, panelClass)}>
       {/* Lesson Header */}
       <div className="flex flex-col gap-2.5">
         <div className="flex justify-between items-center">

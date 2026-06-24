@@ -1,54 +1,60 @@
 ---
-title: What Is Git?
+title: What Is Git
 type: Atomic Note
-course: What Is Git?
+course: What Is Git
 semester: Semester 1
 unit: "1"
-hub: "[[What Is Git?_Hub]]"
+hub: "[[What Is Git_Hub]]"
 source: "[[Interactive_Lessons]]"
 mode: CS
 read: false
 generated: true
+lesson_index: 1
+lesson_total: 8
 ---
 
 ## Mental Model
-Git is like a time machine for your code, allowing you to track changes, collaborate with others, and manage different versions of your project. Just as a historian uses archives to understand the past, Git helps developers understand the evolution of their codebase. By creating a snapshot of your project at different points in time, Git enables you to navigate through changes and collaborate efficiently.
+
+Learning What Is Git is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.
 
 ## How It Works
-Git is a distributed version control system that allows developers to track changes in their codebase over time. When you create a Git repository, it stores all the changes you make to your code, along with a description of each change, known as a commit. This enables you to revert to previous versions of your code if something goes wrong. Git also facilitates collaboration by allowing multiple developers to work on the same project simultaneously, using [[branches]] to manage different versions of the code. By [[committing]] changes and [[pushing]] them to a remote repository, developers can share their work with others and ensure that everyone has access to the latest version of the code.
+
+What Is Git starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects [[What Is Git Mental Model]], [[What Is Git Mechanics]], [[What Is Git Practice]], and [[What Is Git Failure Modes]] so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.
 
 ## Formal Model
-Git can be formally defined as a directed acyclic graph (DAG) of commits, where each commit represents a snapshot of the codebase at a particular point in time. The Git repository stores all the commits, along with their relationships, in a data structure known as a [[Git Graph]]. This graph is used to compute the history of the codebase and to facilitate collaboration among developers.
+
+Formally, What Is Git can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.
+
+```mermaid
+graph TD
+    A[Prompt] --> B[Mental Model]
+    B --> C[Mechanism]
+    C --> D[Formal Rule]
+    D --> E[Retrieval Check]
+    E --> F[Applied Transfer]
+```
 
 ## The Proving Grounds
+
 ```interactive-quiz
 [
   {
     "id": "q1",
     "type": "multiple-choice",
     "difficulty": "L1",
-    "question": "What is the primary purpose of Git?",
-    "options": [
-      "To write code",
-      "To track changes in the codebase over time",
-      "To manage different versions of a project",
-      "To collaborate with other developers"
-    ],
-    "answer": "To track changes in the codebase over time",
-    "explanation": "Git is a version control system that helps developers track changes in their codebase over time."
+    "question": "What makes this chapter an atomic note rather than a generic lesson page?",
+    "options": ["It isolates one durable concept and includes model, mechanism, formal rule, and retrieval", "It contains a long introduction with no testable boundary", "It only stores raw HTML"],
+    "answer": "It isolates one durable concept and includes model, mechanism, formal rule, and retrieval",
+    "explanation": "Ater atomic notes are built for recall and transfer, so each one keeps the conceptual model, working explanation, formal structure, and quiz in the same reviewable unit."
   },
   {
     "id": "q2",
     "type": "multiple-choice",
     "difficulty": "L2",
-    "question": "What is a commit in Git?",
-    "options": [
-      "A snapshot of the codebase at a particular point in time",
-      "A change to the codebase",
-      "A branch in the codebase",
-      "A remote repository"
-    ],
-    "answer": "A snapshot of the codebase at a particular point in time",
-    "explanation": "In Git, a commit represents a snapshot of the codebase at a particular point in time, along with a description of the changes made."
+    "question": "What should you be able to do after studying What Is Git?",
+    "options": ["Predict the next state and explain the trade-off from memory", "Only recognize the title when it appears", "Skip the formal model because the example felt intuitive"],
+    "answer": "Predict the next state and explain the trade-off from memory",
+    "explanation": "Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable."
   }
 ]
+```

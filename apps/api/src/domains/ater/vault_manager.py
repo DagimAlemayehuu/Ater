@@ -202,8 +202,8 @@ class VaultManager:
         """
         import yaml
 
-        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source"}
-        WIKILINK_LIST_FIELDS = {"prerequisites", "concepts"}
+        WIKILINK_SCALAR_FIELDS = {"hub", "parent", "source", "chapter"}
+        WIKILINK_LIST_FIELDS = {"prerequisites", "concepts", "chapters", "atomic_notes"}
 
         def deep_clean_item(v, is_wikilink: bool = False) -> str:
             while isinstance(v, list):

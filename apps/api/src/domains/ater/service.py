@@ -28,6 +28,7 @@ from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgen
 from .router import router
 from .templates import render_atomic_note, build_skeleton_note, build_dynamic_section_plan
 from .healer import LogicHealer
+from .planner import AterPlanner
 from .validator import StructureValidationError
 from .governor import governor, DailyLimitExceededException
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
@@ -103,6 +104,9 @@ class AterService:
 
         # Initialize the Architect Agent for deterministic planning
         self.architect_agent = ArchitectAgent(llm=self.llm) if self.llm else None
+
+        # Initialize the Teach Anything Planner
+        self.planner = AterPlanner(secrets, llm=self.llm)
 
         # Initialize Planner LLM for complex tasks like quiz generation
         planner_provider = secrets.planner_provider or secrets.ai_provider

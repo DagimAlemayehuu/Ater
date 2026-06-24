@@ -3,61 +3,58 @@ title: Basic Git Operations
 type: Atomic Note
 course: Basic Git Operations
 semester: Semester 1
-unit: "1"
+unit: "3"
 hub: "[[Basic Git Operations_Hub]]"
 source: "[[Interactive_Lessons]]"
 mode: CS
 read: false
 generated: true
+lesson_index: 3
+lesson_total: 8
 ---
 
 ## Mental Model
-Imagine a librarian who keeps track of all the changes made to a book. The librarian uses a system to record who made changes, what changes were made, and when they were made. Similarly, Git uses a system to track changes made to code, allowing developers to collaborate and manage different versions of their project.
+
+Learning Basic Git Operations is like opening a precise instrument panel where every gauge represents one part of the system. The working tree is the live workspace, the index is the staging tray where intent is prepared, and the commit history is the durable record that lets a learner inspect, compare, and recover decisions instead of guessing what changed.
 
 ## How It Works
-Basic Git operations include commands like `git add`, `git commit`, and `git log`. The `git add` command stages changes to be committed, while `git commit` records changes with a meaningful message. The `git log` command displays a history of all commits made to the repository. These commands work together to help developers track changes and collaborate with others. Understanding [[Git Repository]], [[Git Staging Area]], and [[Git Commit History]] is essential to mastering basic Git operations.
+
+Basic Git Operations starts by isolating the smallest useful unit of understanding from the larger request: teach me about git. The concept becomes useful when the learner can explain its purpose, name the state it changes, and predict what will happen after each operation without relying on the interface. This chapter connects [[Basic Git Operations Mental Model]], [[Basic Git Operations Mechanics]], [[Basic Git Operations Practice]], and [[Basic Git Operations Failure Modes]] so the idea can move from recognition into active control. Ater treats this as one atomic note because the learner should be able to rehearse the model, the mechanism, the formal rule, and the retrieval check in one focused pass.
 
 ## Formal Model
-The basic Git operations can be defined as follows:
-- `git add <file>`: Stages changes to the specified file.
-- `git commit -m "<message>"`: Commits changes with a meaningful message.
-- `git log`: Displays a log of all commits made to the repository.
 
-```bash
-git add .
-git commit -m "Initial commit"
-git log
+Formally, Basic Git Operations can be modeled as a state transition over a bounded learning system. The learner begins with an input prompt, builds a mental representation, applies an operation, then checks whether the output preserves the intended invariant. The boundary condition is competence: if the learner cannot predict the next state, inspect an error, or explain the trade-off from memory, the concept is not yet stable. The model below captures the chapter loop used by Ater lessons.
+
+```mermaid
+graph TD
+    A[Prompt] --> B[Mental Model]
+    B --> C[Mechanism]
+    C --> D[Formal Rule]
+    D --> E[Retrieval Check]
+    E --> F[Applied Transfer]
 ```
 
 ## The Proving Grounds
+
 ```interactive-quiz
 [
   {
     "id": "q1",
     "type": "multiple-choice",
     "difficulty": "L1",
-    "question": "What is the purpose of the `git add` command?",
-    "options": [
-      "To commit changes",
-      "To stage changes to be committed",
-      "To display commit history",
-      "To create a new repository"
-    ],
-    "answer": "To stage changes to be committed",
-    "explanation": "The `git add` command stages changes to be committed, allowing developers to review and organize changes before recording them in the commit history."
+    "question": "What makes this chapter an atomic note rather than a generic lesson page?",
+    "options": ["It isolates one durable concept and includes model, mechanism, formal rule, and retrieval", "It contains a long introduction with no testable boundary", "It only stores raw HTML"],
+    "answer": "It isolates one durable concept and includes model, mechanism, formal rule, and retrieval",
+    "explanation": "Ater atomic notes are built for recall and transfer, so each one keeps the conceptual model, working explanation, formal structure, and quiz in the same reviewable unit."
   },
   {
     "id": "q2",
     "type": "multiple-choice",
     "difficulty": "L2",
-    "question": "What is the purpose of the `-m` option in the `git commit` command?",
-    "options": [
-      "To specify the files to commit",
-      "To provide a meaningful commit message",
-      "To display commit history",
-      "To stage changes"
-    ],
-    "answer": "To provide a meaningful commit message",
-    "explanation": "The `-m` option in the `git commit` command allows developers to provide a clear and concise message describing the changes made in the commit."
+    "question": "What should you be able to do after studying Basic Git Operations?",
+    "options": ["Predict the next state and explain the trade-off from memory", "Only recognize the title when it appears", "Skip the formal model because the example felt intuitive"],
+    "answer": "Predict the next state and explain the trade-off from memory",
+    "explanation": "Competence means the learner can operate the concept, not just identify it. Prediction and explanation expose whether the model is usable."
   }
 ]
+```

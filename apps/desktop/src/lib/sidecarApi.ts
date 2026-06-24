@@ -1479,6 +1479,120 @@ export const sidecarApi = {
             throw err
         }
     },
+    classifyTeachIntent: async (payload: { prompt: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/plan/intent`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to classify intent (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] classifyTeachIntent failed:', err);
+            throw err;
+        }
+    },
+    generateTeachCurriculum: async (payload: { prompt: string; learning_mode?: string; semester?: string; course?: string; unit?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/plan/curriculum`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to generate teach curriculum (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] generateTeachCurriculum failed:', err);
+            throw err;
+        }
+    },
+    confirmTeachCurriculum: async (payload: { curriculum: any; mode: string; semester?: string; course?: string; unit?: string }) => {
+        enforceFeatureLock('ai-features')
+        await deductCredits('explain-features')
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/plan/confirm`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to confirm teach curriculum (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] confirmTeachCurriculum failed:', err);
+            throw err;
+        }
+    },
     planCurriculum: async (payload: { concept: string; target_hub_id?: string }) => {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')

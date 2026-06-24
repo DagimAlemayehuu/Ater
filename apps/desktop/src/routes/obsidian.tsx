@@ -281,6 +281,19 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     return files.some(f => f.path === mdPath)
   }, [selectedPath, files])
 
+  const isLessonNote = useMemo(() => {
+    if (!selectedPath) return false
+    const pathLower = selectedPath.toLowerCase()
+    return (
+      pathLower.includes('/lessons/') ||
+      pathLower.includes('\\lessons\\') ||
+      hasMatchingHtml ||
+      hasMatchingMd ||
+      noteMetadata?.type?.toLowerCase() === 'lesson' ||
+      noteMetadata?.mode === 'EDUCATION'
+    )
+  }, [selectedPath, hasMatchingHtml, hasMatchingMd, noteMetadata])
+
   useEffect(() => {
     if (selectedPath) {
       if (selectedPath.toLowerCase().endsWith('.html')) {
@@ -2217,27 +2230,31 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   )}
                 </div>
 
-                <KnowledgeFooter 
-                  tree={studyTree} 
-                  activePath={selectedPath}
-                  onNavigate={handleWikiLinkClick}
-                  onFinish={async () => {
-                    if (selectedPath) {
-                      const label = selectedPath.split(/[/\\]/).pop()?.replace('.md', '') ?? '';
-                      await handleToggleCheckbox(label, true, selectedPath);
-                    }
-                  }}
-                />
+                {!isLessonNote && (
+                  <KnowledgeFooter 
+                    tree={studyTree} 
+                    activePath={selectedPath}
+                    onNavigate={handleWikiLinkClick}
+                    onFinish={async () => {
+                      if (selectedPath) {
+                        const label = selectedPath.split(/[/\\]/).pop()?.replace('.md', '') ?? '';
+                        await handleToggleCheckbox(label, true, selectedPath);
+                      }
+                    }}
+                  />
+                )}
 
-                <div className="mt-8 mb-12 flex flex-col items-center gap-3">
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Space Repetition Review</div>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
-                    <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-muted-foreground/30 text-muted-foreground hover:bg-bento-item transition-none">Hard</button>
-                    <button data-tour="srs-btn-good" onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
-                    <button data-tour="srs-btn-easy" onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
+                {!isLessonNote && (
+                  <div className="mt-8 mb-12 flex flex-col items-center gap-3">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Space Repetition Review</div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
+                      <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-muted-foreground/30 text-muted-foreground hover:bg-bento-item transition-none">Hard</button>
+                      <button data-tour="srs-btn-good" onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
+                      <button data-tour="srs-btn-easy" onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">

@@ -197,9 +197,21 @@ def _markdown_fragment_to_html(markdown_fragment: str) -> str:
             # The simple renderer handles one list item at a time unless adjacent
             html_parts.append(f"<ul><li>{_inline_markdown_to_html(line[2:].strip())}</li></ul>")
             continue
+        if line.startswith("#### "):
+            flush_paragraph()
+            html_parts.append(f"<h4>{_inline_markdown_to_html(line[5:].strip())}</h4>")
+            continue
         if line.startswith("### "):
             flush_paragraph()
             html_parts.append(f"<h3>{_inline_markdown_to_html(line[4:].strip())}</h3>")
+            continue
+        if line.startswith("## "):
+            flush_paragraph()
+            html_parts.append(f"<h2>{_inline_markdown_to_html(line[3:].strip())}</h2>")
+            continue
+        if line.startswith("# "):
+            flush_paragraph()
+            html_parts.append(f"<h1>{_inline_markdown_to_html(line[2:].strip())}</h1>")
             continue
         paragraph.append(line)
 
@@ -1294,15 +1306,16 @@ graph TD
         safe_title = html.escape(lesson_title)
         safe_prompt = html.escape(prompt.strip() or lesson_title)
         safe_markdown = html.escape(markdown_content)
-        mental_model = _extract_markdown_section(markdown_content, "Mental Model")
-        how_it_works = _extract_markdown_section(markdown_content, "How It Works")
-        formal_model = _extract_markdown_section(markdown_content, "Formal Model")
         proving_grounds = _extract_markdown_section(markdown_content, "The Proving Grounds")
         quiz_items = _extract_quiz_items(proving_grounds)
-        mental_html = _markdown_fragment_to_html(mental_model)
-        how_html = _markdown_fragment_to_html(how_it_works)
-        formal_html = _markdown_fragment_to_html(formal_model)
         quiz_html = self._render_quiz_html(quiz_items)
+        
+        # Clean and render the entire markdown body
+        body = _strip_frontmatter(markdown_content)
+        body_no_quiz = re.sub(r'```interactive-quiz\s*\n.*?\n```', '', body, flags=re.DOTALL | re.IGNORECASE)
+        body_no_quiz = re.sub(r'^##\s+The Proving Grounds\s*$', '', body_no_quiz, flags=re.MULTILINE | re.IGNORECASE)
+        lesson_body_html = _markdown_fragment_to_html(body_no_quiz.strip())
+
         progress = int((section_number / max(total_sections, 1)) * 100)
         next_label = "Next Chapter" if section_number < total_sections else "Finish Path"
         return f"""<!doctype html>
@@ -1646,50 +1659,23 @@ graph TD
 
       <section class="page-container active">
         <div class="lesson-card">
-          <h2>Mental Model</h2>
-          <div class="section-body">{mental_html}</div>
+          <div class="section-body">{lesson_body_html}</div>
           <div class="prompt-note">Original request: {safe_prompt}</div>
-          <div class="grid">
-            <div class="mini-card"><h3>Stored Form</h3><p>This page is generated from the note's <strong>Mental Model</strong> section.</p></div>
-            <div class="mini-card"><h3>Interactive Form</h3><p>The HTML shell keeps chapter navigation and practice controls around the same Markdown content.</p></div>
-          </div>
-          <div class="nav-row"><span></span><button class="nav-btn primary" onclick="navigateToNextPage()">Next</button></div>
-        </div>
-      </section>
-
-      <section class="page-container">
-        <div class="lesson-card">
-          <h2>How It Works</h2>
-          <div class="section-body">{how_html}</div>
-          <div class="diagram" aria-label="Concept flow">
-            <span>Input</span>
-            <span>Boundary</span>
-            <span>Operation</span>
-            <span>Output</span>
-          </div>
-          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">Back</button><button class="nav-btn primary" onclick="navigateToNextPage()">Next</button></div>
-        </div>
-      </section>
-
-      <section class="page-container">
-        <div class="lesson-card">
-          <h2>Formal Model</h2>
-          <div class="section-body">{formal_html}</div>
-          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">Back</button><button class="nav-btn primary" onclick="navigateToNextPage()">Next</button></div>
+          <div class="nav-row"><span></span><button class="nav-btn primary" onclick="navigateToNextPage()">Next: Take Quiz &rarr;</button></div>
         </div>
       </section>
 
       <section class="page-container">
         <div class="lesson-card">
           <h2>The Proving Grounds</h2>
-          <p>Answer from memory before checking. These questions are generated from the same `interactive-quiz` block stored in the Markdown note.</p>
+          <p>Answer from memory before checking. These questions are generated from the `interactive-quiz` block stored in the Markdown note.</p>
           {quiz_html}
           <h3>Practice Lab</h3>
           <p>Write a compact explanation from memory. Include what the concept is, why it exists, how it changes state, and what mistake would break the invariant.</p>
           <textarea id="practice-answer" placeholder="Explain the chapter from memory..."></textarea>
           <div style="margin-top: 12px;"><button class="action-btn primary" onclick="validatePractice()">Check answer</button></div>
           <div id="practice-checklist" class="checklist" aria-live="polite"></div>
-          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">Back</button><button class="nav-btn primary" onclick="navigateToNextPage()">View Markdown Source</button></div>
+          <div class="nav-row"><button class="nav-btn" onclick="navigateToPreviousPage()">&larr; Back to Lesson</button><button class="nav-btn primary" onclick="navigateToNextPage()">Next: View Source &rarr;</button></div>
         </div>
       </section>
 
@@ -1699,7 +1685,7 @@ graph TD
           <p>This is the complete vault note used to generate the lesson. If the Markdown is weak, the lesson is weak, so the source remains visible and reviewable.</p>
           <pre class="markdown-source" data-markdown-source>{safe_markdown}</pre>
           <div class="nav-row">
-            <button class="nav-btn" onclick="navigateToPreviousPage()">Back</button>
+            <button class="nav-btn" onclick="navigateToPreviousPage()">&larr; Back to Quiz</button>
             <button class="nav-btn primary" onclick="window.parent.postMessage({{ type: 'NEXT_NOTE' }}, '*')">{next_label}</button>
           </div>
         </div>

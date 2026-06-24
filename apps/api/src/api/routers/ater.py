@@ -253,6 +253,123 @@ async def ater_confirm_plan(
         error_details = traceback.format_exc()
         raise HTTPException(status_code=500, detail=f"Ater Confirmation failed: {str(e)}\n\nTraceback:\n{error_details}")
 
+@router.post("/ater/plan/intent")
+async def ater_plan_intent(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Classifies intent (is learning or not) and checks if the prompt is specific or vague.
+    """
+    if not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="AI Key is required")
+    
+    prompt = payload.get("prompt")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+        
+    try:
+        service = AterService(secrets)
+        result = await service.planner.classify_intent_and_clarification(prompt)
+        
+        # If not learning request, raise routing error (400 Bad Request)
+        if not result.get("is_learning"):
+            raise HTTPException(status_code=400, detail="The prompt does not represent a learning request.")
+            
+        return result
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/plan/curriculum")
+async def ater_plan_curriculum(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Checks for existing Hub matching the topic, then generates the structured curriculum.
+    """
+    if not secrets.ai_key or not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="AI Key and Vault Path are required")
+        
+    prompt = payload.get("prompt")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+        
+    learning_mode = payload.get("learning_mode", "self-study")
+    semester = payload.get("semester")
+    course = payload.get("course")
+    unit = payload.get("unit")
+    
+    try:
+        service = AterService(secrets)
+        
+        # Extract topic first
+        topic = await service.planner.extract_topic(prompt)
+        
+        # Try to lookup existing Hub
+        from src.domains.ater.learning_object import lookup_existing_hub
+        hub_data = lookup_existing_hub(secrets.vault_path, topic)
+        
+        existing_chapters = []
+        if hub_data:
+            try:
+                import frontmatter
+                post = frontmatter.loads((Path(secrets.vault_path) / hub_data["path"]).read_text(encoding="utf-8"))
+                existing_chapters = post.metadata.get("chapters", [])
+            except Exception:
+                pass
+                
+        # Generate curriculum structure
+        curriculum = await service.planner.generate_curriculum(
+            prompt=prompt,
+            existing_chapters=existing_chapters,
+            learning_mode=learning_mode
+        )
+        
+        return {
+            "curriculum": curriculum,
+            "existing_hub_found": bool(hub_data),
+            "existing_hub_path": hub_data["path"] if hub_data else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/plan/confirm")
+async def ater_plan_confirm(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    """
+    Confirms proposed curriculum and writes files to the vault in "Generate All" or "Progressive" mode.
+    """
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+        
+    curriculum = payload.get("curriculum")
+    mode = payload.get("mode") # "Generate All" or "Progressive"
+    
+    if not curriculum or not mode:
+        raise HTTPException(status_code=400, detail="curriculum and mode are required")
+        
+    semester = payload.get("semester")
+    course = payload.get("course")
+    unit = payload.get("unit")
+    
+    try:
+        service = AterService(secrets)
+        result = service.planner.write_curriculum(
+            curriculum=curriculum,
+            mode=mode,
+            semester=semester,
+            course=course,
+            unit=unit
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/ater/curriculum/plan")
 async def ater_curriculum_plan(
     payload: Dict[str, Any] = Body(...),
