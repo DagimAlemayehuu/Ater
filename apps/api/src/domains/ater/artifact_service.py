@@ -1,5 +1,6 @@
 import datetime
 import json
+import sqlite3
 from pathlib import Path
 from typing import List, Dict, Union, Literal, Any, Optional
 from pydantic import BaseModel, Field, ValidationError
@@ -78,9 +79,42 @@ class Timeline(BaseModel):
     type: Literal["timeline"] = "timeline"
     events: List[TimelineEvent]
 
+class SQLQueryPlayground(BaseModel):
+    type: Literal["sql_query_playground"] = "sql_query_playground"
+    schema_ddl: str
+    seed_sql: str
+    target_query: str
+    initial_query: str
+    table_headers: List[str]
+
+class SimulationPredict(BaseModel):
+    type: Literal["simulation_predict"] = "simulation_predict"
+    states: List[Dict[str, Any]]
+    checkpoints: List[Dict[str, Any]]
+
+class ProofStep(BaseModel):
+    type: Literal["proof_step"] = "proof_step"
+    steps: List[str]
+    reasons: List[str]
+    correct_order: List[int]
+    reason_mappings: List[int]
+
+class EvidenceSelect(BaseModel):
+    type: Literal["evidence_select"] = "evidence_select"
+    raw_text: str
+    selectable_spans: List[Dict[str, Any]]
+    target_spans: List[int]
+
+class CaseSimulation(BaseModel):
+    type: Literal["case_simulation"] = "case_simulation"
+    stages: Dict[str, Dict[str, Any]]
+    metrics: Dict[str, float]
+    success_conditions: Dict[str, Any]
+
 Artifact = Union[
     RevealCard, ClozeMulti, MatchingPairs, SortableSteps, StateStepper,
-    ConceptMap, TableLens, CodeTrace, FormulaCard, Timeline
+    ConceptMap, TableLens, CodeTrace, FormulaCard, Timeline,
+    SQLQueryPlayground, SimulationPredict, ProofStep, EvidenceSelect, CaseSimulation
 ]
 
 # Helper to validate single artifact dict
@@ -109,6 +143,16 @@ def validate_artifact(data: dict) -> Artifact:
         return FormulaCard(**data)
     elif t == "timeline":
         return Timeline(**data)
+    elif t == "sql_query_playground":
+        return SQLQueryPlayground(**data)
+    elif t == "simulation_predict":
+        return SimulationPredict(**data)
+    elif t == "proof_step":
+        return ProofStep(**data)
+    elif t == "evidence_select":
+        return EvidenceSelect(**data)
+    elif t == "case_simulation":
+        return CaseSimulation(**data)
     else:
         raise ValidationError(f"Unknown artifact type: {t}")
 
@@ -121,6 +165,18 @@ def select_candidate_types(frontmatter: dict, content: str) -> List[str]:
     modality = frontmatter.get("concept_modality", "Qualitative/Definitional")
     mode = str(frontmatter.get("mode", "")).upper()
     content_lower = content.lower()
+
+    # Route advanced modalities first based on keyphrase matching
+    if any(k in content_lower for k in ["sql", "query", "database", "select"]):
+        return ["sql_query_playground", "table_lens"]
+    if any(k in content_lower for k in ["theorem", "induction", "proof", "logic"]):
+        return ["proof_step", "reveal_card"]
+    if any(k in content_lower for k in ["trace", "simulate", "array state", "iteration"]):
+        return ["simulation_predict", "code_trace"]
+    if any(k in content_lower for k in ["bug", "find error", "locate line", "identify evidence"]):
+        return ["evidence_select", "cloze_multi"]
+    if any(k in content_lower for k in ["branching case", "decision study", "scenario simulation"]):
+        return ["case_simulation", "timeline"]
 
     # Detect programming code or commands
     is_programming = (
@@ -241,6 +297,11 @@ You MUST generate valid JSON matching these Pydantic schemas:
 - code_trace: {{ "type": "code_trace", "code": "...", "steps": ["..."], "variables": [{{ "var_name": "value" }}] }}
 - formula_card: {{ "type": "formula_card", "expression": "...", "variables": {{ "x": "..." }}, "derivation": ["..."] }}
 - timeline: {{ "type": "timeline", "events": [{{ "date": "...", "description": "..." }}] }}
+- sql_query_playground: {{ "type": "sql_query_playground", "schema_ddl": "CREATE TABLE...", "seed_sql": "INSERT INTO...", "target_query": "SELECT...", "initial_query": "SELECT...", "table_headers": ["col1", "col2"] }}
+- simulation_predict: {{ "type": "simulation_predict", "states": [{{ "step": 0, "vars": {{ "x": 1 }} }}], "checkpoints": [{{ "step_index": 0, "target_var": "x", "expected_value": "1", "question": "What is x?" }}] }}
+- proof_step: {{ "type": "proof_step", "steps": ["step 1", "step 2"], "reasons": ["reason A", "reason B"], "correct_order": [0, 1], "reason_mappings": [0, 1] }}
+- evidence_select: {{ "type": "evidence_select", "raw_text": "...", "selectable_spans": [{{ "id": 0, "start": 0, "end": 10, "text": "..." }}], "target_spans": [0] }}
+- case_simulation: {{ "type": "case_simulation", "stages": {{ "start": {{ "text": "...", "choices": [{{ "text": "...", "next": "next_stage", "modifications": {{ "stability": -0.1 }} }}] }} }}, "metrics": {{ "stability": 1.0 }}, "success_conditions": {{ "stability": {{ "min": 0.5 }} }} }}
 
 Respond ONLY with a valid JSON array of these objects. Do not include markdown code fences or headers.
 """
@@ -329,9 +390,135 @@ Respond ONLY with a valid JSON array of these objects. Do not include markdown c
         valid_types = {
             "reveal_card", "cloze_multi", "matching_pairs", "sortable_steps",
             "state_stepper", "concept_map", "table_lens", "code_trace",
-            "formula_card", "timeline"
+            "formula_card", "timeline",
+            "sql_query_playground", "simulation_predict", "proof_step", "evidence_select", "case_simulation"
         }
         filtered = [pt for pt in pinned_types if pt in valid_types]
         pack["pinned_artifact_types"] = filtered
         self.write_artifact_pack(note_title, pack)
         return pack
+
+def evaluate_sql_query(schema_ddl: str, seed_sql: str, target_query: str, user_query: str) -> dict:
+    conn = None
+    try:
+        # Create ephemeral connection
+        conn = sqlite3.connect(":memory:")
+        cursor = conn.cursor()
+        
+        # Execute DDL
+        for stmt in schema_ddl.split(";"):
+            if stmt.strip():
+                cursor.execute(stmt)
+                
+        # Execute Seed SQL
+        for stmt in seed_sql.split(";"):
+            if stmt.strip():
+                cursor.execute(stmt)
+                
+        conn.commit()
+        
+        # Execute target query
+        try:
+            cursor.execute(target_query)
+            target_cols = [desc[0] for desc in cursor.description] if cursor.description else []
+            target_rows = cursor.fetchall()
+        except sqlite3.Error as e:
+            return {
+                "success": False,
+                "error": f"Target query execution failed: {type(e).__name__}: {str(e)}",
+                "dataset": None
+            }
+            
+        # Execute user query
+        try:
+            cursor.execute(user_query)
+            user_cols = [desc[0] for desc in cursor.description] if cursor.description else []
+            user_rows = cursor.fetchall()
+        except sqlite3.Error as e:
+            return {
+                "success": False,
+                "error": f"{type(e).__name__}: {str(e)}",
+                "dataset": None
+            }
+            
+        # Compare columns and rows
+        if target_cols != user_cols:
+            return {
+                "success": False,
+                "error": f"Column mismatch. Expected {target_cols}, got {user_cols}",
+                "dataset": [dict(zip(user_cols, row)) for row in user_rows]
+            }
+            
+        if target_rows != user_rows:
+            return {
+                "success": False,
+                "error": f"Row data mismatch. Expected {len(target_rows)} rows, got {len(user_rows)} rows",
+                "dataset": [dict(zip(user_cols, row)) for row in user_rows]
+            }
+            
+        # Success
+        return {
+            "success": True,
+            "error": None,
+            "dataset": [dict(zip(user_cols, row)) for row in user_rows]
+        }
+    except Exception as ex:
+        return {
+            "success": False,
+            "error": f"Unexpected error: {str(ex)}",
+            "dataset": None
+        }
+    finally:
+        if conn:
+            conn.close()
+
+def evaluate_case_step(
+    stages: dict,
+    current_stage: str,
+    choice_index: int,
+    current_metrics: dict,
+    success_conditions: dict
+) -> dict:
+    if current_stage not in stages:
+        return {"next_stage": current_stage, "metrics": current_metrics, "ended": True, "success": False}
+        
+    stage = stages[current_stage]
+    choices = stage.get("choices", [])
+    
+    if not choices or choice_index < 0 or choice_index >= len(choices):
+        return {"next_stage": current_stage, "metrics": current_metrics, "ended": True, "success": False}
+        
+    choice = choices[choice_index]
+    next_stage = choice.get("next", "")
+    modifications = choice.get("modifications", {})
+    
+    # Calculate new metrics
+    new_metrics = {}
+    for k, v in current_metrics.items():
+        mod = modifications.get(k, 0.0)
+        new_val = v + mod
+        if k in ("integrity", "stability"):
+            new_val = min(1.0, max(0.0, new_val))
+        new_metrics[k] = new_val
+        
+    # Check if next stage is terminal
+    next_stage_obj = stages.get(next_stage, {})
+    next_choices = next_stage_obj.get("choices", [])
+    ended = len(next_choices) == 0
+    
+    # Evaluate success if ended
+    success = True
+    if ended:
+        for metric, condition in success_conditions.items():
+            val = new_metrics.get(metric, 0.0)
+            if "min" in condition and val < condition["min"]:
+                success = False
+            if "max" in condition and val > condition["max"]:
+                success = False
+                
+    return {
+        "next_stage": next_stage,
+        "metrics": new_metrics,
+        "ended": ended,
+        "success": success
+    }

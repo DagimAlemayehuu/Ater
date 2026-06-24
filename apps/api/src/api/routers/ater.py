@@ -2330,4 +2330,34 @@ async def ater_source_augment(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/playground/sql/evaluate")
+async def evaluate_playground_sql(
+    payload: Dict[str, Any] = Body(...)
+):
+    playground = payload.get("playground", {})
+    query = payload.get("query", "")
+    
+    schema_ddl = playground.get("schema_ddl", "")
+    seed_sql = playground.get("seed_sql", "")
+    target_query = playground.get("target_query", "")
+    
+    from src.domains.ater.artifact_service import evaluate_sql_query
+    res = evaluate_sql_query(schema_ddl, seed_sql, target_query, query)
+    return res
+
+@router.post("/ater/playground/case/evaluate")
+async def evaluate_playground_case(
+    payload: Dict[str, Any] = Body(...)
+):
+    stages = payload.get("stages", {})
+    current_stage = payload.get("current_stage", "")
+    choice_index = payload.get("choice_index", 0)
+    current_metrics = payload.get("current_metrics", {})
+    success_conditions = payload.get("success_conditions", {})
+    
+    from src.domains.ater.artifact_service import evaluate_case_step
+    res = evaluate_case_step(stages, current_stage, choice_index, current_metrics, success_conditions)
+    return res
+
+
 

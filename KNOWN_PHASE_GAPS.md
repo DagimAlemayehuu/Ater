@@ -50,3 +50,9 @@ This file tracks the outstanding gaps, missing test coverages, and design issues
 
 - [ ] **SQLite Local Engine Compatibility**: The local SQL Query Playground evaluator assumes the sidecar python runtime has `sqlite3` built-in and configured for `:memory:` operations.
 - [ ] **DAG Parsing Safety**: The Case Simulation branching checker assumes choice structures can be represented as acyclic models and validated without infinite loops or deep recursion.
+
+## Phase 9: adaptive-learner-model Assumptions
+
+- [ ] **Telemetry Availability**: Calculations assume that FSRS metadata and prior tutor wagers are populated in SQLite and parsed without formatting anomalies.
+- [ ] **Dependency Map Availability**: Next-lesson sorting assumes that prerequisite metadata (e.g. `prerequisites` list in frontmatter or Chapter structure) is available in a parsed format.
+

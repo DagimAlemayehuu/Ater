@@ -296,49 +296,143 @@ class AterLessonCompiler:
             for idx, q in enumerate(quiz_json):
                 q_id = q.get("id") or f"q{idx+1}"
                 q_type = q.get("type") or "multiple-choice"
-                question = q.get("question") or ""
                 explanation = q.get("explanation") or "No explanation available."
                 
-                # Check for options
-                options = q.get("options") or []
-                
-                quiz_html += f"""
-                <div class="quiz-card" data-quiz-id="{q_id}">
-                  <h3>Question {idx + 1}</h3>
-                  <p>{question}</p>
-                """
-                
-                if isinstance(options, list) and options:
-                    quiz_html += '<div class="quiz-options" data-quiz>'
-                    for opt in options:
-                        is_correct = "true" if opt == q.get("answer") else "false"
-                        quiz_html += f"""
-                        <button class="option" onclick="selectOption(this, {is_correct})" data-explanation="{explanation}">{opt}</button>
-                        """
-                    quiz_html += '</div>'
-                elif isinstance(options, dict) and options:
-                    quiz_html += '<div class="quiz-options" data-quiz>'
-                    for key, val in options.items():
-                        is_correct = "true" if key == q.get("answer") else "false"
-                        quiz_html += f"""
-                        <button class="option" onclick="selectOption(this, {is_correct})" data-explanation="{explanation}"><strong>{key}</strong>: {val}</button>
-                        """
-                    quiz_html += '</div>'
-                else:
-                    # Write in answer/scenario
-                    ans = q.get("answer") or ""
+                if q_type == "sql_query_playground":
+                    schema_ddl_escaped = q.get("schema_ddl", "").replace("<", "&lt;").replace(">", "&gt;")
+                    initial_query = q.get("initial_query", "")
                     quiz_html += f"""
-                    <div style="margin-top: 10px;">
-                      <textarea id="quiz-write-{q_id}" placeholder="Write your answer here..."></textarea>
-                      <button class="action-btn primary" style="margin-top: 10px;" onclick="showWritingExplanation('{q_id}', '{explanation}')">Reveal Explanation</button>
-                      <div class="feedback" id="feedback-{q_id}"></div>
+                    <div class="quiz-card" data-quiz-id="{q_id}" data-type="sql_query_playground" data-playground='{json.dumps(q)}'>
+                      <h3>SQL Query Playground</h3>
+                      <p><strong>Database Schema:</strong></p>
+                      <pre class="code-block"><code>{schema_ddl_escaped}</code></pre>
+                      <textarea id="sql-query-{q_id}" style="font-family: monospace; min-height: 80px;" placeholder="SELECT...">{initial_query}</textarea>
+                      <div style="margin-top: 10px;">
+                        <button class="action-btn primary" onclick="runSqlQuery('{q_id}')">Run Query</button>
+                      </div>
+                      <div class="feedback" id="sql-feedback-{q_id}"></div>
+                      <div style="overflow-x: auto; margin-top: 10px;">
+                        <table id="sql-table-{q_id}" style="width: 100%; border-collapse: collapse; display: none;">
+                          <thead></thead>
+                          <tbody></tbody>
+                        </table>
+                      </div>
                     </div>
                     """
-                
-                quiz_html += f"""
-                  <div class="feedback" data-feedback></div>
-                </div>
-                """
+                elif q_type == "simulation_predict":
+                    states_json = json.dumps(q.get("states", []))
+                    checkpoints_json = json.dumps(q.get("checkpoints", []))
+                    quiz_html += f"""
+                    <div class="quiz-card" data-quiz-id="{q_id}" data-type="simulation_predict" data-states='{states_json}' data-checkpoints='{checkpoints_json}'>
+                      <h3>Simulation Predict</h3>
+                      <div id="sim-container-{q_id}">
+                        <div id="sim-state-{q_id}" class="mini-card" style="margin-bottom: 10px;"></div>
+                        <div id="sim-input-area-{q_id}"></div>
+                        <button class="action-btn" id="sim-btn-{q_id}" onclick="advanceSimulation('{q_id}')">Next Step</button>
+                      </div>
+                      <div class="feedback" id="sim-feedback-{q_id}"></div>
+                    </div>
+                    """
+                elif q_type == "proof_step":
+                    steps_json = json.dumps(q.get("steps", []))
+                    reasons_json = json.dumps(q.get("reasons", []))
+                    correct_order = json.dumps(q.get("correct_order", []))
+                    reason_mappings = json.dumps(q.get("reason_mappings", []))
+                    quiz_html += f"""
+                    <div class="quiz-card" data-quiz-id="{q_id}" data-type="proof_step" 
+                         data-steps='{steps_json}' 
+                         data-reasons='{reasons_json}'
+                         data-correct-order='{correct_order}'
+                         data-reason-mappings='{reason_mappings}'>
+                      <h3>Proof Builder</h3>
+                      <div id="proof-container-{q_id}"></div>
+                      <button class="action-btn primary" onclick="checkProof('{q_id}')">Verify Proof</button>
+                      <div class="feedback" id="proof-feedback-{q_id}"></div>
+                    </div>
+                    """
+                elif q_type == "evidence_select":
+                    selectable_spans = q.get("selectable_spans", [])
+                    raw_text = q.get("raw_text", "")
+                    sorted_spans = sorted(selectable_spans, key=lambda x: x.get("start", 0))
+                    evidence_html = ""
+                    last_idx = 0
+                    for span in sorted_spans:
+                        start = span.get("start", 0)
+                        end = span.get("end", 0)
+                        span_id = span.get("id")
+                        evidence_html += raw_text[last_idx:start].replace("<", "&lt;").replace(">", "&gt;")
+                        evidence_html += f'<span class="selectable" data-id="{span_id}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; border: 1px dashed var(--line); transition: background 0.2s;" onclick="toggleEvidenceSpan(this)">{raw_text[start:end].replace("<", "&lt;").replace(">", "&gt;")}</span>'
+                        last_idx = end
+                    evidence_html += raw_text[last_idx:].replace("<", "&lt;").replace(">", "&gt;")
+                    target_spans = json.dumps(q.get("target_spans", []))
+                    quiz_html += f"""
+                    <div class="quiz-card" data-quiz-id="{q_id}" data-type="evidence_select" data-target-spans='{target_spans}'>
+                      <h3>Evidence Selection</h3>
+                      <p>Highlight the spans that represent evidence or contain bugs:</p>
+                      <pre class="code-block" style="line-height: 2.2; white-space: pre-wrap;">{evidence_html}</pre>
+                      <button class="action-btn primary" onclick="checkEvidence('{q_id}')">Submit Selection</button>
+                      <div class="feedback" id="evidence-feedback-{q_id}"></div>
+                    </div>
+                    """
+                elif q_type == "case_simulation":
+                    stages_json = json.dumps(q.get("stages", {}))
+                    metrics_json = json.dumps(q.get("metrics", {}))
+                    success_conditions = json.dumps(q.get("success_conditions", {}))
+                    quiz_html += f"""
+                    <div class="quiz-card" data-quiz-id="{q_id}" data-type="case_simulation"
+                         data-stages='{stages_json}'
+                         data-metrics='{metrics_json}'
+                         data-success-conditions='{success_conditions}'>
+                      <h3>Case Simulation</h3>
+                      <div id="case-container-{q_id}">
+                        <div style="display: flex; gap: 20px; margin-bottom: 12px;" id="case-metrics-{q_id}"></div>
+                        <p id="case-text-{q_id}"></p>
+                        <div id="case-choices-{q_id}" style="display: grid; gap: 8px;"></div>
+                      </div>
+                      <div class="feedback" id="case-feedback-{q_id}"></div>
+                    </div>
+                    """
+                else:
+                    # Default question types (multiple-choice or write-in)
+                    question = q.get("question") or ""
+                    options = q.get("options") or []
+                    
+                    quiz_html += f"""
+                    <div class="quiz-card" data-quiz-id="{q_id}">
+                      <h3>Question {idx + 1}</h3>
+                      <p>{question}</p>
+                    """
+                    
+                    if isinstance(options, list) and options:
+                        quiz_html += '<div class="quiz-options" data-quiz>'
+                        for opt in options:
+                            is_correct = "true" if opt == q.get("answer") else "false"
+                            quiz_html += f"""
+                            <button class="option" onclick="selectOption(this, {is_correct})" data-explanation="{explanation}">{opt}</button>
+                            """
+                        quiz_html += '</div>'
+                    elif isinstance(options, dict) and options:
+                        quiz_html += '<div class="quiz-options" data-quiz>'
+                        for key, val in options.items():
+                            is_correct = "true" if key == q.get("answer") else "false"
+                            quiz_html += f"""
+                            <button class="option" onclick="selectOption(this, {is_correct})" data-explanation="{explanation}"><strong>{key}</strong>: {val}</button>
+                            """
+                        quiz_html += '</div>'
+                    else:
+                        ans = q.get("answer") or ""
+                        quiz_html += f"""
+                        <div style="margin-top: 10px;">
+                          <textarea id="quiz-write-{q_id}" placeholder="Write your answer here..."></textarea>
+                          <button class="action-btn primary" style="margin-top: 10px;" onclick="showWritingExplanation('{q_id}', '{explanation}')">Reveal Explanation</button>
+                          <div class="feedback" id="feedback-{q_id}"></div>
+                        </div>
+                        """
+                    
+                    quiz_html += f"""
+                      <div class="feedback" data-feedback></div>
+                    </div>
+                    """
 
         # For exam variant, page 1 is the quiz page directly!
         quiz_page_active = "active" if variant == "exam" else ""
@@ -651,6 +745,13 @@ class AterLessonCompiler:
       font-size: 13px;
     }}
     .feedback.visible {{ display: block; }}
+    .selectable:hover {
+      background: var(--surface-2);
+    }
+    .selectable.selected {
+      background: var(--warn);
+      color: #111113;
+    }
     .quiz-card {{
       border: 1px solid var(--line);
       background: var(--surface);
@@ -848,6 +949,445 @@ class AterLessonCompiler:
       const target = document.getElementById('practice-checklist');
       target.innerHTML = checks.map(([label, pass]) => `<div class="${{pass ? 'pass' : 'miss'}}">${{pass ? 'Passed' : 'Missing'}}: ${{label}}</div>`).join('');
     }}
+
+    // Advanced Artifacts JS Functions
+
+    // 1. SQL Playground
+    async function runSqlQuery(qId) {
+      const textarea = document.getElementById('sql-query-' + qId);
+      const query = textarea ? textarea.value : '';
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const playgroundData = JSON.parse(card.dataset.playground);
+      const feedback = document.getElementById('sql-feedback-' + qId);
+      const table = document.getElementById('sql-table-' + qId);
+
+      feedback.classList.remove('visible');
+      table.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/ater/playground/sql/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playground: playgroundData,
+            query: query
+          })
+        });
+        const data = await res.json();
+        
+        feedback.classList.add('visible');
+        if (data.success) {
+          feedback.textContent = 'Correct query execution!';
+          feedback.style.color = 'var(--good)';
+          
+          // Render Table
+          if (data.dataset && data.dataset.length > 0) {
+            table.style.display = 'table';
+            const headers = Object.keys(data.dataset[0]);
+            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
+            table.querySelector('tbody').innerHTML = data.dataset.map(row => 
+              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
+            ).join('');
+          }
+        } else {
+          feedback.textContent = 'Error: ' + data.error;
+          feedback.style.color = 'var(--bad)';
+        }
+
+        window.parent.postMessage({
+          type: 'ANSWER_SUBMITTED',
+          payload: {
+            question_id: qId,
+            is_correct: data.success,
+            wager: 'high',
+            user_answer: query
+          }
+        }, '*');
+      } catch (err) {
+        feedback.classList.add('visible');
+        feedback.textContent = 'Failed to execute query: ' + err.message;
+        feedback.style.color = 'var(--bad)';
+      }
+    }
+
+    // 2. Simulation Predict
+    const simStates = {};
+    function initSimulation(qId) {
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const states = JSON.parse(card.dataset.states);
+      const checkpoints = JSON.parse(card.dataset.checkpoints);
+      
+      simStates[qId] = {
+        currentStep: 0,
+        states: states,
+        checkpoints: checkpoints,
+        success: true
+      };
+
+      renderSimStep(qId);
+    }
+
+    function renderSimStep(qId) {
+      const sim = simStates[qId];
+      const stateDiv = document.getElementById('sim-state-' + qId);
+      const inputArea = document.getElementById('sim-input-area-' + qId);
+      const btn = document.getElementById('sim-btn-' + qId);
+      
+      const currState = sim.states[sim.currentStep];
+      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
+        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
+      
+      inputArea.innerHTML = '';
+      
+      // Check if there is a checkpoint for the current step
+      const checkpoint = sim.checkpoints.find(cp => cp.step_index === sim.currentStep);
+      if (checkpoint) {
+        inputArea.innerHTML = `
+          <div style="margin-bottom: 10px;">
+            <p>${checkpoint.question}</p>
+            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
+          </div>
+        `;
+        btn.textContent = 'Verify Prediction';
+      } else {
+        btn.textContent = sim.currentStep < sim.states.length - 1 ? 'Next Step' : 'Finish Simulation';
+      }
+    }
+
+    function advanceSimulation(qId) {
+      const sim = simStates[qId];
+      const feedback = document.getElementById('sim-feedback-' + qId);
+      feedback.classList.remove('visible');
+
+      const checkpoint = sim.checkpoints.find(cp => cp.step_index === sim.currentStep);
+      if (checkpoint) {
+        const input = document.getElementById('sim-pred-' + qId);
+        const prediction = input ? input.value : '';
+        if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
+          sim.success = false;
+          feedback.classList.add('visible');
+          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
+          feedback.style.color = 'var(--bad)';
+          return;
+        } else {
+          feedback.classList.add('visible');
+          feedback.textContent = 'Correct prediction!';
+          feedback.style.color = 'var(--good)';
+        }
+      }
+
+      if (sim.currentStep < sim.states.length - 1) {
+        sim.currentStep++;
+        renderSimStep(qId);
+      } else {
+        feedback.classList.add('visible');
+        feedback.textContent = sim.success ? 'Simulation completed successfully!' : 'Simulation finished with incorrect predictions.';
+        feedback.style.color = sim.success ? 'var(--good)' : 'var(--bad)';
+        
+        window.parent.postMessage({
+          type: 'ANSWER_SUBMITTED',
+          payload: {
+            question_id: qId,
+            is_correct: sim.success,
+            wager: 'high',
+            user_answer: 'completed'
+          }
+        }, '*');
+      }
+    }
+
+    // 3. Proof Step
+    const proofStates = {};
+    function initProof(qId) {
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const steps = JSON.parse(card.dataset.steps);
+      const reasons = JSON.parse(card.dataset.reasons);
+      
+      // Shuffle initially
+      const indices = steps.map((_, i) => i);
+      indices.sort(() => Math.random() - 0.5);
+
+      proofStates[qId] = {
+        order: indices,
+        steps: steps,
+        reasons: reasons
+      };
+
+      renderProof(qId);
+    }
+
+    function renderProof(qId) {
+      const proof = proofStates[qId];
+      const container = document.getElementById('proof-container-' + qId);
+      container.innerHTML = '';
+
+      proof.order.forEach((stepIdx, renderIdx) => {
+        const stepText = proof.steps[stepIdx];
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'mini-card';
+        stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
+        stepDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 14px;">${stepText}</span>
+            <div style="display: flex; gap: 4px;">
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
+            </div>
+          </div>
+          <div>
+            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+              <option value="">-- Choose Justification --</option>
+              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
+            </select>
+          </div>
+        `;
+        container.appendChild(stepDiv);
+      });
+    }
+
+    function moveProofStep(qId, renderIdx, direction) {
+      const proof = proofStates[qId];
+      const targetIdx = renderIdx + direction;
+      if (targetIdx >= 0 && targetIdx < proof.order.length) {
+        // Swap select values before re-rendering
+        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
+        const val1 = currentSelect ? currentSelect.value : '';
+        const val2 = targetSelect ? targetSelect.value : '';
+
+        const temp = proof.order[renderIdx];
+        proof.order[renderIdx] = proof.order[targetIdx];
+        proof.order[targetIdx] = temp;
+
+        renderProof(qId);
+
+        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
+        if (newCurrentSelect) newCurrentSelect.value = val2;
+        if (newTargetSelect) newTargetSelect.value = val1;
+      }
+    }
+
+    function checkProof(qId) {
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const proof = proofStates[qId];
+      const correctOrder = JSON.parse(card.dataset.correctOrder);
+      const reasonMappings = JSON.parse(card.dataset.reasonMappings);
+      const feedback = document.getElementById('proof-feedback-' + qId);
+
+      let correct = true;
+      proof.order.forEach((stepIdx, renderIdx) => {
+        // Check order
+        if (stepIdx !== correctOrder[renderIdx]) {
+          correct = false;
+        }
+        // Check reason mapping
+        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const selectedReasonIdx = select ? parseInt(select.value) : -1;
+        if (selectedReasonIdx !== reasonMappings[stepIdx]) {
+          correct = false;
+        }
+      });
+
+      feedback.classList.add('visible');
+      if (correct) {
+        feedback.textContent = 'Proof verified successfully! Correct order and axioms.';
+        feedback.style.color = 'var(--good)';
+      } else {
+        feedback.textContent = 'Incorrect proof order or justifications. Try again.';
+        feedback.style.color = 'var(--bad)';
+      }
+
+      window.parent.postMessage({
+        type: 'ANSWER_SUBMITTED',
+        payload: {
+          question_id: qId,
+          is_correct: correct,
+          wager: 'high',
+          user_answer: JSON.stringify(proof.order)
+        }
+      }, '*');
+    }
+
+    // 4. Evidence Select
+    function toggleEvidenceSpan(span) {
+      span.classList.toggle('selected');
+    }
+
+    function checkEvidence(qId) {
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const targetSpans = JSON.parse(card.dataset.targetSpans);
+      const feedback = document.getElementById('evidence-feedback-' + qId);
+      
+      const selectedSpans = Array.from(card.querySelectorAll('.selectable.selected')).map(el => parseInt(el.dataset.id));
+      
+      // Compare arrays
+      const isCorrect = targetSpans.length === selectedSpans.length && targetSpans.every(v => selectedSpans.includes(v));
+
+      feedback.classList.add('visible');
+      if (isCorrect) {
+        feedback.textContent = 'Correct selection! All target elements identified.';
+        feedback.style.color = 'var(--good)';
+      } else {
+        feedback.textContent = 'Incorrect selection. Make sure to select all required items.';
+        feedback.style.color = 'var(--bad)';
+      }
+
+      window.parent.postMessage({
+        type: 'ANSWER_SUBMITTED',
+        payload: {
+          question_id: qId,
+          is_correct: isCorrect,
+          wager: 'high',
+          user_answer: JSON.stringify(selectedSpans)
+        }
+      }, '*');
+    }
+
+    // 5. Case Simulation
+    const caseStates = {};
+    function initCaseSimulation(qId) {
+      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const stages = JSON.parse(card.dataset.stages);
+      const initialMetrics = JSON.parse(card.dataset.metrics);
+      const successConditions = JSON.parse(card.dataset.successConditions);
+
+      caseStates[qId] = {
+        currentStage: 'start',
+        stages: stages,
+        metrics: { ...initialMetrics },
+        successConditions: successConditions,
+        ended: false
+      };
+
+      renderCaseStep(qId);
+    }
+
+    function renderCaseStep(qId) {
+      const c = caseStates[qId];
+      const metricsDiv = document.getElementById('case-metrics-' + qId);
+      const textP = document.getElementById('case-text-' + qId);
+      const choicesDiv = document.getElementById('case-choices-' + qId);
+      const feedback = document.getElementById('case-feedback-' + qId);
+
+      // Render metrics
+      metricsDiv.innerHTML = Object.entries(c.metrics).map(([name, val]) => {
+        // Clamp stability or integrity metrics [0.0, 1.0] as progress bars
+        const isPercentage = name === 'stability' || name === 'integrity';
+        const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
+        const progressHtml = isPercentage ? `
+          <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
+            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
+          </div>
+        ` : '';
+        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
+      }).join('');
+
+      const stage = c.stages[c.currentStage];
+      textP.textContent = stage.text;
+      choicesDiv.innerHTML = '';
+
+      if (c.ended) return;
+
+      const choices = stage.choices || [];
+      if (choices.length === 0) {
+        // Terminal stage
+        c.ended = true;
+        
+        // Evaluate success
+        let success = true;
+        for (const [metric, condition] of Object.entries(c.successConditions)) {
+          const val = c.metrics[metric];
+          if (condition.min !== undefined && val < condition.min) success = false;
+          if (condition.max !== undefined && val > condition.max) success = false;
+        }
+
+        feedback.classList.add('visible');
+        if (success) {
+          feedback.textContent = 'Scenario successfully resolved! All conditions met.';
+          feedback.style.color = 'var(--good)';
+        } else {
+          feedback.textContent = 'Scenario failed. Critical success thresholds violated.';
+          feedback.style.color = 'var(--bad)';
+        }
+
+        window.parent.postMessage({
+          type: 'ANSWER_SUBMITTED',
+          payload: {
+            question_id: qId,
+            is_correct: success,
+            wager: 'high',
+            user_answer: c.currentStage
+          }
+        }, '*');
+        return;
+      }
+
+      choices.forEach((choice, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.textContent = choice.text;
+        btn.onclick = () => selectCaseChoice(qId, idx);
+        choicesDiv.appendChild(btn);
+      });
+    }
+
+    async function selectCaseChoice(qId, choiceIndex) {
+      const c = caseStates[qId];
+      const feedback = document.getElementById('case-feedback-' + qId);
+
+      try {
+        const res = await fetch('/api/ater/playground/case/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stages: c.stages,
+            current_stage: c.currentStage,
+            choice_index: choiceIndex,
+            current_metrics: c.metrics,
+            success_conditions: c.successConditions
+          })
+        });
+        const data = await res.json();
+        
+        c.currentStage = data.next_stage;
+        c.metrics = data.metrics;
+        c.ended = data.ended;
+
+        renderCaseStep(qId);
+        
+        if (c.ended) {
+          feedback.classList.add('visible');
+          if (data.success) {
+            feedback.textContent = 'Scenario successfully resolved! All conditions met.';
+            feedback.style.color = 'var(--good)';
+          } else {
+            feedback.textContent = 'Scenario failed. Critical success thresholds violated.';
+            feedback.style.color = 'var(--bad)';
+          }
+          window.parent.postMessage({
+            type: 'ANSWER_SUBMITTED',
+            payload: {
+              question_id: qId,
+              is_correct: data.success,
+              wager: 'high',
+              user_answer: c.currentStage
+            }
+          }, '*');
+        }
+      } catch (err) {
+        feedback.classList.add('visible');
+        feedback.textContent = 'Failed to evaluate case choice: ' + err.message;
+        feedback.style.color = 'var(--bad)';
+      }
+    }
+
+    // Initialize all widgets on load
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-type="simulation_predict"]').forEach(el => initSimulation(el.dataset.quizId));
+      document.querySelectorAll('[data-type="proof_step"]').forEach(el => initProof(el.dataset.quizId));
+      document.querySelectorAll('[data-type="case_simulation"]').forEach(el => initCaseSimulation(el.dataset.quizId));
+    });
   </script>
 </body>
 </html>
