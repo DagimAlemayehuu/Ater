@@ -2191,6 +2191,58 @@ export const sidecarApi = {
             console.error('[Tauri Native RAG] augmentGroundedContext failed:', err);
             throw err;
         }
+    },
+    getLearnerProfile: async (topic: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/learner/profile?topic=${encodeURIComponent(topic)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to fetch learner profile (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getLearnerProfile failed:', err);
+            throw err;
+        }
+    },
+    getLearnerRecommendations: async (topic: string, limit?: number) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/learner/recommendations?topic=${encodeURIComponent(topic)}&limit=${limit || 5}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to fetch learner recommendations (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getLearnerRecommendations failed:', err);
+            throw err;
+        }
     }
 };
 

@@ -2359,5 +2359,43 @@ async def evaluate_playground_case(
     res = evaluate_case_step(stages, current_stage, choice_index, current_metrics, success_conditions)
     return res
 
+@router.get("/ater/learner/profile")
+async def get_learner_profile_endpoint(
+    topic: str = Query(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    try:
+        from src.domains.ater.learner_model_service import LearnerModelManager
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        manager = LearnerModelManager(db_path, Path(secrets.vault_path))
+        profile = manager.update_profile(topic)
+        if not profile:
+            raise HTTPException(status_code=404, detail=f"Topic profile for '{topic}' not found")
+        return profile
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ater/learner/recommendations")
+async def get_learner_recommendations_endpoint(
+    topic: str = Query(...),
+    limit: int = Query(5),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    try:
+        from src.domains.ater.learner_model_service import LearnerModelManager
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        manager = LearnerModelManager(db_path, Path(secrets.vault_path))
+        recommendations = manager.recommend_next_lessons(topic, limit=limit)
+        return {"recommendations": recommendations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 

@@ -118,6 +118,18 @@ class SRSEngine:
                 created_at TEXT
             )
         """)
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS learner_profile_stats (
+                topic TEXT PRIMARY KEY,
+                notes_total INTEGER DEFAULT 0,
+                notes_completed INTEGER DEFAULT 0,
+                accuracy_rate REAL DEFAULT 1.0,
+                avg_retrievability REAL DEFAULT 1.0,
+                overconfidence_count INTEGER DEFAULT 0,
+                calibration_index REAL DEFAULT 0.0,
+                last_studied_at TEXT
+            )
+        """)
         self.db.commit()
 
 

@@ -179,7 +179,10 @@ class TutorSessionManager:
             new_score = 0
             
         wagers = session["wagers"]
-        wagers[question_id] = wager_lower
+        wagers[question_id] = {
+            "wager": wager_lower,
+            "correct": is_correct
+        }
         
         diagnosis = {"is_misconception": False, "misconception_text": "", "hint": ""}
         if not is_correct:
