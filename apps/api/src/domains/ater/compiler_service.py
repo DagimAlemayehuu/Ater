@@ -792,25 +792,51 @@ class AterLessonCompiler:
       const curr = pages.findIndex(page => page.classList.contains('active'));
       if (curr > 0) showPage(curr - 1);
     }}
-    function selectOption(button, correct) {{
+    function selectOption(button, correct) {
       const quiz = button.closest('[data-quiz]');
       const buttons = Array.from(quiz.querySelectorAll('.option'));
-      buttons.forEach(option => {{
+      buttons.forEach(option => {
         option.disabled = true;
         option.classList.remove('correct', 'incorrect');
-      }});
+      });
       button.classList.add(correct ? 'correct' : 'incorrect');
       const feedback = quiz.parentElement.querySelector('[data-feedback]');
       feedback.classList.add('visible');
       feedback.textContent = button.dataset.explanation || (correct
         ? 'Correct. Use this answer as the retrieval anchor for the chapter.'
         : 'Not enough. Re-open the Markdown source and identify the invariant this chapter is protecting.');
-    }}
-    function showWritingExplanation(qId, explanation) {{
+      
+      const quizCard = button.closest('.quiz-card');
+      const quizId = quizCard ? quizCard.dataset.quizId : 'unknown';
+      const wager = confirm("Are you highly confident in this answer?") ? "high" : "low";
+      window.parent.postMessage({
+        type: 'ANSWER_SUBMITTED',
+        payload: {
+          question_id: quizId,
+          is_correct: correct,
+          wager: wager,
+          user_answer: button.textContent || ''
+        }
+      }, '*');
+    }
+    function showWritingExplanation(qId, explanation) {
       const feedback = document.getElementById('feedback-' + qId);
       feedback.textContent = explanation;
       feedback.classList.add('visible');
-    }}
+      
+      const textarea = document.getElementById('quiz-write-' + qId);
+      const user_ans = textarea ? textarea.value : '';
+      const wager = confirm("Are you highly confident in this answer?") ? "high" : "low";
+      window.parent.postMessage({
+        type: 'ANSWER_SUBMITTED',
+        payload: {
+          question_id: qId,
+          is_correct: false,
+          wager: wager,
+          user_answer: user_ans
+        }
+      }, '*');
+    }
     function validatePractice() {{
       const text = document.getElementById('practice-answer').value.toLowerCase();
       const checks = [

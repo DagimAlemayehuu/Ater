@@ -97,7 +97,29 @@ class SRSEngine:
                 last_review TEXT
             )
         """)
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS tutor_sessions (
+                session_id TEXT PRIMARY KEY,
+                hub_path TEXT,
+                current_note_path TEXT,
+                completed_notes TEXT,
+                wagers TEXT,
+                score INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'active',
+                updated_at TEXT
+            )
+        """)
+        self.db.execute("""
+            CREATE TABLE IF NOT EXISTS user_misconceptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT,
+                note_title TEXT,
+                misconception_text TEXT,
+                created_at TEXT
+            )
+        """)
         self.db.commit()
+
 
     def get_card(self, note_path: str) -> FSRSCard:
         row = self.db.execute(

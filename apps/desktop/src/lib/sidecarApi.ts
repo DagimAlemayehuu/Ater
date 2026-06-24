@@ -1872,4 +1872,159 @@ export const sidecarApi = {
             throw err;
         }
     },
+    startTutorSession: async (payload: { session_id: string; hub_path: string }) => {
+        if (isSimulationMode()) {
+            return {
+                session_id: payload.session_id,
+                hub_path: payload.hub_path,
+                current_note_path: 'mock_note.md',
+                completed_notes: [],
+                wagers: {},
+                score: 0,
+                status: 'active',
+                curriculum: ['mock_note.md']
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/start`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to start tutor session (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] startTutorSession failed:', err);
+            throw err;
+        }
+    },
+    submitTutorAnswer: async (payload: { session_id: string; question_id: string; is_correct: boolean; wager: string; user_answer?: string }) => {
+        if (isSimulationMode()) {
+            return {
+                score: 10,
+                score_change: 10,
+                diagnosis: { is_misconception: false, misconception_text: '', hint: '' },
+                session: {
+                    session_id: payload.session_id,
+                    score: 10,
+                    wagers: { [payload.question_id]: payload.wager }
+                }
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/submit`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to submit tutor answer (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] submitTutorAnswer failed:', err);
+            throw err;
+        }
+    },
+    getTutorStatus: async (session_id: string) => {
+        if (isSimulationMode()) {
+            return {
+                session_id,
+                hub_path: 'mock_hub.md',
+                current_note_path: 'mock_note.md',
+                completed_notes: [],
+                wagers: {},
+                score: 0,
+                status: 'active',
+                curriculum: ['mock_note.md']
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/status?session_id=${encodeURIComponent(session_id)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to get tutor status (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getTutorStatus failed:', err);
+            throw err;
+        }
+    },
+    advanceTutorSession: async (payload: { session_id: string }) => {
+        if (isSimulationMode()) {
+            return {
+                session_id: payload.session_id,
+                hub_path: 'mock_hub.md',
+                current_note_path: 'mock_note2.md',
+                completed_notes: ['mock_note.md'],
+                wagers: {},
+                score: 0,
+                status: 'active',
+                curriculum: ['mock_note.md', 'mock_note2.md']
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/advance`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to advance tutor session (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] advanceTutorSession failed:', err);
+            throw err;
+        }
+    }
 }
+

@@ -31,4 +31,15 @@ This file tracks the outstanding gaps, missing test coverages, and design issues
   This path discrepancy must be unified so that the generator reads the correct files initialized by the planner.
 - [ ] **Pydantic Validation Coercion Limits**: Structuring code execution steps or concept maps requires highly specific JSON formats. Weak models might return types (e.g., integers instead of strings in variables) that fail strict Pydantic validation, causing the generator to fallback to a generic `reveal_card` too frequently.
 
+## Phase 5: tutor-runtime Gaps
+
+- [ ] **SyntaxError in compiler_service.py**: In `compiler_service.py:L795-L838`, the added Javascript event dispatchers `selectOption` and `showWritingExplanation` contain unescaped curly braces `{` and `}`. Since they are within a Python f-string template, these must be escaped as `{{` and `}}` to avoid SyntaxErrors during module compilation.
+
+## Phase 6: cram-mode Assumptions
+
+- [ ] **Telemetry Invariance**: Cram mode calculations assume that tutor session telemetry (`tutor_sessions` and `user_misconceptions` tables in `ater_queue.db`) are queryable via standard SQLite methods and that fields like `wagers` and `completed_notes` are valid JSON.
+- [ ] **Lesson Variant Compilation Integration**: Cram mode assumes that the compiler is capable of generating `lessons/<Atomic_Note>.cram.html` correctly once the SyntaxError in compiler_service is resolved.
+- [ ] **Offline Execution**: Cram mode's phase scheduler and weakness ranker must run locally without relying on remote or active AI services, utilizing mock providers or local heuristics when telemetry or LLMs are unavailable.
+
+
 

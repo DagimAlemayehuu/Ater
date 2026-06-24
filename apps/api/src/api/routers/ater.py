@@ -2097,3 +2097,102 @@ async def pin_artifact_endpoint(
         return pack
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/tutor/start")
+async def start_tutor_session_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    session_id = payload.get("session_id")
+    hub_path = payload.get("hub_path")
+    if not session_id or not hub_path:
+        raise HTTPException(status_code=400, detail="session_id and hub_path are required")
+
+    try:
+        from src.domains.ater.tutor_service import TutorSessionManager
+        from src.domains.ater.service import AterService
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        
+        ai_service = AterService(secrets)
+        manager = TutorSessionManager(db_path, Path(secrets.vault_path), ai_service)
+        session = manager.start_session(session_id, hub_path)
+        return session
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/tutor/submit")
+async def submit_tutor_answer_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    session_id = payload.get("session_id")
+    question_id = payload.get("question_id")
+    is_correct = payload.get("is_correct")
+    wager = payload.get("wager")
+    user_answer = payload.get("user_answer", "")
+    
+    if not session_id or not question_id or is_correct is None or not wager:
+        raise HTTPException(status_code=400, detail="session_id, question_id, is_correct, and wager are required")
+
+    try:
+        from src.domains.ater.tutor_service import TutorSessionManager
+        from src.domains.ater.service import AterService
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        
+        ai_service = AterService(secrets)
+        manager = TutorSessionManager(db_path, Path(secrets.vault_path), ai_service)
+        res = manager.submit_answer(session_id, question_id, bool(is_correct), wager, user_answer)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ater/tutor/status")
+async def get_tutor_status_endpoint(
+    session_id: str = Query(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    try:
+        from src.domains.ater.tutor_service import TutorSessionManager
+        from src.domains.ater.service import AterService
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        
+        ai_service = AterService(secrets)
+        manager = TutorSessionManager(db_path, Path(secrets.vault_path), ai_service)
+        session = manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/tutor/advance")
+async def advance_tutor_session_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    session_id = payload.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+        
+    try:
+        from src.domains.ater.tutor_service import TutorSessionManager
+        from src.domains.ater.service import AterService
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        
+        ai_service = AterService(secrets)
+        manager = TutorSessionManager(db_path, Path(secrets.vault_path), ai_service)
+        session = manager.advance_note(session_id)
+        return session
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
