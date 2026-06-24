@@ -198,8 +198,8 @@ class SourceGroundedPlanner(AterPlanner):
                     note_abs_path = self.vault_path / note_rel_path
                     note_abs_path.parent.mkdir(parents=True, exist_ok=True)
                     
-                    art_pack_rel = lo.get_artifact_pack_path(note_title)
-                    art_pack_abs = self.vault_path / "database" / art_pack_rel
+                    art_pack_rel = lo.get_artifact_pack_path(note_rel_path)
+                    art_pack_abs = self.vault_path / art_pack_rel
                     art_pack_abs.parent.mkdir(parents=True, exist_ok=True)
                     
                     if not art_pack_abs.exists():

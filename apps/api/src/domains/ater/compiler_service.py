@@ -10,6 +10,7 @@ def normalize_title(title: str) -> str:
     and capitalizing the first letter of each word (TitleCase)."""
     if not title:
         return ""
+    title = re.sub(r'[\\/:*?"<>|]', '_', title)
     cleaned = re.sub(r'[\s_]+', ' ', title).strip()
     words = cleaned.split(' ')
     capitalized_words = [w[0].upper() + w[1:] if w else "" for w in words]
@@ -745,13 +746,13 @@ class AterLessonCompiler:
       font-size: 13px;
     }}
     .feedback.visible {{ display: block; }}
-    .selectable:hover {
+    .selectable:hover {{
       background: var(--surface-2);
-    }
-    .selectable.selected {
+    }}
+    .selectable.selected {{
       background: var(--warn);
       color: #111113;
-    }
+    }}
     .quiz-card {{
       border: 1px solid var(--line);
       background: var(--surface);
@@ -893,13 +894,13 @@ class AterLessonCompiler:
       const curr = pages.findIndex(page => page.classList.contains('active'));
       if (curr > 0) showPage(curr - 1);
     }}
-    function selectOption(button, correct) {
+    function selectOption(button, correct) {{
       const quiz = button.closest('[data-quiz]');
       const buttons = Array.from(quiz.querySelectorAll('.option'));
-      buttons.forEach(option => {
+      buttons.forEach(option => {{
         option.disabled = true;
         option.classList.remove('correct', 'incorrect');
-      });
+      }});
       button.classList.add(correct ? 'correct' : 'incorrect');
       const feedback = quiz.parentElement.querySelector('[data-feedback]');
       feedback.classList.add('visible');
@@ -910,17 +911,17 @@ class AterLessonCompiler:
       const quizCard = button.closest('.quiz-card');
       const quizId = quizCard ? quizCard.dataset.quizId : 'unknown';
       const wager = confirm("Are you highly confident in this answer?") ? "high" : "low";
-      window.parent.postMessage({
+      window.parent.postMessage({{
         type: 'ANSWER_SUBMITTED',
-        payload: {
+        payload: {{
           question_id: quizId,
           is_correct: correct,
           wager: wager,
           user_answer: button.textContent || ''
-        }
-      }, '*');
-    }
-    function showWritingExplanation(qId, explanation) {
+        }}
+      }}, '*');
+    }}
+    function showWritingExplanation(qId, explanation) {{
       const feedback = document.getElementById('feedback-' + qId);
       feedback.textContent = explanation;
       feedback.classList.add('visible');
@@ -928,16 +929,16 @@ class AterLessonCompiler:
       const textarea = document.getElementById('quiz-write-' + qId);
       const user_ans = textarea ? textarea.value : '';
       const wager = confirm("Are you highly confident in this answer?") ? "high" : "low";
-      window.parent.postMessage({
+      window.parent.postMessage({{
         type: 'ANSWER_SUBMITTED',
-        payload: {
+        payload: {{
           question_id: qId,
           is_correct: false,
           wager: wager,
           user_answer: user_ans
-        }
-      }, '*');
-    }
+        }}
+      }}, '*');
+    }}
     function validatePractice() {{
       const text = document.getElementById('practice-answer').value.toLowerCase();
       const checks = [
@@ -953,10 +954,10 @@ class AterLessonCompiler:
     // Advanced Artifacts JS Functions
 
     // 1. SQL Playground
-    async function runSqlQuery(qId) {
+    async function runSqlQuery(qId) {{
       const textarea = document.getElementById('sql-query-' + qId);
       const query = textarea ? textarea.value : '';
-      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
       const playgroundData = JSON.parse(card.dataset.playground);
       const feedback = document.getElementById('sql-feedback-' + qId);
       const table = document.getElementById('sql-table-' + qId);
@@ -964,142 +965,142 @@ class AterLessonCompiler:
       feedback.classList.remove('visible');
       table.style.display = 'none';
 
-      try {
-        const res = await fetch('/api/ater/playground/sql/evaluate', {
+      try {{
+        const res = await fetch('/api/ater/playground/sql/evaluate', {{
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
             playground: playgroundData,
             query: query
-          })
-        });
+          }})
+        }});
         const data = await res.json();
         
         feedback.classList.add('visible');
-        if (data.success) {
+        if (data.success) {{
           feedback.textContent = 'Correct query execution!';
           feedback.style.color = 'var(--good)';
           
           // Render Table
-          if (data.dataset && data.dataset.length > 0) {
+          if (data.dataset && data.dataset.length > 0) {{
             table.style.display = 'table';
             const headers = Object.keys(data.dataset[0]);
-            table.querySelector('thead').innerHTML = `<tr>${headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">${h}</th>`).join('')}</tr>`;
+            table.querySelector('thead').innerHTML = `<tr>\${{headers.map(h => `<th style="border: 1px solid var(--line); padding: 6px;">\${{h}}</th>`).join('')}}</tr>`;
             table.querySelector('tbody').innerHTML = data.dataset.map(row => 
-              `<tr>${headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">${row[h]}</td>`).join('')}</tr>`
+              `<tr>\${{headers.map(h => `<td style="border: 1px solid var(--line); padding: 6px;">\${{row[h]}}</td>`).join('')}}</tr>`
             ).join('');
-          }
-        } else {
+          }}
+        }} else {{
           feedback.textContent = 'Error: ' + data.error;
           feedback.style.color = 'var(--bad)';
-        }
+        }}
 
-        window.parent.postMessage({
+        window.parent.postMessage({{
           type: 'ANSWER_SUBMITTED',
-          payload: {
+          payload: {{
             question_id: qId,
             is_correct: data.success,
             wager: 'high',
             user_answer: query
-          }
-        }, '*');
-      } catch (err) {
+          }}
+        }}, '*');
+      }} catch (err) {{
         feedback.classList.add('visible');
         feedback.textContent = 'Failed to execute query: ' + err.message;
         feedback.style.color = 'var(--bad)';
-      }
-    }
+      }}
+    }}
 
     // 2. Simulation Predict
-    const simStates = {};
-    function initSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+    const simStates = {{}};
+    function initSimulation(qId) {{
+      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
       const states = JSON.parse(card.dataset.states);
       const checkpoints = JSON.parse(card.dataset.checkpoints);
       
-      simStates[qId] = {
+      simStates[qId] = {{
         currentStep: 0,
         states: states,
         checkpoints: checkpoints,
         success: true
-      };
+      }};
 
       renderSimStep(qId);
-    }
+    }}
 
-    function renderSimStep(qId) {
+    function renderSimStep(qId) {{
       const sim = simStates[qId];
       const stateDiv = document.getElementById('sim-state-' + qId);
       const inputArea = document.getElementById('sim-input-area-' + qId);
       const btn = document.getElementById('sim-btn-' + qId);
       
       const currState = sim.states[sim.currentStep];
-      stateDiv.innerHTML = `<strong>Step ${sim.currentStep}:</strong><br>` + 
-        Object.entries(currState.vars || {}).map(([k, v]) => `${k} = ${v}`).join('<br>');
+      stateDiv.innerHTML = `<strong>Step \${{sim.currentStep}}:</strong><br>` + 
+        Object.entries(currState.vars || {{}}).map(([k, v]) => `\${{k}} = \${{v}}`).join('<br>');
       
       inputArea.innerHTML = '';
       
       // Check if there is a checkpoint for the current step
       const checkpoint = sim.checkpoints.find(cp => cp.step_index === sim.currentStep);
-      if (checkpoint) {
+      if (checkpoint) {{
         inputArea.innerHTML = `
           <div style="margin-bottom: 10px;">
-            <p>${checkpoint.question}</p>
-            <input type="number" id="sim-pred-${qId}" placeholder="Enter prediction for ${checkpoint.target_var}">
+            <p>\${{checkpoint.question}}</p>
+            <input type="number" id="sim-pred-\${{qId}}" placeholder="Enter prediction for \${{checkpoint.target_var}}">
           </div>
         `;
         btn.textContent = 'Verify Prediction';
-      } else {
+      }} else {{
         btn.textContent = sim.currentStep < sim.states.length - 1 ? 'Next Step' : 'Finish Simulation';
-      }
-    }
+      }}
+    }}
 
-    function advanceSimulation(qId) {
+    function advanceSimulation(qId) {{
       const sim = simStates[qId];
       const feedback = document.getElementById('sim-feedback-' + qId);
       feedback.classList.remove('visible');
 
       const checkpoint = sim.checkpoints.find(cp => cp.step_index === sim.currentStep);
-      if (checkpoint) {
+      if (checkpoint) {{
         const input = document.getElementById('sim-pred-' + qId);
         const prediction = input ? input.value : '';
-        if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {
+        if (prediction === '' || parseFloat(prediction) !== parseFloat(checkpoint.expected_value)) {{
           sim.success = false;
           feedback.classList.add('visible');
-          feedback.textContent = `Incorrect prediction! Expected ${checkpoint.expected_value} for ${checkpoint.target_var}.`;
+          feedback.textContent = `Incorrect prediction! Expected \${{checkpoint.expected_value}} for \${{checkpoint.target_var}}.`;
           feedback.style.color = 'var(--bad)';
           return;
-        } else {
+        }} else {{
           feedback.classList.add('visible');
           feedback.textContent = 'Correct prediction!';
           feedback.style.color = 'var(--good)';
-        }
-      }
+        }}
+      }}
 
-      if (sim.currentStep < sim.states.length - 1) {
+      if (sim.currentStep < sim.states.length - 1) {{
         sim.currentStep++;
         renderSimStep(qId);
-      } else {
+      }} else {{
         feedback.classList.add('visible');
         feedback.textContent = sim.success ? 'Simulation completed successfully!' : 'Simulation finished with incorrect predictions.';
         feedback.style.color = sim.success ? 'var(--good)' : 'var(--bad)';
         
-        window.parent.postMessage({
+        window.parent.postMessage({{
           type: 'ANSWER_SUBMITTED',
-          payload: {
+          payload: {{
             question_id: qId,
             is_correct: sim.success,
             wager: 'high',
             user_answer: 'completed'
-          }
-        }, '*');
-      }
-    }
+          }}
+        }}, '*');
+      }}
+    }}
 
     // 3. Proof Step
-    const proofStates = {};
-    function initProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+    const proofStates = {{}};
+    function initProof(qId) {{
+      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
       const steps = JSON.parse(card.dataset.steps);
       const reasons = JSON.parse(card.dataset.reasons);
       
@@ -1107,51 +1108,51 @@ class AterLessonCompiler:
       const indices = steps.map((_, i) => i);
       indices.sort(() => Math.random() - 0.5);
 
-      proofStates[qId] = {
+      proofStates[qId] = {{
         order: indices,
         steps: steps,
         reasons: reasons
-      };
+      }};
 
       renderProof(qId);
-    }
+    }}
 
-    function renderProof(qId) {
+    function renderProof(qId) {{
       const proof = proofStates[qId];
       const container = document.getElementById('proof-container-' + qId);
       container.innerHTML = '';
 
-      proof.order.forEach((stepIdx, renderIdx) => {
+      proof.order.forEach((stepIdx, renderIdx) => {{
         const stepText = proof.steps[stepIdx];
         const stepDiv = document.createElement('div');
         stepDiv.className = 'mini-card';
         stepDiv.style = 'display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;';
         stepDiv.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">${stepText}</span>
+            <span style="font-size: 14px;">\${{stepText}}</span>
             <div style="display: flex; gap: 4px;">
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, -1)">▲</button>
-              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('${qId}', ${renderIdx}, 1)">▼</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${{qId}}', \${{renderIdx}}, -1)">▲</button>
+              <button class="action-btn" style="min-height: 28px; padding: 2px 6px;" onclick="moveProofStep('\${{qId}}', \${{renderIdx}}, 1)">▼</button>
             </div>
           </div>
           <div>
-            <select id="proof-reason-${qId}-${renderIdx}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
+            <select id="proof-reason-\${{qId}}-\${{renderIdx}}" style="width: 100%; background: #101011; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px;">
               <option value="">-- Choose Justification --</option>
-              ${proof.reasons.map((r, rIdx) => `<option value="${rIdx}">${r}</option>`).join('')}
+              \${{proof.reasons.map((r, rIdx) => `<option value="\${{rIdx}}">\${{r}}</option>`).join('')}}
             </select>
           </div>
         `;
         container.appendChild(stepDiv);
-      });
-    }
+      }});
+    }}
 
-    function moveProofStep(qId, renderIdx, direction) {
+    function moveProofStep(qId, renderIdx, direction) {{
       const proof = proofStates[qId];
       const targetIdx = renderIdx + direction;
-      if (targetIdx >= 0 && targetIdx < proof.order.length) {
+      if (targetIdx >= 0 && targetIdx < proof.order.length) {{
         // Swap select values before re-rendering
-        const currentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
-        const targetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
+        const currentSelect = document.getElementById(`proof-reason-\${{qId}}-\${{renderIdx}}`);
+        const targetSelect = document.getElementById(`proof-reason-\${{qId}}-\${{targetIdx}}`);
         const val1 = currentSelect ? currentSelect.value : '';
         const val2 = targetSelect ? targetSelect.value : '';
 
@@ -1161,61 +1162,61 @@ class AterLessonCompiler:
 
         renderProof(qId);
 
-        const newCurrentSelect = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
-        const newTargetSelect = document.getElementById(`proof-reason-${qId}-${targetIdx}`);
+        const newCurrentSelect = document.getElementById(`proof-reason-\${{qId}}-\${{renderIdx}}`);
+        const newTargetSelect = document.getElementById(`proof-reason-\${{qId}}-\${{targetIdx}}`);
         if (newCurrentSelect) newCurrentSelect.value = val2;
         if (newTargetSelect) newTargetSelect.value = val1;
-      }
-    }
+      }}
+    }}
 
-    function checkProof(qId) {
-      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+    function checkProof(qId) {{
+      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
       const proof = proofStates[qId];
       const correctOrder = JSON.parse(card.dataset.correctOrder);
       const reasonMappings = JSON.parse(card.dataset.reasonMappings);
       const feedback = document.getElementById('proof-feedback-' + qId);
 
       let correct = true;
-      proof.order.forEach((stepIdx, renderIdx) => {
+      proof.order.forEach((stepIdx, renderIdx) => {{
         // Check order
-        if (stepIdx !== correctOrder[renderIdx]) {
+        if (stepIdx !== correctOrder[renderIdx]) {{
           correct = false;
-        }
+        }}
         // Check reason mapping
-        const select = document.getElementById(`proof-reason-${qId}-${renderIdx}`);
+        const select = document.getElementById(`proof-reason-\${{qId}}-\${{renderIdx}}`);
         const selectedReasonIdx = select ? parseInt(select.value) : -1;
-        if (selectedReasonIdx !== reasonMappings[stepIdx]) {
+        if (selectedReasonIdx !== reasonMappings[stepIdx]) {{
           correct = false;
-        }
-      });
+        }}
+      }});
 
       feedback.classList.add('visible');
-      if (correct) {
+      if (correct) {{
         feedback.textContent = 'Proof verified successfully! Correct order and axioms.';
         feedback.style.color = 'var(--good)';
-      } else {
+      }} else {{
         feedback.textContent = 'Incorrect proof order or justifications. Try again.';
         feedback.style.color = 'var(--bad)';
-      }
+      }}
 
-      window.parent.postMessage({
+      window.parent.postMessage({{
         type: 'ANSWER_SUBMITTED',
-        payload: {
+        payload: {{
           question_id: qId,
           is_correct: correct,
           wager: 'high',
           user_answer: JSON.stringify(proof.order)
-        }
-      }, '*');
-    }
+        }}
+      }}, '*');
+    }}
 
     // 4. Evidence Select
-    function toggleEvidenceSpan(span) {
+    function toggleEvidenceSpan(span) {{
       span.classList.toggle('selected');
-    }
+    }}
 
-    function checkEvidence(qId) {
-      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+    function checkEvidence(qId) {{
+      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
       const targetSpans = JSON.parse(card.dataset.targetSpans);
       const feedback = document.getElementById('evidence-feedback-' + qId);
       
@@ -1225,45 +1226,45 @@ class AterLessonCompiler:
       const isCorrect = targetSpans.length === selectedSpans.length && targetSpans.every(v => selectedSpans.includes(v));
 
       feedback.classList.add('visible');
-      if (isCorrect) {
+      if (isCorrect) {{
         feedback.textContent = 'Correct selection! All target elements identified.';
         feedback.style.color = 'var(--good)';
-      } else {
+      }} else {{
         feedback.textContent = 'Incorrect selection. Make sure to select all required items.';
         feedback.style.color = 'var(--bad)';
-      }
+      }}
 
-      window.parent.postMessage({
+      window.parent.postMessage({{
         type: 'ANSWER_SUBMITTED',
-        payload: {
+        payload: {{
           question_id: qId,
           is_correct: isCorrect,
           wager: 'high',
           user_answer: JSON.stringify(selectedSpans)
-        }
-      }, '*');
-    }
+        }}
+      }}, '*');
+    }}
 
     // 5. Case Simulation
-    const caseStates = {};
-    function initCaseSimulation(qId) {
-      const card = document.querySelector(`[data-quiz-id="${qId}"]`);
+    const caseStates = {{}};
+    function initCaseSimulation(qId) {{
+      const card = document.querySelector(`[data-quiz-id="\${{qId}}"]`);
       const stages = JSON.parse(card.dataset.stages);
       const initialMetrics = JSON.parse(card.dataset.metrics);
       const successConditions = JSON.parse(card.dataset.successConditions);
 
-      caseStates[qId] = {
+      caseStates[qId] = {{
         currentStage: 'start',
         stages: stages,
-        metrics: { ...initialMetrics },
+        metrics: {{ ...initialMetrics }},
         successConditions: successConditions,
         ended: false
-      };
+      }};
 
       renderCaseStep(qId);
-    }
+    }}
 
-    function renderCaseStep(qId) {
+    function renderCaseStep(qId) {{
       const c = caseStates[qId];
       const metricsDiv = document.getElementById('case-metrics-' + qId);
       const textP = document.getElementById('case-text-' + qId);
@@ -1271,17 +1272,17 @@ class AterLessonCompiler:
       const feedback = document.getElementById('case-feedback-' + qId);
 
       // Render metrics
-      metricsDiv.innerHTML = Object.entries(c.metrics).map(([name, val]) => {
+      metricsDiv.innerHTML = Object.entries(c.metrics).map(([name, val]) => {{
         // Clamp stability or integrity metrics [0.0, 1.0] as progress bars
         const isPercentage = name === 'stability' || name === 'integrity';
         const displayVal = isPercentage ? Math.round(val * 100) + '%' : val;
         const progressHtml = isPercentage ? `
           <div style="width: 100px; height: 10px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 4px;">
-            <div style="width: ${val * 100}%; height: 100%; background: var(--soft);"></div>
+            <div style="width: \${{val * 100}}%; height: 100%; background: var(--soft);"></div>
           </div>
         ` : '';
-        return `<div><strong>${name.toUpperCase()}</strong>: ${displayVal}${progressHtml}</div>`;
-      }).join('');
+        return `<div><strong>\${{name.toUpperCase()}}</strong>: \${{displayVal}}\${{progressHtml}}</div>`;
+      }}).join('');
 
       const stage = c.stages[c.currentStage];
       textP.textContent = stage.text;
@@ -1290,64 +1291,64 @@ class AterLessonCompiler:
       if (c.ended) return;
 
       const choices = stage.choices || [];
-      if (choices.length === 0) {
+      if (choices.length === 0) {{
         // Terminal stage
         c.ended = true;
         
         // Evaluate success
         let success = true;
-        for (const [metric, condition] of Object.entries(c.successConditions)) {
+        for (const [metric, condition] of Object.entries(c.successConditions)) {{
           const val = c.metrics[metric];
           if (condition.min !== undefined && val < condition.min) success = false;
           if (condition.max !== undefined && val > condition.max) success = false;
-        }
+        }}
 
         feedback.classList.add('visible');
-        if (success) {
+        if (success) {{
           feedback.textContent = 'Scenario successfully resolved! All conditions met.';
           feedback.style.color = 'var(--good)';
-        } else {
+        }} else {{
           feedback.textContent = 'Scenario failed. Critical success thresholds violated.';
           feedback.style.color = 'var(--bad)';
-        }
+        }}
 
-        window.parent.postMessage({
+        window.parent.postMessage({{
           type: 'ANSWER_SUBMITTED',
-          payload: {
+          payload: {{
             question_id: qId,
             is_correct: success,
             wager: 'high',
             user_answer: c.currentStage
-          }
-        }, '*');
+          }}
+        }}, '*');
         return;
-      }
+      }}
 
-      choices.forEach((choice, idx) => {
+      choices.forEach((choice, idx) => {{
         const btn = document.createElement('button');
         btn.className = 'option';
         btn.textContent = choice.text;
         btn.onclick = () => selectCaseChoice(qId, idx);
         choicesDiv.appendChild(btn);
-      });
-    }
+      }});
+    }}
 
-    async function selectCaseChoice(qId, choiceIndex) {
+    async function selectCaseChoice(qId, choiceIndex) {{
       const c = caseStates[qId];
       const feedback = document.getElementById('case-feedback-' + qId);
 
-      try {
-        const res = await fetch('/api/ater/playground/case/evaluate', {
+      try {{
+        const res = await fetch('/api/ater/playground/case/evaluate', {{
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
             stages: c.stages,
             current_stage: c.currentStage,
             choice_index: choiceIndex,
             current_metrics: c.metrics,
             success_conditions: c.successConditions
-          })
-        });
+          }})
+        }});
         const data = await res.json();
         
         c.currentStage = data.next_stage;
@@ -1356,38 +1357,38 @@ class AterLessonCompiler:
 
         renderCaseStep(qId);
         
-        if (c.ended) {
+        if (c.ended) {{
           feedback.classList.add('visible');
-          if (data.success) {
+          if (data.success) {{
             feedback.textContent = 'Scenario successfully resolved! All conditions met.';
             feedback.style.color = 'var(--good)';
-          } else {
+          }} else {{
             feedback.textContent = 'Scenario failed. Critical success thresholds violated.';
             feedback.style.color = 'var(--bad)';
-          }
-          window.parent.postMessage({
+          }}
+          window.parent.postMessage({{
             type: 'ANSWER_SUBMITTED',
-            payload: {
+            payload: {{
               question_id: qId,
               is_correct: data.success,
               wager: 'high',
               user_answer: c.currentStage
-            }
-          }, '*');
-        }
-      } catch (err) {
+            }}
+          }}, '*');
+        }}
+      }} catch (err) {{
         feedback.classList.add('visible');
         feedback.textContent = 'Failed to evaluate case choice: ' + err.message;
         feedback.style.color = 'var(--bad)';
-      }
-    }
+      }}
+    }}
 
     // Initialize all widgets on load
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {{
       document.querySelectorAll('[data-type="simulation_predict"]').forEach(el => initSimulation(el.dataset.quizId));
       document.querySelectorAll('[data-type="proof_step"]').forEach(el => initProof(el.dataset.quizId));
       document.querySelectorAll('[data-type="case_simulation"]').forEach(el => initCaseSimulation(el.dataset.quizId));
-    });
+    }});
   </script>
 </body>
 </html>
@@ -1421,9 +1422,15 @@ class AterLessonCompiler:
         
         # Write back frontmatter and keep the rest of the note
         try:
+            from .vault_manager import VaultManager
+            vm = VaultManager(self.vault_path)
             post = frontmatter.loads(note_path.read_text(encoding="utf-8"))
             post.metadata["lesson_variants"] = lesson_variants
-            note_path.write_text(frontmatter.dumps(post), encoding="utf-8")
+            yaml_part = vm.dump_obsidian_yaml(post.metadata)
+            body = post.content
+            if not body.startswith("\n") and body:
+                body = "\n" + body
+            note_path.write_text(f"---\n{yaml_part}---\n{body}", encoding="utf-8")
         except Exception:
             pass
             

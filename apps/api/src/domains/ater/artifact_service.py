@@ -216,18 +216,53 @@ class ArtifactService:
         self.llm = llm
         self.vault_path = Path(vault_path) if vault_path else None
 
-    def get_artifact_pack_path(self, note_title: str) -> Path:
-        """Finds or constructs the path to the note's artifact pack file."""
+    def get_artifact_pack_path(self, note_title: str, note_path_rel: Optional[str] = None) -> Path:
+        """Finds or constructs the path to the note's artifact pack file.
+        
+        Performs automatic migration from legacy paths if necessary.
+        """
         if not self.vault_path:
             raise ValueError("Vault path is not set")
-        # Matches learning_object.py normalize_title / get_artifact_pack_path
+            
+        from src.domains.ater.learning_object import get_artifact_pack_path as lo_get_artifact_pack_path
         from src.domains.ater.learning_object import normalize_title
+        import shutil
+        import logging
+        logger = logging.getLogger("Ater")
+
         norm_title = normalize_title(note_title)
-        return self.vault_path / "artifacts" / f"{norm_title}.artifacts.json"
+        
+        if note_path_rel:
+            new_rel = lo_get_artifact_pack_path(note_path_rel)
+            new_path = self.vault_path / new_rel
+            
+            if new_path.exists():
+                return new_path
+                
+            # If missing from the new path, check the legacy paths
+            legacy_paths = [
+                self.vault_path / "database" / "artifacts" / f"{norm_title}.artifacts.json",
+                self.vault_path / "artifacts" / f"{norm_title}.artifacts.json"
+            ]
+            
+            for legacy_path in legacy_paths:
+                if legacy_path.exists():
+                    try:
+                        new_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(legacy_path), str(new_path))
+                        logger.info(f"Migrated legacy artifact pack from {legacy_path} to {new_path}")
+                        return new_path
+                    except Exception as e:
+                        logger.error(f"Failed to migrate legacy artifact pack from {legacy_path}: {e}")
+            
+            return new_path
+        else:
+            # Fallback when note_path_rel is not provided
+            return self.vault_path / "artifacts" / f"{norm_title}.artifacts.json"
 
     def read_artifact_pack(self, note_title: str, note_path_rel: str) -> dict:
         """Reads or initializes an artifact pack for a note."""
-        path = self.get_artifact_pack_path(note_title)
+        path = self.get_artifact_pack_path(note_title, note_path_rel)
         if path.exists():
             try:
                 with open(path, "r", encoding="utf-8") as f:
@@ -255,7 +290,8 @@ class ArtifactService:
 
     def write_artifact_pack(self, note_title: str, pack: dict):
         """Writes the artifact pack JSON to the vault."""
-        path = self.get_artifact_pack_path(note_title)
+        note_path_rel = pack.get("note_path")
+        path = self.get_artifact_pack_path(note_title, note_path_rel)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(pack, f, indent=2, ensure_ascii=False)

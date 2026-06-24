@@ -10,6 +10,7 @@ def normalize_title(title: str) -> str:
     and capitalizing the first letter of each word (TitleCase)."""
     if not title:
         return ""
+    title = re.sub(r'[\\/:*?"<>|]', '_', title)
     cleaned = re.sub(r'[\s_]+', ' ', title).strip()
     words = cleaned.split(' ')
     capitalized_words = [w[0].upper() + w[1:] if w else "" for w in words]
@@ -68,9 +69,11 @@ def get_lesson_variant_path(note_title: str, variant: str) -> str:
     """Builds the deterministic filename for a lesson variant."""
     return f"lessons/{normalize_title(note_title)}.{variant}.html"
 
-def get_artifact_pack_path(note_title: str) -> str:
-    """Builds the deterministic filename for an artifact pack."""
-    return f"artifacts/{normalize_title(note_title)}.artifacts.json"
+def get_artifact_pack_path(note_path: str) -> str:
+    """Builds the deterministic path for an artifact pack relative to the vault root."""
+    note_path_obj = Path(note_path)
+    norm_stem = normalize_title(note_path_obj.stem)
+    return str(note_path_obj.parent / "artifacts" / f"{norm_stem}.artifacts.json")
 
 def build_hub_content(topic: str, learning_mode: str, chapters: list[str]) -> str:
     """Constructs Learning Hub markdown frontmatter and body."""
@@ -223,15 +226,19 @@ def lookup_existing_hub(vault_path: str, topic: str) -> dict | None:
         if not directory.exists():
             continue
         for file_path in directory.rglob("*.md"):
-            stem = file_path.stem
-            stem_norm = stem.lower().replace("_", "").replace("hub", "")
-            
-            if stem_norm == target_norm:
-                return {"path": str(file_path.relative_to(vault_dir)), "type": path_type}
-            
             try:
                 post = frontmatter.loads(file_path.read_text(encoding="utf-8"))
                 meta = post.metadata
+                
+                # Check for type: Learning Hub
+                if meta.get("type") != "Learning Hub":
+                    continue
+                
+                stem = file_path.stem
+                stem_norm = stem.lower().replace("_", "").replace("hub", "")
+                
+                if stem_norm == target_norm:
+                    return {"path": str(file_path.relative_to(vault_dir)), "type": path_type}
                 
                 meta_topic = meta.get("topic")
                 if meta_topic:
@@ -254,7 +261,7 @@ def lookup_existing_hub(vault_path: str, topic: str) -> dict | None:
                 continue
     return None
 
-def validate_learning_objects(vault_path: str) -> list[str]:
+def validate_learning_objects(vault_path: str, strict: bool = False) -> list[str]:
     """Scans and validates all Hub, Chapter, Atomic Note files and their companion artifact packs."""
     errors = []
     vault_dir = Path(vault_path)
@@ -313,17 +320,59 @@ def validate_learning_objects(vault_path: str) -> list[str]:
             if clean_ch not in chapters:
                 errors.append(f"Atomic Note '{note_stem}' (at {note_path}) links to Chapter '{clean_ch}' but the Chapter file does not exist")
                 
+        # Validate lesson_variants exists and variant HTML files exist on disk
+        lesson_variants = note_meta.get("lesson_variants")
+        if lesson_variants:
+            if not isinstance(lesson_variants, dict):
+                errors.append(f"Atomic Note '{note_stem}' (at {note_path}) has invalid 'lesson_variants' format (must be dict)")
+            else:
+                for variant, variant_path_rel in lesson_variants.items():
+                    variant_abs_path = note_path.parent / variant_path_rel
+                    if not variant_abs_path.exists():
+                        msg = f"Atomic Note '{note_stem}' (at {note_path}) references lesson variant '{variant}' ({variant_path_rel}) but file does not exist on disk"
+                        if strict:
+                            errors.append(msg)
+                        else:
+                            import logging
+                            logging.getLogger("Ater").warning(f"[WARNING] {msg}")
+
         art_pack_rel = note_meta.get("artifact_pack")
         if not art_pack_rel:
             errors.append(f"Atomic Note '{note_stem}' (at {note_path}) is missing 'artifact_pack' path")
         else:
+            new_path = note_path.parent / "artifacts" / f"{note_stem}.artifacts.json"
             pack_found = False
             pack_path = None
-            for p in [vault_dir / art_pack_rel, vault_dir / "database" / art_pack_rel, note_path.parent / art_pack_rel]:
-                if p.exists():
-                    pack_found = True
-                    pack_path = p
-                    break
+            
+            if new_path.exists():
+                pack_found = True
+                pack_path = new_path
+            else:
+                # Check legacy paths and migrate if found
+                legacy_candidates = [
+                    vault_dir / art_pack_rel,
+                    vault_dir / "database" / art_pack_rel,
+                    note_path.parent / art_pack_rel,
+                    vault_dir / "database" / "artifacts" / f"{note_stem}.artifacts.json",
+                    vault_dir / "artifacts" / f"{note_stem}.artifacts.json"
+                ]
+                import shutil
+                for cand in legacy_candidates:
+                    if cand.resolve() == new_path.resolve():
+                        continue
+                    if cand.exists():
+                        try:
+                            new_path.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(cand), str(new_path))
+                            import logging
+                            logging.getLogger("Ater").info(f"Validator migrated legacy artifact pack from {cand} to {new_path}")
+                            pack_found = True
+                            pack_path = new_path
+                            break
+                        except Exception as e:
+                            import logging
+                            logging.getLogger("Ater").error(f"Validator failed to migrate legacy artifact pack from {cand}: {e}")
+            
             if not pack_found:
                 errors.append(f"Atomic Note '{note_stem}' (at {note_path}) references artifact_pack '{art_pack_rel}' but file does not exist")
             else:

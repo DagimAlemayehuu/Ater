@@ -194,8 +194,8 @@ class AterPlanner:
                     note_abs_path.parent.mkdir(parents=True, exist_ok=True)
                     
                     # Create artifact pack path and write minimal JSON
-                    art_pack_rel = lo.get_artifact_pack_path(note_title)
-                    art_pack_abs = self.vault_path / "database" / art_pack_rel
+                    art_pack_rel = lo.get_artifact_pack_path(note_rel_path)
+                    art_pack_abs = self.vault_path / art_pack_rel
                     art_pack_abs.parent.mkdir(parents=True, exist_ok=True)
                     
                     # Check if artifact pack already exists
