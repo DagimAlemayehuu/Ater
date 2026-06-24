@@ -118,7 +118,7 @@ def build_chapter_content(hub_title: str, order: int, atomic_notes: list[str]) -
     
     return f"---\n{yaml_part}---\n\n" + "\n".join(body_lines) + "\n"
 
-def merge_atomic_note_metadata(existing_content: str, chapter_title: str, lesson_variants: dict[str, str], artifact_pack_path: str, hub_title: str = None) -> str:
+def merge_atomic_note_metadata(existing_content: str, chapter_title: str, lesson_variants: dict[str, str], artifact_pack_path: str, hub_title: str = None, sources: list = None) -> str:
     """Merges new learning object properties into Atomic Note frontmatter."""
     from src.domains.ater.assistant import preprocess_frontmatter
     
@@ -139,6 +139,9 @@ def merge_atomic_note_metadata(existing_content: str, chapter_title: str, lesson
         
     post.metadata["lesson_variants"] = lesson_variants
     post.metadata["artifact_pack"] = artifact_pack_path
+    
+    if sources is not None:
+        post.metadata["sources"] = sources
     
     vm = VaultManager(".")
     yaml_part = vm.dump_obsidian_yaml(post.metadata)

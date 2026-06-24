@@ -2028,8 +2028,9 @@ export const sidecarApi = {
     },
     startCramSession: async (payload: any) => {
         try {
-            const port = await TauriNativeRAG.getSidecarPort();
-            const obsidianVaultPath = await Store.getObsidianVaultPath();
+            const port = await invoke<number>('get_sidecar_port');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
             };
@@ -2052,8 +2053,9 @@ export const sidecarApi = {
     },
     getCramStatus: async (sessionId: string) => {
         try {
-            const port = await TauriNativeRAG.getSidecarPort();
-            const obsidianVaultPath = await Store.getObsidianVaultPath();
+            const port = await invoke<number>('get_sidecar_port');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
             const headers: Record<string, string> = {};
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
@@ -2073,8 +2075,9 @@ export const sidecarApi = {
     },
     submitCramAnswer: async (payload: any) => {
         try {
-            const port = await TauriNativeRAG.getSidecarPort();
-            const obsidianVaultPath = await Store.getObsidianVaultPath();
+            const port = await invoke<number>('get_sidecar_port');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
             };
@@ -2092,6 +2095,100 @@ export const sidecarApi = {
             return await res.json();
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitCramAnswer failed:', err);
+            throw err;
+        }
+    },
+    uploadSourceFile: async (file: File) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/upload`, {
+                method: 'POST',
+                headers,
+                body: formData
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to upload source file (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] uploadSourceFile failed:', err);
+            throw err;
+        }
+    },
+    generateGroundedCurriculumPlan: async (payload: { prompt: string; sources: any[]; learning_mode?: string }) => {
+        enforceFeatureLock('ai-features');
+        await deductCredits('explain-features');
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/plan`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to generate grounded curriculum plan (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] generateGroundedCurriculumPlan failed:', err);
+            throw err;
+        }
+    },
+    augmentGroundedContext: async (payload: { concept: string }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/augment`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to augment grounded context (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] augmentGroundedContext failed:', err);
             throw err;
         }
     }

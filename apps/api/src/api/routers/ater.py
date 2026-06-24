@@ -359,13 +359,25 @@ async def ater_plan_confirm(
     
     try:
         service = AterService(secrets)
-        result = service.planner.write_curriculum(
-            curriculum=curriculum,
-            mode=mode,
-            semester=semester,
-            course=course,
-            unit=unit
-        )
+        if isinstance(curriculum, dict) and "notes" in curriculum:
+            from src.domains.ater.source_service import SourceGroundedPlanner, SourceGroundedCurriculum
+            planner = SourceGroundedPlanner(secrets)
+            curr_obj = SourceGroundedCurriculum.model_validate(curriculum)
+            result = planner.write_grounded_curriculum(
+                curriculum=curr_obj,
+                mode=mode,
+                semester=semester,
+                course=course,
+                unit=unit
+            )
+        else:
+            result = service.planner.write_curriculum(
+                curriculum=curriculum,
+                mode=mode,
+                semester=semester,
+                course=course,
+                unit=unit
+            )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -2231,5 +2243,91 @@ async def submit_cram_answer_endpoint(
     if not session_id or not question_id:
         raise HTTPException(status_code=400, detail="session_id and question_id are required")
     return {"status": "submitted", "question_id": question_id}
+
+@router.post("/ater/source/upload")
+async def upload_source_file(
+    file: UploadFile = File(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    
+    suffix = Path(file.filename).suffix
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+    
+    try:
+        from src.domains.ater.source_service import SourceIngestionService
+        ingestor = SourceIngestionService()
+        result = ingestor.ingest_pdf(tmp_path)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+@router.post("/ater/source/plan")
+async def ater_source_plan(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path or not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="Vault Path and AI Key are required")
+    
+    prompt = payload.get("prompt")
+    sources = payload.get("sources", [])
+    learning_mode = payload.get("learning_mode", "self-study")
+    
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+        
+    try:
+        from src.domains.ater.source_service import SourceGroundedPlanner, SourceWeaknessDetector
+        planner = SourceGroundedPlanner(secrets)
+        curriculum = await planner.generate_grounded_curriculum(prompt, sources, learning_mode)
+        
+        detector = SourceWeaknessDetector(secrets)
+        warnings = await detector.analyze_coverage(curriculum, sources)
+        
+        return {
+            "curriculum": curriculum.model_dump(),
+            "warnings": [w.model_dump() for w in warnings]
+        }
+    except Exception as e:
+        error_details = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Source grounded planning failed: {str(e)}\n\nTraceback:\n{error_details}")
+
+@router.post("/ater/source/augment")
+async def ater_source_augment(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    concept = payload.get("concept")
+    if not concept:
+        raise HTTPException(status_code=400, detail="concept is required")
+        
+    try:
+        from src.domains.ater.source_service import SearchAugmentationEngine
+        engine = SearchAugmentationEngine()
+        results = engine.search_query(concept)
+        augmented_context = engine.augment_context(concept, results)
+        
+        sources_list = []
+        for r in results:
+            sources_list.append({
+                "file": f"Web Search: {r['title']}",
+                "url": r["url"]
+            })
+            
+        return {
+            "concept": concept,
+            "augmented_context": augmented_context,
+            "sources": sources_list
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 

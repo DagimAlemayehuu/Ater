@@ -46,6 +46,7 @@ This file tracks the outstanding gaps, missing test coverages, and design issues
 - [ ] **PDF Extraction Robustness**: The ingestion service assumes the robust PyPDF/pypdf loader defined in `pdf_extractor.py` is stable and returns structured pages with valid metadata.
 - [ ] **Web Search Mocking**: Web search augmentation assumes that in a headless test environment, search API calls can be mocked to return predictable markdown mock pages, preventing live network calls.
 
+## Phase 8: advanced-artifacts Assumptions
 
-
-
+- [ ] **SQLite Local Engine Compatibility**: The local SQL Query Playground evaluator assumes the sidecar python runtime has `sqlite3` built-in and configured for `:memory:` operations.
+- [ ] **DAG Parsing Safety**: The Case Simulation branching checker assumes choice structures can be represented as acyclic models and validated without infinite loops or deep recursion.
