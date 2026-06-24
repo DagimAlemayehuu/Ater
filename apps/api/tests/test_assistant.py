@@ -6,7 +6,8 @@ from src.domains.ater.assistant import (
     to_underscore_title_case,
     sanitize_note_content,
     AterAssistant,
-    _convert_to_lesson_json
+    _convert_to_lesson_json,
+    _stream_learning_runtime_lesson,
 )
 
 def test_underscore_title_case():
@@ -73,6 +74,62 @@ Please confirm you'd like to open an interactive Rubik's Cube solver.
     assert "Right trigger" in converted
     assert "R U R' U'" in converted
     assert converted.count("<chapter ") >= 8
+
+
+@pytest.mark.asyncio
+async def test_teach_anything_stream_uses_learning_runtime_not_legacy_teacher(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock
+    from src.domains.ater.planner import AterPlanner
+    from src.domains.ater.vault_manager import VaultManager
+    import src.domains.ater.assistant as assistant_module
+
+    secrets = AppSecrets(
+        ai_provider="google",
+        ai_key="mock-key",
+        ai_model="gemini-2.0-flash",
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path / "Inbox"),
+        academic_path="Notes"
+    )
+
+    class FakePlanner:
+        async def generate_curriculum(self, prompt, existing_chapters=None, learning_mode="learn_from_scratch"):
+            return {
+                "topic": "Git",
+                "learning_mode": learning_mode,
+                "chapters": [
+                    {
+                        "title": "Foundations",
+                        "order": 1,
+                        "atomic_notes": ["Git Commit Graph"],
+                    }
+                ],
+            }
+
+        def write_curriculum(self, curriculum, mode):
+            return AterPlanner(secrets, llm=MagicMock()).write_curriculum(curriculum, mode=mode)
+
+    class FakeService:
+        def __init__(self, _secrets):
+            self.planner = FakePlanner()
+            self.vm = VaultManager(_secrets.vault_path)
+
+    monkeypatch.setattr(assistant_module, "AterService", FakeService)
+
+    events = []
+    async for event in _stream_learning_runtime_lesson(
+        messages_history=[{"role": "user", "content": "Teach me Git"}],
+        topic="Git",
+        secrets=secrets,
+    ):
+        events.append(event)
+
+    lesson_event = next(event for event in events if event["type"] == "lesson_created")
+    assert "/api/teacher" not in lesson_event["preview_url"]
+    assert lesson_event["preview_url"].startswith("/api/ater/lesson/preview/")
+    assert lesson_event["lesson_path"].endswith("Git_Commit_Graph.simple.html")
+    assert (tmp_path / "database" / "learning paths" / "Git_Hub.md").exists()
+    assert (tmp_path / lesson_event["lesson_path"]).exists()
 
 def test_assistant_record_management(tmp_path):
     secrets = AppSecrets(

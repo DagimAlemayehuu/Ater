@@ -75,7 +75,7 @@ def get_artifact_pack_path(note_path: str) -> str:
     norm_stem = normalize_title(note_path_obj.stem)
     return str(note_path_obj.parent / "artifacts" / f"{norm_stem}.artifacts.json")
 
-def build_hub_content(topic: str, learning_mode: str, chapters: list[str]) -> str:
+def build_hub_content(topic: str, learning_mode: str, chapters: list[str], chapter_notes: dict[str, list[str]] | None = None) -> str:
     """Constructs Learning Hub markdown frontmatter and body."""
     cleaned_chapters = []
     for ch in chapters:
@@ -92,13 +92,17 @@ def build_hub_content(topic: str, learning_mode: str, chapters: list[str]) -> st
     vm = VaultManager(".")
     yaml_part = vm.dump_obsidian_yaml(meta)
     
-    body_lines = [f"# {normalize_title(topic)} Hub\n"]
+    body_lines = [f"# {normalize_title(topic)} Hub\n", "## Curriculum Map\n"]
     for ch in cleaned_chapters:
         body_lines.append(f"- [[{ch}]]")
+        for note in (chapter_notes or {}).get(ch, []):
+            clean_note = re.sub(r"[\[\]]+", "", str(note)).strip()
+            if clean_note:
+                body_lines.append(f"  - [[{clean_note}]]")
     
     return f"---\n{yaml_part}---\n\n" + "\n".join(body_lines) + "\n"
 
-def build_chapter_content(hub_title: str, order: int, atomic_notes: list[str]) -> str:
+def build_chapter_content(hub_title: str, order: int, atomic_notes: list[str], chapter_title: str = "") -> str:
     """Constructs Chapter markdown frontmatter and body."""
     hub_cleaned = re.sub(r"[\[\]]+", "", hub_title).strip()
     notes_cleaned = []
@@ -115,7 +119,8 @@ def build_chapter_content(hub_title: str, order: int, atomic_notes: list[str]) -
     vm = VaultManager(".")
     yaml_part = vm.dump_obsidian_yaml(meta)
     
-    body_lines = [f"# Chapter {order}\n"]
+    heading = chapter_title.replace("_", " ") if chapter_title else f"Chapter {order}"
+    body_lines = [f"# {heading}\n", "## Atomic Notes\n"]
     for note in notes_cleaned:
         body_lines.append(f"- [[{note}]]")
     

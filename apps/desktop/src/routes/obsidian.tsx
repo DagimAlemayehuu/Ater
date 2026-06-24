@@ -269,16 +269,35 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const [viewMode, setViewMode] = useState<'notes' | 'lesson'>('notes')
   const [companionContent, setCompanionContent] = useState<string>('')
 
+  const lessonVariantPath = useMemo(() => {
+    if (!selectedPath || !selectedPath.toLowerCase().endsWith('.md')) return null
+    
+    const simple = noteMetadata?.simple || noteMetadata?.lesson_variants?.simple;
+    const deep = noteMetadata?.deep || noteMetadata?.lesson_variants?.deep;
+    const cram = noteMetadata?.cram || noteMetadata?.lesson_variants?.cram;
+    const exam = noteMetadata?.exam || noteMetadata?.lesson_variants?.exam;
+    
+    const rel = simple || deep || cram || exam;
+    if (!rel || typeof rel !== 'string') return null
+    
+    const parts = selectedPath.replace(/\\/g, '/').split('/');
+    parts.pop();
+    const parentDir = parts.join('/');
+    const fullPath = parentDir ? `${parentDir}/${rel}` : rel;
+    return fullPath.replace(/\\/g, '/');
+  }, [selectedPath, noteMetadata])
+
   const hasMatchingHtml = useMemo(() => {
     if (!selectedPath || !selectedPath.toLowerCase().endsWith('.md')) return false
-    const htmlPath = selectedPath.replace(/\.md$/i, '.html')
-    return files.some(f => f.path === htmlPath)
-  }, [selectedPath, files])
+    if (lessonVariantPath) return true;
+    const htmlPath = selectedPath.replace(/\.md$/i, '.html').replace(/\\/g, '/').toLowerCase();
+    return files.some(f => f.path.replace(/\\/g, '/').toLowerCase() === htmlPath);
+  }, [selectedPath, files, lessonVariantPath])
 
   const hasMatchingMd = useMemo(() => {
     if (!selectedPath || !selectedPath.toLowerCase().endsWith('.html')) return false
-    const mdPath = selectedPath.replace(/\.html$/i, '.md')
-    return files.some(f => f.path === mdPath)
+    const mdPath = selectedPath.replace(/\.html$/i, '.md').replace(/\\/g, '/').toLowerCase();
+    return files.some(f => f.path.replace(/\\/g, '/').toLowerCase() === mdPath);
   }, [selectedPath, files])
 
   const isLessonNote = useMemo(() => {
@@ -298,7 +317,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     if (selectedPath) {
       if (selectedPath.toLowerCase().endsWith('.html')) {
         setViewMode('lesson')
-      } else if (!hasMatchingHtml) {
+      } else if (hasMatchingHtml) {
+        setViewMode('lesson')
+      } else {
         setViewMode('notes')
       }
     }
@@ -307,7 +328,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   useEffect(() => {
     let active = true
     if (selectedPath && hasMatchingHtml) {
-      const htmlPath = selectedPath.replace(/\.md$/i, '.html')
+      const htmlPath = lessonVariantPath || selectedPath.replace(/\.md$/i, '.html')
       sidecarApi.readObsidianNote(htmlPath)
         .then(res => {
           if (active) setCompanionContent(res.content || '')
@@ -331,7 +352,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     return () => {
       active = false
     }
-  }, [selectedPath, hasMatchingHtml, hasMatchingMd])
+  }, [selectedPath, hasMatchingHtml, hasMatchingMd, lessonVariantPath])
 
   const {
     artifacts,
@@ -2126,7 +2147,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                 />
               </div>
             ) : !selectedIsPdf ? (
-              <div className="editor-content px-2 mx-auto max-w-[95%] w-full flex-1 flex flex-col min-h-0">
+              <div className="editor-content w-full flex-1 flex flex-col min-h-0">
                 <div className="shrink-0">
                   <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
                     {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
@@ -2176,7 +2197,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                             : "border-transparent text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        Notes
+                        Markdown
                       </button>
                       <button
                         onClick={() => setViewMode('lesson')}
@@ -2230,31 +2251,6 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   )}
                 </div>
 
-                {!isLessonNote && (
-                  <KnowledgeFooter 
-                    tree={studyTree} 
-                    activePath={selectedPath}
-                    onNavigate={handleWikiLinkClick}
-                    onFinish={async () => {
-                      if (selectedPath) {
-                        const label = selectedPath.split(/[/\\]/).pop()?.replace('.md', '') ?? '';
-                        await handleToggleCheckbox(label, true, selectedPath);
-                      }
-                    }}
-                  />
-                )}
-
-                {!isLessonNote && (
-                  <div className="mt-8 mb-12 flex flex-col items-center gap-3">
-                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Space Repetition Review</div>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      <button onClick={() => handleSRSRating(1)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-none">Again</button>
-                      <button onClick={() => handleSRSRating(2)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-muted-foreground/30 text-muted-foreground hover:bg-bento-item transition-none">Hard</button>
-                      <button data-tour="srs-btn-good" onClick={() => handleSRSRating(3)} className="px-6 py-2 rounded-[4px] text-xs font-bold border border-primary/50 text-primary hover:bg-primary/10 transition-none">Good</button>
-                      <button data-tour="srs-btn-easy" onClick={() => handleSRSRating(4)} className="px-6 py-2 rounded-[4px] text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-none shadow-lg shadow-primary/20">Easy</button>
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">

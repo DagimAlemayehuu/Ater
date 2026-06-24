@@ -20,6 +20,138 @@ class AterLessonCompiler:
     def __init__(self, vault_path: str):
         self.vault_path = Path(vault_path).resolve()
 
+    def _extract_definitions(self, parsed: dict, clean_title: str) -> list[tuple[str, str]]:
+        """Extracts dynamic definitions and key points from the parsed note content."""
+        definitions = []
+        
+        # Clean title to get the core topic/noun term (e.g. "What Is Git" -> "Git")
+        core_term = clean_title
+        core_term = re.sub(r'^(what is|how to|about|importance of|brief history of|history of)\s+', '', core_term, flags=re.IGNORECASE).strip()
+        
+        # Combine contents for parsing
+        h1_content = parsed.get("h1", {}).get("content", "")
+        h2_content = parsed.get("h2", {}).get("content", "")
+        mental_content = parsed.get("mental_model", {}).get("content", "")
+        combined_text = f"{mental_content}\n{h1_content}\n{h2_content}"
+        
+        # 1. Search for "<core_term> is/are ..." or "<core_term> refers to ..."
+        primary_match = re.search(
+            rf'(?:^|\n|[\s.\n])({re.escape(core_term)}\s+(?:is|are|refers\s+to|means)\s+[^.\n]+)',
+            combined_text,
+            re.IGNORECASE
+        )
+        if primary_match:
+            sentence = primary_match.group(1).strip()
+            # Clean sentence trailing punctuation
+            sentence = re.sub(r'^[.\s]+|[.\s]+$', '', sentence)
+            if len(sentence.split()) <= 20:  # Keep it concise
+                definitions.append((core_term, sentence))
+        
+        # 2. Search for explicit bolded definitions (**Term**: Description) in H1 and H2
+        bold_defs = re.findall(r'(?:^|\n)[-*+ \t]*\*\*(.*?)\*\*[:\-]\s*([^\n]+)', h1_content + "\n" + h2_content)
+        for term, desc in bold_defs:
+            term_clean = term.strip()
+            desc_clean = desc.strip()
+            if term_clean and desc_clean and len(desc_clean.split()) <= 25:
+                # Avoid duplicates
+                if not any(t.lower() == term_clean.lower() for t, _ in definitions):
+                    definitions.append((term_clean, desc_clean))
+        
+        # 3. Search for bullet points and parse them
+        bullet_lines = []
+        for line in (h1_content + "\n" + h2_content).split('\n'):
+            line_stripped = line.strip()
+            if line_stripped.startswith('-') or line_stripped.startswith('*'):
+                bullet_text = re.sub(r'^[-*\s]+', '', line_stripped).strip()
+                if bullet_text:
+                    bullet_lines.append(bullet_text)
+                    
+        for bullet in bullet_lines:
+            if len(definitions) >= 4:
+                break
+                
+            # If bullet starts with bold text: e.g. **Branch**: description
+            bold_start = re.match(r'^\*\*(.*?)\*\*[:\-]\s*(.*)', bullet)
+            if bold_start:
+                term = bold_start.group(1).strip()
+                desc = bold_start.group(2).strip()
+                if not any(t.lower() == term.lower() for t, _ in definitions):
+                    definitions.append((term, desc))
+                continue
+                
+            # If bullet matches: Term is/are/refers to ...
+            match_is = re.match(r'^([A-Z][a-zA-Z0-9_\-\s]{1,30})\s+(?:is|are|refers\s+to|means)\s+(.*)', bullet)
+            if match_is:
+                term = match_is.group(1).strip()
+                desc = match_is.group(2).strip()
+                # Check for pronouns
+                if term.lower() in ["it", "this", "they", "she", "he"]:
+                    term = core_term
+                desc_full = f"{term} is {desc}"
+                if any(t.lower() == term.lower() for t, _ in definitions):
+                    words = desc.split()
+                    if words:
+                        first_word = words[0].strip(":,.-").capitalize()
+                        if len(words) > 1 and first_word.lower() in ["a", "an", "the"]:
+                            first_word = words[1].strip(":,.-").capitalize()
+                        if first_word and not any(t.lower() == first_word.lower() for t, _ in definitions):
+                            term = first_word
+                        else:
+                            term = f"{core_term} Feature"
+                
+                if not any(t.lower() == term.lower() for t, _ in definitions):
+                    definitions.append((term, desc_full))
+                continue
+                
+            # If bullet matches: Term verb-s ...
+            match_verb = re.match(r'^([A-Z][a-zA-Z0-9_\-\s]{1,30})\s+([a-z]+s)\s+(.*)', bullet)
+            if match_verb:
+                term = match_verb.group(1).strip()
+                verb = match_verb.group(2).strip()
+                desc = match_verb.group(3).strip()
+                if term.lower() in ["it", "this", "they"]:
+                    term = core_term
+                desc_full = f"{term} {verb} {desc}"
+                if any(t.lower() == term.lower() for t, _ in definitions):
+                    words = desc.split()
+                    if words:
+                        first_word = f"{verb.capitalize()} {words[0].strip(':,.-')}"
+                        if not any(t.lower() == first_word.lower() for t, _ in definitions):
+                            term = first_word
+                        else:
+                            term = f"{core_term} Capability"
+                
+                if not any(t.lower() == term.lower() for t, _ in definitions):
+                    definitions.append((term, desc_full))
+                continue
+                
+            # Fallback for plain bullet point (use core_term or "Key Concept")
+            desc_full = bullet
+            # If it starts with a lowercase letter or "it"/"this", prepend the core_term
+            if bullet[0].islower() or bullet.lower().startswith("it ") or bullet.lower().startswith("this "):
+                cleaned_bullet = re.sub(r'^(it|this)\s+', '', bullet, flags=re.IGNORECASE).strip()
+                desc_full = f"{core_term} {cleaned_bullet}"
+            
+            # Use core_term or first 2 words if core_term is already defined
+            if not any(t.lower() == core_term.lower() for t, _ in definitions):
+                definitions.append((core_term, desc_full))
+            else:
+                first_words = " ".join(desc_full.split()[:2]).strip(":,.-")
+                if len(first_words) > 3 and not any(t.lower() == first_words.lower() for t, _ in definitions):
+                    definitions.append((first_words, desc_full))
+                else:
+                    definitions.append(("Key Concept", desc_full))
+                    
+        # 4. Final Fallback if still empty or too short
+        if len(definitions) < 2:
+            if not any(t.lower() == core_term.lower() for t, _ in definitions):
+                definitions.append((core_term, f"The core topic of this interactive lesson."))
+            if len(definitions) < 2:
+                h1_title = parsed.get("h1", {}).get("title", "Foundational Concept")
+                definitions.append((h1_title, f"Important principles to master for {clean_title}."))
+                
+        return definitions[:3]
+
     def parse_note(self, note_path: Path) -> tuple[dict, dict]:
         """Parses the Markdown content of an Atomic Note and extracts its four canonical sections."""
         note_path = Path(note_path)
@@ -216,6 +348,8 @@ class AterLessonCompiler:
         content_html = ""
         
         if variant == "simple":
+            defs = self._extract_definitions(parsed, clean_title)
+            defs_html = "\n".join([f"                    <li><strong>{t}</strong>: {d}</li>" for t, d in defs])
             content_html = f"""
             <section class="page-container active">
               <div class="lesson-card">
@@ -223,11 +357,10 @@ class AterLessonCompiler:
                   <h2>Mental Model</h2>
                   {mental_model_html}
                   <h2>{parsed["h1"]["title"]} (Core Idea)</h2>
-                  <p><strong>{clean_title}</strong> in simple terms focuses on the foundational rules and concepts.</p>
+                  {h1_html}
                   <h2>Key Definitions</h2>
                   <ul>
-                    <li><strong>{parsed["h1"]["title"]}</strong>: {parsed["h1"]["title"]} provides the core mechanism for this topic.</li>
-                    <li><strong>{parsed["h2"]["title"]}</strong>: {parsed["h2"]["title"]} provides the textbook model.</li>
+{defs_html}
                   </ul>
                 </div>
                 <div class="nav-row">
@@ -420,6 +553,15 @@ class AterLessonCompiler:
                             <button class="option" onclick="selectOption(this, {is_correct})" data-explanation="{explanation}"><strong>{key}</strong>: {val}</button>
                             """
                         quiz_html += '</div>'
+                    elif q_type in ["fill_in", "fill-in", "fill_blank", "fill-in-the-blank"]:
+                        answer = str(q.get("answer") or "").replace("'", "\\'")
+                        quiz_html += f"""
+                        <div style="margin-top: 10px;">
+                          <input id="quiz-fill-{q_id}" class="fill-input" placeholder="Type the missing word or phrase..." data-answer="{answer}" />
+                          <button class="action-btn primary" style="margin-top: 10px;" onclick="checkFillIn('{q_id}', '{answer}', '{explanation}')">Check Answer</button>
+                          <div class="feedback" id="feedback-{q_id}"></div>
+                        </div>
+                        """
                     else:
                         ans = q.get("answer") or ""
                         quiz_html += f"""
@@ -936,6 +1078,24 @@ class AterLessonCompiler:
           is_correct: false,
           wager: wager,
           user_answer: user_ans
+        }}
+      }}, '*');
+    }}
+    function checkFillIn(qId, answer, explanation) {{
+      const input = document.getElementById('quiz-fill-' + qId);
+      const feedback = document.getElementById('feedback-' + qId);
+      const userAnswer = input ? input.value.trim() : '';
+      const correct = userAnswer.toLowerCase() === String(answer || '').trim().toLowerCase();
+      feedback.textContent = (correct ? 'Correct. ' : 'Not quite. ') + explanation;
+      feedback.classList.add('visible');
+      feedback.style.color = correct ? 'var(--good)' : 'var(--bad)';
+      window.parent.postMessage({{
+        type: 'ANSWER_SUBMITTED',
+        payload: {{
+          question_id: qId,
+          is_correct: correct,
+          wager: 'low',
+          user_answer: userAnswer
         }}
       }}, '*');
     }}

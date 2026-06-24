@@ -528,12 +528,16 @@ def evaluate_case_step(
     next_stage = choice.get("next", "")
     modifications = choice.get("modifications", {})
     
+    # Metrics that are unrestricted accumulators and must NOT be clamped to [0, 1].
+    # All other metrics are treated as percentage scores and clamped universally.
+    _UNCLAMPED_METRICS = {"time", "score", "attempts"}
+
     # Calculate new metrics
     new_metrics = {}
     for k, v in current_metrics.items():
         mod = modifications.get(k, 0.0)
         new_val = v + mod
-        if k in ("integrity", "stability"):
+        if k not in _UNCLAMPED_METRICS:
             new_val = min(1.0, max(0.0, new_val))
         new_metrics[k] = new_val
         

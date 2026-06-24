@@ -129,13 +129,16 @@ class AterPlanner:
         
         # Retrieve or construct chapters list for Hub body/metadata
         all_chapter_links = []
+        chapter_notes_map = {}
         for ch in chapters_data:
             ch_title = ch.get("title", "")
             ch_order = ch.get("order", 1)
             norm_ch_title = lo.normalize_title(ch_title)
             # Chapter link filename representation (canonical title)
             padded_order = f"{ch_order:02d}"
-            all_chapter_links.append(f"Chapter_{padded_order}_{norm_ch_title}")
+            chapter_link = f"Chapter_{padded_order}_{norm_ch_title}"
+            all_chapter_links.append(chapter_link)
+            chapter_notes_map[chapter_link] = [lo.normalize_title(n) for n in ch.get("atomic_notes", [])]
             
         # If Hub exists, load its existing chapters first
         existing_hub_chapters = []
@@ -157,7 +160,7 @@ class AterPlanner:
                 merged_chapters.append(link)
                 
         # Build and write Hub content
-        hub_content = lo.build_hub_content(topic, learning_mode, merged_chapters)
+        hub_content = lo.build_hub_content(topic, learning_mode, merged_chapters, chapter_notes_map)
         hub_abs_path.write_text(hub_content, encoding="utf-8")
         
         written_files = [str(hub_rel_path)]
@@ -183,7 +186,12 @@ class AterPlanner:
             if should_write:
                 # Write Chapter file
                 ch_abs_path.parent.mkdir(parents=True, exist_ok=True)
-                ch_content = lo.build_chapter_content(f"{lo.normalize_title(topic)}_Hub", ch_order, norm_notes)
+                ch_content = lo.build_chapter_content(
+                    f"{lo.normalize_title(topic)}_Hub",
+                    ch_order,
+                    norm_notes,
+                    f"Chapter {ch_order:02d} {ch_title}"
+                )
                 ch_abs_path.write_text(ch_content, encoding="utf-8")
                 written_files.append(str(ch_rel_path))
                 

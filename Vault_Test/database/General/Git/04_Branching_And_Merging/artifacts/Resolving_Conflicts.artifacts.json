@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "note_title": "Resolving_Conflicts",
+  "note_path": "database/General/Git/04_Branching_And_Merging/Resolving_Conflicts.md",
+  "active_version": 2,
+  "pinned_artifact_types": [],
+  "versions": [
+    {
+      "version": 1,
+      "created_at": "2026-06-24T13:37:34.769653+00:00",
+      "artifacts": []
+    },
+    {
+      "version": 2,
+      "created_at": "2026-06-24T13:38:09.819993+00:00",
+      "artifacts": [
+        {
+          "type": "reveal_card",
+          "front": "What is the core concept of Resolving_Conflicts?",
+          "back": "Details about Resolving_Conflicts can be found in the note content."
+        }
+      ]
+    }
+  ]
+}

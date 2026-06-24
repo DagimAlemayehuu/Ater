@@ -2634,7 +2634,7 @@ fn verify_absent(path: &std::path::Path, verified: &mut Vec<String>) -> Result<(
 
 #[tauri::command]
 pub async fn factory_reset(
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {

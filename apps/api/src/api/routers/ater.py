@@ -13,7 +13,8 @@ from pathlib import Path
 from urllib.parse import unquote
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request
+from fastapi.responses import FileResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.ater.service import AterService
@@ -2008,6 +2009,41 @@ async def compile_lesson_endpoint(
         logger.error(f"[Compiler] Error compiling note: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/ater/lesson/register")
+async def register_ater_lesson_preview_endpoint(
+    request: Request,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+
+    lesson_path_str = payload.get("lesson_path")
+    if not lesson_path_str:
+        raise HTTPException(status_code=400, detail="lesson_path is required")
+
+    try:
+        from src.domains.ater.lesson_preview import register_ater_lesson_preview
+        lesson_path = Path(secrets.vault_path) / str(lesson_path_str)
+        token = register_ater_lesson_preview(Path(secrets.vault_path), lesson_path)
+        return {
+            "token": token,
+            "preview_url": str(request.url_for("ater_lesson_preview", token=token)),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ater/lesson/preview/{token}", name="ater_lesson_preview")
+async def ater_lesson_preview(token: str):
+    from src.domains.ater.lesson_preview import get_ater_lesson_preview
+
+    _, requested = get_ater_lesson_preview(token)
+    return FileResponse(requested, media_type="text/html")
+
 @router.post("/ater/artifact/generate")
 async def generate_artifacts_endpoint(
     payload: Dict[str, Any] = Body(...),
@@ -2395,7 +2431,6 @@ async def get_learner_recommendations_endpoint(
         return {"recommendations": recommendations}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 

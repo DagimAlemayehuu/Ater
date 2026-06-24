@@ -132,6 +132,294 @@ def sanitize_note_content(content: str) -> str:
         return content
 
 
+def _learning_runtime_note_markdown(topic: str, note_title: str) -> str:
+    """Deterministic fallback content for Teach Anything notes.
+
+    The weak-model path may only produce a curriculum outline. This gives every
+    new Atomic Note enough source material for the compiler, tutor, cram mode,
+    and artifact pack flow to work immediately while preserving the Markdown as
+    the source of truth.
+    """
+    display_topic = topic.replace("_", " ").strip() or "this topic"
+    display_title = note_title.replace("_", " ").strip() or display_topic
+    slug = to_underscore_title_case(display_title)
+    return f"""## Mental Model
+Think of {display_title} as one small control panel inside {display_topic}. You do not need to memorize everything at once. First learn what this idea controls, then learn what changes when you use it, and then test yourself by predicting the next result.
+
+## What You Must Know
+{display_title} matters because it explains one action, rule, or relationship that appears again and again while learning {display_topic}. Start by saying the idea in simple words, then connect it to a concrete example, and finally check whether you can use it without looking back at the note.
+
+## Common Mistakes
+The most common mistake is treating {display_title} like an isolated definition instead of a working tool. Another common mistake is moving too fast into advanced details before the basic cause and effect is clear.
+
+## The Proving Grounds
+```interactive-quiz
+[
+  {{
+    "id": "{slug}_recall",
+    "type": "mcq",
+    "question": "What should you understand first about {display_title}?",
+    "options": {{
+      "A": "The core idea in simple words",
+      "B": "Only the historical background",
+      "C": "Every advanced edge case",
+      "D": "A random fact unrelated to {display_topic}"
+    }},
+    "answer": "A",
+    "explanation": "Ater starts with a simple mental model, then builds toward harder use cases."
+  }},
+  {{
+    "id": "{slug}_teach_back",
+    "type": "writing",
+    "question": "Explain {display_title} in two simple sentences, as if teaching a 12-year-old.",
+    "answer": "A good answer names the core idea, gives a concrete example, and avoids unnecessary jargon.",
+    "explanation": "Teach-back reveals whether the idea is actually understood or only recognized."
+  }}
+]
+```
+"""
+
+
+def _ensure_interactive_quiz_block(content: str, topic: str, note_title: str) -> str:
+    if "```interactive-quiz" in content:
+        return content
+
+    slug = to_underscore_title_case(note_title)
+    quiz = [
+        {
+            "id": f"{slug}_core",
+            "type": "mcq",
+            "question": f"What is the main job of {note_title}?",
+            "options": {
+                "A": "To explain the core idea in simple words",
+                "B": "To hide the important rule",
+                "C": "To skip practice",
+                "D": "To memorize unrelated facts",
+            },
+            "answer": "A",
+            "explanation": f"{note_title} should first be understood as a clear, usable idea inside {topic}.",
+        },
+        {
+            "id": f"{slug}_fill",
+            "type": "fill_in",
+            "question": f"{note_title} is useful because it helps you track the important ______ in {topic}.",
+            "answer": "change",
+            "explanation": "Learning becomes useful when you can explain what changes and why it matters.",
+        },
+        {
+            "id": f"{slug}_teach_back",
+            "type": "writing",
+            "question": f"Explain {note_title} in two simple sentences and give one concrete example.",
+            "answer": "A strong answer defines the idea, gives a concrete example, and avoids unnecessary jargon.",
+            "explanation": "Teach-back checks whether you can produce the idea from memory.",
+        },
+    ]
+    block = "```interactive-quiz\n" + json.dumps(quiz, indent=2) + "\n```"
+    if re.search(r"##\s+The Proving Grounds\b", content, flags=re.IGNORECASE):
+        return re.sub(
+            r"(##\s+The Proving Grounds\s*\n)[\s\S]*$",
+            rf"\1{block}\n",
+            content,
+            flags=re.IGNORECASE,
+        )
+    return content.rstrip() + "\n\n## The Proving Grounds\n" + block + "\n"
+
+
+async def _generate_learning_runtime_note_markdown(
+    llm: Any,
+    topic: str,
+    chapter_title: str,
+    note_title: str,
+    prompt: str,
+) -> str:
+    if not llm:
+        return ""
+
+    system = """You are Ater's Atomic Note writer.
+Write one high-quality Obsidian Atomic Note section body for an interactive lesson system.
+
+Rules:
+- Return Markdown body only. Do not include YAML frontmatter.
+- Use exactly these section headings:
+  ## Mental Model
+  ## What You Must Know
+  ## Common Mistakes
+  ## The Proving Grounds
+- Teach in simple English first, as if the learner is 12, then add rigor.
+- Make the content specific to the note title, not generic filler.
+- Mental Model must be continuous prose, not bullets.
+- The Proving Grounds must include an interactive-quiz fenced block with at least 3 questions.
+- Use varied question types where useful: mcq, fill_in, matching, trace, writing, find_error.
+- Keep it concise enough for a weak model, but complete enough to teach the concept.
+"""
+    user = f"""Learning request: {prompt}
+Topic: {topic}
+Chapter: {chapter_title}
+Atomic Note: {note_title}
+
+Write the note body now."""
+    try:
+        res = await llm.ainvoke([
+            SystemMessage(content=system),
+            HumanMessage(content=user),
+        ])
+        content = str(getattr(res, "content", "") or "").strip()
+        content = re.sub(r"^```(?:markdown|md)?\s*", "", content, flags=re.IGNORECASE).strip()
+        content = re.sub(r"\s*```$", "", content).strip()
+        required = ["## Mental Model", "## What You Must Know", "## Common Mistakes", "## The Proving Grounds"]
+        if not content or not all(section in content for section in required):
+            return ""
+        return _ensure_interactive_quiz_block(content, topic, note_title)
+    except Exception as e:
+        logger.warning(f"[Learning Runtime] Note generation failed for {note_title}: {e}")
+        return ""
+
+
+async def _stream_learning_runtime_lesson(
+    messages_history: List[Dict[str, Any]],
+    topic: str,
+    secrets: AppSecrets,
+    request: Optional[Any] = None,
+):
+    """Run Teach Anything through the new Ater learning-runtime modules."""
+    if not secrets.vault_path:
+        yield {"type": "error", "message": "Vault path is required for Teach Anything."}
+        return
+
+    latest_prompt = ""
+    for msg in reversed(messages_history):
+        if msg.get("role") == "user":
+            latest_prompt = str(msg.get("content") or "")
+            break
+    latest_prompt = latest_prompt or f"Teach me {topic}"
+
+    try:
+        from src.domains.ater.compiler_service import AterLessonCompiler
+        from src.domains.ater.artifact_service import ArtifactService
+
+        yield {"type": "status", "message": "Planning learning path with Ater..."}
+        service = AterService(secrets)
+        curriculum = await service.planner.generate_curriculum(
+            prompt=latest_prompt,
+            existing_chapters=None,
+            learning_mode="learn_from_scratch",
+        )
+
+        yield {"type": "status", "message": "Writing Hub, Chapters, and Atomic Notes..."}
+        written = service.planner.write_curriculum(curriculum, mode="Generate All")
+
+        vault_root = Path(secrets.vault_path)
+        compiler = AterLessonCompiler(str(vault_root))
+        artifact_service = ArtifactService(vault_path=str(vault_root))
+        compiled_lessons: List[str] = []
+        first_note_path: Optional[Path] = None
+        first_lesson_path: Optional[Path] = None
+
+        topic_name = str(curriculum.get("topic") or topic or "Learning Path")
+        chapters = curriculum.get("chapters") or []
+
+        for chapter in chapters:
+            chapter_title = str(chapter.get("title") or "Foundations")
+            order = int(chapter.get("order") or 1)
+            for raw_note_title in chapter.get("atomic_notes") or []:
+                note_title = str(raw_note_title)
+                from src.domains.ater import learning_object as lo
+                note_rel = lo.get_note_path(topic_name, chapter_title, order, note_title)
+                note_abs = vault_root / note_rel
+                if not note_abs.exists():
+                    continue
+
+                existing = note_abs.read_text(encoding="utf-8")
+                post = frontmatter.loads(preprocess_frontmatter(existing))
+                is_fallback_body = (
+                    "one small control panel inside" in post.content
+                    or "Ater starts with a simple mental model" in post.content
+                )
+                lacks_interactive_quiz = "```interactive-quiz" not in post.content
+                if not post.content.strip() or is_fallback_body or lacks_interactive_quiz:
+                    yield {"type": "status", "message": f"Writing atomic note: {note_title}..."}
+                    generated_body = await _generate_learning_runtime_note_markdown(
+                        llm=getattr(service, "llm", None),
+                        topic=topic_name,
+                        chapter_title=chapter_title,
+                        note_title=note_title,
+                        prompt=latest_prompt,
+                    )
+                    post.content = _ensure_interactive_quiz_block(
+                        generated_body or _learning_runtime_note_markdown(topic_name, note_title),
+                        topic_name,
+                        note_title,
+                    )
+                    vm = service.vm
+                    yaml_part = vm.dump_obsidian_yaml(post.metadata)
+                    body = post.content if post.content.startswith("\n") else f"\n{post.content}"
+                    note_abs.write_text(f"---\n{yaml_part}---\n{body}", encoding="utf-8")
+
+                yield {"type": "status", "message": f"Compiling lesson: {note_title}..."}
+                for variant in ("simple", "deep", "cram", "exam"):
+                    out = compiler.compile_lesson(note_abs, variant)
+                    if variant == "simple":
+                        compiled_lessons.append(out.relative_to(vault_root).as_posix())
+                        if first_lesson_path is None:
+                            first_lesson_path = out
+                            first_note_path = note_abs
+
+                try:
+                    note_post = frontmatter.loads(note_abs.read_text(encoding="utf-8"))
+                    await artifact_service.generate_artifacts(
+                        note_title=note_abs.stem,
+                        note_path_rel=note_abs.relative_to(vault_root).as_posix(),
+                        frontmatter=note_post.metadata,
+                        content=note_post.content,
+                    )
+                except Exception as artifact_err:
+                    logger.warning(f"[Learning Runtime] Artifact generation fallback failed: {artifact_err}")
+
+        if first_lesson_path is None or first_note_path is None:
+            raise RuntimeError("Learning path was planned, but no lesson HTML was compiled.")
+
+        first_rel = first_lesson_path.relative_to(vault_root).as_posix()
+        from src.domains.ater.lesson_preview import register_ater_lesson_preview
+
+        token = register_ater_lesson_preview(vault_root, first_lesson_path)
+        preview_url = f"/api/ater/lesson/preview/{token}"
+        if request:
+            try:
+                preview_url = str(request.url_for("ater_lesson_preview", token=token))
+            except Exception:
+                preview_url = f"/api/ater/lesson/preview/{token}"
+
+        hub_path = written.get("hub_path", "")
+        lesson_title = first_note_path.stem.replace("_", " ")
+        chapter_count = len(chapters)
+        note_count = sum(len(ch.get("atomic_notes") or []) for ch in chapters)
+
+        yield {
+            "type": "chunk",
+            "content": (
+                f"## {topic_name} Learning Path\n\n"
+                f"I created a durable Ater learning path in your vault.\n\n"
+                f"- Hub: [[{Path(hub_path).stem}]]\n"
+                f"- Chapters: {chapter_count}\n"
+                f"- Atomic notes: {note_count}\n"
+                f"- HTML lesson variants: simple, deep, cram, exam\n"
+                f"- Tutor, cram, and artifact metadata are attached to the notes.\n\n"
+                f"Open the lesson preview to start, or go to Explorer and open `{hub_path}`."
+            ),
+        }
+        yield {
+            "type": "lesson_created",
+            "title": lesson_title,
+            "lesson_path": first_rel,
+            "note_path": first_note_path.relative_to(vault_root).as_posix(),
+            "hub_path": hub_path,
+            "preview_url": preview_url,
+        }
+    except Exception as e:
+        logger.error(f"[Learning Runtime] Teach Anything failed: {e}", exc_info=True)
+        yield {"type": "error", "message": str(e)}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Input Schemas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2800,31 +3088,17 @@ async def run_assistant_chat(
     _lesson_mode, _lesson_topic = _is_lesson_request(messages_history)
 
     if _lesson_mode:
-        from src.domains.teacher.service import TeacherService
-        from src.domains.teacher.router import _register_lesson_preview
-        
-        teacher_service = TeacherService(Path(secrets.vault_path))
         try:
-            async for event in teacher_service.chat(history=messages_history, secrets=secrets):
-                if event.get("type") == "lesson_created":
-                    token = _register_lesson_preview(Path(secrets.vault_path), Path(event["absolute_lesson_path"]))
-                    if request:
-                        try:
-                            preview_url = str(request.url_for("teacher_lesson", token=token))
-                        except Exception:
-                            preview_url = f"/api/teacher/lesson/{token}"
-                    else:
-                        preview_url = f"/api/teacher/lesson/{token}"
-                    
-                    event = {
-                        **event,
-                        "preview_url": preview_url
-                    }
-                    event.pop("absolute_lesson_path", None)
+            async for event in _stream_learning_runtime_lesson(
+                messages_history=messages_history,
+                topic=_lesson_topic,
+                secrets=secrets,
+                request=request,
+            ):
                 yield f"data: {json.dumps(event)}\n\n"
             return
         except Exception as e:
-            logger.error(f"[Assistant Lesson Stream] Teacher Service error: {e}", exc_info=True)
+            logger.error(f"[Assistant Lesson Stream] Learning runtime error: {e}", exc_info=True)
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
             return
 

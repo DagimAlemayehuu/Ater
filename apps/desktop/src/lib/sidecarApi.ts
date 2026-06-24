@@ -505,7 +505,7 @@ export const sidecarApi = {
             return await invoke<any>('read_obsidian_note', { path: ipcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] readObsidianNote failed:', err)
-            return { metadata: {}, content: '' }
+            throw err
         }
     },
     

@@ -163,30 +163,28 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
           if (nextFile) {
             const sidecarPort = await invoke<number>('get_sidecar_port').catch(() => 8765);
             const sidecarToken = await invoke<string>('get_sidecar_token').catch(() => '');
-              
             const store = await getAppStore();
             const vaultPath = await store.get<string>('obsidianVaultPath') || config?.obsidianVaultPath || '';
-              
-            const registerUrl = `http://127.0.0.1:${sidecarPort}/api/teacher/register`;
+            const registerUrl = `http://127.0.0.1:${sidecarPort}/api/ater/lesson/register`;
             const response = await fetchSidecarJson(registerUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'X-Ater-Token': sidecarToken,
-                'X-Vault-Path': vaultPath
+                'X-Vault-Path': vaultPath,
               },
-              body: JSON.stringify({ lesson_path: nextFile.path })
+              body: JSON.stringify({ lesson_path: nextFile.path }),
             });
-              
-            if (response && response.preview_url) {
-              const nextTitleMatch = nextFile.name.match(/^\d{4}-(.*)\.html$/);
-              const nextTitleRaw = nextTitleMatch ? nextTitleMatch[1] : nextFile.name;
+            const previewUrl = response?.preview_url ? `${resolvePreviewUrl(response.preview_url)}?t=${Date.now()}` : '';
+
+            if (previewUrl) {
+              const nextTitleRaw = nextFile.name.replace(/\.(simple|deep|cram|exam)\.html$/i, '').replace(/\.html$/i, '');
               const nextTitle = cleanTitle(nextTitleRaw);
                 
               const newPreview = {
                 title: nextTitle || 'Next Lesson Section',
                 lessonPath: nextFile.path,
-                previewUrl: `${resolvePreviewUrl(response.preview_url)}?t=${Date.now()}`,
+                previewUrl,
               };
                 
               setPreview(newPreview);
@@ -1899,8 +1897,25 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  if (isStrict) await new Promise(r => setTimeout(r, 500));
  else { setIsAwaitingNextBatch(true); break; }
 } else {
- setIsCompleted(true);
- break;
+  setIsCompleted(true);
+  
+  // Resolve first atomic note and expand right panel
+  const firstNote = structuredPlan?.atomic_notes?.[0];
+  const firstNoteTitle = typeof firstNote === 'string' ? firstNote : (firstNote?.title || firstNote?.note);
+  if (firstNoteTitle) {
+    try {
+      const findRes = await sidecarApi.findVaultPage(firstNoteTitle);
+      if (findRes.found && findRes.path) {
+        setActiveNotePath(findRes.path);
+        localStorage.setItem('ater_study_active_note_path', findRes.path);
+        setIsRightCollapsed(false);
+        localStorage.setItem('ater_study_split_right_collapsed', 'false');
+      }
+    } catch (findErr) {
+      console.error('Failed to auto-open first curriculum note:', findErr);
+    }
+  }
+  break;
 }
 }
 } catch (err: any) {
@@ -2131,9 +2146,25 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           >
             <NoteCanvas
               notePath={activeNotePath}
-              onNavigate={(path) => {
-                setActiveNotePath(path);
-                localStorage.setItem('ater_study_active_note_path', path);
+              onClose={() => {
+                setIsRightCollapsed(true);
+                localStorage.setItem('ater_study_split_right_collapsed', 'true');
+              }}
+              onNavigate={async (pageName) => {
+                try {
+                  const res = await sidecarApi.findVaultPage(pageName);
+                  if (res.found && res.path) {
+                    setActiveNotePath(res.path);
+                    localStorage.setItem('ater_study_active_note_path', res.path);
+                  } else {
+                    setActiveNotePath(pageName);
+                    localStorage.setItem('ater_study_active_note_path', pageName);
+                  }
+                } catch (err) {
+                  console.error('Failed to resolve page name in NoteCanvas onNavigate:', err);
+                  setActiveNotePath(pageName);
+                  localStorage.setItem('ater_study_active_note_path', pageName);
+                }
               }}
             />
           </div>
