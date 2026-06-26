@@ -657,7 +657,7 @@ class AterLessonCompiler:
       --bad: #ff8f8f;
     }}
     @media (prefers-color-scheme: light) {{
-      :root {{
+      :root:not(.dark) {{
         color-scheme: light;
         --bg: #fafafa;
         --panel: #ffffff;
@@ -672,6 +672,36 @@ class AterLessonCompiler:
         --warn: #ca8a04;
         --bad: #dc2626;
       }}
+    }}
+    :root.light {{
+      color-scheme: light;
+      --bg: #fafafa;
+      --panel: #ffffff;
+      --surface: #f4f4f5;
+      --surface-2: #e4e4e7;
+      --line: #e4e4e7;
+      --line-strong: #d4d4d8;
+      --text: #18181b;
+      --muted: #71717a;
+      --soft: #27272a;
+      --good: #16a34a;
+      --warn: #ca8a04;
+      --bad: #dc2626;
+    }}
+    :root.dark {{
+      color-scheme: dark;
+      --bg: #111113;
+      --panel: #151517;
+      --surface: #18181b;
+      --surface-2: #202024;
+      --line: #2b2b30;
+      --line-strong: #3a3a40;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --soft: #d4d4d8;
+      --good: #8bd49c;
+      --warn: #f4c06a;
+      --bad: #ff8f8f;
     }}
     * {{ box-sizing: border-box; }}
     html {{ scroll-behavior: smooth; }}
@@ -976,7 +1006,7 @@ class AterLessonCompiler:
     .nav-btn.primary, .action-btn.primary {{
       background: var(--text);
       border-color: var(--text);
-      color: #111113;
+      color: var(--bg);
     }}
     @media (max-width: 760px) {{
       .lesson-shell {{ padding: 18px 14px 30px; }}

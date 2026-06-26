@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
+import { useTheme } from '@/context/theme-provider'
 
 type HtmlLessonViewerProps = {
   content: string
@@ -17,6 +18,8 @@ export function HtmlLessonViewer({
   onNavigate,
   files = []
 }: HtmlLessonViewerProps) {
+  const { resolvedTheme } = useTheme()
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
     if (!onNavigate || !activePath) return
 
@@ -80,9 +83,38 @@ export function HtmlLessonViewer({
     }
   }, [tree, activePath, onNavigate, files])
 
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const updateTheme = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document
+        if (doc && doc.documentElement) {
+          if (resolvedTheme === 'dark') {
+            doc.documentElement.classList.add('dark')
+            doc.documentElement.classList.remove('light')
+          } else {
+            doc.documentElement.classList.add('light')
+            doc.documentElement.classList.remove('dark')
+          }
+        }
+      } catch (e) {
+        console.error('Failed to apply theme to iframe', e)
+      }
+    }
+
+    updateTheme()
+    iframe.addEventListener('load', updateTheme)
+    return () => {
+      iframe.removeEventListener('load', updateTheme)
+    }
+  }, [resolvedTheme])
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-bento-panel">
       <iframe
+        ref={iframeRef}
         title={title}
         srcDoc={content}
         sandbox="allow-scripts allow-forms"
