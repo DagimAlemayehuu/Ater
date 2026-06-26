@@ -103,8 +103,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   useEffect(() => {
     if (isRevealed && currentQ && currentQ.id) {
       const isCorrect = scores[currentQ.id];
-      if (isCorrect === false && fetchedDiagnosticQId !== currentQ.id) {
-        setFetchedDiagnosticQId(currentQ.id);
+      if (isCorrect === false && fetchedDiagnosticQId !== String(currentQ.id)) {
+        setFetchedDiagnosticQId(String(currentQ.id));
         setDiagnosticLoading(true);
         setDiagnosticFeedback(null);
         

@@ -152,7 +152,7 @@ describe('Mistake Diagnostics Trigger', () => {
 
     it('should fetch diagnostics and render inline card when mcq question is graded wrong', async () => {
         render(
-            <MiniPracticeUI question={mockQuestion} notePath="/test.md" />
+            <MiniPracticeUI question={mockQuestion as any} notePath="/test.md" />
         );
 
         // Verify option buttons are displayed

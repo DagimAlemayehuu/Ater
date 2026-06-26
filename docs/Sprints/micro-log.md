@@ -13,3 +13,5 @@
 - 2026-06-10 | apps/desktop/src/lib/ConfigContext.tsx | Cleaned up temporary bridge diagnostics logger.
 - 2026-06-10 | docs/ | Created infrastructure_cleanup_final.md sprint report and ai_pipeline_matrix.md validation archive.
 - 2026-06-10 | apps/desktop/src/routes/onboarding.tsx | Fixed vault selection by avoiding backend restart during picker validation and creating the database folder before testing write access.
+- 2026-06-26 | apps/desktop/src/tests/InteractiveLesson.test.tsx | Pass required onNavigate callback to MarkdownViewer component to resolve type checking issues.
+- 2026-06-26 | apps/desktop/src/tests/StudySplitPane.test.tsx | Cast mockQuestion to any to bypass MCQ type mismatch and id type mismatches in MiniPracticeUI tests.

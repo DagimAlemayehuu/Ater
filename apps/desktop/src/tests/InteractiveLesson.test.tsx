@@ -127,7 +127,7 @@ The repository is a directed acyclic graph.
 
     render(
       <MemoryRouter>
-        <MarkdownViewer content={atomicNote} path="Lessons/git/lessons/0001-what-is-git.md" />
+        <MarkdownViewer content={atomicNote} path="Lessons/git/lessons/0001-what-is-git.md" onNavigate={() => {}} />
       </MemoryRouter>
     );
 
