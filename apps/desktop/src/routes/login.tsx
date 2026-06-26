@@ -25,7 +25,7 @@ export default function Login() {
   }
 
   return (
-    <div className="h-screen w-full bg-[#0e0e0f] text-foreground flex flex-col items-center justify-center p-6 selection:bg-foreground selection:text-background relative">
+    <div className="h-screen w-full bg-background text-foreground flex flex-col items-center justify-center p-6 selection:bg-foreground selection:text-background relative">
       <div className="absolute top-8 right-8">
         <ThemeSwitch />
       </div>

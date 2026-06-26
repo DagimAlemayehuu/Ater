@@ -19,7 +19,7 @@ export function LockoutScreen({
   fullScreen = false
 }: LockoutScreenProps) {
   const content = (
-    <div className="w-full max-w-[500px] border border-border/80 p-12 bg-[#131313] space-y-8 shadow-2xl relative overflow-hidden text-center flex flex-col items-center">
+    <div className="w-full max-w-[500px] border border-border/80 p-12 bg-card space-y-8 shadow-2xl relative overflow-hidden text-center flex flex-col items-center">
       <div className="absolute top-0 left-0 right-0 h-1 bg-destructive" />
       
       {/* Centered Lock Icon */}
@@ -71,14 +71,14 @@ export function LockoutScreen({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#0a0a0a] text-foreground select-none font-mono">
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-background text-foreground select-none font-mono">
         {content}
       </div>
     )
   }
 
   return (
-    <div className="w-full h-full min-h-[450px] flex items-center justify-center bg-[#0a0a0a] p-8 border border-border/40 font-mono select-none">
+    <div className="w-full h-full min-h-[450px] flex items-center justify-center bg-background p-8 border border-border/40 font-mono select-none">
       {content}
     </div>
   )

@@ -286,41 +286,41 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                                     setExplainOpen(true);
                                     setFloatPos(null);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground text-background border border-foreground shadow-xl rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 transition-none animate-in fade-in zoom-in duration-100"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground border border-primary shadow-xl rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 transition-none animate-in fade-in zoom-in duration-100"
                             >
                                 Explain More
                             </button>
                         </div>
                     )}
 
-                    <div className="flex-1 w-full h-full overflow-hidden flex flex-col bg-[#111317]">
+                    <div className="flex-1 w-full h-full overflow-hidden flex flex-col bg-bento-bg">
                         {!(window as any).__TAURI_INTERNALS__ ? (
                             <div className="flex-1 w-full h-full flex flex-col p-6 overflow-y-auto">
                                 {/* Slide Header */}
-                                <div className="flex justify-between items-center border-b border-[#282E36] pb-4 mb-6 shrink-0">
+                                <div className="flex justify-between items-center border-b border-border pb-4 mb-6 shrink-0">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-[#48defd] animate-pulse" />
-                                        <span className="text-[10px] font-mono tracking-widest text-[#bbc9cd] uppercase">Document Preview: {title}</span>
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                        <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase">Document Preview: {title}</span>
                                     </div>
-                                    <span className="text-[10px] font-mono text-[#bbc9cd]">PAGE {page} OF 12</span>
+                                    <span className="text-[10px] font-mono text-muted-foreground">PAGE {page} OF 12</span>
                                 </div>
                                 
                                 {/* Slide Body */}
-                                <div className="flex-1 flex flex-col justify-center max-w-[800px] mx-auto w-full border border-[#282E36] bg-[#0c0e11] p-10 rounded-[8px] shadow-lg relative min-h-[420px] my-auto">
-                                    <div className="absolute top-4 left-4 text-[9px] font-mono text-[#bbc9cd]/30 uppercase tracking-[0.2em]">CS 201: Algorithms & Data Structures</div>
-                                    <div className="absolute top-4 right-4 text-[9px] font-mono text-[#bbc9cd]/30 uppercase tracking-[0.2em]">Syllabus Pack</div>
+                                <div className="flex-1 flex flex-col justify-center max-w-[800px] mx-auto w-full border border-border bg-bento-panel p-10 rounded-[8px] shadow-lg relative min-h-[420px] my-auto">
+                                    <div className="absolute top-4 left-4 text-[9px] font-mono text-muted-foreground/40 uppercase tracking-[0.2em]">CS 201: Algorithms & Data Structures</div>
+                                    <div className="absolute top-4 right-4 text-[9px] font-mono text-muted-foreground/40 uppercase tracking-[0.2em]">Syllabus Pack</div>
                                     
                                     <div className="my-auto space-y-6">
                                         {page === 1 ? (
                                             <>
-                                                <h2 className="text-[20px] font-bold text-foreground tracking-tight border-b border-[#282E36] pb-3">Lecture 1: Logarithmic Complexity & Halving Structures</h2>
+                                                <h2 className="text-[20px] font-bold text-foreground tracking-tight border-b border-border pb-3">Lecture 1: Logarithmic Complexity & Halving Structures</h2>
                                                 
-                                                <div className="space-y-4 text-xs leading-relaxed text-[#bbc9cd]">
+                                                <div className="space-y-4 text-xs leading-relaxed text-muted-foreground">
                                                     <p className="font-semibold text-foreground">Core Objective:</p>
-                                                    <p>This course analyzes logarithmic runtime complexities <code className="font-mono bg-[#1a1c1f] px-1 py-0.5 rounded text-[#48defd]">O(log n)</code> through Halving Structures, demonstrating how partitioning search spaces leads to extreme computational bounds.</p>
+                                                    <p>This course analyzes logarithmic runtime complexities <code className="font-mono bg-muted px-1 py-0.5 rounded text-foreground">O(log n)</code> through Halving Structures, demonstrating how partitioning search spaces leads to extreme computational bounds.</p>
                                                     
-                                                    <div className="p-4 bg-[#111317] border border-[#282E36] rounded-[6px] space-y-2 mt-4">
-                                                        <p className="font-bold text-[#48defd] uppercase tracking-wider text-[9px]">Course Modules:</p>
+                                                    <div className="p-4 bg-bento-card border border-border rounded-[6px] space-y-2 mt-4">
+                                                        <p className="font-bold text-foreground uppercase tracking-wider text-[9px]">Course Modules:</p>
                                                         <ul className="list-disc list-inside space-y-1.5 text-[11px]">
                                                             <li><span className="font-bold text-foreground">Unit 1:</span> Searching Complexity & Binary Search proofs</li>
                                                             <li><span className="font-bold text-foreground">Unit 2:</span> Balanced Search Trees & AVL rotations</li>
@@ -332,26 +332,26 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                                             </>
                                         ) : page === 2 ? (
                                             <>
-                                                <h2 className="text-[20px] font-bold text-foreground tracking-tight border-b border-[#282E36] pb-3">Section 1.2: Divide & Conquer Master Theorem</h2>
+                                                <h2 className="text-[20px] font-bold text-foreground tracking-tight border-b border-border pb-3">Section 1.2: Divide & Conquer Master Theorem</h2>
                                                 
-                                                <div className="space-y-4 text-xs leading-relaxed text-[#bbc9cd]">
+                                                <div className="space-y-4 text-xs leading-relaxed text-muted-foreground">
                                                     <p className="font-semibold text-foreground">Mathematical Modeling:</p>
                                                     <p>We model the reduction process using recurrence relations. For algorithms that bisect problems:</p>
-                                                    <div className="p-4 bg-[#111317] border border-[#282E36] rounded-[6px] font-mono text-[11px] text-[#48defd] text-center my-2">
+                                                    <div className="p-4 bg-bento-card border border-border rounded-[6px] font-mono text-[11px] text-foreground text-center my-2">
                                                         T(n) = T(n/2) + O(1)
-                                                    </div>
-                                                    <p>By case 2 of the Master Theorem, this solves directly to <code className="font-mono bg-[#1a1c1f] px-1 py-0.5 rounded text-[#48defd]">Θ(log n)</code>. The height of the decision recursion tree is exactly bounded by the log base 2 of the problem size.</p>
+                                                     </div>
+                                                    <p>By case 2 of the Master Theorem, this solves directly to <code className="font-mono bg-muted px-1 py-0.5 rounded text-foreground">Θ(log n)</code>. The height of the decision recursion tree is exactly bounded by the log base 2 of the problem size.</p>
                                                 </div>
                                             </>
                                         ) : (
                                             <>
-                                                <h2 className="text-[20px] font-bold text-foreground tracking-tight border-b border-[#282E36] pb-3">Section {1 + page / 10}: Optimal Searching Partitions</h2>
+                                                <h2 className="text-[20px] font-bold text-foreground tracking-tight border-b border-border pb-3">Section {1 + page / 10}: Optimal Searching Partitions</h2>
                                                 
-                                                <div className="space-y-4 text-xs leading-relaxed text-[#bbc9cd]">
+                                                <div className="space-y-4 text-xs leading-relaxed text-muted-foreground">
                                                     <p className="font-semibold text-foreground">Minimax Decision Tree Bounds:</p>
-                                                    <p>For any comparison-based search algorithm over an array of size <code className="font-mono bg-[#1a1c1f] px-1 py-0.5 rounded text-[#48defd]">n</code>, the worst-case complexity is lower-bounded by the minimum height of a binary decision tree containing <code className="font-mono bg-[#1a1c1f] px-1 py-0.5 rounded text-[#48defd]">n</code> leaves.</p>
-                                                    <p className="p-3 bg-[#111317] border border-dashed border-[#282E36] rounded-[6px] text-[11px]">
-                                                        Height ≥ ⌈log₂ n⌉. Thus, binary bisection is mathematically optimal for comparison-based searching under uniform distributions.
+                                                    <p>For any comparison-based search algorithm over an array of size <code className="font-mono bg-muted px-1 py-0.5 rounded text-foreground">n</code>, the worst-case complexity is lower-bounded by the minimum height of a binary decision tree containing <code className="font-mono bg-muted px-1 py-0.5 rounded text-foreground">n</code> leaves.</p>
+                                                    <p className="p-3 bg-bento-card border border-dashed border-border rounded-[6px] text-[11px]">
+                                                        Height ≥ ⌈log₂ n⌉. Thus, bisection is mathematically optimal for comparison-based searching under uniform distributions.
                                                     </p>
                                                 </div>
                                             </>

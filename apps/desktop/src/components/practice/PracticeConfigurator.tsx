@@ -142,7 +142,7 @@ export function PracticeConfigurator({
                         <RadioGroupItem value={level.val} id={level.val} className="peer sr-only" />
                         <Label
                           htmlFor={level.val}
-                          className="flex h-10 border border-border rounded-[8px] bg-bento-item peer-data-[state=checked]:bg-[#e4e4e7]/10 peer-data-[state=checked]:border-foreground/40 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-[#e4e4e7]/5 transition-all"
+                          className="flex h-10 border border-border rounded-[8px] bg-bento-item peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground/40 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-foreground/5 transition-all"
                         >
                           {level.label}
                         </Label>
@@ -158,7 +158,7 @@ export function PracticeConfigurator({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full h-10 border-border bg-bento-item text-[10px] font-black uppercase px-4 justify-between hover:bg-[#e4e4e7]/5 transition-colors"
+                      className="w-full h-10 border-border bg-bento-item text-[10px] font-black uppercase px-4 justify-between hover:bg-foreground/5 transition-colors"
                     >
                       <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
                       <Layers size={12} className="opacity-40" />
@@ -176,7 +176,7 @@ export function PracticeConfigurator({
                         <Button
                           variant="ghost"
                           size="default"
-                          className="h-7 text-[8px] font-black uppercase hover:bg-[#e4e4e7]/5"
+                          className="h-7 text-[8px] font-black uppercase hover:bg-foreground/5"
                           onClick={() => {
                             if (advancedConfig.selectedAtomicNotes.length === availableNotes.length) {
                               setAdvancedConfig((prev) => ({ ...prev, selectedAtomicNotes: [] }))
@@ -199,12 +199,12 @@ export function PracticeConfigurator({
                             <CommandItem
                               key={note.path}
                               onSelect={() => toggleAtomicNote(note.path)}
-                              className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-[6px] text-[9px] font-black uppercase hover:bg-[#e4e4e7]/5"
+                              className="flex items-center gap-2 cursor-pointer py-2 px-3 rounded-[6px] text-[9px] font-black uppercase hover:bg-foreground/5"
                             >
                               <div
                                 className={cn(
                                   'w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors',
-                                  isSelected ? 'bg-[#e4e4e7] border-foreground text-background' : 'border-border'
+                                  isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-border'
                                 )}
                               >
                                 {isSelected && <Check size={8} />}
@@ -284,7 +284,7 @@ export function PracticeConfigurator({
                     <button
                       key={k}
                       onClick={() => applyPreset(k)}
-                      className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-bento-item hover:bg-[#e4e4e7]/5 border border-border text-muted-foreground hover:text-foreground transition-all rounded-[4px]"
+                      className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-bento-item hover:bg-foreground/5 border border-border text-muted-foreground hover:text-foreground transition-all rounded-[4px]"
                       title={p.label}
                     >
                       {p.label}
@@ -295,7 +295,7 @@ export function PracticeConfigurator({
                   variant="outline"
                   size="default"
                   onClick={randomizeDistribution}
-                  className="h-7 px-2.5 text-[8px] font-black uppercase border-border bg-bento-item hover:bg-[#e4e4e7]/5 rounded-[4px]"
+                  className="h-7 px-2.5 text-[8px] font-black uppercase border-border bg-bento-item hover:bg-foreground/5 rounded-[4px]"
                 >
                   <Zap size={10} className="mr-1" />
                   Random
@@ -352,7 +352,7 @@ export function PracticeConfigurator({
               data-tour="start-practice-btn"
               onClick={handleStartSession}
               disabled={isLoading}
-              className="h-11 w-full bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors"
+              className="h-11 w-full bg-primary text-primary-foreground border border-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors"
             >
               Start Practice
             </Button>

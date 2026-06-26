@@ -677,7 +677,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
                                         <Badge variant="outline" className={cn(
                                             "rounded-[6px] px-1.5 py-0.5 text-[8px] font-black uppercase border shrink-0",
                                             isActive 
-                                                ? "border-foreground bg-foreground text-background" 
+                                                ? "border-primary bg-primary text-primary-foreground" 
                                                 : "border-border text-muted-foreground"
                                         )}>
                                             {status}

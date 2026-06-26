@@ -79,3 +79,7 @@ CleanShot*.png
 scratch/
 mock_inbox/
 apps/api/mock_inbox/
+
+# Git Worktrees
+.worktrees/
+worktrees/

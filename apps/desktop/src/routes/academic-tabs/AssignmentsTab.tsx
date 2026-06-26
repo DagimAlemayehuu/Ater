@@ -155,7 +155,7 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
         {/* Mark complete */}
         <button onClick={e => handleToggleDone(assignment, e)}
           className={cn('px-6 py-3 border rounded-[6px] text-[10px] font-black uppercase tracking-widest w-full transition-colors',
-            isDone ? 'border-border bg-bento-item/30 text-muted-foreground hover:bg-bento-item' : 'border-foreground bg-foreground text-background hover:bg-foreground/90')}>
+            isDone ? 'border-border bg-bento-item/30 text-muted-foreground hover:bg-bento-item' : 'border-primary bg-primary text-primary-foreground hover:bg-primary/90')}>
           {isDone ? '↩ Mark Incomplete' : '✓ Mark Complete'}
         </button>
       </div>

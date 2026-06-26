@@ -832,7 +832,7 @@ export default function Notebooks() {
                           onClick={() => setUploadType(type)}
                           className={cn(
                             "px-3 py-1 border text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all",
-                            uploadType === type ? "border-foreground bg-foreground text-background" : "border-border/60 hover:bg-muted/10 text-muted-foreground"
+                            uploadType === type ? "border-primary bg-primary text-primary-foreground" : "border-border/60 hover:bg-muted/10 text-muted-foreground"
                           )}
                         >
                           {type === 'file' ? 'File' : type === 'url' ? 'URL' : type === 'drive' ? 'Drive' : 'Text'}
@@ -1567,7 +1567,7 @@ export default function Notebooks() {
                     <button
                       disabled={generatingStudio || sources.length === 0 || (artifactType === 'data-table' && !dataTableDescription.trim())}
                       onClick={handleGenerateStudio}
-                      className="w-full py-2.5 mt-2 border border-foreground bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 transition-all rounded-[6px] disabled:opacity-30 flex items-center justify-center gap-1"
+                      className="w-full py-2.5 mt-2 border border-primary bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all rounded-[6px] disabled:opacity-30 flex items-center justify-center gap-1"
                     >
                       <span>Generate Media</span>
                     </button>

@@ -318,7 +318,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   className="flex items-center justify-between p-4 border border-border bg-bento-card rounded-[8px] cursor-pointer hover:bg-bento-item/30 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={cn('w-5 h-5 border rounded-[4px] flex items-center justify-center text-[8px] font-black shrink-0',
-                      isDone ? 'border-foreground bg-foreground text-background' :
+                      isDone ? 'border-primary bg-primary text-primary-foreground' :
                       isActive ? 'border-muted-foreground text-foreground bg-bento-item' : 'border-border text-muted-foreground')}>
                       {isDone ? <Check size={9} strokeWidth={4} /> : idx + 1}
                     </div>

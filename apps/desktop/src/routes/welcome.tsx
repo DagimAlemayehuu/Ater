@@ -40,7 +40,7 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0b] relative overflow-hidden select-none">
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden select-none">
       {/* Ambient glow */}
       <div
         className="pointer-events-none absolute inset-0"

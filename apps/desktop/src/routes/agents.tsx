@@ -1025,7 +1025,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                                     type="button"
                                     onClick={() => handleSendMessage('Start Lesson')}
                                     disabled={isLoading}
-                                    className="h-9 px-5 bg-foreground text-background font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                    className="h-9 px-5 bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                                   >
                                     <BookOpenCheck size={12} />
                                     Start Lesson
@@ -1939,7 +1939,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
             className={cn(
               "h-8 px-3 border border-border/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]",
               isHistoryOpen 
-                ? "bg-foreground text-background hover:bg-foreground/90" 
+                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
                 : "bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground"
             )}
             title={isHistoryOpen ? "Hide History" : "Show History"}
@@ -2012,7 +2012,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
                   className={cn(
                     "h-8 px-3 border border-border/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]",
                     oracleState.isPanelOpen 
-                      ? "bg-foreground text-background hover:bg-foreground/90" 
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90" 
                       : "bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground"
                   )}
                   title={`Toggle ${label.toLowerCase()} panel`}
@@ -2388,7 +2388,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           <div key={virtualRow.index} data-index={virtualRow.index} ref={virtualizer.measureElement} style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }} className="py-3">
           <div className="p-6 rounded-[12px] border border-border bg-bento-card shadow-sm">
           <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 rounded-[4px] bg-foreground text-[10px] font-black text-background flex items-center justify-center">{b.batch}</div>
+          <div className="w-6 h-6 rounded-[4px] bg-primary text-[10px] font-black text-primary-foreground flex items-center justify-center">{b.batch}</div>
           <span className={cn("text-[10px] font-black uppercase tracking-widest", b.results.length > 0 ? "text-foreground" : "text-destructive")}>{b.results.length > 0 ? "Success" : "Failed"}</span>
           </div>
           {b.results.length === 0 && (

@@ -387,14 +387,14 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
         <div className="flex rounded-[6px] border border-border bg-bento-card p-0.5">
           <button
             onClick={() => setMode('preview')}
-            className={cn('grid size-7 place-items-center rounded-[4px]', mode === 'preview' ? 'bg-foreground text-background' : 'text-muted-foreground')}
+            className={cn('grid size-7 place-items-center rounded-[4px]', mode === 'preview' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}
             title="Preview"
           >
             <Eye size={13} />
           </button>
           <button
             onClick={() => setMode('code')}
-            className={cn('grid size-7 place-items-center rounded-[4px]', mode === 'code' ? 'bg-foreground text-background' : 'text-muted-foreground')}
+            className={cn('grid size-7 place-items-center rounded-[4px]', mode === 'code' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}
             title="Code"
           >
             <Code2 size={13} />

@@ -218,7 +218,7 @@ export const GenerationStepper = ({ payload }: { payload: any }) => {
                             ))}
                         </div>
                         <Button 
-                            className="w-full rounded-[12px] bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-widest h-10 shadow-lg shadow-foreground/5 mt-4"
+                            className="w-full rounded-[12px] bg-primary text-primary-foreground hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest h-10 shadow-lg shadow-foreground/5 mt-4"
                             onClick={handleConfirm}
                             disabled={isDeploying}
                         >
@@ -521,7 +521,7 @@ export const AppConfigBlock = ({ payload, onSendMessage }: { payload: any; onSen
                             />
                             <Button 
                                 variant="outline" 
-                                className="h-6 px-2 rounded-[12px] text-[9px] font-black uppercase border-foreground bg-foreground text-background hover:bg-foreground/90"
+                                className="h-6 px-2 rounded-[12px] text-[9px] font-black uppercase border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                                 onClick={handleSaveName}
                             >
                                 Save
@@ -728,7 +728,7 @@ export const QueueStatusBlock = ({ payload, onSendMessage }: { payload: any; onS
                     variant="outline" 
                     className={cn(
                         "rounded-[12px] border-border hover:border-foreground/40 text-[9px] font-black uppercase tracking-widest h-9",
-                        queue_size > 0 && !isProcessing && "bg-foreground text-background hover:bg-foreground/90 border-foreground"
+                        queue_size > 0 && !isProcessing && "bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
                     )}
                     onClick={handleProcessQueue}
                     disabled={isProcessing || queue_size === 0}
@@ -990,7 +990,7 @@ export const FormCard = ({ payload, onSendMessage }: { payload: any; onSendMessa
             <div className="pt-2 flex justify-end gap-2">
                 <Button 
                     type="submit" 
-                    className="rounded-[12px] bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-widest h-9 px-4"
+                    className="rounded-[12px] bg-primary text-primary-foreground hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest h-9 px-4"
                 >
                     Save Changes
                 </Button>
@@ -1273,7 +1273,7 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
 
             <button 
                 onClick={handleStart}
-                className="w-full py-2.5 rounded-[12px] bg-foreground text-background hover:bg-foreground/90 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-[12px] bg-primary text-primary-foreground hover:bg-primary/90 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
             >
                 <Play size={12} fill="currentColor" />
                 <span>Start Practice Session</span>
@@ -1944,7 +1944,7 @@ export function CurriculumPlannerCard({ payload }: CurriculumPlannerCardProps) {
                             </button>
                             <button
                                 onClick={handleAddNote}
-                                className="px-3 py-1.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-foreground/90"
+                                className="px-3 py-1.5 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-primary/90"
                             >
                                 Add Note
                             </button>
@@ -1986,7 +1986,7 @@ export function CurriculumPlannerCard({ payload }: CurriculumPlannerCardProps) {
                                             </button>
                                             <button
                                                 onClick={() => handleSaveEdit(idx)}
-                                                className="px-3 py-1 bg-foreground text-background text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-foreground/90"
+                                                className="px-3 py-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-primary/90"
                                             >
                                                 Save
                                             </button>

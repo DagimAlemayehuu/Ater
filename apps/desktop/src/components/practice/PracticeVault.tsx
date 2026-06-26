@@ -168,17 +168,17 @@ export function PracticeVault({
                           }
                           className={cn(
                             'w-full text-left p-3 border rounded-[8px] flex items-center justify-between transition-colors',
-                            isSel ? 'border-foreground/40 bg-[#e4e4e7]/5' : 'border-border bg-bento-item hover:border-foreground/20'
+                            isSel ? 'border-foreground/40 bg-foreground/5' : 'border-border bg-bento-item hover:border-foreground/20'
                           )}
                         >
                           <div className="flex items-center gap-3">
                             <div
                               className={cn(
                                 'w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors',
-                                isSel ? 'bg-[#e4e4e7] border-foreground' : 'border-border'
+                                isSel ? 'bg-primary border-primary' : 'border-border'
                               )}
                             >
-                              {isSel && <Check size={10} className="text-background" />}
+                              {isSel && <Check size={10} className="text-primary-foreground" />}
                             </div>
                             <div>
                               <div className="text-[10px] font-black uppercase tracking-tight text-foreground">
@@ -209,7 +209,7 @@ export function PracticeVault({
                         className={cn(
                           'p-3 border rounded-[8px] text-left transition-colors',
                           vaultMode === m.id
-                            ? 'border-foreground/40 bg-[#e4e4e7]/5'
+                            ? 'border-foreground/40 bg-foreground/5'
                             : 'border-border bg-bento-item hover:border-foreground/20'
                         )}
                       >
@@ -218,7 +218,7 @@ export function PracticeVault({
                           <span className="text-[10px] font-black uppercase tracking-tight text-foreground">
                             {m.label}
                           </span>
-                          {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#e4e4e7]" />}
+                          {vaultMode === m.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
                         </div>
                         <p className="text-[8px] text-muted-foreground/40 leading-relaxed">{m.desc}</p>
                       </button>

@@ -260,7 +260,7 @@ export default function AcademicDashboard() {
          className={cn(
            'h-8 flex items-center gap-1.5 px-3 rounded-[8px] text-[9px] font-black uppercase tracking-widest focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
            activeTab === 'CALENDAR' 
-             ? 'bg-foreground text-background border border-foreground' 
+             ? 'bg-primary text-primary-foreground border border-primary' 
              : 'bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30'
          )}
        >

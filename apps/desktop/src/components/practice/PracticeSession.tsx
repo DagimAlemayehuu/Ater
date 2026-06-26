@@ -671,7 +671,7 @@ export function PracticeSession({
                               type="checkbox"
                               checked={keywordChecks[kw] || false}
                               onChange={(e) => session.setKeywordCheck(kw, e.target.checked)}
-                              className="w-5 h-5 shrink-0 appearance-none border border-border bg-bento-item rounded-[4px] checked:bg-[#e4e4e7]/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
+                              className="w-5 h-5 shrink-0 appearance-none border border-border bg-bento-item rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[5px] after:top-[1px] after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20"
                             />
                             <span className={cn('text-sm font-bold transition-colors', isFound ? 'text-foreground' : 'text-muted-foreground')}>
                               {kw}{' '}

@@ -220,7 +220,7 @@ export default function Teacher() {
                                 type="button"
                                 onClick={() => handleSend('Start Lesson')}
                                 disabled={isLoading}
-                                className="h-9 px-5 bg-foreground text-background font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                className="h-9 px-5 bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                               >
                                 <BookOpenCheck size={12} />
                                 Start Lesson

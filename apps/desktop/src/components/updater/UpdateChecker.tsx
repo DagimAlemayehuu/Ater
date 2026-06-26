@@ -181,7 +181,7 @@ export function UpdateChecker() {
         <button 
           onClick={handleUpdate}
           disabled={isUpdating}
-          className="text-[9px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 flex items-center gap-1.5 h-8 px-4 rounded-[6px] transition-all"
+          className="text-[9px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 h-8 px-4 rounded-[6px] transition-all"
         >
           {isUpdating ? (
             <>

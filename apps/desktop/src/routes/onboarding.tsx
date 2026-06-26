@@ -582,7 +582,7 @@ export default function Onboarding() {
   ] as const
 
   return (
-    <div className="h-screen w-full flex flex-col justify-center bg-[#0e0e0f] text-foreground selection:bg-foreground selection:text-background px-12 relative overflow-y-auto">
+    <div className="h-screen w-full flex flex-col justify-center bg-background text-foreground selection:bg-foreground selection:text-background px-12 relative overflow-y-auto">
       {/* Existing Vault Detected Modal */}
       {showDetectedModal && detectedProfile && (
         <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 select-none animate-fade-in pointer-events-auto">
@@ -602,12 +602,12 @@ export default function Onboarding() {
                 <span className="text-muted-foreground uppercase font-black tracking-widest">Program</span>
                 <span className="text-foreground uppercase font-black tracking-widest">{detectedProfile.programName}</span>
               </div>
-              <div className="h-px bg-[#242426]" />
+              <div className="h-px bg-border" />
               <div className="flex justify-between items-center text-[10px]">
                 <span className="text-muted-foreground uppercase font-black tracking-widest">Level / Year</span>
                 <span className="text-foreground uppercase font-black tracking-widest">Year {detectedProfile.programCurrentYear} ({detectedProfile.programLevel})</span>
               </div>
-              <div className="h-px bg-[#242426]" />
+              <div className="h-px bg-border" />
               <div className="flex justify-between items-center text-[10px]">
                 <span className="text-muted-foreground uppercase font-black tracking-widest">Work Timer</span>
                 <span className="text-foreground uppercase font-black tracking-widest">{detectedProfile.pomodoroWorkDuration}m Work / {detectedProfile.pomodoroShortBreakDuration}m Break</span>
@@ -698,10 +698,10 @@ export default function Onboarding() {
                         ? "bg-foreground"
                         : step > s
                         ? "bg-muted-foreground/60"
-                        : "bg-[#242426]"
+                        : "bg-border"
                     )}
                   />
-                  {idx < totalDisplaySteps - 1 && <div className="w-6 h-px bg-[#242426]" />}
+                  {idx < totalDisplaySteps - 1 && <div className="w-6 h-px bg-border" />}
                 </div>
               ))}
               <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">
@@ -884,14 +884,14 @@ export default function Onboarding() {
                       className={cn(
                         "flex items-center justify-between p-3.5 border rounded-[8px] cursor-pointer transition-colors",
                         isSelected 
-                          ? "bg-bento-item/55 border-primary" 
-                          : "bg-bento-item/20 border-border hover:bg-bento-item/30"
+                          ? "bg-muted/55 border-primary" 
+                          : "bg-muted/20 border-border hover:bg-muted/30"
                       )}
                     >
                       <div className="text-left space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-bold text-foreground uppercase">{k.name}</span>
-                          <span className="text-[8px] px-1 bg-[#1c1c1e] text-muted-foreground border border-border rounded uppercase">{k.provider}</span>
+                          <span className="text-[8px] px-1 bg-muted text-muted-foreground border border-border rounded uppercase">{k.provider}</span>
                         </div>
                         <div className="text-[10px] font-mono text-muted-foreground">••••••••{k.key.slice(-4)}</div>
                       </div>
@@ -999,7 +999,7 @@ export default function Onboarding() {
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <button data-tour="save-key-btn" onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save Key</button>
+                    <button data-tour="save-key-btn" onClick={handleAddNewKey} className="flex-1 h-9 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 rounded-[8px] transition-all">Save Key</button>
                     <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Cancel</button>
                   </div>
                 </div>
@@ -1025,7 +1025,7 @@ export default function Onboarding() {
                   <button
                     onClick={testConnection}
                     disabled={testStatus === 'testing'}
-                    className="text-[9px] bg-foreground text-background font-black uppercase tracking-widest hover:bg-foreground/90 px-4 py-2 rounded-[6px] transition-colors disabled:opacity-40"
+                    className="text-[9px] bg-primary text-primary-foreground font-black uppercase tracking-widest hover:bg-primary/90 px-4 py-2 rounded-[6px] transition-colors disabled:opacity-40"
                   >
                     {testStatus === 'testing' ? 'Testing...' : 'Check if Key Works'}
                   </button>
@@ -1153,7 +1153,7 @@ export default function Onboarding() {
                       className={cn(
                         "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border transition-colors rounded-[8px]",
                         programCurrentYear === i + 1
-                          ? "bg-foreground text-background border-foreground"
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "bg-bento-item/30 text-muted-foreground border-border hover:border-foreground hover:text-foreground"
                       )}
                     >
@@ -1281,26 +1281,26 @@ export default function Onboarding() {
                   {vaultPath}
                 </span>
               </div>
-              <div className="h-px bg-[#242426]" />
+              <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">AI Provider</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
                   {activeKey ? `${activeProvider} (${savedKeys.length} Saved Keys)` : 'Disabled'}
                 </span>
               </div>
-              <div className="h-px bg-[#242426]" />
+              <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Study Timer</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
                   {workDuration}m / {shortBreak}m / {longBreak}m
                 </span>
               </div>
-              <div className="h-px bg-[#242426]" />
+              <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Program</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground truncate max-w-[150px]">{programName}</span>
               </div>
-              <div className="h-px bg-[#242426]" />
+              <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Current Level</span>
                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Year {programCurrentYear} / {programDuration}</span>

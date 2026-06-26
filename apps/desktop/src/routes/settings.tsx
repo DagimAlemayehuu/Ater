@@ -44,7 +44,7 @@ const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCanc
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <button onClick={onSave} className="h-8 px-4 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save</button>
+              <button onClick={onSave} className="h-8 px-4 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 rounded-[8px] transition-all">Save</button>
               <button onClick={onCancel} className="h-8 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Abort</button>
             </>
           ) : (
@@ -720,7 +720,7 @@ export default function Settings() {
                   "h-10 px-6 text-[10px] font-black uppercase tracking-widest transition-all rounded-[8px] flex items-center gap-2",
                   updateStatus === 'up-to-date' 
                     ? "bg-bento-item text-muted-foreground border border-border" 
-                    : "bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 )}
               >
                 {isCheckingUpdate ? (
@@ -876,7 +876,7 @@ export default function Settings() {
                 <button
                   data-tour="settings-danger-factory"
                   onClick={() => handleFactoryReset()}
-                  className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-foreground text-background border border-foreground hover:bg-foreground/90 rounded-[8px] transition-all"
+                  className="h-11 px-6 text-[10px] font-black uppercase tracking-widest bg-primary text-primary-foreground border border-primary hover:bg-primary/90 rounded-[8px] transition-all"
                 >
                   Delete Everything & Reset App
                 </button>
@@ -1119,7 +1119,7 @@ export default function Settings() {
                       className={cn(
                         "w-full h-11 text-[10px] font-black uppercase tracking-widest border transition-all rounded-[8px]",
                         testStatus.loading ? "opacity-50 cursor-not-allowed bg-muted/20 text-muted-foreground border-border/40" :
-                        testStatus.success === true ? "bg-foreground text-background border-foreground" :
+                        testStatus.success === true ? "bg-primary text-primary-foreground border-primary" :
                         testStatus.success === false ? "bg-background text-foreground border-foreground/50" :
                         "bg-muted/10 hover:bg-muted/20 text-muted-foreground hover:text-foreground border-border/40 hover:border-foreground/30"
                       )}
@@ -1253,7 +1253,7 @@ export default function Settings() {
                       </div>
 
                       <div className="flex gap-2 pt-2">
-                        <button data-tour="save-key-btn" onClick={handleAddNewKey} className="flex-1 h-9 bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all">Save</button>
+                        <button data-tour="save-key-btn" onClick={handleAddNewKey} className="flex-1 h-9 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 rounded-[8px] transition-all">Save</button>
                         <button onClick={() => setIsAddingKey(false)} className="h-9 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[10px] font-black uppercase hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Cancel</button>
                       </div>
                     </div>
@@ -1385,7 +1385,7 @@ export default function Settings() {
                   <button
                     disabled={notebooklmAuthenticating}
                     onClick={() => handleNotebookLMLogin(false)}
-                    className="h-8 px-4 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[8px] transition-all disabled:opacity-50"
+                    className="h-8 px-4 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 rounded-[8px] transition-all disabled:opacity-50"
                   >
                     {notebooklmAuthenticating ? 'Connecting...' : (isConfigured ? 'Reconnect Account' : 'Connect Account')}
                   </button>

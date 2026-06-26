@@ -96,7 +96,7 @@ export function PracticeResults({
           {/* Progress bar */}
           <div className="h-2.5 w-full bg-bento-card rounded-full overflow-hidden border border-border">
             <div
-              className="h-full bg-[#e4e4e7] rounded-none transition-all duration-700"
+              className="h-full bg-primary rounded-none transition-all duration-700"
               style={{ width: `${score}%` }}
             />
           </div>
@@ -183,12 +183,12 @@ export function PracticeResults({
 
           {/* Actions */}
           <div className="flex flex-row gap-3 pt-6 border-t border-border">
-            <Button
+             <Button
               onClick={() => {
                 session.reset()
                 setView('configuring')
               }}
-              className="h-11 flex-1 bg-[#e4e4e7] text-background border border-foreground hover:bg-[#e4e4e7]/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors"
+              className="h-11 flex-1 bg-primary text-primary-foreground border border-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors"
             >
               Practice Again
             </Button>
@@ -202,7 +202,7 @@ export function PracticeResults({
                 setAdvancedConfig({ ...DEFAULT_CONFIG, questionDistribution: distribution })
                 setView('configuring')
               }}
-              className="h-11 flex-1 border-border bg-bento-card hover:bg-[#e4e4e7]/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors"
+              className="h-11 flex-1 border-border bg-bento-card hover:bg-foreground/5 text-muted-foreground/50 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors"
             >
               Retry Wrong Only
             </Button>
@@ -214,7 +214,7 @@ export function PracticeResults({
                 session.reset()
                 setView('dashboard')
               }}
-              className="h-11 px-6 border-border bg-bento-card hover:bg-[#e4e4e7]/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors"
+              className="h-11 px-6 border-border bg-bento-card hover:bg-foreground/5 text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-colors"
             >
               Finish Session
             </Button>

@@ -1,0 +1,13 @@
+{
+  "status": "initialized",
+  "activeChange": null,
+  "githubIssue": null,
+  "baseBranch": "main",
+  "branch": null,
+  "worktree": null,
+  "currentPhase": null,
+  "retryBudget": 3,
+  "phases": [],
+  "blockers": [],
+  "lastVerification": null
+}

@@ -372,7 +372,7 @@ export default function RubiksCubeWidget({ payload, dark: darkProp }: RubiksCube
                       className={cn(
                         'px-1.5 py-0.5 text-[9px] font-black tracking-wide rounded-[3px] border transition-all',
                         active
-                          ? 'bg-foreground text-background border-foreground'
+                          ? 'bg-primary text-primary-foreground border-primary'
                           : completed
                           ? 'opacity-40 border-muted-foreground'
                           : cn('opacity-20', borderClass)
@@ -403,7 +403,7 @@ export default function RubiksCubeWidget({ payload, dark: darkProp }: RubiksCube
                     'flex-1 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
                     stepIndex === solutionMoves.length
                       ? 'opacity-20 cursor-not-allowed border-border text-muted-foreground/30'
-                      : 'bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground'
+                      : 'bg-primary text-primary-foreground border-primary hover:bg-transparent hover:text-primary'
                   )}
                 >
                   Next Step

@@ -88,7 +88,7 @@ function PuzzleConceptWidget({ dark }: { dark: boolean }) {
                       className={cn(
                         'px-2.5 py-1 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                         active
-                          ? 'bg-foreground text-background border-foreground'
+                          ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
                       )}
                     >
@@ -220,7 +220,7 @@ function LegoScaffoldWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-3 py-1 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 sharing
-                  ? 'bg-foreground text-background border-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
@@ -546,7 +546,7 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 networks
-                  ? 'bg-foreground text-background border-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
@@ -561,7 +561,7 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 signLang
-                  ? 'bg-foreground text-background border-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
@@ -576,7 +576,7 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 translation
-                  ? 'bg-foreground text-background border-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
@@ -591,7 +591,7 @@ function CommunityStrategiesWidget({ dark }: { dark: boolean }) {
               className={cn(
                 'px-2 py-0.5 border text-[9px] font-bold uppercase tracking-wider rounded-[3px] transition-all',
                 commitment
-                  ? 'bg-foreground text-background border-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
               )}
             >
@@ -846,7 +846,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
               'px-3 py-1 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all',
               cursor === total - 1
                 ? 'opacity-25 cursor-not-allowed border-border text-muted-foreground/30'
-                : 'bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground'
+                : 'bg-primary text-primary-foreground border-primary hover:bg-transparent hover:text-primary'
             )}
           >
             Next
@@ -877,7 +877,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                       className={cn(
                         'px-2 py-0.5 rounded-[3px] border text-[8px] font-bold uppercase tracking-wider transition-all',
                         kw.matched
-                          ? 'border-foreground bg-foreground text-background font-black'
+                          ? 'border-primary bg-primary text-primary-foreground font-black'
                           : 'bg-transparent border-dashed text-muted-foreground border-border'
                       )}
                     >
@@ -890,7 +890,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             <div className="flex justify-between items-center">
               <button
                 onClick={() => setTextSubmitted(true)}
-                className="px-4 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground"
+                className="px-4 py-1.5 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all bg-primary text-primary-foreground border-primary hover:bg-transparent hover:text-primary"
               >
                 Submit
               </button>
@@ -930,7 +930,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                     className={cn(
                       'flex-1 py-3 border text-[11px] font-black uppercase tracking-wider rounded-[4px] transition-all',
                       active
-                        ? 'bg-foreground text-background border-foreground'
+                        ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-transparent border-border text-muted-foreground hover:border-foreground'
                     )}
                   >
@@ -967,7 +967,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                     className={cn(
                       'w-full text-left px-3 py-2.5 border text-[11px] rounded-[4px] transition-all flex items-start gap-2',
                       showResults && isCorrect
-                        ? 'bg-foreground text-background border-foreground'
+                        ? 'bg-primary text-primary-foreground border-primary'
                         : showResults && chosen && !isCorrect
                         ? 'border-border text-muted-foreground line-through opacity-50'
                         : 'border-border hover:border-foreground text-foreground'
@@ -1009,7 +1009,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
                       className={cn(
                         'w-full text-left px-2.5 py-2.5 border text-[10px] font-bold uppercase tracking-wide rounded-[4px] transition-all',
                         active
-                          ? 'bg-foreground text-background border-foreground'
+                          ? 'bg-primary text-primary-foreground border-primary'
                           : assigned
                           ? 'bg-transparent opacity-50 border-border'
                           : 'border-border hover:border-foreground text-foreground'
@@ -1056,7 +1056,7 @@ function QuizNavigator({ questions, dark }: { questions: any[], dark: boolean })
             <div className="flex justify-between items-center pt-2">
               <button
                 onClick={() => setMatchVerified(true)}
-                className="px-4 py-1.5 border text-[9px] font-black uppercase tracking-[0.2em] rounded-[4px] transition-all bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground"
+                className="px-4 py-1.5 border text-[9px] font-black uppercase tracking-[0.2em] rounded-[4px] transition-all bg-primary text-primary-foreground border-primary hover:bg-transparent hover:text-primary"
               >
                 Validate Pairs
               </button>

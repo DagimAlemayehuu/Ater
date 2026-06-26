@@ -144,7 +144,7 @@ export default function InteractiveLessonPlayer({ payload }: InteractiveLessonPl
         ) : (
           <button
             onClick={handleNext}
-            className="flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all bg-foreground text-background border-foreground hover:bg-transparent hover:text-foreground"
+            className="flex items-center gap-1.5 px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-all bg-primary text-primary-foreground border-primary hover:bg-transparent hover:text-primary"
           >
             Next
             <ChevronRight size={12} />
