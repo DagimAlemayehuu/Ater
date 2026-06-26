@@ -15,3 +15,4 @@
 - 2026-06-10 | apps/desktop/src/routes/onboarding.tsx | Fixed vault selection by avoiding backend restart during picker validation and creating the database folder before testing write access.
 - 2026-06-26 | apps/desktop/src/tests/InteractiveLesson.test.tsx | Pass required onNavigate callback to MarkdownViewer component to resolve type checking issues.
 - 2026-06-26 | apps/desktop/src/tests/StudySplitPane.test.tsx | Cast mockQuestion to any to bypass MCQ type mismatch and id type mismatches in MiniPracticeUI tests.
+- 2026-06-26 | apps/api/ | Normalize lookup_existing_hub paths to posix format and add SQLite connection destructors to resolve Windows database file locks.

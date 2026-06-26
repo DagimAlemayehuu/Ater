@@ -13,6 +13,13 @@ class TutorSessionManager:
         self.ai_service = ai_service  # AterService
         self._init_conn()
 
+    def __del__(self):
+        try:
+            if hasattr(self, 'conn') and self.conn:
+                self.conn.close()
+        except Exception:
+            pass
+
     def _init_conn(self):
         self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row

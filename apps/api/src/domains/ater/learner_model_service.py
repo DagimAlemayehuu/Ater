@@ -27,6 +27,13 @@ class LearnerModelManager:
         self.vault_path = Path(vault_path)
         self._init_conn()
 
+    def __del__(self):
+        try:
+            if hasattr(self, 'conn') and self.conn:
+                self.conn.close()
+        except Exception:
+            pass
+
     def _init_conn(self):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)

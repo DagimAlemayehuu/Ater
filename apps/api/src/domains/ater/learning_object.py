@@ -243,13 +243,13 @@ def lookup_existing_hub(vault_path: str, topic: str) -> dict | None:
                 stem_norm = stem.lower().replace("_", "").replace("hub", "")
                 
                 if stem_norm == target_norm:
-                    return {"path": str(file_path.relative_to(vault_dir)), "type": path_type}
+                    return {"path": Path(file_path.relative_to(vault_dir)).as_posix(), "type": path_type}
                 
                 meta_topic = meta.get("topic")
                 if meta_topic:
                     norm_meta_topic = normalize_title(str(meta_topic)).lower().replace("_", "")
                     if norm_meta_topic == target_norm:
-                        return {"path": str(file_path.relative_to(vault_dir)), "type": path_type}
+                        return {"path": Path(file_path.relative_to(vault_dir)).as_posix(), "type": path_type}
                         
                 aliases = meta.get("aliases")
                 if aliases:
@@ -257,11 +257,11 @@ def lookup_existing_hub(vault_path: str, topic: str) -> dict | None:
                         for alias in aliases:
                             norm_alias = normalize_title(str(alias)).lower().replace("_", "")
                             if norm_alias == target_norm:
-                                return {"path": str(file_path.relative_to(vault_dir)), "type": path_type}
+                                return {"path": Path(file_path.relative_to(vault_dir)).as_posix(), "type": path_type}
                     elif isinstance(aliases, str):
                         norm_alias = normalize_title(aliases).lower().replace("_", "")
                         if norm_alias == target_norm:
-                            return {"path": str(file_path.relative_to(vault_dir)), "type": path_type}
+                            return {"path": Path(file_path.relative_to(vault_dir)).as_posix(), "type": path_type}
             except Exception:
                 continue
     return None

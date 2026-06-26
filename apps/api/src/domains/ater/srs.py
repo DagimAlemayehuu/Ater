@@ -85,6 +85,13 @@ class SRSEngine:
         self.db = sqlite3.connect(str(db_path), check_same_thread=False)
         self._init_db()
 
+    def __del__(self):
+        try:
+            if hasattr(self, 'db') and self.db:
+                self.db.close()
+        except Exception:
+            pass
+
     def _init_db(self):
         self.db.execute("""
             CREATE TABLE IF NOT EXISTS srs_cards (

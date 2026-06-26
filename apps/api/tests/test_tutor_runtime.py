@@ -73,6 +73,7 @@ Mechanism details.
 def srs_db(temp_vault):
     db_path = temp_vault / "Inbox/ater_queue.db"
     engine = SRSEngine(db_path)
+    engine.db.close()
     return db_path
 
 def test_sqlite_schema_init(srs_db):
