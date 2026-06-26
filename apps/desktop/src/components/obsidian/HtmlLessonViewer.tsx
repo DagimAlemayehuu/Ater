@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useMemo } from 'react'
 import { useTheme } from '@/context/theme-provider'
 
 type HtmlLessonViewerProps = {
@@ -20,6 +20,14 @@ export function HtmlLessonViewer({
 }: HtmlLessonViewerProps) {
   const { resolvedTheme } = useTheme()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const processedContent = useMemo(() => {
+    if (!content) return content
+    if (content.includes('<html')) {
+      return content.replace('<html', `<html class="${resolvedTheme}"`)
+    }
+    return content
+  }, [content, resolvedTheme])
   useEffect(() => {
     if (!onNavigate || !activePath) return
 
@@ -116,7 +124,7 @@ export function HtmlLessonViewer({
       <iframe
         ref={iframeRef}
         title={title}
-        srcDoc={content}
+        srcDoc={processedContent}
         sandbox="allow-scripts allow-forms"
         className="flex-1 w-full bg-bento-panel border-none"
       />
