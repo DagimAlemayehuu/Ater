@@ -91,6 +91,7 @@ def test_learner_profile_schema_and_persistence(temp_vault, db_path):
     conn.row_factory = sqlite3.Row
     res = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='learner_profile_stats'").fetchone()
     assert res is not None
+    conn.close()
     
     # Update profile on a topic with no prior entries
     profile = manager.update_profile("Git")
@@ -101,10 +102,13 @@ def test_learner_profile_schema_and_persistence(temp_vault, db_path):
     assert profile.calibration_status == "calibrated"
     
     # Verify row was persisted in database
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
     row = conn.execute("SELECT * FROM learner_profile_stats WHERE topic='Git'").fetchone()
     assert row is not None
     assert row["notes_total"] == 2
     assert row["notes_completed"] == 0
+    conn.close()
 
 def test_calibration_and_misconceptions(temp_vault, db_path):
     srs = SRSEngine(db_path)
@@ -135,12 +139,14 @@ def test_calibration_and_misconceptions(temp_vault, db_path):
         "Git", "Git_Intro", "Confused working tree with index.", datetime.now().isoformat()
     ))
     conn.commit()
+    conn.close()
     
     profile = manager.update_profile("Git")
     assert profile.calibration_status == "overconfident"
     assert "Confused working tree with index." in profile.common_misconceptions
     
     # Underconfident scenario: high ratio of correct answers wagered with low confidence
+    conn = sqlite3.connect(str(db_path))
     conn.execute("DELETE FROM tutor_sessions")
     wagers_under = {
         "q1": {"wager": "low", "correct": True},
@@ -155,6 +161,7 @@ def test_calibration_and_misconceptions(temp_vault, db_path):
         json.dumps([]), json.dumps(wagers_under), 0, "completed", datetime.now().isoformat()
     ))
     conn.commit()
+    conn.close()
     
     profile2 = manager.update_profile("Git")
     assert profile2.calibration_status == "underconfident"

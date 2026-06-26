@@ -92,6 +92,7 @@ def test_sqlite_schema_init(srs_db):
     assert "hub_path" in cols
     assert "score" in cols
     assert "status" in cols
+    conn.close()
 
 def test_tutor_session_state_machine(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)
@@ -155,6 +156,7 @@ def test_misconception_logging(temp_vault, srs_db):
     assert row is not None
     assert row["note_title"] == "Git_Three_State_Model"
     assert "q1" in row["misconception_text"] or "concept" in row["misconception_text"]
+    conn.close()
 
 def test_tutor_advance_progression(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)

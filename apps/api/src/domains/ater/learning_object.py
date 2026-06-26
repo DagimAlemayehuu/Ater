@@ -73,7 +73,7 @@ def get_artifact_pack_path(note_path: str) -> str:
     """Builds the deterministic path for an artifact pack relative to the vault root."""
     note_path_obj = Path(note_path)
     norm_stem = normalize_title(note_path_obj.stem)
-    return str(note_path_obj.parent / "artifacts" / f"{norm_stem}.artifacts.json")
+    return (note_path_obj.parent / "artifacts" / f"{norm_stem}.artifacts.json").as_posix()
 
 def build_hub_content(topic: str, learning_mode: str, chapters: list[str], chapter_notes: dict[str, list[str]] | None = None) -> str:
     """Constructs Learning Hub markdown frontmatter and body."""

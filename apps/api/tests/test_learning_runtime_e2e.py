@@ -552,6 +552,7 @@ class TestPhase4TutorPersistence:
         ).fetchone()
         assert row is not None, "Session must be persisted to the tutor_sessions table"
         assert row["score"] == 0
+        conn.close()
 
     def test_wager_scoring_correct_high_confidence(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)
@@ -589,6 +590,7 @@ class TestPhase4TutorPersistence:
             "Misconception must be persisted to the user_misconceptions table"
         )
         assert row["note_title"] == "Git_Commit_Graph"
+        conn.close()
 
     def test_score_clamped_at_zero(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)
@@ -606,6 +608,7 @@ class TestPhase4TutorPersistence:
             "SELECT score FROM tutor_sessions WHERE session_id = 'e2e_sess_clamp'"
         ).fetchone()
         assert row["score"] >= 0, "Score must be clamped at 0 and never go negative"
+        conn.close()
 
 
 # ===========================================================================
@@ -987,6 +990,7 @@ class TestPhase8LearnerRecalibration:
             ),
         )
         conn.commit()
+        conn.close()
 
         profile = manager.update_profile("Git")
         assert profile.calibration_status == "overconfident", (
