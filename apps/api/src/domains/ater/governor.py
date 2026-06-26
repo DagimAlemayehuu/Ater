@@ -1,7 +1,6 @@
 import time
 import asyncio
 import sqlite3
-import json
 import hashlib
 from pathlib import Path
 from collections import deque
@@ -359,7 +358,7 @@ class TokenGovernor:
                     "used_tpd": r[1] or 0,
                     "used_rpd": r[2] or 0
                 } for r in cursor.fetchall()]
-        except Exception as e:
+        except Exception:
             return []
 
     def _init_db(self):

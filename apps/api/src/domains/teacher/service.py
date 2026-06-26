@@ -193,7 +193,6 @@ def _markdown_fragment_to_html(markdown_fragment: str) -> str:
             continue
         if line.startswith("- "):
             flush_paragraph()
-            items = [line]
             # The simple renderer handles one list item at a time unless adjacent
             html_parts.append(f"<ul><li>{_inline_markdown_to_html(line[2:].strip())}</li></ul>")
             continue
@@ -240,7 +239,6 @@ class TeacherService:
         history: List[Dict[str, str]],
         secrets: Optional[Any] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
-        user_message = ""
         original_prompt = ""
 
         # Let's find the original user prompt (the first user message)
@@ -262,7 +260,7 @@ class TeacherService:
         # Get latest user message for the current chat action
         for message in reversed(history):
             if message.get("role") == "user":
-                user_message = message.get("content", "")
+                message.get("content", "")
                 break
 
         topic = _title_from_prompt(original_prompt)

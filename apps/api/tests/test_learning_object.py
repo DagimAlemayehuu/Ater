@@ -1,7 +1,6 @@
 import tempfile
 import json
 from pathlib import Path
-import pytest
 from src.domains.ater.learning_object import (
     normalize_title,
     get_hub_path,

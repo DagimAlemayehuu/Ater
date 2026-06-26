@@ -1,8 +1,7 @@
 import uuid
-import json
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from .academic_db import AcademicDB
 from .service import AterService
 

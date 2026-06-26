@@ -1,85 +1,61 @@
-# ROADMAP.md — Ater Adaptive Learning Runtime Roadmap
+# ROADMAP.md - Ater Adaptive Learning Runtime
 
-This document outlines the product vision, directory routing rules, multi-phase implementation roadmap, and active phase gaps for the Ater Adaptive Learning Runtime.
+This document records durable product direction only. Active implementation work belongs in OpenSpec changes, not in this file.
 
----
+## Product Vision
 
-## 1. Product Vision & Learning Loop
-Ater is evolving from a static note-generation pipeline into a local-first **adaptive learning runtime**. It runs a continuous learning loop:
-```
+Ater is evolving from a note-generation pipeline into a local-first adaptive learning runtime:
+
+```text
 Teach -> Interact -> Ask -> Check -> Diagnose -> Remediate -> Advance -> Review
 ```
-* **Source of Truth:** Plain Markdown files inside your Obsidian Vault.
-* **Durable Delivery:** HTML lessons serve as offline-first, interactive learning representations of the notes.
-* **Weak-Model Safe:** Interactive objects are structured as versioned, editable JSON **artifact packs** so that lightweight local models can render them consistently without generation failure.
 
----
+Markdown inside the Obsidian Vault remains the source of truth. Durable HTML lessons and structured artifact packs expand that Markdown into offline interactive learning experiences.
 
-## 2. Core Learning Hierarchy & Folder Routes
+## Learning Hierarchy
+
+```text
+Hub
+  -> Chapter files
+      -> Atomic Notes
+          -> Markdown source
+          -> Artifact pack
+          -> HTML lesson variants
 ```
-Hub (Obsidian file)
-  └── Chapter files (Markdown)
-       └── Atomic Notes (Markdown + metadata)
-            ├── Artifact Pack (JSON)
-            └── HTML Lesson Variants (simple, deep, cram, exam)
+
+## Vault Routing
+
+Self-study and Teach Anything:
+
+```text
+Hub:     database/learning paths/
+Content: database/General/<Topic>/
 ```
 
-### Routing Invariants
-* **Self-Study (Teach Anything):**
-  * Hub: `database/learning paths/`
-  * Content: `database/General/<Topic>/`
-* **School Coursework:**
-  * Hub: `database/study planner/`
-  * Content: `database/<Semester>/<Course>/<Unit>/`
+School coursework:
 
----
+```text
+Hub:     database/study planner/
+Content: database/<Semester>/<Course>/<Unit>/
+```
 
-## 3. Development Phases & Scope
+If Ater finds an existing relevant Hub, it should extend that Hub rather than creating duplicate learning paths.
 
-### Phase 1: `learning-object-model` [VALIDATED]
-* **Scope:** Defines the directory structure, chapter schemas, note link mappings, and basic versioning for artifact packs.
+## Capability Areas
 
-### Phase 2: `teach-anything-planner`
-* **Scope:** Classifier to determine user intent, lookup existing Hubs, and plan chapters/atomic notes progressively.
+- Learning object model: Hubs, Chapters, Atomic Notes, lesson variants, artifact pack versioning.
+- Teach Anything planner: intent classification, Hub lookup, chapter planning, progressive note generation.
+- Atomic note lesson compiler: durable offline HTML lessons compiled from Markdown.
+- Artifact packs: structured interactive objects such as reveal cards, matching pairs, code traces, formula cards, simulations, and proof steps.
+- Tutor runtime: quiz checking, wagers, mistake diagnosis, lesson event logging.
+- Cram mode: high-yield scheduling under strict time limits.
+- Source-driven learning: local document extraction and source-grounded learning paths.
+- Adaptive learner model: FSRS, confidence calibration, misconception history, and next-lesson recommendations.
 
-### Phase 3: `atomic-note-lesson-compiler`
-* **Scope:** Compiles Obsidian Markdown into standalone interactive HTML lessons with Hub/chapter navigation.
+## Execution Rule
 
-### Phase 4: `artifact-pack-v1`
-* **Scope:** Introduces JSON schemas for interactive objects (e.g. `reveal_card`, `matching_pairs`, `code_trace`, `formula_card`).
+Every new capability or hardening pass must be represented as an OpenSpec change under `openspec/changes/<change-name>/` and follow:
 
-### Phase 5: `tutor-runtime`
-* **Scope:** Powers active quiz checking, wagers, mistake diagnoses, and lesson event logging.
-
-### Phase 6: `cram-mode`
-* **Scope:** Priority ranker to optimize high-yield study schedules under strict time limits.
-
-### Phase 7: `source-driven-learning`
-* **Scope:** Local PDF/source document extraction to automatically scaffold complete hubs from documents.
-
-### Phase 8: `advanced-artifacts`
-* **Scope:** Introduces advanced templates like SQL Query playgrounds, simulations, and proof steps.
-
-### Phase 9: `adaptive-learner-model`
-* **Scope:** Integrates the FSRS scheduler, confidence calibration, and next-lesson recommendation sorting.
-
----
-
-## 4. Active Phase Gaps & Hardening Checklist
-*These are outstanding gaps to address during the final hardening pass of each phase.*
-
-### Phase 1 Gaps
-- [ ] **Lesson Variant Verification:** Ensure `validate_learning_objects` checks that all lesson paths exist.
-- [ ] **Fragile Hub Lookup:** Verify `lookup_existing_hub` checks for `type: Learning Hub` in frontmatter instead of matching any arbitrary Markdown file.
-- [ ] **Title Normalization:** Sanitize filename characters (e.g. `\`, `/`, `*`, `?`) during normalization.
-
-### Phase 3 Gaps
-- [ ] **YAML Formatting:** Ensure `compiler_service.py` uses `VaultManager.dump_obsidian_yaml` instead of `frontmatter.dumps` to prevent breaking double-quoted wikilink rules.
-- [ ] **Tauri Relative Links:** Validate that relative links (e.g. `./Prev_Note.simple.html`) resolve correctly under Tauri's `convertFileSrc` file protocol.
-
-### Phase 4 Gaps
-- [ ] **Mismatched Paths:** Standardize the artifact pack write path. The planner writes to `database/artifacts/` but the service expects them nested under the specific chapter directory.
-- [ ] **Pydantic Validation Coercion:** Add fallback structures for weak models returning invalid type coordinates (e.g. integers instead of strings) in execution steps.
-
-### Phase 5 Gaps
-- [ ] **JavaScript Template Escape:** Escape javascript brackets as `{{` and `}}` in `compiler_service.py` to prevent Python f-string SyntaxErrors.
+```text
+sdlc-plan -> sdlc-orchestrate -> sdlc-verify
+```

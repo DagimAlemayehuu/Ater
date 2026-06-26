@@ -28,7 +28,6 @@ Invariants (enforced by this test suite)
 import os
 import json
 import sqlite3
-import tempfile
 import pytest
 from pathlib import Path
 from datetime import datetime
@@ -46,8 +45,6 @@ os.environ.setdefault("ATER_TEST_MODE", "1")
 from src.domains.ater.planner import (
     AterPlanner,
     IntentClarificationResponse,
-    CurriculumPlan,
-    PlannedChapter,
 )
 from src.domains.ater.compiler_service import AterLessonCompiler
 from src.domains.ater.learning_object import (
@@ -212,7 +209,7 @@ class TestPhase1Planning:
     def test_write_curriculum_creates_hub(self, git_vault, git_curriculum):
         secrets = _DummySecrets(str(git_vault))
         planner = AterPlanner(secrets, llm=MagicMock())
-        result = planner.write_curriculum(git_curriculum, mode="Generate All")
+        planner.write_curriculum(git_curriculum, mode="Generate All")
 
         hub_path = git_vault / "database" / "learning paths" / "Git_Hub.md"
         assert hub_path.exists(), "Learning Hub file must be created under 'database/learning paths/'"
@@ -963,7 +960,7 @@ class TestPhase8LearnerRecalibration:
 
     def test_overconfidence_detected_from_wager_data(self, git_vault, srs_db):
         self._setup_vault(git_vault)
-        srs = SRSEngine(srs_db)  # ensure schema is present
+        SRSEngine(srs_db)  # ensure schema is present
         manager = LearnerModelManager(srs_db, git_vault)
 
         wagers = {
@@ -999,7 +996,7 @@ class TestPhase8LearnerRecalibration:
 
     def test_next_lesson_respects_prerequisites(self, git_vault, srs_db):
         self._setup_vault(git_vault)
-        srs = SRSEngine(srs_db)
+        SRSEngine(srs_db)
         manager = LearnerModelManager(srs_db, git_vault)
 
         recs = manager.recommend_next_lessons("Git", limit=5)

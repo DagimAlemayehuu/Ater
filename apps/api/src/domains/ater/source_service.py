@@ -3,7 +3,7 @@ import re
 import sys
 import json
 from typing import Dict, Any, List, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from pathlib import Path
 
 from src.domains.ater.planner import AterPlanner

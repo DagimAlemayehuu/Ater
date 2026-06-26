@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any, Optional
 import asyncio
+import json
 import ruamel.yaml
 import uuid
 from pathlib import Path
@@ -505,7 +506,6 @@ async def create_vault_row(db_name: str, req: CreateRowRequest, secrets: AppSecr
 
     try:
 
-        schema_props = {}
         # In folder-driven mode, we don't look at bases for ID generation.
         # Future: infer ID generation from existing file patterns if needed.
 
@@ -935,7 +935,7 @@ async def get_vault_graph(secrets: AppSecrets = Depends(get_app_secrets)):
     
     # regex to find unescaped wikilinks like [[Link]] or [[Link|Alias]]
     wiki_link_pattern = re.compile(r"\[\[(.*?)\]\]")
-    tags_pattern = re.compile(r"(?:^|\s)#([a-zA-Z0-9_\-\/]+)")
+    re.compile(r"(?:^|\s)#([a-zA-Z0-9_\-\/]+)")
     
     # Store all path mappings for link resolution: stem -> relative path
     # Obsidian links are often just the file stem (e.g. "My Note" links to "subfolder/My Note.md")

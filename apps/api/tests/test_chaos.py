@@ -6,19 +6,16 @@ import signal
 import shutil
 import psutil
 import pytest
-import sqlite3
 import traceback
 import portalocker
 from pathlib import Path
-from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.domains.ater.watcher import AterQueueManager
 from src.domains.ater.service import AterService
-from src.domains.ater.governor import governor, DailyLimitExceededException
+from src.domains.ater.governor import governor
 from src.domains.obsidian.client import ObsidianClient
 from src.api.deps import AppSecrets
 
@@ -65,7 +62,7 @@ async def run_massive_ingest_meltdown():
     print(f"Baseline Memory: {start_mem:.2f} MB")
     
     # 200 Mock PDFs
-    print(f"Blasting 200 files...")
+    print("Blasting 200 files...")
     for i in range(200):
         f = INBOX_PATH / f"stress_test_{i}.pdf"
         f.write_text("Mock PDF Content " * 100)

@@ -2,9 +2,9 @@ import sqlite3
 import json
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from .learning_object import lookup_existing_hub
 

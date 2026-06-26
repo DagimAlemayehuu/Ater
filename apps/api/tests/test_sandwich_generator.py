@@ -1,9 +1,5 @@
 import pytest
-import asyncio
-import json
 from unittest.mock import MagicMock
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
 
 from src.domains.ater.service import AterService, SynthesisNoteResponse
 from src.domains.ater.agents import TheoryAgent, PractitionerAgent, QuestionAgent, StructuredArtifactsResponse

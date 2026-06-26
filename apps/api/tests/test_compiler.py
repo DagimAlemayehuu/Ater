@@ -1,7 +1,5 @@
 import tempfile
-import json
 from pathlib import Path
-import pytest
 from fastapi.testclient import TestClient
 from src.api.main import app
 from src.domains.ater.compiler_service import AterLessonCompiler

@@ -1,7 +1,6 @@
-import json
 import uuid
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from .academic_db import AcademicDB
 from src.domains.ai.factory import ModelFactory

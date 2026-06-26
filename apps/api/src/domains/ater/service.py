@@ -9,14 +9,13 @@ from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from pathlib import Path
 from datetime import datetime
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 # Robust PDF loading, SRS, quiz generation, and session management are delegated to separate modular subcomponents.
 from .pdf_extractor import load_pdf_robust as _load_pdf_robust
 from .srs_engine import list_practices as _list_practices_ext, update_practice_score as _update_practice_score_ext
 from .quiz_builder import (
     determine_dynamic_question_count,
     select_dynamic_question_types,
-    rate_candidate_quiz as _rate_candidate_quiz_ext,
     generate_practice as _generate_practice_ext
 )
 from .session_store import SessionStore
@@ -24,7 +23,7 @@ from .session_store import SessionStore
 from .vault_manager import VaultManager
 from .deployer import AterDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, QuizAuditorAgent, EpistemicClassifierAgent, MetaScannerAgent, DOMAIN_MATRIX, get_professional_domain, get_persona, normalize_mode
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, EpistemicClassifierAgent, MetaScannerAgent, get_professional_domain, get_persona, normalize_mode
 from .router import router
 from .templates import render_atomic_note, build_skeleton_note, build_dynamic_section_plan
 from .healer import LogicHealer
@@ -1667,7 +1666,7 @@ class AterService:
 
             from .embeddings_linker import EmbeddingsLinker
             linker = EmbeddingsLinker()
-            print(f"[Ater Service] Activating EmbeddingsLinker pipeline...")
+            print("[Ater Service] Activating EmbeddingsLinker pipeline...")
             all_atomic_notes = linker.map_prerequisites(all_atomic_notes, full_text=full_text)
 
             # Phase 1.5: Epistemic Classification (HYDRA)
@@ -1944,7 +1943,7 @@ class AterService:
             note_schema.source_context = healer.clean_ocr_noise(note_schema.source_context)
 
 
-        title_readable = current_note_title.replace("_", " ")
+        current_note_title.replace("_", " ")
         member_concepts = ", ".join([f"[[{p}]]" for p in note_schema.prerequisites])
 
         sys_prompt = f"""You are a world-class Pedagogue and Senior Systems Engineer.
@@ -2111,8 +2110,8 @@ generated: true"""
             session["target_hub"] = self._find_hub(saved_id)
         
         # THIN CONTEXT PROTOCOL
-        initial_messages = session["messages"][:2]
-        plan_response = [m for m in session["messages"] if isinstance(m, AIMessage) and "# Knowledge Asset Plan" in m.content][:1]
+        session["messages"][:2]
+        [m for m in session["messages"] if isinstance(m, AIMessage) and "# Knowledge Asset Plan" in m.content][:1]
         
         current_batch = session.get("current_batch", 0)
         total_batches = session.get("total_batches", 1)
@@ -2127,19 +2126,18 @@ generated: true"""
                     batch_type = b.get("type", "atomic")
                     break
         
-        notes_context = ", ".join([f"[[{n}]]" for n in batch_notes])
+        ", ".join([f"[[{n}]]" for n in batch_notes])
 
         deployment_results = []
         try:
             # Mandatory framing for ALL notes
             primary_language = session["metadata"].get("primary_language", "General")
             all_note_titles = [n["title"] for n in session["metadata"].get("atomic_notes", [])]
-            all_concepts_list = ", ".join([f"[[{t}]]" for t in all_note_titles])
+            ", ".join([f"[[{t}]]" for t in all_note_titles])
             plan_obj = SovereignPlan(**session["metadata"])
             course = plan_obj.course
             semester = plan_obj.semester
             unit_num = plan_obj.unit
-            hub_title = plan_obj.hub_title
             
             if "all_note_probes" not in session:
                 session["all_note_probes"] = {}
@@ -2273,7 +2271,6 @@ generated: true"""
                             }
 
                             generation_attempts = 0
-                            last_candidate_markdown = None
                             max_generation_attempts = 3
 
                             while True:
@@ -2608,7 +2605,6 @@ generated: true"""
                                     }
                                     yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
                                     final_markdown = f"---\n{yaml_frontmatter}---\n{body_content}"
-                                    last_candidate_markdown = final_markdown
 
                                     # 5. Validation Check
                                     try:
@@ -2830,7 +2826,7 @@ generated: true"""
                             )
                             
                             # ── Auto-Weaver Script ──
-                            print(f"[Ater Service] Running Auto-Weaver script...")
+                            print("[Ater Service] Running Auto-Weaver script...")
                             auto_weave_wikilinks(unit_dir)
                             # Resolve hub file (may be the anchored Study Planner hub)
                             relative_path = local_results[0]["path"]
@@ -2950,7 +2946,7 @@ generated: true"""
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
             
             try:
-                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
+                Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
@@ -3001,7 +2997,7 @@ generated: true"""
             _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
             
             try:
-                rel_inbox = Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
+                Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
             except Exception:
                 source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"

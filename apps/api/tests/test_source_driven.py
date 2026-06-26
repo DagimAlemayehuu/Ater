@@ -1,6 +1,5 @@
 import pytest
 import os
-import sys
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -96,7 +95,7 @@ async def test_generate_grounded_curriculum_and_write(temp_vault):
     assert result_curr.notes[0].citations[0].pages == [12, 13]
     
     # Write to Vault and verify sources frontmatter serialization
-    write_result = planner.write_grounded_curriculum(result_curr, mode="Generate All")
+    planner.write_grounded_curriculum(result_curr, mode="Generate All")
     
     note_path = temp_vault / "database/General/Git_Rebase/01_Branch_Management/Git_Rebase_Basics.md"
     assert note_path.exists()

@@ -16,11 +16,10 @@ Design goals for weak LLMs:
 
 import re
 import json
-import asyncio
 import hashlib
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 from datetime import datetime
 
 logger = logging.getLogger("Ater")
@@ -335,19 +334,19 @@ class VaultWriter:
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         lines = [
-            f"---",
+            "---",
             f"title: {safe_name} — Reference Vault",
             f"hub: {hub_id}",
             f"source: {source_name}",
             f"created: {now}",
             f"total_questions: {len(questions)}",
-            f"tags: [reference-vault, practice]",
-            f"---",
-            f"",
+            "tags: [reference-vault, practice]",
+            "---",
+            "",
             f"# {safe_name} — Question Vault",
-            f"",
+            "",
             f"> Source: `{source_name}` | Hub: `{hub_id}` | Generated: {now}",
-            f"",
+            "",
         ]
 
         q_num = 1

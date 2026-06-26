@@ -1,4 +1,3 @@
-import pytest
 from src.domains.ater.cram_service import calculate_weakness_score, calculate_phase_allocations, check_rescue_mode, filter_question_mix, CramPhase
 
 def test_phase_allocations():
@@ -33,9 +32,9 @@ def test_fallback_scoring():
     assert fallback > 0
 
 def test_rescue_mode():
-    assert check_rescue_mode(4.0, 60) == True
-    assert check_rescue_mode(8.0, 60) == True # 8 < 60*0.15 = 9
-    assert check_rescue_mode(15.0, 60) == False
+    assert check_rescue_mode(4.0, 60)
+    assert check_rescue_mode(8.0, 60) # 8 < 60*0.15 = 9
+    assert not check_rescue_mode(15.0, 60)
 
 def test_filter_question_mix():
     questions = [

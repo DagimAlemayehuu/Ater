@@ -4,7 +4,7 @@ import asyncio
 import time
 import random
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -152,9 +152,9 @@ def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict
             "question": f"Which of the following statements best describes the core mechanism or operational significance of {concept} in the context of {note_title}?",
             "options": {
                 "A": f"It acts as a primary driving mechanism to achieve strategic outcomes defined in the {note_title} framework.",
-                "B": f"It has no operational relevance and is considered a secondary, passive concept.",
+                "B": "It has no operational relevance and is considered a secondary, passive concept.",
                 "C": f"It represents an external, ungrounded variable that operates outside of the {note_title} domain.",
-                "D": f"It functions as a temporary measure that directly contradicts the stable principles of the unit."
+                "D": "It functions as a temporary measure that directly contradicts the stable principles of the unit."
             },
             "answer": "A",
             "explanation": f"The core definition and application of {concept} is a vital and active mechanism within the {note_title} framework."
@@ -197,14 +197,14 @@ def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict
             "type": "order",
             "question": f"Arrange the typical operational phases or steps in the execution of {concept} (from {note_title}) in the correct sequence:",
             "steps": [
-                f"Step 2: Assessing resource constraints and tactical trade-offs.",
+                "Step 2: Assessing resource constraints and tactical trade-offs.",
                 f"Step 1: Identifying the core objectives of {concept}.",
-                f"Step 3: Direct application and monitoring of results."
+                "Step 3: Direct application and monitoring of results."
             ],
             "answer": [
                 f"Step 1: Identifying the core objectives of {concept}.",
-                f"Step 2: Assessing resource constraints and tactical trade-offs.",
-                f"Step 3: Direct application and monitoring of results."
+                "Step 2: Assessing resource constraints and tactical trade-offs.",
+                "Step 3: Direct application and monitoring of results."
             ],
             "explanation": f"Ensures the student can causally trace the sequential steps of {concept}."
         }
@@ -222,15 +222,15 @@ def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict
             "question": f"Synthesize a comprehensive strategic framework showing how {concept} (from {note_title}) interacts with the broader goals of {note_title}.",
             "answer": f"A perfect synthesis outlines the direct relationship between {concept} and the secondary variables in the unit, highlighting the critical trade-offs and structural implications.",
             "required_keywords": [w.lower() for w in re.findall(r"[A-Za-z]{4,}", concept.lower())[:3]] or ["synthesis"],
-            "explanation": f"Assesses higher-order conceptual synthesis and integration skills."
+            "explanation": "Assesses higher-order conceptual synthesis and integration skills."
         }
     elif q_type == "calculation":
         return {
             "type": "calculation",
             "question": f"Given a state capability factor of 0.8 and a focus weighting of 0.6 for {concept} in {note_title}, calculate the overall priority score.",
-            "content": f"State Capability: 0.8\nFocus Weighting: 0.6",
+            "content": "State Capability: 0.8\nFocus Weighting: 0.6",
             "answer": "0.48",
-            "explanation": f"The priority score is calculated by multiplying capability and focus weighting: 0.8 * 0.6 = 0.48."
+            "explanation": "The priority score is calculated by multiplying capability and focus weighting: 0.8 * 0.6 = 0.48."
         }
     elif q_type == "data_analysis":
         return {
@@ -251,7 +251,7 @@ def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict
         return {
             "type": "trace",
             "question": f"Trace the step-by-step causal pathway through which {concept} influences outcomes in {note_title}.",
-            "answer": f"Step 1: Ingestion of concepts. Step 2: Strategic alignment. Step 3: Positive feedback loop.",
+            "answer": "Step 1: Ingestion of concepts. Step 2: Strategic alignment. Step 3: Positive feedback loop.",
             "explanation": f"Checks step-by-step causal tracing of {concept} in the system."
         }
     else:
@@ -529,7 +529,7 @@ async def generate_practice(
     if total_q <= 0:
         raise ValueError("Total requested questions is 0. Please ensure the question distribution specifies at least one question type with a count greater than 0.")
     
-    dist_str = ", ".join([f"{count} {type}" for type, count in distribution.items() if count > 0])
+    ", ".join([f"{count} {type}" for type, count in distribution.items() if count > 0])
     
     pedagogy_prompts = []
     if config.difficulty == "L3":
@@ -685,7 +685,7 @@ async def generate_practice(
                     return await task_fn()
                 except DailyLimitExceededException as e:
                     if str(e) == "ROTATION_TRIGGERED":
-                        print(f"[Ater Service] 🔄 Governor triggered rotation during practice generation. Swapping LLM key...")
+                        print("[Ater Service] 🔄 Governor triggered rotation during practice generation. Swapping LLM key...")
                         swap_api_key_fn(governor._active_key)
                         continue
                     logger.error(f"[Ater Service] Daily limit exceeded in practice generation: {e}")
@@ -835,7 +835,7 @@ async def generate_practice(
     
     questions = final_questions
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    quiz_title = f"{hub['title']} - {config.difficulty} Mastery Session"
+    f"{hub['title']} - {config.difficulty} Mastery Session"
     quiz_filename = f"Practice_{timestamp}.md"
     quiz_path = practice_dir / quiz_filename
     

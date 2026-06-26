@@ -1,8 +1,7 @@
-import json
 import tempfile
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 
 from src.domains.ater.planner import (
     AterPlanner,
@@ -10,8 +9,6 @@ from src.domains.ater.planner import (
     CurriculumPlan,
     PlannedChapter
 )
-from src.domains.ater.vault_manager import VaultManager
-from src.domains.ater import learning_object as lo
 
 class DummySecrets:
     def __init__(self, vault_path):

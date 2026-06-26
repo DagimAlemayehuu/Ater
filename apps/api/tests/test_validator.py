@@ -1,4 +1,3 @@
-import pytest
 from src.domains.ater.validator import AterValidator
 
 def test_validator_perfect_note():

@@ -6,7 +6,6 @@ exclusively via localhost HTTP. All secret keys are passed per-request
 via HTTP headers (X-Gemini-Key, X-Vault-Path).
 """
 
-import signal
 import sys
 import os
 import argparse

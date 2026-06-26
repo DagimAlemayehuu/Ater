@@ -1,4 +1,3 @@
-import pytest
 import json
 import re
 from src.domains.ater.router import DomainRouter
@@ -286,7 +285,6 @@ Details of the formal translation.
 
 def test_wikilink_density_enforcement():
     """enforce_wikilink_density must trim sections exceeding 5 wikilinks."""
-    import re
     from src.domains.ater.healer import LogicHealer
     healer = LogicHealer(canonical_titles=set())
     body = (
@@ -307,7 +305,6 @@ def test_wikilink_density_enforcement():
 
 def test_walkthrough_normalization():
     """purge_pedagogical_artifacts must renumber walkthrough steps sequentially."""
-    import re
     from src.domains.ater.post_processing import sanitize_body
     body = (
         "## 5. Walkthrough\n"
@@ -569,9 +566,9 @@ def test_read_pdf_integration(tmp_path):
     assert "Error reading" in res or "pypdf" in res.lower()
 
 def test_search_web_and_schemas(tmp_path):
-    from src.domains.ater.assistant import AterAssistant, SearchWebInput
+    from src.domains.ater.assistant import AterAssistant
     from types import SimpleNamespace
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import patch
 
     secrets = SimpleNamespace(
         vault_path=str(tmp_path),

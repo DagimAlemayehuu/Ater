@@ -1,7 +1,7 @@
 import hashlib
 import numpy as np
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any
 from .academic_db import AcademicDB
 from .embeddings_linker import EmbeddingsLinker
 

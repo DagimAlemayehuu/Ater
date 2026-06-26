@@ -1,10 +1,8 @@
 import sqlite3
 import shutil
-import os
 import sys
 import asyncio
 import logging
-import traceback
 import json
 from pathlib import Path
 from datetime import datetime
@@ -615,7 +613,7 @@ class AterQueueManager:
                     except Exception as e:
                         err_msg = str(e).lower()
                         if "429" in err_msg or "rate limit" in err_msg:
-                            self.last_action = f"Rate Limit Detected: Waiting for Governor..."
+                            self.last_action = "Rate Limit Detected: Waiting for Governor..."
                             watcher_logger.warning(f"Rate limit hit for {path.name}. Sleeping 10s...")
                             await asyncio.sleep(10)
                         else:

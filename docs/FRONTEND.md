@@ -33,7 +33,7 @@ All client-side routes reside in `apps/desktop/src/routes/`:
 ---
 
 ## 4. Visual Design Rules
-For visual consistency, all developers/agents must conform to the token system in **[docs/Architecture/DESIGN.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/Architecture/DESIGN.md)**:
+For visual consistency, all developers/agents must conform to the token system in **[docs/DESIGN.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/DESIGN.md)**:
 * **Anti-Generic Policy:** Never introduce bright, standard SaaS gradients (purple-to-blue) or card-nesting bloat. The UI is a "scientific laboratory console."
 * **Industrial Hues:** Use only HSL 240-scale de-warmed grays (`--background: hsl(240, 5%, 7%)`).
 * **Typography:** Use the Outfit font globally for all elements (body, buttons, and code blocks). No secondary font families allowed.

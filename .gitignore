@@ -63,6 +63,7 @@ ENV/
 .python-version
 
 # Local SQLite databases/journals (from tests or runs)
+apps/api/ater.db
 *.db-shm
 *.db-wal
 
@@ -72,6 +73,9 @@ ENV/
 .all_sessions
 .antigravitycli/
 .system/
+.agent/
+.hyperframes/
+agent-config-backup/
 
 # Personal screenshot or temp files
 CleanShot *.png

@@ -1624,7 +1624,7 @@ class AterAssistant:
             return "Error: Vault path not configured."
         try:
             # We call the FastAPI endpoint or service directly to validate
-            service = AterService(self.secrets)
+            AterService(self.secrets)
             # Find the actual FSRS note path or resolve relative path
             # Resolve db_path
             db_path = Path(self.secrets.inbox_path) / "ater_queue.db" if self.secrets.inbox_path else None

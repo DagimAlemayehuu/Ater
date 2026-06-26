@@ -1,4 +1,3 @@
-import time
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
@@ -119,7 +118,7 @@ def check_rescue_mode(remaining_minutes: float, total_minutes: int) -> bool:
     """
     Rescue mode trigger: when remaining time falls below 15% of total budget or under 5 minutes.
     """
-    threshold_minutes = max(5.0, total_minutes * 0.15)
+    max(5.0, total_minutes * 0.15)
     # Actually, the spec says: "below 15% of the total budget (or under 5 minutes)". 
     # Usually this means `remaining < 0.15 * total OR remaining < 5`.
     return remaining_minutes < (total_minutes * 0.15) or remaining_minutes < 5.0

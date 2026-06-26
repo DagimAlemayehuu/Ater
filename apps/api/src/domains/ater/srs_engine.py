@@ -1,9 +1,7 @@
 import re
-import yaml
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from .vault_manager import VaultManager
-from .srs import SRSEngine, FSRSCard, fsrs_update
 
 def list_practices(
     vm: VaultManager,

@@ -228,7 +228,6 @@ def sanitize_body(text: str, title: str = "") -> Tuple[str, List[str]]:
     Returns (cleaned_text, list_of_fixes_applied).
     """
     fixes: List[str] = []
-    original = text
 
     # Protect blocks (code, quiz, tables, display math) from replacements
     blocks = []
@@ -434,7 +433,7 @@ def canonicalize_unit(unit_dir: Path):
             
             # Clean prerequisites and source pages if they exist
             prereqs = fm.get("prerequisites", [])
-            source_pages = fm.get("source_pages", [])
+            fm.get("source_pages", [])
             
             if prereqs and isinstance(prereqs, list):
                 from src.domains.ater.validator import AterValidator
@@ -1155,7 +1154,7 @@ def merge_extra_sections_to_four(body: str) -> Tuple[str, bool]:
         # Cannot merge if Proving Grounds is too early
         return body, False
         
-    new_parts = [sections[0]] # Preamble before H2
+    [sections[0]] # Preamble before H2
     mental_model_part = sections[1]
     core_logic_part = sections[2]
     formal_model_part = sections[3]
@@ -1219,9 +1218,9 @@ def heal_quiz_scaffolding(quiz_block: str, title: str = "") -> str:
                 "question": f"Which of the following best defines the primary role of {concept_label}?",
                 "options": {
                     "A": f"It provides a structured way to apply {concept_label} within the domain context.",
-                    "B": f"It is a temporary process that has no long-term significance.",
-                    "C": f"It is only relevant when dealing with software systems and computer programs.",
-                    "D": f"It is an obsolete concept that has been replaced by modern alternatives."
+                    "B": "It is a temporary process that has no long-term significance.",
+                    "C": "It is only relevant when dealing with software systems and computer programs.",
+                    "D": "It is an obsolete concept that has been replaced by modern alternatives."
                 },
                 "answer": "A",
                 "explanation": f"The core concept of {concept_label} is defined by its structured domain application.",

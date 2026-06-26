@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import logging
 import traceback
@@ -10,7 +9,6 @@ import re
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import unquote
 from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request
@@ -299,9 +297,9 @@ async def ater_plan_curriculum(
         raise HTTPException(status_code=400, detail="prompt is required")
         
     learning_mode = payload.get("learning_mode", "self-study")
-    semester = payload.get("semester")
-    course = payload.get("course")
-    unit = payload.get("unit")
+    payload.get("semester")
+    payload.get("course")
+    payload.get("unit")
     
     try:
         service = AterService(secrets)
@@ -389,7 +387,7 @@ async def ater_curriculum_plan(
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     concept = payload.get("concept")
-    target_hub_id = payload.get("target_hub_id")
+    payload.get("target_hub_id")
     if not concept:
         raise HTTPException(status_code=400, detail="concept is required")
     
@@ -452,9 +450,9 @@ async def ater_curriculum_confirm(
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
-    concept = payload.get("concept")
+    payload.get("concept")
     curriculum = payload.get("curriculum")
-    target_hub_id = payload.get("target_hub_id")
+    payload.get("target_hub_id")
     
     if not curriculum:
         raise HTTPException(status_code=400, detail="curriculum is required")
@@ -1538,7 +1536,9 @@ async def vault_upload_file(
     secrets: AppSecrets = Depends(get_app_secrets),
 ):
     """Accepts a binary file upload (PDF/image/txt), extracts text, then runs the pipeline."""
-    import tempfile, os, base64
+    import tempfile
+    import os
+    import base64
     from src.domains.ai.factory import ModelFactory
     from src.domains.ater.reference_vault import ReferenceVaultPipeline
     from src.domains.ater.governor import governor

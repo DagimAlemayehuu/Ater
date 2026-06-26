@@ -1,7 +1,7 @@
 import re
 import json
-from typing import Dict, List, Any
-from .agents import DOMAIN_MATRIX, MODE_SPECIALITIES, normalize_mode
+from typing import Dict, Any
+from .agents import MODE_SPECIALITIES, normalize_mode
 from .keywords import DOMAIN_KEYWORDS
 
 class DomainRouter:

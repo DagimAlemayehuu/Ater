@@ -1,6 +1,4 @@
 import pytest
-import re
-from pathlib import Path
 from src.api.deps import AppSecrets
 from src.domains.ater.assistant import (
     to_underscore_title_case,
@@ -179,7 +177,6 @@ def test_assistant_record_management(tmp_path):
 
 @pytest.mark.asyncio
 async def test_assistant_custom_practice_and_exams(tmp_path):
-    import json
     from unittest.mock import AsyncMock, patch
     
     secrets = AppSecrets(

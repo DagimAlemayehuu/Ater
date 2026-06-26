@@ -2,11 +2,10 @@ import json
 import re
 import asyncio
 import hashlib
-import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 from pydantic import BaseModel, Field
 from langchain_core.language_models.chat_models import BaseChatModel
-from .schemas import PartialPlan, TheoryResponse, PractitionerResponse, QuizResponse, Question, ContextBriefing
+from .schemas import PartialPlan
 from .governor import governor, DailyLimitExceededException
 
 import yaml
@@ -1181,7 +1180,7 @@ class QuestionAgent:
 
     async def generate(self, note_schema, source_text: str, mechanics: str, academic_level: str, count: int = 3, prof_domain: str = "General", q_type: str = None, seed: str = None) -> list:
         title_readable = note_schema.title.replace("_", " ")
-        persona = self.domain.get("persona", "Subject Matter Expert")
+        self.domain.get("persona", "Subject Matter Expert")
         axioms = self.domain.get("quiz_axioms", "Test core principles.")
         
         schemas = {
@@ -1445,7 +1444,7 @@ Domain axioms: {axioms[:300]}"""
                     if "question" not in q or not q["question"]:
                         q["question"] = f"Understand the core mechanism of {title_readable}."
                     if "explanation" not in q or not q["explanation"]:
-                        q["explanation"] = f"Explained in the textbook context."
+                        q["explanation"] = "Explained in the textbook context."
                     if "answer" not in q:
                         q["answer"] = "A" if q_type_actual == "mcq" else (True if q_type_actual == "true_false" else "Correct explanation.")
                     
@@ -1615,7 +1614,7 @@ Source context: {source_context[:400]}"""
                 if attempt == 1:
                     # Parse failure ≠ content failure — default to PASS to stop false regen loops.
                     import logging as _logging
-                    _logging.getLogger("Ater").warning(f"[VerifierAgent] Both attempts failed. Defaulting to PASS to avoid false block.")
+                    _logging.getLogger("Ater").warning("[VerifierAgent] Both attempts failed. Defaulting to PASS to avoid false block.")
                     return {"passed": True, "failures": []}
 
 
@@ -1626,7 +1625,6 @@ class QuizAuditorAgent:
         self.llm = llm
 
     async def audit(self, note_title: str, quiz_json_str: str, theory_summary: str, prof_domain: str = "General") -> dict:
-        max_retries = 2
         title_readable = note_title.replace("_", " ")
         sys_prompt = f"""You are a quiz quality auditor. Evaluate these technical questions for "{title_readable}".
 Return ONLY a valid JSON object.

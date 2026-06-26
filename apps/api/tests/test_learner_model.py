@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 from pathlib import Path
 from datetime import datetime
-from src.domains.ater.learner_model_service import LearnerModelManager, LearnerTopicProfile, LessonRecommendation
+from src.domains.ater.learner_model_service import LearnerModelManager
 from src.domains.ater.srs import SRSEngine
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def db_path(temp_vault):
 
 def test_learner_profile_schema_and_persistence(temp_vault, db_path):
     # Initialize SRSEngine to run DB migrations first
-    srs = SRSEngine(db_path)
+    SRSEngine(db_path)
     
     manager = LearnerModelManager(db_path, temp_vault)
     
@@ -111,7 +111,7 @@ def test_learner_profile_schema_and_persistence(temp_vault, db_path):
     conn.close()
 
 def test_calibration_and_misconceptions(temp_vault, db_path):
-    srs = SRSEngine(db_path)
+    SRSEngine(db_path)
     manager = LearnerModelManager(db_path, temp_vault)
     
     # Simulate a tutor session with overconfident wagers

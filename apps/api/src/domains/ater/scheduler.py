@@ -1,7 +1,7 @@
 import frontmatter
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from .srs import SRSEngine, _retrievability
 
 class StudyScheduler:

@@ -1,4 +1,3 @@
-import pytest
 from src.domains.ater.healer import LogicHealer
 
 def test_healer_wikilink_pruning():

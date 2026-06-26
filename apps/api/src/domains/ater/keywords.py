@@ -140,7 +140,6 @@ DOMAIN_KEYWORDS = {
     "ASTROPHYSICS": ["astrophysics", "stellar", "fusion", "spectroscopy", "radiation", "luminosity"]
 }
 
-import re
 from typing import List, Dict, Any
 
 def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 1000) -> List[str]:
@@ -273,7 +272,7 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         dropped_notes = result[MAX_NOTES:]
         
         # Merge dropped concepts into kept concepts to preserve coverage!
-        kept_titles = {n["title"] for n in kept_notes}
+        {n["title"] for n in kept_notes}
         for d_note in dropped_notes:
             d_title = d_note["title"]
             d_desc = d_note.get("description", "").strip()

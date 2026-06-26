@@ -5,7 +5,7 @@ import re
 import gc
 import numpy as np
 # Imports for onnxruntime and transformers are moved inside load_model() to optimize cold-start
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple
 from pathlib import Path
 
 def mean_pooling(model_output, attention_mask):
@@ -169,7 +169,7 @@ class EmbeddingsLinker:
         title_to_idx = {note["title"]: idx for idx, note in enumerate(notes)}
 
         for idx_b, note_b in enumerate(notes):
-            title_b = note_b["title"]
+            note_b["title"]
             prereqs_set = set(note_b.get("prerequisites", []) or [])
             min_page_b = get_min_page(note_b)
             desc_b = (note_b.get("description", "") or "").lower()

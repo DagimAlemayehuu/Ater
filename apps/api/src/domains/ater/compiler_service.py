@@ -145,7 +145,7 @@ class AterLessonCompiler:
         # 4. Final Fallback if still empty or too short
         if len(definitions) < 2:
             if not any(t.lower() == core_term.lower() for t, _ in definitions):
-                definitions.append((core_term, f"The core topic of this interactive lesson."))
+                definitions.append((core_term, "The core topic of this interactive lesson."))
             if len(definitions) < 2:
                 h1_title = parsed.get("h1", {}).get("title", "Foundational Concept")
                 definitions.append((h1_title, f"Important principles to master for {clean_title}."))
@@ -382,7 +382,7 @@ class AterLessonCompiler:
                     bullets_html += f"<li>{b.lstrip('-* ')}</li>"
                 bullets_html += "</ul>"
             else:
-                bullets_html = f"<p>Active Recall Summary: Focus heavily on definitions and Proving Grounds questions below.</p>"
+                bullets_html = "<p>Active Recall Summary: Focus heavily on definitions and Proving Grounds questions below.</p>"
 
             content_html = f"""
             <section class="page-container active">
@@ -577,7 +577,7 @@ class AterLessonCompiler:
                         </div>
                         """
                     
-                    quiz_html += f"""
+                    quiz_html += """
                       <div class="feedback" data-feedback></div>
                     </div>
                     """
@@ -597,8 +597,8 @@ class AterLessonCompiler:
             <a class="nav-btn primary" href="{nav["next_note_path"]}.{variant}.html">Next Lesson &rarr;</a>
             """
         else:
-            next_btn_html = f"""
-            <button class="nav-btn primary" onclick="window.parent.postMessage({{ type: 'NEXT_NOTE' }}, '*')">Next Chapter</button>
+            next_btn_html = """
+            <button class="nav-btn primary" onclick="window.parent.postMessage({ type: 'NEXT_NOTE' }, '*')">Next Chapter</button>
             """
 
         # For exam variant, page 1 is the quiz page directly!

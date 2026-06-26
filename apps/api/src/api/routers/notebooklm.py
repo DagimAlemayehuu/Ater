@@ -3,12 +3,11 @@ import uuid
 import tempfile
 import shutil
 import asyncio
-import json
 import logging
 import mimetypes
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Body, Depends, BackgroundTasks, Query
+from typing import Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, UploadFile, File, Body, Depends, BackgroundTasks, Query
 from fastapi.responses import FileResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
@@ -57,7 +56,6 @@ def safe_artifact_filename(notebook_id: str, artifact_type: str, artifact_id: Op
 
 def sync_artifact_to_db(db_path: Path, notebook_id: str, artifact_type: str, title: str, data_json: str):
     import sqlite3
-    import uuid
     from datetime import datetime
     
     conn = sqlite3.connect(str(db_path))

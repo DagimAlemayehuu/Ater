@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import List, Set, Dict
+from typing import Set
 
 class LogicHealer:
     """
@@ -322,7 +322,7 @@ class LogicHealer:
                     
                     q["options"] = new_options
                     q["answer"] = new_answer
-                    self.logger.info(f"[Healer] Converted MCQ options to dict format.")
+                    self.logger.info("[Healer] Converted MCQ options to dict format.")
 
                 # ── 5.3 Cross-Key Numeric Consistency Heal ──
                 # If explanation says 'X = 12' and answer is '10', and type is not MCQ (where keys are A/B/C/D), heal it.
@@ -349,13 +349,11 @@ class LogicHealer:
         """
         lines = text.split("\n")
         healed_lines = []
-        in_table = False
         
         for line in lines:
             stripped = line.strip()
             # Detect table start/content
             if "|" in stripped and not stripped.startswith("##") and not stripped.startswith("$"):
-                in_table = True
                 # Preserve indent
                 indent_match = re.match(r"^(\s*)", line)
                 indent = indent_match.group(1) if indent_match else ""
@@ -368,7 +366,6 @@ class LogicHealer:
                 
                 healed_lines.append(indent + content)
             else:
-                in_table = False
                 healed_lines.append(line)
         return "\n".join(healed_lines)
 

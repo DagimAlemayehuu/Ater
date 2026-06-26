@@ -1,7 +1,5 @@
 import pytest
 import json
-import shutil
-from pathlib import Path
 from pydantic import ValidationError
 
 from src.domains.ater.artifact_service import (

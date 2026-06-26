@@ -4,9 +4,7 @@ import time
 import signal
 import psutil
 import logging
-import asyncio
 import threading
-from typing import Dict, Any
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 

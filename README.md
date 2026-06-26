@@ -144,8 +144,6 @@ The Tauri desktop client interfaces with the native Rust system using specific t
 
 ```
 /
-├── .system/            # Multi-Agent Workflow State, Command Center & Rules
-├── .agent/             # Developer Agents, Persona Rules, and Verification scripts
 ├── apps/
 │   ├── desktop/        # Tauri v2 React Desktop application
 │   │   ├── src/        # React, Zustand stores, Monaco layouts, custom PageGuards
@@ -155,8 +153,13 @@ The Tauri desktop client interfaces with the native Rust system using specific t
 │   │   └── onnx_model/ # Local embedding weights and model loaders
 │   ├── admin/          # Next.js Supabase Admin Panel (Waitlists, DRM panel)
 │   └── landing-page/   # Next.js high-contrast monochrome landing page
-├── docs/               # System architecture and agent briefings
-├── scripts/            # Shared database migrations, seed data, and vault templates
+├── docs/               # Canonical product, architecture, and workflow docs
+├── openspec/           # OpenSpec changes, archives, and long-lived capability specs
+├── .sdlc/              # Current SDLC state, verification profile, and phase ledger
+├── .stitch/            # Stitch design snapshots and generated screen references
+├── scripts/            # Shared automation and vault template generation
+├── vault_template/     # Canonical vault scaffold
+├── Vault_Test/         # Local test vault fixture
 ├── package.json        # Monorepo root configuration
 ├── turbo.json          # Turborepo build pipelines
 └── pnpm-workspace.yaml # Monorepo workspace definitions

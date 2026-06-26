@@ -1,6 +1,5 @@
 import re
-import json
-from typing import List, Dict, Any, Tuple
+from typing import List, Tuple
 
 def compile_mermaid(raw_text: str, direction: str = "TD") -> str:
     """
@@ -18,7 +17,7 @@ def compile_mermaid(raw_text: str, direction: str = "TD") -> str:
     
     # Simple regex to find nodes and arrows, e.g. "Node A -> Node B" or "Node A --> Node B"
     # Or bracket labels like "A[Label A] -> B[Label B]"
-    pattern = re.compile(r"([^\->]+)\s*\-+\s*>\s*([^\->\n]+)")
+    re.compile(r"([^\->]+)\s*\-+\s*>\s*([^\->\n]+)")
     
     def sanitize_id(node_name: str) -> Tuple[str, str]:
         # Extract custom label if present, e.g., "A[My Label]"

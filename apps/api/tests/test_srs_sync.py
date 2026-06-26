@@ -10,13 +10,11 @@ Covers:
 """
 import json
 import sqlite3
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import pytest
 
-from src.domains.ater.srs import SRSEngine, FSRSCard
+from src.domains.ater.srs import SRSEngine
 
 
 # ─────────────────────────────────────────────────────────────────────────────

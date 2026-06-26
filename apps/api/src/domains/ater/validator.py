@@ -299,7 +299,7 @@ class AterValidator:
             w for w in wikilinks
             if w.replace(" ", "_").strip() != note_title_yaml
         ]
-        wikilink_count = len(non_self_wikilinks)
+        len(non_self_wikilinks)
 
         # Hub/PQ notes don't need prose wikilinks — they ARE wikilinks
         note_type_match = re.search(r"type:\s*(.+)", content[:500])
@@ -589,7 +589,7 @@ class AterValidator:
                 match = matcher.find_longest_match(0, len(norm1), 0, len(norm2))
                 
                 shorter_len = min(len(norm1), len(norm2))
-                longer_len = max(len(norm1), len(norm2))
+                max(len(norm1), len(norm2))
                 
                 if match.size > 0:
                     overlap_ratio_shorter = match.size / shorter_len
@@ -899,7 +899,7 @@ class AterValidator:
             block_lower = block.lower()
             if "true" in block_lower and "false" in block_lower and ("type: true_false" in block_lower or "true/false" in block_lower or "[type] true_false" in block_lower or "true_false" in block_lower):
                 q_type = "true_false"
-            elif any(re.search(rf'(?im)^\s*[A-D]\s*[:\-\)]\s*\w+', block) for _ in range(1)):
+            elif any(re.search(r'(?im)^\s*[A-D]\s*[:\-\)]\s*\w+', block) for _ in range(1)):
                 q_type = "mcq"
                 
             type_match = re.search(r'(?im)(?:type|question_type)\s*[:\-\)]\s*(\w+)', block)

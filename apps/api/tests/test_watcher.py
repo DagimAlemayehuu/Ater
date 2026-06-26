@@ -1,7 +1,6 @@
 import pytest
 import sqlite3
 import asyncio
-import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from src.domains.ater.watcher import AterQueueManager, InboxHandler

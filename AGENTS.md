@@ -15,8 +15,10 @@ To minimize token usage and prevent context drift, do NOT read all documentation
 | **[docs/FRONTEND.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/FRONTEND.md)** | React, Tauri, Vite frameworks, routes, and client-side Zustand store. | Load when modifying React screens, Monaco editor, or UI files. |
 | **[docs/BACKEND.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/BACKEND.md)** | FastAPI sidecar services, ONNX local embeddings, and LangChain chat tools. | Load when editing Python API routes, background watches, or agents. |
 | **[docs/DATABASE.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/DATABASE.md)** | Local SQLite FSRS schemas and remote Supabase DRM/RLS systems. | Load when modifying database tables, migrations, or security leases. |
+| **[docs/ARCHITECTURE.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/ARCHITECTURE.md)** | System boundaries, component map, data flows, and dependency map. | Load when changing cross-app architecture or data flow. |
+| **[docs/DECISIONS.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/DECISIONS.md)** | Consolidated accepted architecture decisions. | Load when a change may contradict or add a durable technical decision. |
 | **[docs/GITHUB.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/GITHUB.md)** | Git branch naming rules, PR templates, and CI/CD self-healing gates. | Load when preparing to push, open pull requests, or sync changes. |
-| **[docs/ROADMAP.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/ROADMAP.md)** | Future adaptive learning runtime phases and outstanding phase gaps. | Load when scoping new features or checking specifications. |
+| **[docs/ROADMAP.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/ROADMAP.md)** | Durable adaptive learning runtime product direction. | Load when scoping new capabilities. |
 
 ---
 
@@ -28,6 +30,6 @@ This file resides in the root directory because it is actively queried by the sy
 ---
 
 ## 3. Core Developer Workflow Checklists
-* **Plan:** Call the master skill `sdlc-plan` in Codex to create the spec and GitHub issue.
-* **Orchestrate:** Run the master skill `sdlc-orchestrate` in Antigravity to scaffold the isolated worktree and run sequential Flash agents.
-* **Verify:** Run the master skill `sdlc-verify` to check compliance, run the manual verification checklist, merge the PR, and archive.
+* **Plan:** Call the master skill `sdlc-plan` to explore with the user and create the OpenSpec change.
+* **Orchestrate:** Call the master skill `sdlc-orchestrate` to implement isolated OpenSpec phases.
+* **Verify:** Call the master skill `sdlc-verify` to audit, preview locally, run the manual checklist, integrate, sync specs, and archive.

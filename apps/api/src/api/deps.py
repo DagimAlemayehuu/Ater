@@ -93,8 +93,8 @@ async def get_app_secrets(
         elif primary_provider == "openrouter":
             clean_ai_key = sanitize_api_key(os.environ.get("OPENROUTER_KEY"))
 
-    clean_planner_key = sanitize_api_key(x_planner_key) or clean_ai_key
-    clean_utility_key = sanitize_api_key(x_utility_key) or clean_ai_key
+    sanitize_api_key(x_planner_key) or clean_ai_key
+    sanitize_api_key(x_utility_key) or clean_ai_key
 
     return AppSecrets(
         ai_provider=primary_provider,

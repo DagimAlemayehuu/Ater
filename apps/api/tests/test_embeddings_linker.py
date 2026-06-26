@@ -1,7 +1,6 @@
 import sys
 import pytest
 import numpy as np
-import re
 from unittest.mock import MagicMock
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -20,7 +19,6 @@ sys.modules.setdefault("onnxruntime", MagicMock())
 
 from src.domains.ater.keywords import chunk_text, reduce_concepts
 from src.domains.ater.embeddings_linker import EmbeddingsLinker
-from src.domains.ater.validator import AterValidator
 
 # Detect if a real ONNX model is available — only when transformers is genuinely installed
 _MODEL_AVAILABLE = False
