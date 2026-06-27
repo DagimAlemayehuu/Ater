@@ -1,74 +1,56 @@
 {
-  "status": "archived",
-  "activeChange": "theme-and-contrast-refactor",
-  "githubIssue": "#8",
+  "status": "implemented",
+  "activeChange": "perfect-artifacts",
+  "githubIssue": "#12",
   "baseBranch": "main",
-  "branch": "feature/theme-and-contrast-refactor",
+  "branch": "feature/perfect-artifacts",
   "worktree": null,
-  "currentPhase": 1,
+  "currentPhase": null,
   "retryBudget": 3,
+  "phases": [],
   "associatedChanges": [],
+  "blockers": [],
+  "preview": "pnpm dev:all",
+  "manualVerification": "passed",
   "lastVerification": {
     "status": "passed",
-    "results": {
-      "vitest": {
-        "success": true
+    "profile": "fast",
+    "phase": null,
+    "startedAt": "2026-06-27T19:31:00.991594+00:00",
+    "finishedAt": "2026-06-27T19:31:22.936606+00:00",
+    "results": [
+      {
+        "command": "pnpm lint",
+        "status": "passed",
+        "exitCode": 0,
+        "startedAt": "2026-06-27T19:31:00.991594+00:00",
+        "finishedAt": "2026-06-27T19:31:02.765239+00:00",
+        "outputTail": "-eslint/no-explicit-any\n@ater/desktop:lint:   42:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   43:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   44:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   45:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/src/tests/StudySplitPane.test.tsx\n@ater/desktop:lint:   155:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/src/tests/security.test.tsx\n@ater/desktop:lint:   33:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   38:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   42:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   84:79  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/src/tests/setup.ts\n@ater/desktop:lint:   31:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   70:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   73:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/src/tests/sidecarApi.test.ts\n@ater/desktop:lint:    12:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:    58:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:    66:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:    73:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:    86:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   100:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   118:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   125:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/src/tests/sidecarHttp.test.ts\n@ater/desktop:lint:   12:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   20:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/src/tests/usePracticeSession.test.tsx\n@ater/desktop:lint:    56:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   151:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   172:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint:   182:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any\n@ater/desktop:lint: \n@ater/desktop:lint: \u2716 857 problems (0 errors, 857 warnings)\n@ater/desktop:lint: \n\n Tasks:    3 successful, 3 total\nCached:    3 cached, 3 total\n  Time:    277ms >>> FULL TURBO\n\n\u2022 turbo 2.8.12\n"
+      },
+      {
+        "command": "pnpm typecheck",
+        "status": "passed",
+        "exitCode": 0,
+        "startedAt": "2026-06-27T19:31:02.765373+00:00",
+        "finishedAt": "2026-06-27T19:31:04.264378+00:00",
+        "outputTail": "\n> ater@0.1.0 typecheck /Users/dabodestroyer/code/Antigravity/Ater\n> turbo run typecheck\n\n\u2022 Packages in scope: @ater/desktop, admin, landing-page\n\u2022 Running typecheck in 3 packages\n\u2022 Remote caching disabled\n@ater/desktop:typecheck: cache hit, replaying logs 6afc56346303fac5\n@ater/desktop:typecheck: \n@ater/desktop:typecheck: > @ater/desktop@0.1.1 typecheck /Users/dabodestroyer/code/Antigravity/Ater/apps/desktop\n@ater/desktop:typecheck: > tsc --noEmit\n@ater/desktop:typecheck: \nlanding-page:typecheck: cache hit, replaying logs 02f10ddcb7eaee05\nadmin:typecheck: cache hit, replaying logs 38986986ac8120d7\nlanding-page:typecheck: \nlanding-page:typecheck: > landing-page@0.1.0 typecheck /Users/dabodestroyer/code/Antigravity/Ater/apps/landing-page\nlanding-page:typecheck: > tsc --noEmit\nlanding-page:typecheck: \nadmin:typecheck: \nadmin:typecheck: > admin@0.1.0 typecheck /Users/dabodestroyer/code/Antigravity/Ater/apps/admin\nadmin:typecheck: > tsc --noEmit\nadmin:typecheck: \n\n Tasks:    3 successful, 3 total\nCached:    3 cached, 3 total\n  Time:    324ms >>> FULL TURBO\n\n\u2022 turbo 2.8.12\n"
+      },
+      {
+        "command": "pnpm --filter @ater/desktop test",
+        "status": "passed",
+        "exitCode": 0,
+        "startedAt": "2026-06-27T19:31:04.264459+00:00",
+        "finishedAt": "2026-06-27T19:31:14.446956+00:00",
+        "outputTail": "s not wrapped in act(...).\n\nWhen testing, code that causes React state updates should be wrapped into act(...):\n\nact(() => {\n  /* fire events that update state */\n});\n/* assert on the output */\n\nThis ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act\nAn update to TestComponent inside a test was not wrapped in act(...).\n\nWhen testing, code that causes React state updates should be wrapped into act(...):\n\nact(() => {\n  /* fire events that update state */\n});\n/* assert on the output */\n\nThis ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act\nAn update to TestComponent inside a test was not wrapped in act(...).\n\nWhen testing, code that causes React state updates should be wrapped into act(...):\n\nact(() => {\n  /* fire events that update state */\n});\n/* assert on the output */\n\nThis ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act\nAn update to TestComponent inside a test was not wrapped in act(...).\n\nWhen testing, code that causes React state updates should be wrapped into act(...):\n\nact(() => {\n  /* fire events that update state */\n});\n/* assert on the output */\n\nThis ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act\nAn update to TestComponent inside a test was not wrapped in act(...).\n\nWhen testing, code that causes React state updates should be wrapped into act(...):\n\nact(() => {\n  /* fire events that update state */\n});\n/* assert on the output */\n\nThis ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act\n\n\u001b[90mstderr\u001b[2m | src/tests/security.test.tsx\u001b[2m > \u001b[22m\u001b[2mSecurity Store - checkOnlineLockout\u001b[2m > \u001b[22m\u001b[2mpreserves local state when Supabase auth check is too slow\n\u001b[22m\u001b[39m[Security System] Background lease sync failed: Error: supabase.auth.getUser timeout\n    at \u001b[90m/Users/dabodestroyer/code/Antigravity/Ater/apps/desktop/\u001b[39msrc/context/securityStore.ts:16:31\n    at callTimer (file:///Users/dabodestroyer/code/Antigravity/Ater/node_modules/\u001b[4m.pnpm\u001b[24m/vitest@4.1.6_@opentelemetry+api@1.9.1_@types+node@24.11.0_jsdom@29.1.1_vite@7.3.1_@types+node_m27c26khqfuqabjcnbgv2vugvq/node_modules/\u001b[4mvitest\u001b[24m/dist/chunks/test.DNmyFkvJ.js:1773:25)\n    at doTickInner (file:///Users/dabodestroyer/code/Antigravity/Ater/node_modules/\u001b[4m.pnpm\u001b[24m/vitest@4.1.6_@opentelemetry+api@1.9.1_@types+node@24.11.0_jsdom@29.1.1_vite@7.3.1_@types+node_m27c26khqfuqabjcnbgv2vugvq/node_modules/\u001b[4mvitest\u001b[24m/dist/chunks/test.DNmyFkvJ.js:2444:30)\n    at doTick (file:///Users/dabodestroyer/code/Antigravity/Ater/node_modules/\u001b[4m.pnpm\u001b[24m/vitest@4.1.6_@opentelemetry+api@1.9.1_@types+node@24.11.0_jsdom@29.1.1_vite@7.3.1_@types+node_m27c26khqfuqabjcnbgv2vugvq/node_modules/\u001b[4mvitest\u001b[24m/dist/chunks/test.DNmyFkvJ.js:2525:21)\n    at Immediate.<anonymous> (file:///Users/dabodestroyer/code/Antigravity/Ater/node_modules/\u001b[4m.pnpm\u001b[24m/vitest@4.1.6_@opentelemetry+api@1.9.1_@types+node@24.11.0_jsdom@29.1.1_vite@7.3.1_@types+node_m27c26khqfuqabjcnbgv2vugvq/node_modules/\u001b[4mvitest\u001b[24m/dist/chunks/test.DNmyFkvJ.js:2546:34)\n\u001b[90m    at processImmediate (node:internal/timers:504:21)\u001b[39m\n\n\u001b[90mstderr\u001b[2m | src/tests/ArtifactViewer.test.tsx\u001b[2m > \u001b[22m\u001b[2mArtifactViewer\u001b[2m > \u001b[22m\u001b[2mrenders text chapters as readable lesson pages instead of empty sandbox placeholders\n\u001b[22m\u001b[39mAn update to UnifiedSandboxViewer inside a test was not wrapped in act(...).\n\nWhen testing, code that causes React state updates should be wrapped into act(...):\n\nact(() => {\n  /* fire events that update state */\n});\n/* assert on the output */\n\nThis ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act\n\n"
+      },
+      {
+        "command": "cd apps/api && uv run python -m pytest tests/",
+        "status": "passed",
+        "exitCode": 0,
+        "startedAt": "2026-06-27T19:31:14.447032+00:00",
+        "finishedAt": "2026-06-27T19:31:22.936507+00:00",
+        "outputTail": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.11, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/dabodestroyer/code/Antigravity/Ater/apps/api\nconfigfile: pyproject.toml\nplugins: asyncio-1.3.0, langsmith-0.8.3, anyio-4.13.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 230 items\n\ntests/test_academic_engine.py .......................................... [ 18%]\n.                                                                        [ 18%]\ntests/test_advanced_artifacts.py ............                            [ 23%]\ntests/test_api.py ..                                                     [ 24%]\ntests/test_artifact_generation.py .....                                  [ 26%]\ntests/test_assistant.py ...........                                      [ 31%]\ntests/test_ater_protocol.py ......                                       [ 34%]\ntests/test_compiler.py .....                                             [ 36%]\ntests/test_cram_mode.py .....                                            [ 38%]\ntests/test_embeddings_linker.py ...ss....                                [ 42%]\ntests/test_healer.py ........                                            [ 46%]\ntests/test_learner_model.py ...                                          [ 47%]\ntests/test_learning_object.py .........                                  [ 51%]\ntests/test_learning_runtime_e2e.py ..................................... [ 67%]\n...                                                                      [ 68%]\ntests/test_notebooklm_runner.py ............                             [ 73%]\ntests/test_planner.py .....                                              [ 76%]\ntests/test_planner_curriculum_quality.py ..                              [ 76%]\ntests/test_practice_engine.py ....                                       [ 78%]\ntests/test_provider_profiles.py ....                                     [ 80%]\ntests/test_rag.py ..                                                     [ 81%]\ntests/test_sandwich_generator.py ...                                     [ 82%]\ntests/test_source_driven.py ....                                         [ 84%]\ntests/test_srs_sync.py ...............                                   [ 90%]\ntests/test_tutor_adaptive_questions.py ..                                [ 91%]\ntests/test_tutor_runtime.py ......                                       [ 94%]\ntests/test_validator.py ....                                             [ 96%]\ntests/test_vault_manager.py ..                                           [ 96%]\ntests/test_watcher.py .......                                            [100%]\n\n=============================== warnings summary ===============================\nsrc/domains/ater/artifact_service.py:43\n  /Users/dabodestroyer/code/Antigravity/Ater/apps/api/src/domains/ater/artifact_service.py:43: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/\n    class ConceptEdge(BaseModel):\n\n.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:386\n  /Users/dabodestroyer/code/Antigravity/Ater/apps/api/.venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:386: UserWarning: Valid config keys have changed in V2:\n  * 'allow_population_by_field_name' has been renamed to 'validate_by_name'\n    warnings.warn(message, UserWarning)\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n================== 228 passed, 2 skipped, 2 warnings in 5.48s ==================\n"
       }
-    }
-  },
-  "phases": [
-    {
-      "id": 1,
-      "name": "Button Component, Stylesheet, and Practice Buttons Refactor",
-      "status": "completed",
-      "tasks": [
-        "1.1 Update `button.tsx` default variant to use a responsive hover class: change `hover:bg-[#2c2c30]` to `hover:bg-muted-foreground/20 dark:hover:bg-[#2c2c30]`.",
-        "1.2 Update `index.css` to add any necessary global utility classes if required, and double-check theme variables.",
-        "3.1 Refactor `PracticeConfigurator.tsx` buttons and checkboxes: change `bg-[#e4e4e7] text-background` to `bg-primary text-primary-foreground`, and replace `hover:bg-[#e4e4e7]/5` with `hover:bg-foreground/5`.",
-        "3.2 Refactor `PracticeResults.tsx` buttons and progress bar: change progress bar indicator `bg-[#e4e4e7]` to `bg-primary`, main action button to `bg-primary text-primary-foreground`, and replace `hover:bg-[#e4e4e7]/5` with `hover:bg-foreground/5`.",
-        "3.3 Refactor `PracticeSession.tsx` keyword checkboxes: change `checked:bg-[#e4e4e7]/10` to `checked:bg-foreground/10`.",
-        "3.4 Refactor `PracticeVault.tsx` checkboxes and mode select: change `bg-[#e4e4e7]/5` to `bg-foreground/5` (or similar responsive styling), and selection check background to `bg-primary` or `bg-foreground`."
-      ],
-      "verification": [
-        "pnpm --filter @ater/desktop lint"
-      ],
-      "commit": null,
-      "attempts": 0
-    },
-    {
-      "id": 2,
-      "name": "Page and Layout Backgrounds Refactor",
-      "status": "completed",
-      "tasks": [
-        "2.1 Refactor `login.tsx` root container to change `bg-[#0e0e0f]` to `bg-background`.",
-        "2.2 Refactor `welcome.tsx` root container to change `bg-[#0a0a0b]` to `bg-background`.",
-        "2.3 Refactor `onboarding.tsx` root container and internal elements to use `bg-background` instead of `bg-[#0e0e0f]`, and change hardcoded border colors `bg-[#242426]` to `bg-border`.",
-        "2.4 Refactor `LockoutScreen.tsx` root and internal elements to use `bg-background` and `bg-card` instead of `bg-[#0a0a0a]` and `bg-[#131313]distortion`.",
-        "2.5 Refactor `PdfViewer.tsx` mock document background, borders, and text to use bento theme-aware classes (`bg-bento-panel`, `bg-bento-card`, `border-border`, `text-muted-foreground`) instead of hardcoded hex values (`bg-[#111317]`, `bg-[#0c0e11]`, `border-[#282E36]`, `text-[#bbc9cd]`, and `text-[#48defd]` for formulas)."
-      ],
-      "verification": [
-        "pnpm --filter @ater/desktop lint"
-      ],
-      "commit": null,
-      "attempts": 0
-    },
-    {
-      "id": 3,
-      "name": "Replace bg-foreground Buttons and Verify",
-      "status": "completed",
-      "tasks": [
-        "4.1 Replace `bg-foreground text-background` buttons in `OracleUIBlocks.tsx` with `bg-primary text-primary-foreground` to resolve pure black/white contrast issues.",
-        "4.2 Replace `bg-foreground text-background` buttons/tabs in other routes/components (e.g. `settings.tsx`, `onboarding.tsx`, `agents.tsx`, `notebooks.tsx`, `InteractiveLessonRenderer.tsx`, `InteractiveLessonPlayer.tsx`) with `bg-primary text-primary-foreground`.",
-        "5.1 Run `pnpm lint` and `pnpm build` in desktop directory to verify there are no compilation or typescript errors.",
-        "5.2 Launch application or run verification checks using `checklist.py` if applicable."
-      ],
-      "verification": [
-        "pnpm --filter @ater/desktop lint",
-        "pnpm --filter @ater/desktop build"
-      ],
-      "commit": null,
-      "attempts": 0
-    }
-  ],
-  "blockers": []
+    ]
+  }
 }

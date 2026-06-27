@@ -552,36 +552,39 @@ class TestPhase4TutorPersistence:
         assert row["score"] == 0
         conn.close()
 
-    def test_wager_scoring_correct_high_confidence(self, git_vault, srs_db):
+    @pytest.mark.asyncio
+    async def test_wager_scoring_correct_high_confidence(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)
         manager = TutorSessionManager(srs_db, git_vault)
         manager.start_session("e2e_sess_wager", "database/learning paths/Git_Hub.md")
 
-        result = manager.submit_answer("e2e_sess_wager", "q1", is_correct=True, wager="high")
+        result = await manager.submit_answer("e2e_sess_wager", "q1", is_correct=True, wager="high")
         assert result["score"] == 10, "Correct + high-confidence must award +10 points"
         assert result["score_change"] == 10
 
-    def test_wager_scoring_incorrect_high_confidence(self, git_vault, srs_db):
+    @pytest.mark.asyncio
+    async def test_wager_scoring_incorrect_high_confidence(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)
         manager = TutorSessionManager(srs_db, git_vault)
         manager.start_session("e2e_sess_penalty", "database/learning paths/Git_Hub.md")
 
-        result = manager.submit_answer("e2e_sess_penalty", "q1", is_correct=False, wager="high")
+        result = await manager.submit_answer("e2e_sess_penalty", "q1", is_correct=False, wager="high")
         assert result["score_change"] == -5, "Incorrect + high-confidence must deduct 5 points"
 
-    def test_misconception_logged_for_high_confidence_error(self, git_vault, srs_db):
+    @pytest.mark.asyncio
+    async def test_misconception_logged_for_high_confidence_error(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)
         manager = TutorSessionManager(srs_db, git_vault)
         manager.start_session("e2e_sess_misc", "database/learning paths/Git_Hub.md")
 
         # Submit incorrect answer 1st time (gets a hint, not flagged as misconception)
-        res1 = manager.submit_answer(
+        res1 = await manager.submit_answer(
             "e2e_sess_misc", "q1", is_correct=False, wager="high", user_answer="linked list"
         )
         assert res1["diagnosis"]["is_misconception"] is False
         
         # Submit incorrect answer 2nd consecutive time (flagged as misconception and logged)
-        result = manager.submit_answer(
+        result = await manager.submit_answer(
             "e2e_sess_misc", "q1", is_correct=False, wager="high", user_answer="linked list"
         )
         assert result["diagnosis"]["is_misconception"] is True, (
@@ -598,14 +601,15 @@ class TestPhase4TutorPersistence:
         conn.close()
 
 
-    def test_score_clamped_at_zero(self, git_vault, srs_db):
+    @pytest.mark.asyncio
+    async def test_score_clamped_at_zero(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)
         manager = TutorSessionManager(srs_db, git_vault)
         manager.start_session("e2e_sess_clamp", "database/learning paths/Git_Hub.md")
 
         # Drive score to 0 from initial 0 by submitting wrong/high answers
         for _ in range(5):
-            manager.submit_answer("e2e_sess_clamp", "q1", is_correct=False, wager="high")
+            await manager.submit_answer("e2e_sess_clamp", "q1", is_correct=False, wager="high")
 
         # Score must not go negative
         conn = sqlite3.connect(str(srs_db))

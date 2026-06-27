@@ -1,31 +1,44 @@
 # Context Brief
 
+Updated: 2026-06-27T19:29:17.733205+00:00
+
 ## Current Objective
-- Refactor the Ater theme and contrast settings to resolve component theme-switching errors and button contrast issues.
+- Status: `implemented`
+- Active change: `perfect-artifacts`
+- Associated changes: `None`
+- Current phase: `None`
+- Git branch: `feature/perfect-artifacts`
+- GitHub issue: `#12`
 
-## Active OpenSpec Change
-- [theme-and-contrast-refactor](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor)
+## OpenSpec Artifacts
+- `perfect-artifacts`: 9/9 tasks complete
+- `openspec/changes/perfect-artifacts/proposal.md`
+- `openspec/changes/perfect-artifacts/design.md`
+- `openspec/changes/perfect-artifacts/tasks.md`
+- `openspec/changes/perfect-artifacts/specs/interactive-artifacts-expansion/spec.md`
 
-## Decisions Made
-- Map primary buttons to `--primary` and `--primary-foreground` to ensure adaptive sheets of gray without pure black/white background states.
-- Replace hardcoded hex colors (`#0e0e0f`, `#0a0a0b`, `#131313`, `#1c1c1e`) in pages with theme-aware `bg-background` and `bg-card` classes.
-- Standardize button hover styling using responsive theme variables (`hover:bg-muted-foreground/20 dark:hover:bg-[#2c2c30]`).
-- Replace hardcoded hex shades like `#e4e4e7` in practice screens with responsive classes (`bg-foreground/10`, `hover:bg-foreground/5`).
-
-## Files and Artifacts That Matter
-- [proposal.md](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/proposal.md)
-- [design.md](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/design.md)
-- [spec.md (theme-system)](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/specs/theme-system/spec.md)
-- [tasks.md](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/tasks.md)
-- [AGENTS.md](file:///Users/dabodestroyer/code/Antigravity/Ater/AGENTS.md)
-- [docs/CONTEXT.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/CONTEXT.md)
+## Phase State
+- No phases recorded.
 
 ## Verification State
-- Initial OpenSpec change artifacts created and validated.
-- GitHub tracking issue [#8](https://github.com/DagimAlemayehuu/Ater/issues/8) successfully created.
+- Last verification: not run
 
-## Open Questions
-- None.
+## Decisions Made
+- Finding the first non-whitespace character before `while`.
+- If it is `}`, we track brace depth backward to locate the matching `{`.
+- Once `{` is found, we scan backward to check if the word before `{` is `do`.
+- We also handle single-statement `do-while` loops without braces by scanning backward for `do` without crossing other block delimiters (`{`, `}`, `;`).
+- If it is a `do-while` ending, we skip injecting a loop guard block on that specific `while`.
+- When encountering a `do` keyword, if followed by `{`, we inject a guard counter declaration before the `do`, and increment/check the counter inside the `{` block.
+- Using a full parser: Adds significant bundle size and parsing overhead, which is not suitable for a lightweight, self-contained desktop sidecar client.
+- Simple regex: Fails on complex nested structures. The backward scanning approach is extremely reliable and lightweight.
+- We will add a `useEffect` inside `UnifiedSandboxViewer` that checks if the active chapter has `sandboxSpec` but is missing `sandbox` code.
+- To prevent duplicate compilation triggers, a ref `compilingSpecsRef = useRef<Set<string>>(new Set())` will track active compiles.
+- If a compile succeeds, we update the version using `addVersion`. If it fails, we record the error using `recordCompileError`.
+- We will update the `handleOfflineRetry` function to clear the active `compileError` of the active artifact so that the `useEffect` can re-trigger compilation.
+
+## Blockers
+- None recorded.
 
 ## Next Agent Should
-- Run `sdlc-orchestrate theme-and-contrast-refactor` to begin the implementation phase.
+- Execute: `sdlc-verify perfect-artifacts`

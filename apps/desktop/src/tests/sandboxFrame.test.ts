@@ -73,6 +73,45 @@ describe('Loop-Guard Preprocessor', () => {
     expect(fn()).toBe(4950)
   })
 
+  it('allows normal finite do-while loops to run to completion', () => {
+    const originalJs = `
+      let i = 0;
+      do {
+        i++;
+      } while (i < 10);
+      return i;
+    `
+    const guardedJs = injectLoopGuardToJS(originalJs)
+    const fn = new Function(guardedJs)
+    expect(fn()).toBe(10)
+  })
+
+  it('injects guard variables and limits into infinite do-while loops', () => {
+    const originalJs = `
+      let x = 0;
+      do {
+        x++;
+      } while (true);
+    `
+    const guardedJs = injectLoopGuardToJS(originalJs)
+    expect(guardedJs).toContain('let __guard_1 = 0;')
+    expect(guardedJs).toContain('if (++__guard_1 > 1000000) throw new Error("Infinite loop detected: exceeded 1,000,000 iterations");')
+
+    const fn = new Function(guardedJs)
+    expect(() => fn()).toThrow('Infinite loop detected: exceeded 1,000,000 iterations')
+  })
+
+  it('allows single-statement do-while loops to run to completion', () => {
+    const originalJs = `
+      let i = 0;
+      do i++; while (i < 5);
+      return i;
+    `
+    const guardedJs = injectLoopGuardToJS(originalJs)
+    const fn = new Function(guardedJs)
+    expect(fn()).toBe(5)
+  })
+
   it('preprocesses script blocks inside HTML structure', () => {
     const htmlCode = `
       <div>Layout</div>
@@ -88,4 +127,5 @@ describe('Loop-Guard Preprocessor', () => {
     expect(preprocessed).toContain('src="external.js"') // External scripts remain untouched
   })
 })
+
 

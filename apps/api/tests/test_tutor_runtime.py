@@ -113,48 +113,50 @@ def test_tutor_session_state_machine(temp_vault, srs_db):
     assert loaded["session_id"] == "session1"
     assert loaded["current_note_path"] == session["current_note_path"]
 
-def test_confidence_scoring_logic(temp_vault, srs_db):
+@pytest.mark.asyncio
+async def test_confidence_scoring_logic(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)
     manager.start_session("session2", "database/learning paths/Git_Hub.md")
     
     # Correct + High Confidence -> +10
-    res = manager.submit_answer("session2", "q1", is_correct=True, wager="high")
+    res = await manager.submit_answer("session2", "q1", is_correct=True, wager="high")
     assert res["score"] == 10
     assert res["score_change"] == 10
     
     # Incorrect + High Confidence -> -5
-    res = manager.submit_answer("session2", "q1", is_correct=False, wager="high")
+    res = await manager.submit_answer("session2", "q1", is_correct=False, wager="high")
     assert res["score"] == 5
     assert res["score_change"] == -5
     
     # Correct + Low Confidence -> +5
-    res = manager.submit_answer("session2", "q1", is_correct=True, wager="low")
+    res = await manager.submit_answer("session2", "q1", is_correct=True, wager="low")
     assert res["score"] == 10
     assert res["score_change"] == 5
     
     # Incorrect + Low Confidence -> 0 (no change)
-    res = manager.submit_answer("session2", "q1", is_correct=False, wager="low")
+    res = await manager.submit_answer("session2", "q1", is_correct=False, wager="low")
     assert res["score"] == 10
     assert res["score_change"] == 0
 
     # Test Floor (score cannot go below 0)
     # Deducting 5 repeatedly
-    manager.submit_answer("session2", "q1", is_correct=False, wager="high") # 10 -> 5
-    res = manager.submit_answer("session2", "q1", is_correct=False, wager="high") # 5 -> 0
+    await manager.submit_answer("session2", "q1", is_correct=False, wager="high") # 10 -> 5
+    res = await manager.submit_answer("session2", "q1", is_correct=False, wager="high") # 5 -> 0
     assert res["score"] == 0
-    res = manager.submit_answer("session2", "q1", is_correct=False, wager="high") # 0 -> 0 (clamped)
+    res = await manager.submit_answer("session2", "q1", is_correct=False, wager="high") # 0 -> 0 (clamped)
     assert res["score"] == 0
 
-def test_misconception_logging(temp_vault, srs_db):
+@pytest.mark.asyncio
+async def test_misconception_logging(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)
     manager.start_session("session3", "database/learning paths/Git_Hub.md")
     
     # Submit incorrect answer 1st time to get a hint (not misconception yet)
-    res1 = manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
+    res1 = await manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
     assert res1["diagnosis"]["is_misconception"] is False
     
     # Submit incorrect answer 2nd consecutive time to trigger misconception logging
-    res2 = manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
+    res2 = await manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
     assert res2["diagnosis"]["is_misconception"] is True
     
     # Query database to check if misconception is saved

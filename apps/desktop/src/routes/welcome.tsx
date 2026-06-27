@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useConfig } from '@/lib/ConfigContext'
+import { useConfig, AppConfig } from '@/lib/ConfigContext'
 import { useAuth } from '@/context/auth-context'
 import { useEffect, useState } from 'react'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -31,7 +31,7 @@ export default function WelcomePage() {
       walkthroughStatus: 'active',
       walkthroughMilestone: '2.1',
       walkthroughCompleted: false,
-    } as any)
+    } as Partial<AppConfig>)
     navigate('/settings')
   }
 

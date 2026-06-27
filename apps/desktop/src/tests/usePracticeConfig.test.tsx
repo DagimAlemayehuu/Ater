@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { usePracticeConfig } from '../hooks/usePracticeConfig'
-import { sidecarApi } from '../lib/sidecarApi'
 
 // Mock sidecarApi
 vi.mock('../lib/sidecarApi', () => ({

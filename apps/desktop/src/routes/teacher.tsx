@@ -20,8 +20,18 @@ type LessonPreview = {
   previewUrl: string
 }
 
-// Cached curriculum from Phase 1 — used when "Start Lesson" is clicked
-let _cachedCurriculum: any = null
+interface TutorSession {
+  session_id: string
+  hub_path: string
+  current_note_path: string
+  completed_notes: string[]
+  wagers: Record<string, string>
+  score: number
+  status: string
+  updated_at: string
+  active_note_unlocks: string[]
+  curriculum?: string[]
+}
 
 function resolvePreviewUrl(url: string): string {
   if (!url) return ''
@@ -31,8 +41,7 @@ function resolvePreviewUrl(url: string): string {
 
 export default function Teacher() {
   const navigate = useNavigate()
-  const [tutorSession, setTutorSession] = useState<any | null>(null)
-  const [isConsolidationStarting, setIsConsolidationStarting] = useState(false)
+  const [tutorSession, setTutorSession] = useState<TutorSession | null>(null)
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
       const saved = localStorage.getItem('ater_teacher_chat_history')
@@ -134,7 +143,6 @@ export default function Teacher() {
     setPreview(null)
     setPanelOpen(false)
     setHasRoadmapReady(false)
-    _cachedCurriculum = null
     toast.success('Teacher history cleared.')
   }
 
@@ -210,7 +218,6 @@ export default function Teacher() {
             })
             setPanelOpen(true)
             setHasRoadmapReady(false)
-            _cachedCurriculum = null
           } else if (parsed.type === 'error') {
             throw new Error(parsed.message || 'Teacher failed.')
           }
