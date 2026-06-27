@@ -1,5 +1,5 @@
 {
-  "status": "implemented",
+  "status": "archived",
   "activeChange": "desktop-and-test-alignment",
   "githubIssue": "#10",
   "baseBranch": "main",
@@ -8,6 +8,11 @@
   "currentPhase": 2,
   "retryBudget": 3,
   "associatedChanges": [],
+  "archivePath": "openspec/changes/archive/2026-06-27-desktop-and-test-alignment",
+  "integrationDetails": {
+    "type": "local-merge",
+    "commit": "33a37990"
+  },
   "lastVerification": {
     "status": "passed",
     "profile": "fast",
