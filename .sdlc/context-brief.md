@@ -1,37 +1,41 @@
 # Context Brief
 
-Updated: 2026-06-27T19:17:15Z
+Updated: 2026-06-27T19:29:09.493006+00:00
 
 ## Current Objective
-- Status: `archived`
-- Active change: `None`
+- Status: `implemented`
+- Active change: `perfect-ci-cd`
 - Associated changes: `None`
-- Current phase: `None`
-- Git branch: `main`
-- GitHub issue: `None`
+- Current phase: `2`
+- Git branch: `feat/perfect-ci-cd`
+- GitHub issue: `#11`
 
 ## OpenSpec Artifacts
-- `desktop-and-test-alignment`: 7/7 tasks complete
-- `openspec/changes/desktop-and-test-alignment/proposal.md`
-- `openspec/changes/desktop-and-test-alignment/design.md`
-- `openspec/changes/desktop-and-test-alignment/tasks.md`
-- `openspec/changes/desktop-and-test-alignment/specs/tutor-runtime/spec.md`
+- `perfect-ci-cd`: 7/7 tasks complete
+- `openspec/changes/perfect-ci-cd/proposal.md`
+- `openspec/changes/perfect-ci-cd/design.md`
+- `openspec/changes/perfect-ci-cd/tasks.md`
+- `openspec/changes/perfect-ci-cd/specs/perfect-ci-cd/spec.md`
 
 ## Phase State
-- Phase 1: Backend Test Refactoring (success, attempts=1)
-- Phase 2: Desktop Code Warning Cleanup and Styling Alignment (success, attempts=1)
+- Phase 1: Optimizing CI/CD Caching (completed, attempts=1)
+- Phase 2: Hardening Windows CI & Environment Defaults (completed, attempts=1)
 
 ## Verification State
-- Last verification: `passed`
+- Last verification: not run
 
 ## Decisions Made
-- *Rationale*: Since the runtime code changed `submit_answer` to be async, the tests must conform to it. Pytest-asyncio is already configured in the backend repository and many other tests are async, so changing the test methods to `async def` and using `await` is the standard and correct approach.
-- *Alternatives considered*: Converting the async function back to synchronous was rejected because the sidecar utilizes async networking and LLM stream handlers which require `async` execution.
-- *Rationale*: Unused variables and incorrect hook dependencies lead to subtle runtime bugs or memory leaks. Fixing these ensures code quality and correctness.
-- *Alternatives considered*: Leaving warnings unresolved was rejected because the user requested to make the codebase perfect.
+- **Why**: `actions/setup-node` can automatically cache pnpm packages, but only if the `pnpm` executable is present first.
+- **Decision**: Install `pnpm` first via `pnpm/action-setup@v3`, and then call `actions/setup-node@v4` with `cache: 'pnpm'`.
+- **Why**: Rust release-mode compilation of the Tauri app and sidecar bindings takes several minutes. `swatinem/rust-cache` is highly optimized, handles multiple workspaces/cargo targets automatically, and avoids cache bloat.
+- **Decision**: Replace manual `actions/cache` steps with `swatinem/rust-cache@v2` across macOS and Windows runners.
+- **Why**: Windows is an official release target. Only running `cargo check` fails to catch linking issues (e.g. `ort` ONNX runtime libraries, Arrow/LanceDB DLLs) or test suite failures.
+- **Decision**: Rename `check-rust-windows` to `test-rust-windows`, compile using `cargo build --release`, and execute `cargo test` using the Windows host runner.
+- **Why**: `npx playwright install` downloads about 100-150MB of browser binaries on every run.
+- **Decision**: Cache `~/.cache/ms-playwright` using `actions/cache@v4` keyed on lockfile hash, and only install browser binaries if there is a cache miss.
 
 ## Blockers
 - None recorded.
 
 ## Next Agent Should
-- Execute: `sdlc-verify desktop-and-test-alignment`
+- Execute: `sdlc-verify perfect-ci-cd`
