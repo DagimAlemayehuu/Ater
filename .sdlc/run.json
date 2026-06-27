@@ -53,7 +53,7 @@
     {
       "id": 1,
       "name": "Backend Test Refactoring",
-      "status": "success",
+      "status": "completed",
       "tasks": [
         "1.1 Update `apps/api/tests/test_tutor_runtime.py` to make test functions async and await `TutorSessionManager.submit_answer` calls.",
         "1.2 Update `apps/api/tests/test_learning_runtime_e2e.py` to make `test_wager_scoring_correct_high_confidence`, `test_wager_scoring_incorrect_high_confidence`, `test_misconception_logged_for_high_confidence_error`, and `test_score_clamped_at_zero` async and await `submit_answer`."
@@ -67,7 +67,7 @@
     {
       "id": 2,
       "name": "Desktop Code Warning Cleanup and Styling Alignment",
-      "status": "success",
+      "status": "completed",
       "tasks": [
         "2.1 Fix React Hook dependency issues in `apps/desktop/src/routes/settings.tsx`.",
         "2.2 Cleanup unused variables and typing warnings in `apps/desktop/src/routes/teacher.tsx`.",
