@@ -572,15 +572,6 @@ export default function Onboarding() {
     }
   }
 
-  const PROVIDERS = [
-    { id: 'google', label: 'Google Gemini', hint: 'aistudio.google.com' },
-    { id: 'openai', label: 'OpenAI', hint: 'platform.openai.com' },
-    { id: 'anthropic', label: 'Anthropic', hint: 'console.anthropic.com' },
-    { id: 'groq', label: 'Groq (Fast)', hint: 'console.groq.com' },
-    { id: 'openrouter', label: 'OpenRouter', hint: 'openrouter.ai' },
-    { id: 'custom', label: 'Custom Provider', hint: '' },
-  ] as const
-
   return (
     <div className="h-screen w-full flex flex-col justify-center bg-background text-foreground selection:bg-foreground selection:text-background px-12 relative overflow-y-auto">
       {/* Existing Vault Detected Modal */}

@@ -2,9 +2,7 @@
 
 ## Purpose
 This specification defines the requirements for the Teach Anything Planner capability in Ater.
-
 ## Requirements
-
 ### Requirement: Ingestion intent classification
 The system SHALL classify incoming user prompts to determine if they represent a request to learn/study a topic.
 
@@ -69,7 +67,6 @@ The system MUST support unlocking and writing the next scheduled Atomic Note in 
 - **WHEN** the tutor runtime completes the quiz session for the current active note and verifies mastery
 - **THEN** the system SHALL create the next Atomic Note file in the curriculum in the vault
 - **THEN** it SHALL update the Hub note links to reflect that the note is now created and active
-
 
 ### Requirement: Headless planner tests
 The planner implementation SHALL be verified using headless backend unit and integration tests with mocked LLM generation.

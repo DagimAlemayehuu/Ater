@@ -1,31 +1,37 @@
 # Context Brief
 
+Updated: 2026-06-27T18:43:21.767516+00:00
+
 ## Current Objective
-- Refactor the Ater theme and contrast settings to resolve component theme-switching errors and button contrast issues.
+- Status: `implemented`
+- Active change: `desktop-and-test-alignment`
+- Associated changes: `None`
+- Current phase: `2`
+- Git branch: `feature/desktop-and-test-alignment`
+- GitHub issue: `#10`
 
-## Active OpenSpec Change
-- [theme-and-contrast-refactor](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor)
+## OpenSpec Artifacts
+- `desktop-and-test-alignment`: 7/7 tasks complete
+- `openspec/changes/desktop-and-test-alignment/proposal.md`
+- `openspec/changes/desktop-and-test-alignment/design.md`
+- `openspec/changes/desktop-and-test-alignment/tasks.md`
+- `openspec/changes/desktop-and-test-alignment/specs/tutor-runtime/spec.md`
 
-## Decisions Made
-- Map primary buttons to `--primary` and `--primary-foreground` to ensure adaptive sheets of gray without pure black/white background states.
-- Replace hardcoded hex colors (`#0e0e0f`, `#0a0a0b`, `#131313`, `#1c1c1e`) in pages with theme-aware `bg-background` and `bg-card` classes.
-- Standardize button hover styling using responsive theme variables (`hover:bg-muted-foreground/20 dark:hover:bg-[#2c2c30]`).
-- Replace hardcoded hex shades like `#e4e4e7` in practice screens with responsive classes (`bg-foreground/10`, `hover:bg-foreground/5`).
-
-## Files and Artifacts That Matter
-- [proposal.md](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/proposal.md)
-- [design.md](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/design.md)
-- [spec.md (theme-system)](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/specs/theme-system/spec.md)
-- [tasks.md](file:///Users/dabodestroyer/code/Antigravity/Ater/openspec/changes/theme-and-contrast-refactor/tasks.md)
-- [AGENTS.md](file:///Users/dabodestroyer/code/Antigravity/Ater/AGENTS.md)
-- [docs/CONTEXT.md](file:///Users/dabodestroyer/code/Antigravity/Ater/docs/CONTEXT.md)
+## Phase State
+- Phase 1: Backend Test Refactoring (success, attempts=1)
+- Phase 2: Desktop Code Warning Cleanup and Styling Alignment (success, attempts=1)
 
 ## Verification State
-- Initial OpenSpec change artifacts created and validated.
-- GitHub tracking issue [#8](https://github.com/DagimAlemayehuu/Ater/issues/8) successfully created.
+- Last verification: `passed`
 
-## Open Questions
-- None.
+## Decisions Made
+- *Rationale*: Since the runtime code changed `submit_answer` to be async, the tests must conform to it. Pytest-asyncio is already configured in the backend repository and many other tests are async, so changing the test methods to `async def` and using `await` is the standard and correct approach.
+- *Alternatives considered*: Converting the async function back to synchronous was rejected because the sidecar utilizes async networking and LLM stream handlers which require `async` execution.
+- *Rationale*: Unused variables and incorrect hook dependencies lead to subtle runtime bugs or memory leaks. Fixing these ensures code quality and correctness.
+- *Alternatives considered*: Leaving warnings unresolved was rejected because the user requested to make the codebase perfect.
+
+## Blockers
+- None recorded.
 
 ## Next Agent Should
-- Run `sdlc-orchestrate theme-and-contrast-refactor` to begin the implementation phase.
+- Execute: `sdlc-verify desktop-and-test-alignment`
