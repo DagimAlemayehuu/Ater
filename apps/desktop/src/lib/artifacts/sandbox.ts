@@ -39,20 +39,111 @@ body {
 `
 }
 
+function isDoWhileKeyword(js: string, whileIdx: number): boolean {
+  let idx = whileIdx - 1;
+  while (idx >= 0 && /\s/.test(js[idx])) {
+    idx--;
+  }
+  if (idx < 0) return false;
+
+  // Case A: do { ... } while (cond);
+  if (js[idx] === '}') {
+    let depth = 1;
+    idx--;
+    while (idx >= 0 && depth > 0) {
+      if (js[idx] === '}') depth++;
+      else if (js[idx] === '{') depth--;
+      idx--;
+    }
+    if (depth === 0) {
+      // Find non-whitespace word before '{'
+      while (idx >= 0 && /\s/.test(js[idx])) {
+        idx--;
+      }
+      if (idx >= 1 && js.substring(idx - 1, idx + 1) === 'do' && !/[a-zA-Z0-9_$]/.test(js[idx - 2] || '') && !/[a-zA-Z0-9_$]/.test(js[idx + 1] || '')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Case B: do statement; while (cond);
+  let semisCount = 0;
+  while (idx >= 0) {
+    if (js[idx] === '{' || js[idx] === '}') {
+      return false;
+    }
+    if (js[idx] === ';') {
+      semisCount++;
+      if (semisCount > 1) {
+        return false;
+      }
+    }
+    if (js.substring(idx, idx + 2) === 'do' && !/[a-zA-Z0-9_$]/.test(js[idx - 1] || '') && !/[a-zA-Z0-9_$]/.test(js[idx + 2] || '')) {
+      return true;
+    }
+    idx--;
+  }
+
+  return false;
+}
+
 export function injectLoopGuardToJS(js: string): string {
   let output = '';
   let i = 0;
   let guardCount = 0;
 
   while (i < js.length) {
-    const isLoopKeyword = (
+    const isDoKeyword = (
+      js.substring(i, i + 2) === 'do' && !/[a-zA-Z0-9_$]/.test(js[i - 1] || '') && !/[a-zA-Z0-9_$]/.test(js[i + 2] || '')
+    );
+    const isForOrWhileKeyword = (
       (js.substring(i, i + 3) === 'for' && !/[a-zA-Z0-9_$]/.test(js[i - 1] || '') && !/[a-zA-Z0-9_$]/.test(js[i + 3] || '')) ||
       (js.substring(i, i + 5) === 'while' && !/[a-zA-Z0-9_$]/.test(js[i - 1] || '') && !/[a-zA-Z0-9_$]/.test(js[i + 5] || ''))
     );
 
-    if (isLoopKeyword) {
+    if (isDoKeyword) {
+      const start = i;
+      i += 2; // skip 'do'
+      let temp = i;
+      while (temp < js.length && /\s/.test(js[temp])) {
+        temp++;
+      }
+      if (temp < js.length && js[temp] === '{') {
+        i = temp + 1; // skip '{'
+        guardCount++;
+        const guardVar = `__guard_${guardCount}`;
+        output += `let ${guardVar} = 0;\ndo {\n  if (++${guardVar} > 1000000) throw new Error("Infinite loop detected: exceeded 1,000,000 iterations");\n`;
+      } else {
+        // Single statement do loop without braces
+        let stmtStart = temp;
+        while (temp < js.length && js[temp] !== ';') {
+          temp++;
+        }
+        if (temp < js.length && js[temp] === ';') {
+          const stmt = js.substring(stmtStart, temp + 1);
+          i = temp + 1; // skip ';'
+          guardCount++;
+          const guardVar = `__guard_${guardCount}`;
+          output += `let ${guardVar} = 0;\ndo {\n  if (++${guardVar} > 1000000) throw new Error("Infinite loop detected: exceeded 1,000,000 iterations");\n  ${stmt}\n}`;
+        } else {
+          output += js.substring(start, i);
+        }
+      }
+      continue;
+    }
+
+    if (isForOrWhileKeyword) {
       const keyword = js.substring(i, i + 3) === 'for' ? 'for' : 'while';
       const start = i;
+
+      if (keyword === 'while' && isDoWhileKeyword(js, start)) {
+        // Ending while of a do-while loop, skip injecting guard block!
+        output += keyword;
+        i += keyword.length;
+        continue;
+      }
+
       i += keyword.length;
 
       // Skip whitespace to opening parenthesis

@@ -1,54 +1,48 @@
-# Phase Ledger: desktop-and-test-alignment
+# Phase Ledger: perfect-artifacts
 
-## Phase 1: Backend Test Refactoring
+## Phase 1: Loop Guard Preprocessor do-while Support
 Status: completed
 OpenSpec source:
-- Main change: openspec/changes/desktop-and-test-alignment/
+- Main change: openspec/changes/perfect-artifacts/
 - Phase spec/change: none
 OpenSpec tasks:
-- [x] 1.1 Update `apps/api/tests/test_tutor_runtime.py` to make test functions async and await `TutorSessionManager.submit_answer` calls.
-- [x] 1.2 Update `apps/api/tests/test_learning_runtime_e2e.py` to make `test_wager_scoring_correct_high_confidence`, `test_wager_scoring_incorrect_high_confidence`, `test_misconception_logged_for_high_confidence_error`, and `test_score_clamped_at_zero` async and await `submit_answer`.
+- [x] 1.1 Add helper `isDoWhileKeyword` to detect if `while` is the ending of a `do-while` loop in `apps/desktop/src/lib/artifacts/sandbox.ts`
+- [x] 1.2 Update `injectLoopGuardToJS` to support `do` loops (injecting guard declarations and increment statements) and skip rewriting the ending `while` keyword of `do-while` loops
+- [x] 1.3 Add unit tests to `apps/desktop/src/tests/sandboxFrame.test.ts` verifying that `do-while` loops are successfully guarded and execute/throw correctly
 OpenSpec requirements/scenarios:
-- `tutor-runtime`: Run tutor tests headlessly without network or AI
+- `Loop Guard Watchdog` -> `Halting infinite do while loops in sandbox`
 Allowed files/areas:
-- `apps/api/tests/test_tutor_runtime.py`
-- `apps/api/tests/test_learning_runtime_e2e.py`
+- `apps/desktop/src/lib/artifacts/sandbox.ts`
+- `apps/desktop/src/tests/sandboxFrame.test.ts`
 Forbidden scope:
-- Modifying FastAPI endpoints, logic in tutor_service.py or database schemas.
+- UnifiedSandboxViewer or other UI files.
 Verification:
-- `cd apps/api && uv run python -m pytest tests/`
+- `pnpm --filter @ater/desktop test`
 Manual preview impact:
-- None (backend tests only).
+- None (internal loop preprocessor only).
 Completion report:
-- Successfully refactored all failing sync tutor-runtime tests to be async and await submit_answer, using the `@pytest.mark.asyncio` decorator. Verified that the entire pytest suite passes successfully with zero errors.
+- Added `isDoWhileKeyword` helper and `do` keyword matching in the loop preprocessor. Standard and single-statement do-while loops are now fully supported, parsed, and guarded correctly without throwing syntax errors. All 9 loop preprocessor test cases passed successfully.
 
-## Phase 2: Desktop Code Warning Cleanup and Styling Alignment
-Status: completed
+## Phase 2: Sandbox Viewer Auto-Compilation and Retry
+Status: pending
 OpenSpec source:
-- Main change: openspec/changes/desktop-and-test-alignment/
+- Main change: openspec/changes/perfect-artifacts/
 - Phase spec/change: none
 OpenSpec tasks:
-- [x] 2.1 Fix React Hook dependency issues in `apps/desktop/src/routes/settings.tsx`.
-- [x] 2.2 Cleanup unused variables and typing warnings in `apps/desktop/src/routes/teacher.tsx`.
-- [x] 2.3 Cleanup typing warnings in `apps/desktop/src/routes/welcome.tsx` and test files.
-- [x] 3.1 Audit desktop layouts (AuthenticatedLayout, AppHeader, AppSidebar) for Outfit font usage and consistent HSL/Bento token bindings.
-- [x] 3.2 Verify outer padding and panel gaps conform to `docs/DESIGN.md` guidelines.
+- [ ] 2.1 Update `handleOfflineRetry` in `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx` to clear active compile errors when retrying connection
+- [ ] 2.2 Add auto-compilation `useEffect` in `UnifiedSandboxViewer` that triggers LLM compilation of `sandboxSpec` nodes when they lack sandbox HTML code
+- [ ] 2.3 Store note content in local state when reading an Obsidian note in `UnifiedSandboxViewer` to pass it as context for LLM compilation
 OpenSpec requirements/scenarios:
-- Visual design rules and CSS layout guidelines.
+- `Unified Sandbox Render Component` -> `Auto compile sandbox specs in Obsidian Note Viewer`
+- `Offline Error Warning` -> `Retrying compilation after network error clears active error state`
 Allowed files/areas:
-- `apps/desktop/src/routes/settings.tsx`
-- `apps/desktop/src/routes/teacher.tsx`
-- `apps/desktop/src/routes/welcome.tsx`
-- `apps/desktop/src/components/layout/authenticated-layout.tsx`
-- `apps/desktop/src/components/layout/app-sidebar.tsx`
-- `apps/desktop/src/components/layout/app-header.tsx`
+- `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx`
 Forbidden scope:
-- Changing business logic, introducing un-approved fonts, or purple/violet colors.
+- Sandbox preprocessor logic (sandbox.ts) or other routes.
 Verification:
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm build`
+- `pnpm --filter @ater/desktop test`
+- Manual testing of note view compilation and retry button.
 Manual preview impact:
-- Visual elements and panels inside the desktop client are aligned with the Outfit font and Bento box spacing guidelines.
+- When opening an Obsidian note with an uncompiled `<sandbox-spec>`, it will automatically compile and display in the split pane preview.
 Completion report:
-- Resolved react-hooks dependency warnings in settings.tsx by adding an eslint-disable-next-line comment. Cleaned up unused variable warnings in teacher.tsx and onboarding.tsx, and typed parameters with proper interfaces (TutorSession). Audited layout files and confirmed strict adherence to Outfit font styling and HSL tokens. Build and typecheck pass with zero errors.
+- pending
