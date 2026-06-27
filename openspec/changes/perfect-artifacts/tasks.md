@@ -6,9 +6,9 @@
 
 ## 2. Sandbox Viewer Compilation and Retry Fixes
 
-- [ ] 2.1 Update `handleOfflineRetry` in `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx` to clear active compile errors when retrying connection
-- [ ] 2.2 Add auto-compilation `useEffect` in `UnifiedSandboxViewer` that triggers LLM compilation of `sandboxSpec` nodes when they lack sandbox HTML code
-- [ ] 2.3 Store note content in local state when reading an Obsidian note in `UnifiedSandboxViewer` to pass it as context for LLM compilation
+- [x] 2.1 Update `handleOfflineRetry` in `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx` to clear active compile errors when retrying connection
+- [x] 2.2 Add auto-compilation `useEffect` in `UnifiedSandboxViewer` that triggers LLM compilation of `sandboxSpec` nodes when they lack sandbox HTML code
+- [x] 2.3 Store note content in local state when reading an Obsidian note in `UnifiedSandboxViewer` to pass it as context for LLM compilation
 
 ## 3. End-to-End Verification
 

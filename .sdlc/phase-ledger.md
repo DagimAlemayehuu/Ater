@@ -24,14 +24,14 @@ Completion report:
 - Added `isDoWhileKeyword` helper and `do` keyword matching in the loop preprocessor. Standard and single-statement do-while loops are now fully supported, parsed, and guarded correctly without throwing syntax errors. All 9 loop preprocessor test cases passed successfully.
 
 ## Phase 2: Sandbox Viewer Auto-Compilation and Retry
-Status: pending
+Status: completed
 OpenSpec source:
 - Main change: openspec/changes/perfect-artifacts/
 - Phase spec/change: none
 OpenSpec tasks:
-- [ ] 2.1 Update `handleOfflineRetry` in `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx` to clear active compile errors when retrying connection
-- [ ] 2.2 Add auto-compilation `useEffect` in `UnifiedSandboxViewer` that triggers LLM compilation of `sandboxSpec` nodes when they lack sandbox HTML code
-- [ ] 2.3 Store note content in local state when reading an Obsidian note in `UnifiedSandboxViewer` to pass it as context for LLM compilation
+- [x] 2.1 Update `handleOfflineRetry` in `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx` to clear active compile errors when retrying connection
+- [x] 2.2 Add auto-compilation `useEffect` in `UnifiedSandboxViewer` that triggers LLM compilation of `sandboxSpec` nodes when they lack sandbox HTML code
+- [x] 2.3 Store note content in local state when reading an Obsidian note in `UnifiedSandboxViewer` to pass it as context for LLM compilation
 OpenSpec requirements/scenarios:
 - `Unified Sandbox Render Component` -> `Auto compile sandbox specs in Obsidian Note Viewer`
 - `Offline Error Warning` -> `Retrying compilation after network error clears active error state`
@@ -45,4 +45,4 @@ Verification:
 Manual preview impact:
 - When opening an Obsidian note with an uncompiled `<sandbox-spec>`, it will automatically compile and display in the split pane preview.
 Completion report:
-- pending
+- Added auto-compilation useEffect inside UnifiedSandboxViewer utilizing local state noteContentText to fetch the note's markdown content as generation context. Updated the handleOfflineRetry button handler to clear active compile errors, enabling re-triggering of compilation after simulated offline/unhealthy sidecar retries.

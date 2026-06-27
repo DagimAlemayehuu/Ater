@@ -50,13 +50,16 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
     incrementRepairAttempts: storeIncrementRepairAttempts,
     setRepairing: storeSetRepairing,
     addVersion: storeAddVersion,
+    recordCompileError: storeRecordCompileError,
   } = useArtifactStore()
 
   const [mode, setMode] = useState<'preview' | 'code'>('preview')
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [isSidecarHealthy, setIsSidecarHealthy] = useState(true)
   const [savedState, setSavedState] = useState<any>(null)
+  const [noteContentText, setNoteContentText] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const compilingSpecsRef = useRef<Set<string>>(new Set())
 
 
   const artifacts = customArtifacts || storeArtifacts
@@ -218,6 +221,7 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
   useEffect(() => {
     if (isNoteRoute && notePath) {
       sidecarApi.readObsidianNote(notePath).then((res) => {
+        setNoteContentText(res.content || '')
         const stateStr = res.metadata?.state || res.metadata?.State
         if (stateStr) {
           try {
@@ -230,9 +234,11 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
         }
       }).catch(() => {
         setSavedState(null)
+        setNoteContentText('')
       })
     } else {
       setSavedState(null)
+      setNoteContentText('')
     }
   }, [notePath, isNoteRoute])
 
@@ -322,6 +328,85 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
     }
   }, [resolvedTheme])
 
+  // Auto-compile sandbox specs when they lack sandbox HTML code
+  useEffect(() => {
+    if (!activeArtifact || !activeChapter || !activeChapter.sandboxSpec || sandboxCode) {
+      return
+    }
+
+    const artifactId = activeArtifact.id
+    const spec = activeChapter.sandboxSpec
+    const chapterId = activeChapter.id
+    const key = `${artifactId}:${chapterId}:${spec}`
+
+    if (compilingSpecsRef.current.has(key)) return
+    compilingSpecsRef.current.add(key)
+
+    // Clear compile error when starting
+    if (customArtifacts) {
+      setLocalCompileErrors(prev => {
+        const next = { ...prev }
+        delete next[artifactId]
+        return next
+      })
+    } else {
+      storeRecordCompileError(artifactId, null)
+    }
+
+    const checkAndGenerate = async () => {
+      const isOnline = navigator.onLine
+      if (!isOnline) {
+        const errMsg = "Browser is offline. Connect to the internet to compile."
+        if (customArtifacts) setLocalCompileErrors(prev => ({ ...prev, [artifactId]: errMsg }))
+        else storeRecordCompileError(artifactId, errMsg)
+        compilingSpecsRef.current.delete(key)
+        return
+      }
+      try {
+        const health = await sidecarApi.health()
+        if (health.status !== 'ok') {
+          const errMsg = "FastAPI sidecar service is unhealthy."
+          if (customArtifacts) setLocalCompileErrors(prev => ({ ...prev, [artifactId]: errMsg }))
+          else storeRecordCompileError(artifactId, errMsg)
+          compilingSpecsRef.current.delete(key)
+          return
+        }
+      } catch {
+        const errMsg = "FastAPI sidecar service is unreachable."
+        if (customArtifacts) setLocalCompileErrors(prev => ({ ...prev, [artifactId]: errMsg }))
+        else storeRecordCompileError(artifactId, errMsg)
+        compilingSpecsRef.current.delete(key)
+        return
+      }
+
+      sidecarApi.generateArtifactCode({
+        prompt: spec,
+        context: noteContentText || activeChapter.content || '',
+        previous_code: ''
+      }).then((result) => {
+        const code = result.code || result.answer || ''
+        if (!code) {
+          const errMsg = "FastAPI sidecar generated empty code."
+          if (customArtifacts) setLocalCompileErrors(prev => ({ ...prev, [artifactId]: errMsg }))
+          else storeRecordCompileError(artifactId, errMsg)
+          return
+        }
+        
+        // Save the generated code
+        const nextChapters = chapters.map(c => c.id === chapterId ? { ...c, sandbox: code } : c)
+        addVersion(artifactId, nextChapters, code)
+      }).catch((err) => {
+        const errMsg = err?.message || "Failed to generate sandbox code."
+        if (customArtifacts) setLocalCompileErrors(prev => ({ ...prev, [artifactId]: errMsg }))
+        else storeRecordCompileError(artifactId, errMsg)
+      }).finally(() => {
+        compilingSpecsRef.current.delete(key)
+      })
+    }
+
+    checkAndGenerate()
+  }, [activeArtifact?.id, activeChapter?.id, activeChapter?.sandboxSpec, sandboxCode, noteContentText, chapters, addVersion, customArtifacts, storeRecordCompileError])
+
   if (!activeArtifact || !activeVersion || !activeChapter) {
     return (
       <div className="flex h-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 bg-bento-bg border-l border-border">
@@ -341,6 +426,18 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
       setIsSidecarHealthy(res.status === 'ok')
     } catch {
       setIsSidecarHealthy(false)
+    }
+
+    if (activeArtifact) {
+      if (customArtifacts) {
+        setLocalCompileErrors(prev => {
+          const next = { ...prev }
+          delete next[activeArtifact.id]
+          return next
+        })
+      } else {
+        storeRecordCompileError(activeArtifact.id, null)
+      }
     }
   }
 
