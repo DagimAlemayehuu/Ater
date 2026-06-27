@@ -2,9 +2,7 @@
 
 ## Purpose
 This specification defines requirements and scenarios for standardizing simulator sandboxes under a UnifiedSandboxViewer, implementing loop-guard watchdogs for dynamically generated JavaScript, showing offline warnings, and route-bound dual parameter state persistence in Obsidian notes vs practice sessions.
-
 ## Requirements
-
 ### Requirement: Unified Sandbox Render Component
 The system SHALL parse Markdown text for `<artifact>` and `<sandbox-spec>` blocks using a client-side XML parser and render them in a split-pane layout using a shared component called `UnifiedSandboxViewer`.
 
@@ -16,11 +14,19 @@ The system SHALL parse Markdown text for `<artifact>` and `<sandbox-spec>` block
 - **WHEN** a user opens an Obsidian note containing `<artifact>` blocks in the note viewer
 - **THEN** the editor page SHALL parse the markdown and automatically open the split-pane preview displaying the compiled HTML simulator
 
+#### Scenario: Auto compile sandbox specs in Obsidian Note Viewer
+- **WHEN** a user opens an Obsidian note containing `<sandbox-spec>` blocks in the note viewer and the sandbox code is missing
+- **THEN** the system SHALL automatically trigger FastAPI sidecar generation and compile the sandbox simulator using the note content as context
+
 ### Requirement: Loop Guard Watchdog
 The system SHALL intercept and post-process LLM-generated JavaScript before injecting it into the iframe, inserting counter-based watchdog loops to prevent browser freezes.
 
 #### Scenario: Halting infinite loops in sandbox
 - **WHEN** a JavaScript script inside the sandbox attempts to run a `while` or `for` loop that exceeds 1,000,000 iterations
+- **THEN** the injected loop guard SHALL throw a runtime exception, halting loop execution, and trigger the self-healing error flow
+
+#### Scenario: Halting infinite do while loops in sandbox
+- **WHEN** a JavaScript script inside the sandbox attempts to run a `do` `while` loop that exceeds 1,000,000 iterations
 - **THEN** the injected loop guard SHALL throw a runtime exception, halting loop execution, and trigger the self-healing error flow
 
 ### Requirement: Offline Error Warning
@@ -29,6 +35,10 @@ The system SHALL check for network connectivity and sidecar availability before 
 #### Scenario: Compiling new sandboxes when offline
 - **WHEN** the system attempts to compile a new `<sandbox-spec>` block while offline
 - **THEN** the sandbox preview panel SHALL display a styled offline error card explaining that internet connectivity is required to compile the simulator
+
+#### Scenario: Retrying compilation after network error clears active error state
+- **WHEN** a sandbox compilation has failed due to offline status or unreachable sidecar, and the user clicks retry connection
+- **THEN** the system SHALL check health and connectivity, clear the active compile error state, and automatically re-trigger sandbox compilation if connection is restored
 
 ### Requirement: Parameter State Persistence
 The system SHALL support saving simulator variables in the parent note's frontmatter properties for note-viewing sessions, while isolating practice arena sessions.
@@ -40,3 +50,4 @@ The system SHALL support saving simulator variables in the parent note's frontma
 #### Scenario: Isolated session state during practice
 - **WHEN** a user adjusts parameters in the Practice Arena's simulator panel during an FSRS active recall quiz
 - **THEN** the changes SHALL remain session-isolated and SHALL NOT overwrite the source Atomic Note in the vault
+
