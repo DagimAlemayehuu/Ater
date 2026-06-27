@@ -59,8 +59,17 @@ The system SHALL support writing the planned curriculum files to the vault in ei
 
 #### Scenario: Progressive mode
 - **WHEN** the user confirms the curriculum and the mode is "Progressive"
-- **THEN** the system SHALL create the Hub file and only the first Chapter's file and Atomic Note stubs in the vault
-- **THEN** the Hub frontmatter and body SHALL list all chapters, but only the first chapter's link will point to a created file; other chapters will remain listed but not yet created
+- **THEN** the system SHALL create the Hub file and only the first Chapter's first Atomic Note file in the vault
+- **THEN** all subsequent Atomic Notes and Chapter files in the curriculum SHALL remain locked and uncreated until unlocked sequentially by the tutor runtime
+
+### Requirement: Sequential single-note unlocks
+The system MUST support unlocking and writing the next scheduled Atomic Note in the roadmap sequentially upon receiving verification from the tutor runtime.
+
+#### Scenario: Unlock next atomic note
+- **WHEN** the tutor runtime completes the quiz session for the current active note and verifies mastery
+- **THEN** the system SHALL create the next Atomic Note file in the curriculum in the vault
+- **THEN** it SHALL update the Hub note links to reflect that the note is now created and active
+
 
 ### Requirement: Headless planner tests
 The planner implementation SHALL be verified using headless backend unit and integration tests with mocked LLM generation.
@@ -70,3 +79,29 @@ The planner implementation SHALL be verified using headless backend unit and int
 - **THEN** the tests SHALL NOT open a Tauri window or an OS browser window
 - **THEN** the tests SHALL NOT call live AI providers or require network access
 - **THEN** all LLM calls (intent, clarification, planning) SHALL be mocked using deterministic test fixtures
+
+### Requirement: Teach Anything planner
+The system SHALL generate Teach Anything learning paths for arbitrary user prompts and SHALL produce vault-ready Markdown notes through deterministic quality gates before writing content.
+
+#### Scenario: Reject weak-model prompt leakage before writing
+- **WHEN** a model-generated Teach Anything Atomic Note contains internal prompt text, placeholder source language, placeholder quiz answers, or obviously truncated prose
+- **THEN** the runtime SHALL reject that body before writing it to the vault
+- **AND** the runtime SHALL retry or replace it with a deterministic fallback note
+
+#### Scenario: Produce a usable note without source material
+- **WHEN** the user asks to learn a topic from a simple prompt without attaching sources
+- **THEN** the runtime SHALL build neutral grounding context from the topic, chapter, note title, and prompt
+- **AND** it SHALL NOT inject prompt-shaped fallback text such as requests for a comprehensive explanation into the generated note
+- **AND** it SHALL write a structurally valid Atomic Note with an interactive quiz
+
+#### Scenario: Preserve source-backed grounding without fake citations
+- **WHEN** source snippets are available for a Teach Anything concept
+- **THEN** the runtime MAY use those snippets as grounding context
+- **BUT** it SHALL NOT emit fake page anchors, generic "source treatment" placeholders, or claims that the source says something when no specific source snippet supports it
+
+#### Scenario: Headless quality tests
+- **WHEN** the Teach Anything Markdown quality tests run
+- **THEN** they SHALL run without a desktop window
+- **AND** they SHALL run without live AI providers
+- **AND** they SHALL run without network access
+

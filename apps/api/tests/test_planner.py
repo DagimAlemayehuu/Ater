@@ -88,9 +88,10 @@ async def test_generate_curriculum():
     
     assert result["topic"] == "Git Branching"
     assert result["learning_mode"] == "self-study"
-    assert len(result["chapters"]) == 1
+    assert len(result["chapters"]) >= 8
     assert result["chapters"][0]["title"] == "Foundations of Branching"
     assert "Git Commit Graph" in result["chapters"][0]["atomic_notes"]
+    assert len(result["chapters"][0]["atomic_notes"]) >= 3
 
 
 def test_write_curriculum_generate_all():

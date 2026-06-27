@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
-import { FileText, Eye, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { FileText, Eye, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Dumbbell, BookOpen } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { toast } from 'sonner'
-import { parseFrontmatter } from '@/lib/markdownHelper'
+import MiniPracticeUI from '@/components/MiniPracticeUI'
 
 interface NoteCanvasProps {
   notePath: string | null;
@@ -13,9 +13,8 @@ interface NoteCanvasProps {
 
 export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
   const [content, setContent] = useState<string>('')
-  const [htmlContent, setHtmlContent] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'lesson' | 'markdown'>('markdown')
-  const [hasCompanionHtml, setHasCompanionHtml] = useState<boolean>(false)
+  const [questions, setQuestions] = useState<any[]>([])
+  const [viewMode, setViewMode] = useState<'markdown' | 'practice'>('markdown')
   const [navigationSequence, setNavigationSequence] = useState<string[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(-1)
   const [loading, setLoading] = useState<boolean>(false)
@@ -24,19 +23,17 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
   useEffect(() => {
     if (!notePath) {
       setContent('')
-      setHtmlContent(null)
-      setHasCompanionHtml(false)
+      setQuestions([])
       setNavigationSequence([])
       setCurrentIndex(-1)
       setViewMode('markdown')
       return
     }
 
-    // If it's a full URL (lesson preview) or a .html path, render via iframe — don't fetch as text
+    // If it's a full URL or .html, it shouldn't be loaded directly as Markdown
     if (notePath.startsWith('http') || notePath.toLowerCase().endsWith('.html')) {
       setContent('')
-      setHtmlContent(null)
-      setHasCompanionHtml(false)
+      setQuestions([])
       setNavigationSequence([])
       setCurrentIndex(-1)
       setViewMode('markdown')
@@ -48,13 +45,11 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
     const loadNote = async () => {
       setLoading(true)
       setError(null)
-      setHtmlContent(null)
-      setHasCompanionHtml(false)
+      setQuestions([])
       setViewMode('markdown')
       
       try {
         let resolvedPath = notePath
-        // Resolve pageName to full relative path if it doesn't end with a typical extension and isn't a URL
         if (!notePath.toLowerCase().endsWith('.md') && !notePath.toLowerCase().endsWith('.html') && !notePath.startsWith('http')) {
           const searchRes = await sidecarApi.findVaultPage(notePath)
           if (searchRes.found && searchRes.path) {
@@ -70,31 +65,23 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
         
         const metadata = res.metadata || {}
         
+        // Parse interactive-quiz block
+        const quizMatch = noteText.match(/```interactive-quiz\s*([\s\S]*?)```/);
+        if (quizMatch) {
+          try {
+            const parsedQs = JSON.parse(quizMatch[1].trim());
+            if (Array.isArray(parsedQs)) {
+              setQuestions(parsedQs);
+            }
+          } catch (e) {
+            console.warn('Failed to parse quiz questions:', e);
+          }
+        }
+        
         // Resolve parent folder path
         const parts = resolvedPath.split(/[/\\]/);
         parts.pop();
         const parentDir = parts.join('/');
-        
-        // Check for companion html
-        const simple = metadata.simple || metadata.lesson_variants?.simple;
-        const deep = metadata.deep || metadata.lesson_variants?.deep;
-        const cram = metadata.cram || metadata.lesson_variants?.cram;
-        const exam = metadata.exam || metadata.lesson_variants?.exam;
-        
-        const relativeHtmlPath = simple || deep || cram || exam;
-        if (typeof relativeHtmlPath === 'string') {
-          const htmlPath = parentDir ? `${parentDir}/${relativeHtmlPath}` : relativeHtmlPath;
-          try {
-            const htmlRes = await sidecarApi.readObsidianNote(htmlPath);
-            if (htmlRes && htmlRes.content) {
-              setHtmlContent(htmlRes.content);
-              setHasCompanionHtml(true);
-              setViewMode('lesson');
-            }
-          } catch (htmlErr) {
-            console.warn('Failed to load companion HTML, defaulting to Markdown:', htmlErr);
-          }
-        }
         
         // Build navigation sequence
         let sequence: string[] = [];
@@ -120,7 +107,7 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
           }
         }
         
-        // Fallback to sorted sibling files if no hub was found or loaded
+        // Fallback to sorted sibling files
         if (sequence.length === 0) {
           try {
             const filesRes = await sidecarApi.listObsidianFiles();
@@ -192,22 +179,6 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
     }
   };
 
-  // Keep latest handlers fresh for the message listener
-  const nextHandlerRef = useRef(handleNext);
-  useEffect(() => {
-    nextHandlerRef.current = handleNext;
-  });
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'NEXT_NOTE') {
-        nextHandlerRef.current();
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
   if (!notePath) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bento-panel border border-border/40 rounded-[12px] shadow-sm text-center h-full">
@@ -222,9 +193,7 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
     )
   }
 
-  const isHtml = notePath.startsWith('http') || notePath.toLowerCase().endsWith('.html')
-
-  if (loading && !isHtml) {
+  if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bento-panel border border-border/40 rounded-[12px] shadow-sm text-center h-full">
         <div className="w-8 h-8 rounded-full border-2 border-muted/20 border-t-muted-foreground animate-spin mb-4" />
@@ -233,7 +202,7 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
     )
   }
 
-  if (error && !isHtml) {
+  if (error) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bento-panel border border-border/40 rounded-[12px] shadow-sm text-center h-full">
         <div className="p-4 bg-destructive/10 rounded-full mb-4 border border-destructive/20 text-destructive">
@@ -246,111 +215,117 @@ export function NoteCanvas({ notePath, onNavigate, onClose }: NoteCanvasProps) {
   }
 
   const noteTitle = notePath.split('/').pop()?.replace(/\.(md|html)$/i, '').replace(/-/g, ' ').replace(/^\d+\s*/, '') || 'Note'
+  const displayTitle = noteTitle.charAt(0).toUpperCase() + noteTitle.slice(1);
 
-  if (isHtml) {
-    return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden h-full relative">
-        <div className="absolute top-0 left-0 right-0 z-10 h-10 px-5 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-2">
-            <Eye size={12} className="text-muted-foreground/40" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 truncate">{noteTitle}</span>
-          </div>
-        </div>
-        <iframe
-          title={noteTitle}
-          src={notePath}
-          sandbox="allow-scripts allow-forms"
-          className="flex-1 w-full h-full border-none"
-          style={{ background: 'transparent' }}
-        />
-      </div>
-    )
-  }
+  // Clean frontmatter and interactive-quiz block
+  const cleanedContent = content
+    .replace(/^---[\s\S]*?---\n?/, '')
+    .replace(/```interactive-quiz[\s\S]*?```/g, '')
+    .trim();
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-bento-panel border border-border/40 rounded-[12px] shadow-sm overflow-hidden h-full">
+      {/* Header */}
       <div className="h-14 border-b border-border/40 px-6 flex items-center justify-between shrink-0 bg-bento-card">
-        <div className="flex items-center gap-2">
-          <Eye size={16} className="text-muted-foreground/60" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{noteTitle}</span>
-        </div>
-        
-        {hasCompanionHtml && (
-          <div className="flex items-center bg-muted/10 border border-border/30 rounded-lg p-0.5 select-none text-[9px] font-black uppercase tracking-widest">
-            <button
-              onClick={() => setViewMode('lesson')}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                viewMode === 'lesson'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Interactive Lesson
-            </button>
+        <div className="flex items-center gap-3 min-w-0">
+          {viewMode === 'practice' && (
             <button
               onClick={() => setViewMode('markdown')}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                viewMode === 'markdown'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className="size-8 flex items-center justify-center rounded-[6px] border border-border/40 bg-muted/10 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              aria-label="Back to lesson"
             >
-              Markdown
+              <ChevronLeft size={16} />
             </button>
+          )}
+          <div className="flex items-center gap-2 min-w-0">
+            {viewMode === 'practice' ? (
+              <Dumbbell size={16} className="text-primary shrink-0" />
+            ) : (
+              <BookOpen size={16} className="text-muted-foreground/60 shrink-0" />
+            )}
+            <span className="text-[10px] font-black uppercase tracking-widest text-foreground truncate">
+              {viewMode === 'practice' ? `Practice: ${displayTitle}` : displayTitle}
+            </span>
           </div>
+        </div>
+
+        {viewMode === 'markdown' && questions.length > 0 && (
+          <button
+            onClick={() => setViewMode('practice')}
+            className="h-8 px-4 flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-[8px] text-[9px] font-black uppercase tracking-widest transition-colors"
+          >
+            <Dumbbell size={12} />
+            Start Practice
+          </button>
         )}
       </div>
 
-      {viewMode === 'lesson' && htmlContent ? (
-        <div className="flex-1 min-h-0 overflow-hidden relative bg-bento-panel">
-          <iframe
-            title={noteTitle}
-            srcDoc={htmlContent}
-            sandbox="allow-scripts allow-forms"
-            className="w-full h-full border-none bg-transparent"
+      {/* Body */}
+      {viewMode === 'practice' && questions.length > 0 ? (
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6">
+          <MiniPracticeUI
+            question={questions}
+            notePath={notePath}
+            onComplete={() => setViewMode('markdown')}
           />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
-          <AterMarkdown content={content} path={notePath} onNavigate={onNavigate} />
-        </div>
-      )}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <AterMarkdown content={cleanedContent} path={notePath} onNavigate={onNavigate} />
+            </div>
+            
+            {questions.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-border/40">
+                <button
+                  onClick={() => setViewMode('practice')}
+                  className="w-full h-11 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest rounded-[8px] hover:bg-primary/90 transition-colors shadow-md shadow-primary/10"
+                >
+                  <Dumbbell size={14} />
+                  Start Practice Challenge — {questions.length} Question{questions.length !== 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+          </div>
 
-      {navigationSequence.length > 0 && currentIndex !== -1 && (
-        <div className="h-14 border-t border-border/40 px-6 flex items-center justify-between shrink-0 bg-bento-card">
-          <button
-            onClick={handleBack}
-            disabled={currentIndex === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] border border-border/40 hover:bg-muted/30 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <ChevronLeft size={12} />
-            Back
-          </button>
-          
-          <span className="text-[9px] font-mono font-bold text-muted-foreground/50 uppercase tracking-[0.25em]">
-            Step {currentIndex + 1} of {navigationSequence.length}
-          </span>
-          
-          {currentIndex === navigationSequence.length - 1 ? (
-            <button
-              onClick={handleNext}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 animate-pulse"
-            >
-              <CheckCircle2 size={12} />
-              Complete
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] border border-border/40 hover:bg-muted/30 text-foreground"
-            >
-              Next
-              <ChevronRight size={12} />
-            </button>
+          {/* Footer Navigation */}
+          {navigationSequence.length > 0 && currentIndex !== -1 && (
+            <div className="h-14 border-t border-border/40 px-6 flex items-center justify-between shrink-0 bg-bento-card">
+              <button
+                onClick={handleBack}
+                disabled={currentIndex === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] border border-border/40 hover:bg-muted/30 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronLeft size={12} />
+                Back
+              </button>
+              
+              <span className="text-[9px] font-mono font-bold text-muted-foreground/50 uppercase tracking-[0.25em]">
+                Step {currentIndex + 1} of {navigationSequence.length}
+              </span>
+              
+              {currentIndex === navigationSequence.length - 1 ? (
+                <button
+                  onClick={handleNext}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 animate-pulse"
+                >
+                  <CheckCircle2 size={12} />
+                  Complete
+                </button>
+              ) : (
+                <button
+                  onClick={handleNext}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] border border-border/40 hover:bg-muted/30 text-foreground"
+                >
+                  Next
+                  <ChevronRight size={12} />
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
     </div>
   )
 }
-

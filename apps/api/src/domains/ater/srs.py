@@ -113,9 +113,20 @@ class SRSEngine:
                 wagers TEXT,
                 score INTEGER DEFAULT 0,
                 status TEXT DEFAULT 'active',
-                updated_at TEXT
+                updated_at TEXT,
+                active_note_unlocks TEXT,
+                consecutive_failures TEXT,
+                active_question_overrides TEXT
             )
         """)
+        # Run schema migrations for existing databases
+        for col in ["active_note_unlocks", "consecutive_failures", "active_question_overrides"]:
+            try:
+                self.db.execute(f"ALTER TABLE tutor_sessions ADD COLUMN {col} TEXT")
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e).lower():
+                    raise e
+
         self.db.execute("""
             CREATE TABLE IF NOT EXISTS user_misconceptions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

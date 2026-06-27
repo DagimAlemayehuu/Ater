@@ -36,6 +36,13 @@ export function usePracticeSession() {
   const [feynmanError, setFeynmanError] = useState<string | null>(null);
   const [isFeynmanValidating, setIsFeynmanValidating] = useState(false);
 
+  // Paced retry & misconception states
+  const [questionHint, setQuestionHint] = useState<Record<string, string>>({});
+  const [misconceptionText, setMisconceptionText] = useState<Record<string, string>>({});
+  const [remediationQuestion, setRemediationQuestion] = useState<Record<string, Question | null>>({});
+  const [retryActive, setRetryActive] = useState<Record<string, boolean>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Timer states
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
@@ -154,14 +161,13 @@ export function usePracticeSession() {
   }, [currentQuestion, isRevealed]);
 
   // Answer validation check
-  const checkAnswer = useCallback(() => {
-    if (!currentQuestion || isRevealed) return;
+  const checkAnswer = useCallback(async () => {
+    if (!currentQuestion || isRevealed || isSubmitting) return;
     const ans = userAnswers[currentQuestion.id];
     if (ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0)) return;
 
     let isCorrect = false;
     const userVal = String(ans).trim().toLowerCase();
-    const correctVal = String(currentQuestion.answer).trim().toLowerCase();
 
     if (currentQuestion.type === 'true_false') {
       const userBool = userVal === 'true';
@@ -196,24 +202,79 @@ export function usePracticeSession() {
       );
     }
 
-    setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
-    setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
-    setStreak(prev => isCorrect ? prev + 1 : 0);
+    if (sessionPath) {
+      setIsSubmitting(true);
+      try {
+        const res = await sidecarApi.submitTutorAnswer({
+          session_id: sessionPath,
+          question_id: String(currentQuestion.id),
+          is_correct: isCorrect,
+          wager: confidenceWagers[currentQuestion.id] === 10 ? 'high' : 'low',
+          user_answer: String(ans)
+        });
+        
+        if (isCorrect) {
+          setScores(prev => ({ ...prev, [currentQuestion.id]: true }));
+          setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
+          setStreak(prev => prev + 1);
+        } else {
+          const diag = res.diagnosis;
+          if (diag.remediation_question) {
+            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: diag.misconception_text }));
+            setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: diag.remediation_question }));
+            setScores(prev => ({ ...prev, [currentQuestion.id]: false }));
+            setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
+            setStreak(0);
+          } else {
+            setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: diag.hint || "Try again!" }));
+            setRetryActive(prev => ({ ...prev, [currentQuestion.id]: true }));
+          }
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Submission failed');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
+      setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
+      setStreak(prev => isCorrect ? prev + 1 : 0);
 
-    // Call logging endpoints
-    const timeTakenMs = Date.now() - questionStartTimeRef.current;
-    if (notePath) {
-      sidecarApi.recordPerformance({
-        note_path: notePath,
-        was_correct: isCorrect,
-        time_ms: timeTakenMs,
-        question_type: currentQuestion.type,
-        difficulty: String(currentQuestion.difficulty || '1'),
-        confidence: confidenceWagers[currentQuestion.id] || undefined,
-        question_id: String(currentQuestion.id)
-      }).catch(console.error);
+      // Call logging endpoints
+      const timeTakenMs = Date.now() - questionStartTimeRef.current;
+      if (notePath) {
+        sidecarApi.recordPerformance({
+          note_path: notePath,
+          was_correct: isCorrect,
+          time_ms: timeTakenMs,
+          question_type: currentQuestion.type,
+          difficulty: String(currentQuestion.difficulty || '1'),
+          confidence: confidenceWagers[currentQuestion.id] || undefined,
+          question_id: String(currentQuestion.id)
+        }).catch(console.error);
+      }
     }
-  }, [currentQuestion, isRevealed, userAnswers, currentQuestionIdx, notePath, confidenceWagers]);
+  }, [currentQuestion, isRevealed, userAnswers, currentQuestionIdx, notePath, confidenceWagers, sessionPath, isSubmitting]);
+
+  const handleRetry = useCallback(() => {
+    if (!currentQuestion) return;
+    setUserAnswers(prev => ({ ...prev, [currentQuestion.id]: undefined }));
+    setRetryActive(prev => ({ ...prev, [currentQuestion.id]: false }));
+    setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: "" }));
+  }, [currentQuestion]);
+
+  const handleTakeRemediation = useCallback(() => {
+    if (!currentQuestion) return;
+    const rq = remediationQuestion[currentQuestion.id];
+    if (rq) {
+      const nextQuestions = [...questions];
+      nextQuestions.splice(currentQuestionIdx + 1, 0, rq);
+      setQuestions(nextQuestions);
+      setCurrentQuestionIdx(prev => prev + 1);
+      setKeywordChecks({});
+      questionStartTimeRef.current = Date.now();
+    }
+  }, [currentQuestion, currentQuestionIdx, questions, remediationQuestion]);
 
   const selfGrade = useCallback((isCorrect: boolean) => {
     if (!currentQuestion) return;
@@ -485,6 +546,12 @@ export function usePracticeSession() {
     isRevealed,
     globalTimeLeft,
     questionTimeLeft,
+    questionHint,
+    misconceptionText,
+    remediationQuestion,
+    retryActive,
+    isSubmitting,
+    sessionPath,
 
     startSession,
     selectAnswer,
@@ -497,6 +564,8 @@ export function usePracticeSession() {
     setFeynmanExplanation,
     submitFeynmanChallenge,
     reset,
-    setShowScore
+    setShowScore,
+    handleRetry,
+    handleTakeRemediation
   };
 }

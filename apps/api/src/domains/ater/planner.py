@@ -1,8 +1,61 @@
 import re
 import json
+import logging
+import asyncio
+import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Literal
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger("Ater.Planner")
+
+MIN_ROADMAP_CHAPTERS = 8
+MIN_NOTES_PER_CHAPTER = 3
+MAX_ROADMAP_CHAPTERS = 12
+MAX_NOTES_PER_CHAPTER = 5
+
+ROADMAP_BLUEPRINTS = [
+    (
+        "{topic} Orientation And Mental Model",
+        ["What {topic} Is", "Why {topic} Exists", "{topic} System Boundaries"],
+    ),
+    (
+        "{topic} Core Vocabulary",
+        ["Essential {topic} Terms", "{topic} Objects And Relationships", "Reading {topic} Documentation"],
+    ),
+    (
+        "{topic} State And Workflow",
+        ["The {topic} Working Cycle", "{topic} State Transitions", "{topic} Feedback Signals"],
+    ),
+    (
+        "{topic} Tools And Daily Operations",
+        ["Setting Up {topic}", "Common {topic} Commands", "Inspecting {topic} Results"],
+    ),
+    (
+        "{topic} Mental Models In Practice",
+        ["A First {topic} Walkthrough", "Tracing A {topic} Example", "{topic} Decision Points"],
+    ),
+    (
+        "{topic} Collaboration And Integration",
+        ["Sharing {topic} Work", "{topic} Coordination Patterns", "Resolving {topic} Mismatches"],
+    ),
+    (
+        "{topic} Debugging And Recovery",
+        ["Diagnosing {topic} Problems", "Undoing {topic} Mistakes", "Recovering From Broken {topic} State"],
+    ),
+    (
+        "{topic} Advanced Patterns",
+        ["When {topic} Gets Complex", "{topic} Tradeoffs", "Scaling {topic} Practice"],
+    ),
+    (
+        "{topic} Fluency And Automation",
+        ["Building {topic} Habits", "Automating Repeated {topic} Work", "{topic} Quality Checks"],
+    ),
+    (
+        "{topic} Capstone And Mastery",
+        ["End To End {topic} Project", "{topic} Mastery Checklist", "Teaching {topic} From Memory"],
+    ),
+]
 
 from src.domains.ai.factory import ModelFactory
 from src.domains.ater import learning_object as lo
@@ -129,6 +182,110 @@ class AterPlanner:
             
         return plan
 
+    @staticmethod
+    def _extract_topic_from_prompt(prompt: str) -> str:
+        cleaned = str(prompt or "").strip()
+        cleaned = re.sub(
+            r"^\s*(teach\s+me\s+about|teach\s+me|teach\s+about|teach|learn\s+about|learn|explain\s+about|explain|show\s+me|walk\s+me\s+through)\s+",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        cleaned = re.sub(r"^\s*about\s+", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\bfrom\s+scratch\b", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\bfor\s+beginners\b", "", cleaned, flags=re.IGNORECASE)
+        cleaned = cleaned.strip(" .?!:-")
+        if not cleaned:
+            return "Learning Path"
+        words = re.split(r"\s+", cleaned)
+        titled = []
+        for word in words:
+            if word.isupper() and len(word) <= 6:
+                titled.append(word)
+            else:
+                titled.append(word[:1].upper() + word[1:].lower())
+        return " ".join(titled)
+
+    @staticmethod
+    def _format_blueprint(template: str, topic: str) -> str:
+        return template.format(topic=topic)
+
+    @classmethod
+    def _build_generic_curriculum(cls, prompt: str, learning_mode: str) -> Dict[str, Any]:
+        topic = cls._extract_topic_from_prompt(prompt)
+        chapters = []
+        for order, (chapter_template, note_templates) in enumerate(ROADMAP_BLUEPRINTS, start=1):
+            chapters.append({
+                "title": cls._format_blueprint(chapter_template, topic),
+                "order": order,
+                "atomic_notes": [
+                    cls._format_blueprint(note_template, topic)
+                    for note_template in note_templates
+                ],
+            })
+        return {
+            "topic": topic,
+            "learning_mode": learning_mode,
+            "chapters": chapters,
+        }
+
+    @classmethod
+    def _ensure_curriculum_quality(
+        cls,
+        plan: Dict[str, Any],
+        prompt: str,
+        learning_mode: str,
+    ) -> Dict[str, Any]:
+        topic = str(plan.get("topic") or "").strip() or cls._extract_topic_from_prompt(prompt)
+        plan["topic"] = topic
+        plan["learning_mode"] = plan.get("learning_mode") or learning_mode
+        plan = cls.sanitize_curriculum_plan(plan)
+
+        fallback = cls._build_generic_curriculum(prompt, learning_mode)
+        fallback["topic"] = topic
+
+        existing_chapter_keys = {
+            lo.normalize_title(chapter.get("title", "")).lower()
+            for chapter in plan.get("chapters", [])
+        }
+        existing_note_keys = {
+            lo.normalize_title(note).lower()
+            for chapter in plan.get("chapters", [])
+            for note in chapter.get("atomic_notes", [])
+        }
+
+        for chapter in plan.get("chapters", []):
+            notes = list(chapter.get("atomic_notes") or [])
+            if len(notes) < MIN_NOTES_PER_CHAPTER:
+                for note_template in (
+                    "{chapter} Mental Model",
+                    "{chapter} Worked Example",
+                    "{chapter} Practice Questions",
+                ):
+                    if len(notes) >= MIN_NOTES_PER_CHAPTER:
+                        break
+                    candidate = note_template.format(chapter=chapter.get("title", topic))
+                    key = lo.normalize_title(candidate).lower()
+                    if key not in existing_note_keys:
+                        notes.append(candidate)
+                        existing_note_keys.add(key)
+            chapter["atomic_notes"] = notes[:MAX_NOTES_PER_CHAPTER]
+
+        for fallback_chapter in fallback["chapters"]:
+            if len(plan.get("chapters", [])) >= MIN_ROADMAP_CHAPTERS:
+                break
+            key = lo.normalize_title(fallback_chapter["title"]).lower()
+            if key in existing_chapter_keys:
+                continue
+            plan.setdefault("chapters", []).append(fallback_chapter)
+            existing_chapter_keys.add(key)
+
+        plan["chapters"] = plan.get("chapters", [])[:MAX_ROADMAP_CHAPTERS]
+        for order, chapter in enumerate(plan["chapters"], start=1):
+            chapter["order"] = order
+            chapter["atomic_notes"] = list(chapter.get("atomic_notes") or [])[:MAX_NOTES_PER_CHAPTER]
+        return plan
+
     async def generate_curriculum(self, prompt: str, existing_chapters: Optional[List[str]] = None, learning_mode: str = "self-study") -> Dict[str, Any]:
         """
         Plans a structured curriculum for the given prompt, potentially extending existing chapters.
@@ -141,17 +298,32 @@ class AterPlanner:
             existing_context = f"\nExisting chapters in this Hub: {', '.join(existing_chapters)}. Please do NOT duplicate these chapters. Generate new chapters to extend the curriculum based on the prompt."
 
         system_prompt = (
-            f"You are Ater's Curriculum Planner. Create a structured curriculum JSON matching the schema.\n"
-            f"Set the learning_mode to '{learning_mode}'. {existing_context}"
+            "You are Ater's Curriculum Planner. Create a rigorous beginner-to-independent-practice curriculum JSON matching the schema.\n"
+            f"Set the learning_mode to '{learning_mode}'. {existing_context}\n"
+            "The roadmap must be deep enough to actually teach the requested subject from scratch: 8 to 12 chapters, each with 3 to 5 narrow Atomic Note titles.\n"
+            "Chapters must progress from mental model and vocabulary, through daily workflow, examples, collaboration/integration, debugging/recovery, advanced patterns, and capstone mastery.\n"
+            "Do not return broad placeholder chapters like 'Introduction' unless the atomic notes are precise and actionable."
         )
 
-        structured_llm = self.llm.with_structured_output(CurriculumPlan)
-        response = await structured_llm.ainvoke([
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Request: {prompt}"}
-        ])
-        plan_dict = response.model_dump()
-        return self.sanitize_curriculum_plan(plan_dict)
+        try:
+            timeout_seconds = float(os.getenv("ATER_PLANNER_TIMEOUT_SECONDS", "25"))
+            structured_llm = self.llm.with_structured_output(CurriculumPlan)
+            response = await asyncio.wait_for(
+                structured_llm.ainvoke([
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Request: {prompt}"}
+                ]),
+                timeout=timeout_seconds,
+            )
+            plan_dict = response.model_dump()
+            return self._ensure_curriculum_quality(plan_dict, prompt, learning_mode)
+        except Exception as e:
+            logger.warning(f"[Curriculum Planner] Structured generation failed, compiling default fallback: {e}")
+            return self._ensure_curriculum_quality(
+                self._build_generic_curriculum(prompt, learning_mode),
+                prompt,
+                learning_mode,
+            )
 
     def write_curriculum(self, curriculum: Dict[str, Any], mode: Literal["Generate All", "Progressive"], semester: Optional[str] = None, course: Optional[str] = None, unit: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -202,7 +374,7 @@ class AterPlanner:
                 merged_chapters.append(link)
                 
         # Build and write Hub content
-        hub_content = lo.build_hub_content(topic, learning_mode, merged_chapters, chapter_notes_map)
+        hub_content = lo.build_hub_content(topic, learning_mode, merged_chapters, chapter_notes_map, prompt=curriculum.get("prompt", topic))
         hub_abs_path.write_text(hub_content, encoding="utf-8")
         
         written_files = [str(hub_rel_path)]
@@ -238,7 +410,10 @@ class AterPlanner:
                 written_files.append(str(ch_rel_path))
                 
                 # Write Atomic Note stubs
-                for note_title in norm_notes:
+                for note_idx, note_title in enumerate(norm_notes):
+                    if mode == "Progressive" and idx == 0 and note_idx > 0:
+                        continue
+                        
                     note_rel_path = lo.get_note_path(topic, ch_title, ch_order, note_title, semester, course, unit)
                     note_abs_path = self.vault_path / note_rel_path
                     note_abs_path.parent.mkdir(parents=True, exist_ok=True)
@@ -268,6 +443,7 @@ class AterPlanner:
                     )
                     note_abs_path.write_text(note_content, encoding="utf-8")
                     written_files.append(str(note_rel_path))
+
                     
         return {
             "hub_path": str(hub_rel_path),

@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { BookOpenCheck, PanelRightOpen, Send, Trash2, X } from 'lucide-react'
+import { BookOpenCheck, ChevronRight, PanelRightOpen, Send, Trash2, X } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 
 type Message = {
   role: 'user' | 'assistant'
@@ -13,8 +15,13 @@ type Message = {
 type LessonPreview = {
   title: string
   lessonPath: string
+  notePath?: string
+  hubPath?: string
   previewUrl: string
 }
+
+// Cached curriculum from Phase 1 — used when "Start Lesson" is clicked
+let _cachedCurriculum: any = null
 
 function resolvePreviewUrl(url: string): string {
   if (!url) return ''
@@ -23,6 +30,9 @@ function resolvePreviewUrl(url: string): string {
 }
 
 export default function Teacher() {
+  const navigate = useNavigate()
+  const [tutorSession, setTutorSession] = useState<any | null>(null)
+  const [isConsolidationStarting, setIsConsolidationStarting] = useState(false)
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
       const saved = localStorage.getItem('ater_teacher_chat_history')
@@ -36,6 +46,8 @@ export default function Teacher() {
   const [activeStatus, setActiveStatus] = useState<string | null>(null)
   const [preview, setPreview] = useState<LessonPreview | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
+  // Track if last response has roadmap (for "Start Lesson" button)
+  const [hasRoadmapReady, setHasRoadmapReady] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -83,10 +95,46 @@ export default function Teacher() {
     textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`
   }, [input])
 
+  useEffect(() => {
+    if (!preview?.hubPath) {
+      setTutorSession(null)
+      return
+    }
+
+    let active = true
+    const fetchSession = async () => {
+      try {
+        let session = await sidecarApi.getTutorSessionByHub(preview.hubPath!)
+        if (!session) {
+          const sessId = `tutor_${preview.hubPath!.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`
+          session = await sidecarApi.startTutorSession({
+            session_id: sessId,
+            hub_path: preview.hubPath!,
+            mode: 'Progressive'
+          })
+        }
+        if (active) {
+          setTutorSession(session)
+        }
+      } catch (err) {
+        console.error('Failed to get or start tutor session:', err)
+      }
+    }
+
+    fetchSession()
+    const timer = setInterval(fetchSession, 5000)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [preview?.hubPath])
+
   const clearHistory = () => {
     setMessages([])
     setPreview(null)
     setPanelOpen(false)
+    setHasRoadmapReady(false)
+    _cachedCurriculum = null
     toast.success('Teacher history cleared.')
   }
 
@@ -97,10 +145,16 @@ export default function Teacher() {
     if (!customText) {
       setInput('')
     }
+
+    const isStartLesson = text.toLowerCase() === 'start lesson'
+
     const nextMessages = [...messages, { role: 'user' as const, content: text }]
     setMessages(nextMessages)
     setIsLoading(true)
     setActiveStatus('Starting Teacher...')
+    if (!isStartLesson) {
+      setHasRoadmapReady(false)
+    }
 
     try {
       const response = await sidecarApi.teacherChatStream({ history: nextMessages })
@@ -141,13 +195,22 @@ export default function Teacher() {
               }
               return updated
             })
+            // Detect roadmap in content — Phase 1 response ends with "Start Lesson"
+            if (assistantContent.includes('Start Lesson')) {
+              setHasRoadmapReady(true)
+            }
           } else if (parsed.type === 'lesson_created') {
+            const rawUrl = parsed.preview_url || parsed.preview_path || ''
             setPreview({
               title: parsed.title || 'Teacher Lesson',
               lessonPath: parsed.lesson_path || '',
-              previewUrl: resolvePreviewUrl(parsed.preview_url || ''),
+              notePath: '',
+              hubPath: '',
+              previewUrl: resolvePreviewUrl(rawUrl),
             })
             setPanelOpen(true)
+            setHasRoadmapReady(false)
+            _cachedCurriculum = null
           } else if (parsed.type === 'error') {
             throw new Error(parsed.message || 'Teacher failed.')
           }
@@ -192,15 +255,32 @@ export default function Teacher() {
             <div className="h-full flex flex-col items-center justify-center -mt-12 text-center">
               <h2 className="text-[32px] font-black uppercase tracking-tighter text-foreground">What should we learn?</h2>
               <p className="mt-3 max-w-lg text-sm text-muted-foreground">
-                Ask Teacher to teach a topic. It will create a Lessons workspace in your vault and open the generated interactive lesson here.
+                Ask Teacher to teach a topic. It will show you the roadmap first, then create a Lessons workspace in your vault.
               </p>
+              <div className="mt-6 flex gap-2 flex-wrap justify-center">
+                {['Teach me Git', 'Teach me Python async', 'Teach me React hooks'].map(suggestion => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => handleSend(suggestion)}
+                    disabled={isLoading}
+                    className="px-4 py-2 rounded-[8px] border border-border/40 bg-muted/10 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-all flex items-center gap-1.5"
+                  >
+                    <ChevronRight size={10} />
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-8">
               {messages.map((message, index) => {
                 const isLastMessage = index === messages.length - 1
-                const hasRoadmap = message.content.includes('```mermaid') || message.content.includes('graph TD') || message.content.includes('graph LR')
-                const showStartButton = message.role === 'assistant' && isLastMessage && hasRoadmap
+                const showStartButton =
+                  message.role === 'assistant' &&
+                  isLastMessage &&
+                  hasRoadmapReady &&
+                  !isLoading
 
                 return (
                   <div key={index} className={cn('flex w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -215,12 +295,15 @@ export default function Teacher() {
                             <AterMarkdown content={message.content} />
                           </div>
                           {showStartButton && (
-                            <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
+                            <div className="mt-2 pt-4 border-t border-border/40 flex items-center justify-between gap-3">
+                              <p className="text-[10px] text-muted-foreground font-medium">
+                                Ready to begin? Your first lesson will be generated and saved to your vault.
+                              </p>
                               <button
                                 type="button"
                                 onClick={() => handleSend('Start Lesson')}
                                 disabled={isLoading}
-                                className="h-9 px-5 bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                className="shrink-0 h-9 px-5 bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                               >
                                 <BookOpenCheck size={12} />
                                 Start Lesson
@@ -314,6 +397,91 @@ export default function Teacher() {
               <X size={14} />
             </button>
           </div>
+
+          {/* Visual Curriculum Skill Tree */}
+          {tutorSession && (
+            <div className="border-b border-border/40 p-4 bg-bento-card max-h-[140px] overflow-y-auto custom-scrollbar">
+              <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-2">
+                Visual Curriculum Skill Tree
+              </div>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {tutorSession.curriculum?.map((notePath: string, idx: number) => {
+                  const isCompleted = tutorSession.completed_notes?.includes(notePath)
+                  const isUnlocked = tutorSession.active_note_unlocks?.includes(notePath)
+                  const isActive = tutorSession.current_note_path === notePath
+                  const noteTitle = notePath.split('/').pop()?.replace('.md', '').replace(/_/g, ' ') || notePath
+                  
+                  let status = 'locked'
+                  if (isCompleted) status = 'completed'
+                  else if (isUnlocked) status = 'active'
+                  
+                  return (
+                    <button
+                      key={idx}
+                      disabled={status === 'locked'}
+                      onClick={async () => {
+                        if (status === 'locked') {
+                          toast.error('This lesson is locked. Master previous topics first!')
+                          return
+                        }
+                        try {
+                          const parts = notePath.split('/')
+                          const noteName = parts.pop()?.replace('.md', '') || ''
+                          const simpleHtmlPath = `${parts.join('/')}/artifacts/${noteName}.simple.html`
+                          
+                          const regRes = await sidecarApi.registerAterLessonPreview({ lesson_path: simpleHtmlPath })
+                          if (regRes?.preview_url) {
+                            setPreview(prev => prev ? {
+                              ...prev,
+                              previewUrl: resolvePreviewUrl(regRes.preview_url),
+                              title: noteName.replace(/_/g, ' ')
+                            } : null)
+                          }
+                        } catch (err) {
+                          console.error('Failed to change preview lesson:', err)
+                          toast.error('Failed to load lesson preview')
+                        }
+                      }}
+                      className={cn(
+                        "px-2 py-1 rounded-[6px] text-[8px] font-black uppercase tracking-wider border flex items-center gap-1 transition-all",
+                        status === 'completed'
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20"
+                          : status === 'active'
+                          ? cn("bg-blue-500/10 border-blue-500/30 text-blue-500 hover:bg-blue-500/20", isActive && "ring-1 ring-blue-500 animate-pulse")
+                          : "bg-muted/10 border-border/40 text-muted-foreground/30 cursor-not-allowed"
+                      )}
+                    >
+                      {status === 'completed' && <span className="w-1 h-1 rounded-full bg-emerald-500" />}
+                      {status === 'active' && <span className="w-1 h-1 rounded-full bg-blue-500" />}
+                      {status === 'locked' && <span>🔒</span>}
+                      {noteTitle}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Consolidation Quiz Banner */}
+          {tutorSession?.status === 'consolidation_quiz' && (
+            <div className="m-4 p-4 border border-amber-500/30 bg-amber-500/10 rounded-[8px] space-y-2 text-left shrink-0">
+              <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                Consolidation Challenge Required
+              </div>
+              <p className="text-[11px] text-foreground/80 leading-normal">
+                You have completed all lessons in this chapter! Pass the chapter consolidation quiz to unlock the next chapter.
+              </p>
+              <Button
+                onClick={() => {
+                  navigate(`/practice?resume_session_id=${tutorSession.session_id}`)
+                }}
+                className="bg-amber-500 text-amber-foreground hover:bg-amber-600 font-black uppercase text-[9px] tracking-widest rounded-none w-full h-8"
+              >
+                Start Consolidation Quiz
+              </Button>
+            </div>
+          )}
+
           <iframe
             title={preview.title}
             src={preview.previewUrl}

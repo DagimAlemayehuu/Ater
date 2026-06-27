@@ -1872,7 +1872,37 @@ export const sidecarApi = {
             throw err;
         }
     },
-    startTutorSession: async (payload: { session_id: string; hub_path: string }) => {
+    registerAterLessonPreview: async (payload: { lesson_path: string }) => {
+        if (isSimulationMode()) {
+            return { preview_url: '' };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/lesson/preview/register`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to register lesson preview (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] registerAterLessonPreview failed:', err);
+            throw err;
+        }
+    },
+    startTutorSession: async (payload: { session_id: string; hub_path: string; mode?: string }) => {
         if (isSimulationMode()) {
             return {
                 session_id: payload.session_id,
@@ -1948,6 +1978,118 @@ export const sidecarApi = {
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitTutorAnswer failed:', err);
             throw err;
+        }
+    },
+    getAdaptiveTutorQuestion: async (payload: { session_id: string; note_path: string; history?: any[]; last_result?: any }) => {
+        if (isSimulationMode()) {
+            return {
+                question: {
+                    id: 'mock_adaptive_q1',
+                    type: 'writing',
+                    question: 'Explain the main idea from this note in your own words.',
+                    answer: 'A clear explanation of the note concept.',
+                    explanation: 'This checks conceptual understanding.',
+                    note_id: payload.note_path
+                },
+                progression: { source: 'simulation', generated_follow_up: false, answered_count: 0 }
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/adaptive_question`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to load adaptive tutor question (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getAdaptiveTutorQuestion failed:', err);
+            throw err;
+        }
+    },
+    checkAdaptiveTutorAnswer: async (payload: { session_id: string; note_path: string; question: any; user_answer: any; history?: any[] }) => {
+        if (isSimulationMode()) {
+            return {
+                is_correct: true,
+                feedback: 'Correct.',
+                hint: '',
+                lesson: '',
+                next_question: {
+                    id: 'mock_adaptive_q2',
+                    type: 'mcq',
+                    question: 'Which option best matches the lesson?',
+                    options: { A: 'The main concept', B: 'An unrelated detail' },
+                    answer: 'A',
+                    explanation: 'The main concept is the target.',
+                    note_id: payload.note_path
+                },
+                can_advance: true
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/adaptive_check`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to check adaptive tutor answer (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] checkAdaptiveTutorAnswer failed:', err);
+            throw err;
+        }
+    },
+    getTutorSessionByHub: async (hub_path: string) => {
+        if (isSimulationMode()) {
+            return null;
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/session_by_hub?hub_path=${encodeURIComponent(hub_path)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                return null;
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getTutorSessionByHub failed:', err);
+            return null;
         }
     },
     getTutorStatus: async (session_id: string) => {
@@ -2026,6 +2168,79 @@ export const sidecarApi = {
             throw err;
         }
     },
+    startConsolidationQuiz: async (payload: { session_id: string }) => {
+        if (isSimulationMode()) {
+            return {
+                chapter_title: 'mock_chapter',
+                questions: []
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/consolidation/start`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to start consolidation quiz (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] startConsolidationQuiz failed:', err);
+            throw err;
+        }
+    },
+    verifyConsolidationQuiz: async (payload: { session_id: string }) => {
+        if (isSimulationMode()) {
+            return {
+                session_id: payload.session_id,
+                hub_path: 'mock_hub.md',
+                current_note_path: 'mock_note.md',
+                completed_notes: [],
+                wagers: {},
+                score: 0,
+                status: 'active',
+                curriculum: ['mock_note.md']
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/consolidation/verify`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to verify consolidation quiz (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] verifyConsolidationQuiz failed:', err);
+            throw err;
+        }
+    },
+
     startCramSession: async (payload: any) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
@@ -2245,4 +2460,3 @@ export const sidecarApi = {
         }
     }
 };
-

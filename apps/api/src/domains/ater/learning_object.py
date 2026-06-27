@@ -75,7 +75,7 @@ def get_artifact_pack_path(note_path: str) -> str:
     norm_stem = normalize_title(note_path_obj.stem)
     return (note_path_obj.parent / "artifacts" / f"{norm_stem}.artifacts.json").as_posix()
 
-def build_hub_content(topic: str, learning_mode: str, chapters: list[str], chapter_notes: dict[str, list[str]] | None = None) -> str:
+def build_hub_content(topic: str, learning_mode: str, chapters: list[str], chapter_notes: dict[str, list[str]] | None = None, prompt: str | None = None) -> str:
     """Constructs Learning Hub markdown frontmatter and body."""
     cleaned_chapters = []
     for ch in chapters:
@@ -88,19 +88,27 @@ def build_hub_content(topic: str, learning_mode: str, chapters: list[str], chapt
         "learning_mode": learning_mode,
         "chapters": cleaned_chapters
     }
+    if prompt:
+        meta["prompt"] = prompt
     
     vm = VaultManager(".")
     yaml_part = vm.dump_obsidian_yaml(meta)
     
     body_lines = [f"# {normalize_title(topic)} Hub\n", "## Curriculum Map\n"]
+    is_first_note = True
     for ch in cleaned_chapters:
         body_lines.append(f"- [[{ch}]]")
         for note in (chapter_notes or {}).get(ch, []):
             clean_note = re.sub(r"[\[\]]+", "", str(note)).strip()
             if clean_note:
-                body_lines.append(f"  - [[{clean_note}]]")
+                if is_first_note:
+                    body_lines.append(f"  - [[{clean_note}]]")
+                    is_first_note = False
+                else:
+                    body_lines.append(f"  - [[{clean_note}|🔒 {clean_note.replace('_', ' ')}]]")
     
     return f"---\n{yaml_part}---\n\n" + "\n".join(body_lines) + "\n"
+
 
 def build_chapter_content(hub_title: str, order: int, atomic_notes: list[str], chapter_title: str = "") -> str:
     """Constructs Chapter markdown frontmatter and body."""

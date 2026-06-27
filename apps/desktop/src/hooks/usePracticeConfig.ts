@@ -538,6 +538,20 @@ export function usePracticeConfig() {
     }
   }, [setView, session])
 
+  // Resume session from URL parameters
+  useEffect(() => {
+    const resumeId = searchParams.get('resume_session_id')
+    if (resumeId) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        next.delete('resume_session_id')
+        return next
+      })
+      handleResumePractice(resumeId)
+    }
+  }, [searchParams, setSearchParams, handleResumePractice])
+
+
   const handleDeletePractice = useCallback(async (path: string) => {
     await sidecarApi.deletePractice(path)
     loadPastPractices()

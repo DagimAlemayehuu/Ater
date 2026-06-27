@@ -574,6 +574,13 @@ class TestPhase4TutorPersistence:
         manager = TutorSessionManager(srs_db, git_vault)
         manager.start_session("e2e_sess_misc", "database/learning paths/Git_Hub.md")
 
+        # Submit incorrect answer 1st time (gets a hint, not flagged as misconception)
+        res1 = manager.submit_answer(
+            "e2e_sess_misc", "q1", is_correct=False, wager="high", user_answer="linked list"
+        )
+        assert res1["diagnosis"]["is_misconception"] is False
+        
+        # Submit incorrect answer 2nd consecutive time (flagged as misconception and logged)
         result = manager.submit_answer(
             "e2e_sess_misc", "q1", is_correct=False, wager="high", user_answer="linked list"
         )
@@ -589,6 +596,7 @@ class TestPhase4TutorPersistence:
         )
         assert row["note_title"] == "Git_Commit_Graph"
         conn.close()
+
 
     def test_score_clamped_at_zero(self, git_vault, srs_db):
         self._create_hub_and_note(git_vault)

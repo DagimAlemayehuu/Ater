@@ -158,16 +158,23 @@ class ModelFactory:
         config: Dict[str, Any] = {
             "model_name" if provider in ["openai", "openrouter", "custom"] else "model": model_name,
             "temperature": temperature,
-            "max_retries": max_retries if max_retries is not None else 2,
+            "max_retries": max_retries if max_retries is not None else (0 if provider == "google" else 1),
             "callbacks": [TrackingCallbackHandler(provider, model_name)]
         }
         
         # Provider-specific timeout configuration
-        effective_timeout = timeout or 300
+        if provider == "google":
+            effective_timeout = 25
+        else:
+            effective_timeout = timeout or 60
+            
         if provider in ["openai", "openrouter", "custom", "anthropic", "groq"]:
             config["timeout"] = effective_timeout
-        else:  # google
-            config["request_timeout"] = request_timeout or effective_timeout
+        elif provider == "google":
+            config["timeout"] = effective_timeout
+            config["request_timeout"] = effective_timeout
+        else:
+            config["request_timeout"] = effective_timeout
 
         if provider == "google":
             config["google_api_key"] = valid_api_key

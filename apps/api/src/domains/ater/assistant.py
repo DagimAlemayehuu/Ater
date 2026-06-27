@@ -477,172 +477,286 @@ async def _generate_learning_runtime_note_markdown(
     return build_deterministic_teaching_note(concept_spec)
 
 
+# In-process curriculum cache keyed by topic fingerprint (cleared on lesson start)
+_CURRICULUM_CACHE: dict = {}
+
 async def _stream_learning_runtime_lesson(
     messages_history: List[Dict[str, Any]],
     topic: str,
     secrets: AppSecrets,
     request: Optional[Any] = None,
 ):
-    """Run Teach Anything through the new Ater learning-runtime modules."""
+    """Run Teach Anything through the new Ater learning-runtime modules.
+
+    Two-phase flow:
+    - Phase 1: First call — generate curriculum, stream roadmap preview, cache curriculum.
+    - Phase 2: User clicks "Start Lesson" — retrieve cached curriculum, write files, generate
+      Note 1 body, compile HTML, stream lesson_created.
+    """
     if not secrets.vault_path:
         yield {"type": "error", "message": "Vault path is required for Teach Anything."}
         return
 
     latest_prompt = ""
+    is_start_lesson = False
+    original_learning_prompt = ""
     for msg in reversed(messages_history):
         if msg.get("role") == "user":
             latest_prompt = str(msg.get("content") or "")
+            if latest_prompt.strip().lower() in ("start lesson", "start"):
+                is_start_lesson = True
             break
+    for msg in messages_history:
+        if msg.get("role") == "user":
+            content = str(msg.get("content") or "").strip()
+            if content.lower() not in ("start lesson", "start") and content:
+                original_learning_prompt = content
+                break
     latest_prompt = latest_prompt or f"Teach me {topic}"
 
     try:
+        import asyncio
         from src.domains.ater.compiler_service import AterLessonCompiler
         from src.domains.ater.artifact_service import ArtifactService
-
-        yield {"type": "status", "message": "Planning learning path with Ater..."}
-        service = AterService(secrets)
-        curriculum = await service.planner.generate_curriculum(
-            prompt=latest_prompt,
-            existing_chapters=None,
-            learning_mode="learn_from_scratch",
-        )
-
-        yield {"type": "status", "message": "Writing Hub, Chapters, and Atomic Notes..."}
-        written = service.planner.write_curriculum(curriculum, mode="Generate All")
+        from src.domains.ater import learning_object as lo
 
         vault_root = Path(secrets.vault_path)
-        compiler = AterLessonCompiler(str(vault_root))
-        artifact_service = ArtifactService(vault_path=str(vault_root))
-        compiled_lessons: List[str] = []
-        first_note_path: Optional[Path] = None
-        first_lesson_path: Optional[Path] = None
+        service = AterService(secrets)
+
+        # ── PHASE 2: "Start Lesson" — retrieve cached curriculum, generate + compile ──
+        if is_start_lesson:
+            # Find a cached curriculum based on a recent learning topic in history
+            cached_curriculum = None
+            cache_key = None
+            for msg in reversed(messages_history):
+                if msg.get("role") == "user":
+                    content = str(msg.get("content") or "")
+                    if content.strip().lower() not in ("start lesson", "start"):
+                        key_candidate = content.strip().lower()[:80]
+                        if key_candidate in _CURRICULUM_CACHE:
+                            cached_curriculum = _CURRICULUM_CACHE[key_candidate]
+                            cache_key = key_candidate
+                        break
+
+            if not cached_curriculum:
+                # No cache found — generate fresh (fallback)
+                yield {"type": "status", "message": "Planning learning path..."}
+                try:
+                    cached_curriculum = await asyncio.wait_for(
+                        service.planner.generate_curriculum(
+                            prompt=latest_prompt,
+                            existing_chapters=None,
+                            learning_mode="learn_from_scratch",
+                        ),
+                        timeout=20,
+                    )
+                except asyncio.TimeoutError:
+                    fallback_prompt = original_learning_prompt or topic or latest_prompt
+                    cached_curriculum = service.planner._build_generic_curriculum(
+                        fallback_prompt,
+                        "learn_from_scratch",
+                    )
+
+            curriculum = cached_curriculum
+            curriculum["prompt"] = curriculum.get("prompt") or topic or "learning"
+
+            yield {"type": "status", "message": "Writing Hub, Chapters, and Atomic Notes..."}
+            written = service.planner.write_curriculum(curriculum, mode="Progressive")
+
+            compiler = AterLessonCompiler(str(vault_root))
+            artifact_service = ArtifactService(vault_path=str(vault_root))
+            first_note_path: Optional[Path] = None
+            first_lesson_path: Optional[Path] = None
+
+            topic_name = str(curriculum.get("topic") or topic or "Learning Path")
+            chapters = curriculum.get("chapters") or []
+
+            all_note_titles = []
+            for chapter in chapters:
+                for raw_note_title in chapter.get("atomic_notes") or []:
+                    all_note_titles.append(str(raw_note_title))
+
+            # Only generate Note 1 of Chapter 1 in Progressive mode
+            first_chapter = chapters[0] if chapters else None
+            if first_chapter:
+                chapter_title = str(first_chapter.get("title") or "Foundations")
+                order = int(first_chapter.get("order") or 1)
+                first_note_raw = (first_chapter.get("atomic_notes") or [None])[0]
+                if first_note_raw:
+                    note_title = str(first_note_raw)
+                    note_rel = lo.get_note_path(topic_name, chapter_title, order, lo.normalize_title(note_title))
+                    note_abs = vault_root / note_rel
+
+                    if note_abs.exists():
+                        existing = note_abs.read_text(encoding="utf-8")
+                        post = frontmatter.loads(preprocess_frontmatter(existing))
+                        is_fallback_body = (
+                            "one small control panel inside" in post.content
+                            or "Ater starts with a simple mental model" in post.content
+                        )
+                        lacks_interactive_quiz = "```interactive-quiz" not in post.content
+                        if not post.content.strip() or is_fallback_body or lacks_interactive_quiz:
+                            yield {"type": "status", "message": f"Generating: {note_title}..."}
+                            try:
+                                generated_body = await asyncio.wait_for(
+                                    _generate_learning_runtime_note_markdown(
+                                        llm=getattr(service, "llm", None),
+                                        llm_creative=getattr(service, "llm_creative", None),
+                                        topic=topic_name,
+                                        chapter_title=chapter_title,
+                                        note_title=note_title,
+                                        prompt=curriculum["prompt"],
+                                        all_note_titles=all_note_titles
+                                    ),
+                                    timeout=60,
+                                )
+                            except asyncio.TimeoutError:
+                                generated_body = None
+
+                            write_spec = TeachingConceptSpec(
+                                topic=topic_name,
+                                chapter_title=chapter_title,
+                                note_title=note_title,
+                                prompt=curriculum["prompt"],
+                                related_titles=tuple(all_note_titles or ()),
+                            )
+                            if generated_body:
+                                post.content = ensure_teaching_markdown_quality(generated_body, write_spec)
+                            else:
+                                fallback_body = _ensure_interactive_quiz_block(
+                                    _learning_runtime_note_markdown(topic_name, note_title),
+                                    topic_name,
+                                    note_title,
+                                )
+                                post.content = ensure_teaching_markdown_quality(fallback_body, write_spec)
+
+                            vm = service.vm
+                            yaml_part = vm.dump_obsidian_yaml(post.metadata)
+                            body = post.content if post.content.startswith("\n") else f"\n{post.content}"
+                            note_abs.write_text(f"---\n{yaml_part}---\n{body}", encoding="utf-8")
+
+                    if note_abs.exists():
+                        yield {"type": "status", "message": f"Compiling lesson: {note_title}..."}
+                        for variant in ("simple", "deep", "cram", "exam"):
+                            out = compiler.compile_lesson(note_abs, variant)
+                            if variant == "simple":
+                                if first_lesson_path is None:
+                                    first_lesson_path = out
+                                    first_note_path = note_abs
+
+                        try:
+                            note_post = frontmatter.loads(note_abs.read_text(encoding="utf-8"))
+                            await artifact_service.generate_artifacts(
+                                note_title=note_abs.stem,
+                                note_path_rel=note_abs.relative_to(vault_root).as_posix(),
+                                frontmatter=note_post.metadata,
+                                content=note_post.content,
+                            )
+                        except Exception as artifact_err:
+                            logger.warning(f"[Learning Runtime] Artifact fallback: {artifact_err}")
+
+            if first_lesson_path is None or first_note_path is None:
+                raise RuntimeError("Note 1 could not be compiled. Vault file may be missing.")
+
+            first_rel = first_lesson_path.relative_to(vault_root).as_posix()
+            from src.domains.ater.lesson_preview import register_ater_lesson_preview
+            token = register_ater_lesson_preview(vault_root, first_lesson_path)
+            preview_url = f"/api/ater/lesson/preview/{token}"
+            if request:
+                try:
+                    preview_url = str(request.url_for("ater_lesson_preview", token=token))
+                except Exception:
+                    preview_url = f"/api/ater/lesson/preview/{token}"
+
+            hub_path = written.get("hub_path", "")
+            lesson_title = first_note_path.stem.replace("_", " ")
+            chapter_count = len(chapters)
+            note_count = sum(len(ch.get("atomic_notes") or []) for ch in chapters)
+
+            # Clean cache entry
+            if cache_key and cache_key in _CURRICULUM_CACHE:
+                del _CURRICULUM_CACHE[cache_key]
+
+            yield {
+                "type": "chunk",
+                "content": (
+                    f"## {topic_name}\n\n"
+                    f"Your first lesson is ready! I've created a progressive learning path in your vault:\n\n"
+                    f"- **Hub:** `{hub_path}`\n"
+                    f"- **Chapters planned:** {chapter_count}\n"
+                    f"- **Total atomic notes:** {note_count}\n\n"
+                    f"The Skill Tree on the right shows all upcoming lessons — they unlock progressively as you master each one."
+                ),
+            }
+            yield {
+                "type": "lesson_created",
+                "title": lesson_title,
+                "lesson_path": first_rel,
+                "note_path": first_note_path.relative_to(vault_root).as_posix(),
+                "hub_path": hub_path,
+                "preview_url": preview_url,
+            }
+            return
+
+        # ── PHASE 1: New topic request — generate curriculum, stream roadmap ──
+        # Get the actual user topic from the latest message
+        topic_prompt = latest_prompt
+        cache_key = topic_prompt.strip().lower()[:80]
+
+        yield {"type": "status", "message": "Planning your learning roadmap..."}
+        try:
+            curriculum = await asyncio.wait_for(
+                service.planner.generate_curriculum(
+                    prompt=topic_prompt,
+                    existing_chapters=None,
+                    learning_mode="learn_from_scratch",
+                ),
+                timeout=60,
+            )
+        except asyncio.TimeoutError:
+            curriculum = service.planner._build_generic_curriculum(
+                topic_prompt,
+                "learn_from_scratch",
+            )
+        curriculum["prompt"] = topic_prompt
+
+        # Cache for Phase 2
+        _CURRICULUM_CACHE[cache_key] = curriculum
 
         topic_name = str(curriculum.get("topic") or topic or "Learning Path")
         chapters = curriculum.get("chapters") or []
+        total_notes = sum(len(ch.get("atomic_notes") or []) for ch in chapters)
 
-        # Collect all planned note titles to use as reference list for healers/agents
-        all_note_titles = []
-        for chapter in chapters:
-            for raw_note_title in chapter.get("atomic_notes") or []:
-                all_note_titles.append(str(raw_note_title))
 
-        for chapter in chapters:
-            chapter_title = str(chapter.get("title") or "Foundations")
-            order = int(chapter.get("order") or 1)
-            for raw_note_title in chapter.get("atomic_notes") or []:
-                note_title = str(raw_note_title)
-                from src.domains.ater import learning_object as lo
-                note_rel = lo.get_note_path(topic_name, chapter_title, order, note_title)
-                note_abs = vault_root / note_rel
-                if not note_abs.exists():
-                    continue
+        # Build chapter card roadmap — plain, no emojis, all notes listed
+        chapter_cards = []
+        for ch_idx, ch in enumerate(chapters):
+            ch_title = ch.get("title", "Chapter")
+            notes = ch.get("atomic_notes") or []
+            notes_lines = "\n".join(
+                f"- [ ] {note}" for note in notes
+            )
+            chapter_cards.append(
+                f"**Chapter {ch_idx + 1} — {ch_title}**  "
+                f"*({len(notes)} Atomic Notes)*\n\n"
+                f"Atomic Notes:\n\n"
+                f"{notes_lines}"
+            )
 
-                existing = note_abs.read_text(encoding="utf-8")
-                post = frontmatter.loads(preprocess_frontmatter(existing))
-                is_fallback_body = (
-                    "one small control panel inside" in post.content
-                    or "Ater starts with a simple mental model" in post.content
-                )
-                lacks_interactive_quiz = "```interactive-quiz" not in post.content
-                if not post.content.strip() or is_fallback_body or lacks_interactive_quiz:
-                    yield {"type": "status", "message": f"Writing atomic note: {note_title}..."}
-                    generated_body = await _generate_learning_runtime_note_markdown(
-                        llm=getattr(service, "llm", None),
-                        llm_creative=getattr(service, "llm_creative", None),
-                        topic=topic_name,
-                        chapter_title=chapter_title,
-                        note_title=note_title,
-                        prompt=latest_prompt,
-                        all_note_titles=all_note_titles
-                    )
-                    if generated_body:
-                        write_spec = TeachingConceptSpec(
-                            topic=topic_name,
-                            chapter_title=chapter_title,
-                            note_title=note_title,
-                            prompt=latest_prompt,
-                            related_titles=tuple(all_note_titles or ()),
-                        )
-                        post.content = ensure_teaching_markdown_quality(generated_body, write_spec)
-                    else:
-                        fallback_body = _ensure_interactive_quiz_block(
-                            _learning_runtime_note_markdown(topic_name, note_title),
-                            topic_name,
-                            note_title,
-                        )
-                        write_spec = TeachingConceptSpec(
-                            topic=topic_name,
-                            chapter_title=chapter_title,
-                            note_title=note_title,
-                            prompt=latest_prompt,
-                            related_titles=tuple(all_note_titles or ()),
-                        )
-                        post.content = ensure_teaching_markdown_quality(fallback_body, write_spec)
-                    vm = service.vm
-                    yaml_part = vm.dump_obsidian_yaml(post.metadata)
-                    body = post.content if post.content.startswith("\n") else f"\n{post.content}"
-                    note_abs.write_text(f"---\n{yaml_part}---\n{body}", encoding="utf-8")
-
-                yield {"type": "status", "message": f"Compiling lesson: {note_title}..."}
-                for variant in ("simple", "deep", "cram", "exam"):
-                    out = compiler.compile_lesson(note_abs, variant)
-                    if variant == "simple":
-                        compiled_lessons.append(out.relative_to(vault_root).as_posix())
-                        if first_lesson_path is None:
-                            first_lesson_path = out
-                            first_note_path = note_abs
-
-                try:
-                    note_post = frontmatter.loads(note_abs.read_text(encoding="utf-8"))
-                    await artifact_service.generate_artifacts(
-                        note_title=note_abs.stem,
-                        note_path_rel=note_abs.relative_to(vault_root).as_posix(),
-                        frontmatter=note_post.metadata,
-                        content=note_post.content,
-                    )
-                except Exception as artifact_err:
-                    logger.warning(f"[Learning Runtime] Artifact generation fallback failed: {artifact_err}")
-
-        if first_lesson_path is None or first_note_path is None:
-            raise RuntimeError("Learning path was planned, but no lesson HTML was compiled.")
-
-        first_rel = first_lesson_path.relative_to(vault_root).as_posix()
-        from src.domains.ater.lesson_preview import register_ater_lesson_preview
-
-        token = register_ater_lesson_preview(vault_root, first_lesson_path)
-        preview_url = f"/api/ater/lesson/preview/{token}"
-        if request:
-            try:
-                preview_url = str(request.url_for("ater_lesson_preview", token=token))
-            except Exception:
-                preview_url = f"/api/ater/lesson/preview/{token}"
-
-        hub_path = written.get("hub_path", "")
-        lesson_title = first_note_path.stem.replace("_", " ")
-        chapter_count = len(chapters)
-        note_count = sum(len(ch.get("atomic_notes") or []) for ch in chapters)
+        chapters_block = "\n\n---\n\n".join(chapter_cards)
 
         yield {
             "type": "chunk",
             "content": (
-                f"## {topic_name} Learning Path\n\n"
-                f"I created a durable Ater learning path in your vault.\n\n"
-                f"- Hub: [[{Path(hub_path).stem}]]\n"
-                f"- Chapters: {chapter_count}\n"
-                f"- Atomic notes: {note_count}\n"
-                f"- HTML lesson variants: simple, deep, cram, exam\n"
-                f"- Tutor, cram, and artifact metadata are attached to the notes.\n\n"
-                f"Open the lesson preview to start, or go to Explorer and open `{hub_path}`."
+                f"## {topic_name} — Learning Roadmap\n\n"
+                f"{len(chapters)} chapters · {total_notes} lessons\n\n"
+                f"---\n\n"
+                f"{chapters_block}\n\n"
+                f"---\n\n"
+                f"Click **Start Lesson** to begin — Lesson 1 will be written to your vault."
             ),
         }
-        yield {
-            "type": "lesson_created",
-            "title": lesson_title,
-            "lesson_path": first_rel,
-            "note_path": first_note_path.relative_to(vault_root).as_posix(),
-            "hub_path": hub_path,
-            "preview_url": preview_url,
-        }
+
     except Exception as e:
         logger.error(f"[Learning Runtime] Teach Anything failed: {e}", exc_info=True)
         yield {"type": "error", "message": str(e)}

@@ -92,7 +92,11 @@ def test_sqlite_schema_init(srs_db):
     assert "hub_path" in cols
     assert "score" in cols
     assert "status" in cols
+    assert "active_note_unlocks" in cols
+    assert "consecutive_failures" in cols
+    assert "active_question_overrides" in cols
     conn.close()
+
 
 def test_tutor_session_state_machine(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)
@@ -145,9 +149,13 @@ def test_misconception_logging(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)
     manager.start_session("session3", "database/learning paths/Git_Hub.md")
     
-    # Submit incorrect answer to trigger misconception logging
-    res = manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
-    assert res["diagnosis"]["is_misconception"] is True
+    # Submit incorrect answer 1st time to get a hint (not misconception yet)
+    res1 = manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
+    assert res1["diagnosis"]["is_misconception"] is False
+    
+    # Submit incorrect answer 2nd consecutive time to trigger misconception logging
+    res2 = manager.submit_answer("session3", "q1", is_correct=False, wager="high", user_answer="remote clone")
+    assert res2["diagnosis"]["is_misconception"] is True
     
     # Query database to check if misconception is saved
     conn = sqlite3.connect(str(srs_db))
@@ -157,6 +165,7 @@ def test_misconception_logging(temp_vault, srs_db):
     assert row["note_title"] == "Git_Three_State_Model"
     assert "q1" in row["misconception_text"] or "concept" in row["misconception_text"]
     conn.close()
+
 
 def test_tutor_advance_progression(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)

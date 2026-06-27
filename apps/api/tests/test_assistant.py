@@ -122,7 +122,26 @@ async def test_teach_anything_stream_uses_learning_runtime_not_legacy_teacher(tm
     ):
         events.append(event)
 
-    lesson_event = next(event for event in events if event["type"] == "lesson_created")
+    roadmap_event = next(event for event in events if event["type"] == "chunk")
+    assert "Learning Roadmap" in roadmap_event["content"]
+    assert "Chapter 1" in roadmap_event["content"]
+    assert "Atomic Notes" in roadmap_event["content"]
+    assert "Start Lesson" in roadmap_event["content"]
+    assert not any(event["type"] == "lesson_created" for event in events)
+
+    lesson_events = []
+    async for event in _stream_learning_runtime_lesson(
+        messages_history=[
+            {"role": "user", "content": "Teach me Git"},
+            {"role": "assistant", "content": roadmap_event["content"]},
+            {"role": "user", "content": "Start Lesson"},
+        ],
+        topic="Git",
+        secrets=secrets,
+    ):
+        lesson_events.append(event)
+
+    lesson_event = next(event for event in lesson_events if event["type"] == "lesson_created")
     assert "/api/teacher" not in lesson_event["preview_url"]
     assert lesson_event["preview_url"].startswith("/api/ater/lesson/preview/")
     assert lesson_event["lesson_path"].endswith("Git_Commit_Graph.simple.html")

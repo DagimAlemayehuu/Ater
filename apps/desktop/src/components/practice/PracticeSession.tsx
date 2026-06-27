@@ -80,13 +80,15 @@ export function PracticeSession({
   const retrievability = currentCard ? getRetrievability(currentCard) : 1.0
   const lapses = currentCard ? currentCard.lapses || 0 : 0
 
+  const isTutorSession = !!session.sessionPath
+
   return (
     <div data-tour="practice-session-card" className="h-full w-full flex flex-row min-w-0 bg-transparent text-foreground overflow-hidden relative gap-3">
       <div
         className="bg-bento-panel rounded-[12px] border border-border/40 shadow-sm relative flex flex-col min-w-0 panel-transition flex-1 h-full min-h-0 overflow-hidden"
         style={{
-          width: isPanelOpen && artifacts.length > 0 ? `${100 - panelWidth}%` : '100%',
-          flex: isPanelOpen && artifacts.length > 0 ? 'none' : '1 1 0%',
+          width: !isTutorSession && isPanelOpen && artifacts.length > 0 ? `${100 - panelWidth}%` : '100%',
+          flex: !isTutorSession && isPanelOpen && artifacts.length > 0 ? 'none' : '1 1 0%',
         }}
       >
         {/* ── Feynman Gate Locked Overlay ── */}
@@ -622,6 +624,36 @@ export function PracticeSession({
                 </div>
               )}
 
+              {session.retryActive?.[currentQuestion.id] && session.questionHint?.[currentQuestion.id] && (
+                <div className="p-5 border border-amber-500/20 bg-amber-500/5 rounded-[8px] space-y-2 text-left">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-amber-500">
+                    Tutor Hint (Attempt 1)
+                  </div>
+                  <div className="text-sm font-bold text-amber-500/90">
+                    <MarkdownBlock content={session.questionHint[currentQuestion.id]} />
+                  </div>
+                </div>
+              )}
+
+              {isRevealed && session.misconceptionText?.[currentQuestion.id] && (
+                <div className="p-5 border border-destructive/20 bg-destructive/5 rounded-[8px] space-y-3 text-left">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-destructive">
+                    Misconception Diagnosis (Attempt 2)
+                  </div>
+                  <div className="text-xs font-bold leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                    <MarkdownBlock content={session.misconceptionText[currentQuestion.id]} />
+                  </div>
+                  {session.remediationQuestion?.[currentQuestion.id] && (
+                    <Button
+                      onClick={session.handleTakeRemediation}
+                      className="mt-3 w-full bg-destructive text-destructive-foreground font-black uppercase text-[10px] tracking-widest rounded-none hover:bg-destructive/90"
+                    >
+                      Take Remediation Challenge
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {isRevealed &&
                 ['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQuestion.type) &&
                 Array.isArray(currentQuestion.required_keywords) &&
@@ -707,26 +739,35 @@ export function PracticeSession({
                 Explain More
               </Button>
               <div className="flex items-center gap-2">
-                {!isRevealed ? (
+                {session.retryActive?.[currentQuestion.id] ? (
+                  <Button
+                    onClick={session.handleRetry}
+                    className="h-10 px-10 bg-amber-500 hover:bg-amber-600 text-amber-foreground text-[10px] font-black uppercase tracking-widest rounded-none"
+                  >
+                    Try Again
+                  </Button>
+                ) : !isRevealed ? (
                   <Button
                     data-tour="submit-answer-btn"
                     onClick={handleSubmitAnswer}
                     disabled={
-                      !userAnswers[currentQuestion.id] &&
-                      ![
-                        'writing',
-                        'synthesis',
-                        'debug',
-                        'trace',
-                        'calculation',
-                        'data_analysis',
-                        'scenario',
-                        'code',
-                      ].includes(currentQuestion.type)
+                      session.isSubmitting || (
+                        !userAnswers[currentQuestion.id] &&
+                        ![
+                          'writing',
+                          'synthesis',
+                          'debug',
+                          'trace',
+                          'calculation',
+                          'data_analysis',
+                          'scenario',
+                          'code',
+                        ].includes(currentQuestion.type)
+                      )
                     }
                     className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none"
                   >
-                    Submit Answer
+                    {session.isSubmitting ? 'Submitting...' : 'Submit Answer'}
                   </Button>
                 ) : (
                   <div className="flex gap-2">
@@ -784,7 +825,7 @@ export function PracticeSession({
         </div>
       </div>
 
-      {isPanelOpen && artifacts.length > 0 && (
+      {!isTutorSession && isPanelOpen && artifacts.length > 0 && (
         <>
           <button
             type="button"

@@ -4,12 +4,15 @@ import {
  ShieldCheck, RefreshCw, 
  FileText, Activity, 
  Zap, Search, GraduationCap,
- User, BookOpen, BookOpenCheck, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen
+ User, BookOpen, BookOpenCheck, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen, BrainCircuit
 } from 'lucide-react'
+import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 
 interface LessonPreview {
   title: string
   lessonPath: string
+  notePath?: string
+  hubPath?: string
   previewUrl: string
 }
 
@@ -22,25 +25,17 @@ interface SavedConversation {
   timestamp: number
 }
 
-function resolvePreviewUrl(url: string): string {
-  if (!url) return ''
-  if (/^(https?:|data:|blob:)/.test(url)) return url
-  return `http://127.0.0.1:8765${url.startsWith('/') ? url : `/${url}`}`
-}
 import {sidecarApi} from '@/lib/sidecarApi'
-import { invoke } from '@tauri-apps/api/core'
-import { getAppStore } from '@/lib/store'
-import { fetchSidecarJson } from '@/lib/sidecarHttp'
 import {cn} from '@/lib/utils'
 import { listen } from '@tauri-apps/api/event'
 import { NoteCanvas } from '@/components/intelligence/NoteCanvas'
+import { LearningWorkspace } from '@/components/intelligence/LearningWorkspace'
 import { useConfig} from '@/lib/ConfigContext'
 import {useHeader} from '@/context/header-context'
 import {useNavigate} from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { MiniLoader } from '@/components/ui/loading-state'
-import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 import { ArtifactViewer } from '@/components/obsidian/ArtifactViewer'
 import { extractArtifacts } from '@/lib/artifacts/parser'
 import { useArtifactStore } from '@/lib/artifacts/store'
@@ -49,7 +44,6 @@ import { Send, Trash2, Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
 import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
-import { useTheme } from '@/context/theme-provider'
 
 interface Message {
   role: 'user' | 'assistant';
@@ -77,10 +71,8 @@ interface OracleViewProps {
 /* ─── Oracle Chat View ─── */
 function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSelect }: OracleViewProps) {
   const navigate = useNavigate();
-  const { resolvedTheme } = useTheme();
   const { currentHub, history: studyHistory } = usePomodoroStore();
   const { config, saveConfig } = useConfig();
-  const lessonIframeRef = useRef<HTMLIFrameElement>(null);
 
   // Load conversation list
   const [conversations, setConversations] = useState<SavedConversation[]>(() => {
@@ -130,6 +122,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
       return null;
     }
   });
+  const [tutorSession, setTutorSession] = useState<any | null>(null);
   const [panelOpen, setPanelOpen] = useState(() => {
     if (activeConv) return activeConv.panelOpen;
     try {
@@ -139,98 +132,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
       return false;
     }
   });
-
-  const themedPreviewUrl = useMemo(() => {
-    if (!preview?.previewUrl) return ''
-    try {
-      const url = new URL(preview.previewUrl)
-      url.searchParams.set('theme', resolvedTheme)
-      return url.toString()
-    } catch {
-      const separator = preview.previewUrl.includes('?') ? '&' : '?'
-      return `${preview.previewUrl}${separator}theme=${encodeURIComponent(resolvedTheme)}`
-    }
-  }, [preview?.previewUrl, resolvedTheme]);
-
-  useEffect(() => {
-    lessonIframeRef.current?.contentWindow?.postMessage({
-      type: 'ater:set-theme',
-      theme: resolvedTheme,
-    }, '*')
-  }, [resolvedTheme, themedPreviewUrl, panelOpen]);
-
-
-  // Listen for NEXT_NOTE events from the iframe to transition to the next chapter/lesson
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.data && event.data.type === 'NEXT_NOTE' && preview) {
-        try {
-          const currentPath = preview.lessonPath.replace(/\\/g, '/');
-          const parts = currentPath.split('/');
-          parts.pop();
-          const parentDir = parts.join('/');
-          
-          const res = await sidecarApi.listObsidianFiles();
-          const siblingLessons = res.files
-            .filter((f: any) => {
-              const fPath = f.path.replace(/\\/g, '/');
-              const fParent = fPath.split('/').slice(0, -1).join('/');
-              return fParent === parentDir && f.name.endsWith('.html');
-            })
-            .sort((a: any, b: any) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-
-          const currentIndex = siblingLessons.findIndex((f: any) => f.path.replace(/\\/g, '/') === currentPath);
-          const nextFile = currentIndex >= 0 ? siblingLessons[currentIndex + 1] : null;
-            
-          if (nextFile) {
-            const sidecarPort = await invoke<number>('get_sidecar_port').catch(() => 8765);
-            const sidecarToken = await invoke<string>('get_sidecar_token').catch(() => '');
-            const store = await getAppStore();
-            const vaultPath = await store.get<string>('obsidianVaultPath') || config?.obsidianVaultPath || '';
-            const registerUrl = `http://127.0.0.1:${sidecarPort}/api/ater/lesson/register`;
-            const response = await fetchSidecarJson(registerUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken,
-                'X-Vault-Path': vaultPath,
-              },
-              body: JSON.stringify({ lesson_path: nextFile.path }),
-            });
-            const previewUrl = response?.preview_url ? `${resolvePreviewUrl(response.preview_url)}?t=${Date.now()}` : '';
-
-            if (previewUrl) {
-              const nextTitleRaw = nextFile.name.replace(/\.(simple|deep|cram|exam)\.html$/i, '').replace(/\.html$/i, '');
-              const nextTitle = cleanTitle(nextTitleRaw);
-                
-              const newPreview = {
-                title: nextTitle || 'Next Lesson Section',
-                lessonPath: nextFile.path,
-                previewUrl,
-              };
-                
-              setPreview(newPreview);
-              setPanelOpen(true);
-              if (onNoteSelect) {
-                onNoteSelect(newPreview.previewUrl);
-              }
-              toast.success(`Transitioning to ${newPreview.title}`);
-            }
-          } else {
-            toast.info('You have reached the end of the learning path!');
-          }
-        } catch (err: any) {
-          console.error('[Agents] Failed to transition to next chapter:', err);
-          toast.error(`Failed to load next chapter: ${err.message || err}`);
-        }
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [preview, config?.obsidianVaultPath]);
 
   // If activeConversationId is null and we have messages, initialize activeConversationId
   useEffect(() => {
@@ -387,7 +288,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     setPreview(conv.preview);
     setPanelOpen(conv.panelOpen);
     if (onNoteSelect) {
-      onNoteSelect(conv.preview ? conv.preview.previewUrl : null);
+      onNoteSelect(conv.preview ? (conv.preview.notePath || conv.preview.lessonPath || null) : null);
     }
   }, [conversations, isLoading, onNoteSelect]);
 
@@ -434,7 +335,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
         setPreview(list[0].preview);
         setPanelOpen(list[0].panelOpen);
         if (onNoteSelect) {
-          onNoteSelect(list[0].preview ? list[0].preview.previewUrl : null);
+          const selectedPreview = list[0].preview;
+          onNoteSelect(selectedPreview ? (selectedPreview.notePath || selectedPreview.lessonPath || null) : null);
         }
       } else {
         setActiveConversationId(null);
@@ -647,6 +549,41 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     };
   }, [isDraggingSplit]);
 
+  useEffect(() => {
+    if (!preview?.hubPath) {
+      setTutorSession(null);
+      return;
+    }
+
+    let active = true;
+    const fetchSession = async () => {
+      try {
+        let session = await sidecarApi.getTutorSessionByHub(preview.hubPath!);
+        if (!session) {
+          const sessId = `tutor_${preview.hubPath!.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+          session = await sidecarApi.startTutorSession({
+            session_id: sessId,
+            hub_path: preview.hubPath!,
+            mode: 'Progressive'
+          });
+        }
+        if (active) {
+          setTutorSession(session);
+        }
+      } catch (err) {
+        console.error('Failed to get or start tutor session in agents.tsx:', err);
+      }
+    };
+
+    fetchSession();
+    const timer = setInterval(fetchSession, 5000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [preview?.hubPath]);
+
+
   const handleWikiLinkClick = useCallback(async (pageName: string) => {
     try {
       const searchRes = await sidecarApi.findVaultPage(pageName);
@@ -798,18 +735,17 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                 return next;
               });
             } else if (parsed.type === 'lesson_created') {
-              const resolvedUrl = resolvePreviewUrl(parsed.preview_url || '');
-              if (onNoteSelect && resolvedUrl) {
-                onNoteSelect(resolvedUrl);
+              if (onNoteSelect) {
+                onNoteSelect(parsed.note_path || parsed.lesson_path || null);
               }
               setPreview({
                 title: parsed.title || 'Teacher Lesson',
-                lessonPath: parsed.lesson_path || '',
-                previewUrl: resolvePreviewUrl(parsed.preview_url || ''),
+                lessonPath: parsed.note_path || parsed.lesson_path || '',
+                notePath: parsed.note_path || '',
+                hubPath: parsed.hub_path || '',
+                previewUrl: '',
               });
-              if (!onNoteSelect) {
-                setPanelOpen(true);
-              }
+              setPanelOpen(true);
             } else if (parsed.type === 'action') {
               if (parsed.action === 'navigate' && parsed.route) {
                 navigate(parsed.route);
@@ -912,7 +848,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
       hasMessages: messages.length > 0,
       hasPreview: !!preview,
       isPanelOpen: panelOpen || artifactState.isPanelOpen,
-      isLessonOpen: panelOpen
+      isLessonOpen: !!preview && panelOpen
     });
   }, [messages.length, preview, panelOpen, artifactState.isPanelOpen, onStateChange]);
 
@@ -1010,7 +946,15 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
         </div>
       )}
 
-      {/* Main Chat & Side Panel Wrapper */}
+      {preview && panelOpen ? (
+        <LearningWorkspace
+          preview={preview}
+          tutorSession={tutorSession}
+          onTutorSessionChange={setTutorSession}
+          onPreviewChange={setPreview}
+          onClose={() => setPanelOpen(false)}
+        />
+      ) : (
       <div className="flex-1 flex min-h-0 relative">
         <div
           className="flex min-h-0 flex-col flex-1"
@@ -1038,8 +982,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                           </div>
                           {(() => {
                             const isLastMessage = index === messages.length - 1;
-                            const hasRoadmap = msg.content.includes('```mermaid') || msg.content.includes('graph TD') || msg.content.includes('graph LR');
-                            const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap;
+                            const hasRoadmap = msg.content.includes('Start Lesson');
+                            const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap && !isLoading;
                             if (showStartButton) {
                               return (
                                 <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
@@ -1047,7 +991,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                                     type="button"
                                     onClick={() => handleSendMessage('Start Lesson')}
                                     disabled={isLoading}
-                                    className="h-9 px-5 bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                    className="h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                                   >
                                     <BookOpenCheck size={12} />
                                     Start Lesson
@@ -1111,8 +1055,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
         </div>
         </div>
 
-        {/* Unified Side Panel */}
-        {((preview && panelOpen && !onNoteSelect) || (artifactState.artifacts.length > 0 && artifactState.isPanelOpen)) ? (
+        {/* Artifact Side Panel */}
+        {(artifactState.artifacts.length > 0 && artifactState.isPanelOpen) ? (
           <>
             <button
               type="button"
@@ -1127,70 +1071,15 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
               className="min-w-[420px] max-w-[82%] flex flex-col bg-bento-bg border-l border-border/40 min-h-0"
               style={{ width: `${artifactState.panelWidth}%` }}
             >
-              {preview && panelOpen && !onNoteSelect ? (
-                <aside className="relative flex-1 flex flex-col min-h-0 select-none">
-                  <div className="h-12 shrink-0 border-b border-border/40 px-4 flex items-center justify-between">
-                    <div className="min-w-0">
-                      <p className="truncate text-[11px] font-black uppercase tracking-widest text-foreground">{preview.title}</p>
-                      <p className="truncate text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">{preview.lessonPath}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {artifactState.artifacts.length > 0 && (
-                        <button
-                          onClick={() => {
-                            setPanelOpen(false);
-                            artifactState.setPanelOpen(true);
-                          }}
-                          className="px-2 py-1 bg-muted hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground border border-border rounded-[4px] transition-colors"
-                          title="Show compiled sandbox artifact"
-                        >
-                          Artifact
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setPanelOpen(false)}
-                        className="size-8 rounded-[6px] border border-border/40 bg-muted/10 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                        aria-label="Close lesson preview"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <iframe
-                    ref={lessonIframeRef}
-                    key={`${preview.lessonPath}:${themedPreviewUrl}`}
-                    title={preview.title}
-                    src={themedPreviewUrl}
-                    sandbox="allow-scripts allow-forms"
-                    className="flex-1 w-full bg-bento-bg border-none"
-                    style={{ pointerEvents: isDraggingSplit ? 'none' : 'auto' }}
-                  />
-                </aside>
-              ) : (
-                <div className="flex-1 flex flex-col min-h-0 relative">
-                  {preview && !onNoteSelect && (
-                    <div className="absolute top-2 left-2 z-50">
-                      <button
-                        onClick={() => {
-                          artifactState.setPanelOpen(false);
-                          setPanelOpen(true);
-                        }}
-                        className="px-2 py-1 bg-muted hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground border border-border rounded-[4px] transition-colors"
-                        title="Show active lesson preview"
-                      >
-                        Show Lesson
-                      </button>
-                    </div>
-                  )}
-                  <ArtifactViewer shielded={isDraggingSplit} />
-                </div>
-              )}
+              <div className="flex-1 flex flex-col min-h-0 relative">
+                <ArtifactViewer shielded={isDraggingSplit} />
+              </div>
             </div>
           </>
         ) : null}
 
       </div>
+      )}
     </div>
   );
 }
@@ -1536,9 +1425,9 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  </div>
  ))}
  </div>
- </div>
- </div>
- )
+      </div>
+    </div>
+  )
 }
 
 /* ─── Optimized UI Components ─── */
@@ -1669,6 +1558,14 @@ function AterDashboard({onBack}: {onBack: () => void}) {
   const [hasNewNoteAlert, setHasNewNoteAlert] = useState(false);
 
   const studyContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!oracleState.isLessonOpen) return;
+    setIsLeftCollapsed(false);
+    setIsRightCollapsed(true);
+    localStorage.setItem('ater_study_split_left_collapsed', 'false');
+    localStorage.setItem('ater_study_split_right_collapsed', 'true');
+  }, [oracleState.isLessonOpen]);
 
   useEffect(() => {
     if (!isDragging) return;

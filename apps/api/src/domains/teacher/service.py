@@ -80,37 +80,25 @@ def _normalize_sections(sections: List[str], lesson_title: str) -> List[str]:
 
 
 def _render_roadmap_markdown(lesson_title: str, prompt: str, sections: List[str]) -> str:
-    nodes = []
-    for index, section in enumerate(sections, start=1):
-        node_id = f"S{index}"
-        label = section.replace('"', "'")
-        nodes.append(f'    {node_id}["{index}. {label}"]')
-        if index > 1:
-            nodes.append(f"    S{index - 1} --> {node_id}")
-
     section_lines = []
     for index, section in enumerate(sections, start=1):
         section_lines.append(
-            f"- **Chapter {index}: {section}** creates `"
-            f"{index:04d}-{_slugify(section)}.md` as an Ater Atomic Note with Mental Model, How It Works, Formal Model, and The Proving Grounds."
+            f"{index}. **{section}**"
         )
 
     return "\n".join(
         [
-            f"## Roadmap: {lesson_title}",
+            f"## {lesson_title} — Learning Roadmap",
             "",
-            f"This learning path turns `{prompt.strip() or lesson_title}` into a sequence of focused atomic notes and matching interactive lessons. Each chapter is narrow enough to review, quiz, and advance without losing the larger progression.",
+            f"{len(sections)} chapters planned for: *{prompt.strip() or lesson_title}*",
             "",
-            "```mermaid",
-            "graph TD",
-            *nodes,
-            "```",
-            "",
-            "## Chapter Plan",
+            "---",
             "",
             *section_lines,
             "",
-            'Reply with "confirm" or click **Start Lesson** to generate the full lesson workspace.',
+            "---",
+            "",
+            'Click **Start Lesson** to generate the full lesson workspace.',
         ]
     )
 
@@ -267,9 +255,10 @@ class TeacherService:
         workspace_slug = _slugify(topic)
         lesson_title = _display_title(topic)
 
+        # Phase 1 sentinel: no roadmap yet in history
         has_roadmap = False
         for msg in history:
-            if msg.get("role") == "assistant" and ("```mermaid" in msg.get("content", "") or "graph TD" in msg.get("content", "") or "graph LR" in msg.get("content", "")):
+            if msg.get("role") == "assistant" and "Start Lesson" in msg.get("content", ""):
                 has_roadmap = True
                 break
 
@@ -379,7 +368,11 @@ Return the result strictly as a JSON list of strings, for example:
 Do not output any introductory or concluding text. Output only valid JSON."""
 
             history_text = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in history])
-            response = await llm.ainvoke([SystemMessage(content=system), HumanMessage(content=history_text)])
+            import asyncio
+            response = await asyncio.wait_for(
+                llm.ainvoke([SystemMessage(content=system), HumanMessage(content=history_text)]),
+                timeout=60,
+            )
             raw = response.content if hasattr(response, "content") else str(response)
             
             # Clean JSON markers if present
@@ -480,19 +473,37 @@ Do not output any introductory or concluding text. Output only valid JSON."""
                 max_tokens=2000,
             )
 
-            system = f"""You are Ater Teacher, a stateful teaching agent implementing the Teach skill.
+            system = f"""You are Ater Teacher, a precise teaching agent.
 Your task is to analyze the requested topic "{lesson_title}" and generate a structured, sequential learning roadmap of 8 to 12 atomic-note chapters showing the progression from beginner to competent.
-You MUST output:
-1. A brief 1-2 sentence introduction.
-2. A beautiful Mermaid diagram (graph TD) showing the progression of the sections.
-3. A chapter plan detailing what will be learned in each section and which atomic note will be generated for it.
-4. A friendly question asking the user to confirm/proceed (respond with "confirm" or click the proceed button) to start the first dynamic lesson.
 
-Every planned chapter must be narrow enough to become one Ater Atomic Note with Mental Model, How It Works, Formal Model, and The Proving Grounds sections.
-Format your response in Markdown. Do not generate any HTML code. Keep the Mermaid graph syntax valid."""
+Output format (strict Markdown, no HTML, NO Mermaid diagrams, NO emojis):
+
+## {lesson_title} — Learning Roadmap
+
+<N> chapters planned for: *<original prompt>*
+
+---
+
+1. **<Chapter Title>**
+2. **<Chapter Title>**
+...
+
+---
+
+Click **Start Lesson** to generate the full lesson workspace.
+
+Rules:
+- Every chapter must be narrow enough to become one atomic note.
+- Do not include any diagrams, emojis, or decorative symbols.
+- Do not include explanatory paragraphs between chapters.
+- End with exactly: Click **Start Lesson** to generate the full lesson workspace."""
 
             human = f"Prompt: {prompt}\nLesson title: {lesson_title}"
-            response = await llm.ainvoke([SystemMessage(content=system), HumanMessage(content=human)])
+            import asyncio
+            response = await asyncio.wait_for(
+                llm.ainvoke([SystemMessage(content=system), HumanMessage(content=human)]),
+                timeout=60,
+            )
             return response.content if hasattr(response, "content") else str(response)
         except Exception as e:
             import logging
