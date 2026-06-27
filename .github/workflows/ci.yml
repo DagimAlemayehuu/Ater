@@ -40,8 +40,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       # Provide Supabase vars so Vite build succeeds in CI
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder_key' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install pnpm
@@ -110,8 +110,8 @@ jobs:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
     env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder_key' }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://mock.supabase.co' }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'mock_key' }}
     steps:
@@ -154,8 +154,8 @@ jobs:
             apps/landing-page/playwright-report/
           retention-days: 7
 
-  check-rust-windows:
-    name: Desktop (Rust / cargo check) - Windows
+  test-rust-windows:
+    name: Desktop (Rust / cargo test) - Windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -181,5 +181,10 @@ jobs:
         with:
           workspaces: "apps/desktop/src-tauri -> target"
 
-      - name: Run cargo check
-        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      # Full build (not just check) so that native libraries are linked and tested
+      - name: Run cargo build --release
+        run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml --release
+
+      # Run Rust unit tests
+      - name: Run cargo test
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml -- --nocapture

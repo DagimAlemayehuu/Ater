@@ -29,13 +29,13 @@ Completion report:
 
 
 ## Phase 2: Hardening Windows CI & Environment Defaults
-Status: pending
+Status: completed
 OpenSpec source:
 - Main change: openspec/changes/perfect-ci-cd/
 - Phase spec/change: none
 OpenSpec tasks:
-- [ ] 2.1 Upgrade Windows CI job `check-rust-windows` to `test-rust-windows` to run a full build and test suite (`cargo test`)
-- [ ] 3.1 Add default fallback values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.github/workflows/ci.yml`
+- [x] 2.1 Upgrade Windows CI job `check-rust-windows` to `test-rust-windows` to run a full build and test suite (`cargo test`)
+- [x] 3.1 Add default fallback values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.github/workflows/ci.yml`
 OpenSpec requirements/scenarios:
 - `Windows Test Validation`: The CI workflow SHALL perform full build and unit testing (`cargo test`) for Rust code on the Windows runner.
 Allowed files/areas:
@@ -48,3 +48,5 @@ Verification:
 - Validate GHA workflow syntax.
 Manual preview impact:
 - None.
+Completion report:
+- Successfully upgraded Windows CI from simple cargo check to full release build and cargo test execution (`test-rust-windows`). Added fallback values for all Supabase frontend environment variables in `ci.yml` to prevent failures when building PRs from fork repositories.

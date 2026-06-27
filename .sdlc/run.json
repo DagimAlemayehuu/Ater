@@ -1,5 +1,5 @@
 {
-  "status": "planned",
+  "status": "implemented",
   "activeChange": "perfect-ci-cd",
   "githubIssue": "#11",
   "baseBranch": "main",
@@ -28,7 +28,7 @@
     {
       "id": 2,
       "name": "Hardening Windows CI & Environment Defaults",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         "2.1 Upgrade Windows CI job `check-rust-windows` to `test-rust-windows` to run a full build and test suite (`cargo test`)",
         "3.1 Add default fallback values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.github/workflows/ci.yml`"
@@ -36,7 +36,7 @@
       "verification": [
         "Check CI/CD workflow syntax"
       ],
-      "attempts": 0
+      "attempts": 1
     }
   ],
   "blockers": []
