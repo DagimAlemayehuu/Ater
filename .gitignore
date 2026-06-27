@@ -72,7 +72,8 @@ apps/api/ater.db
 .active_chat_history
 .all_sessions
 .antigravitycli/
-.system/
+.system/*
+!.system/prompts/
 .agent/
 .hyperframes/
 agent-config-backup/
