@@ -44,14 +44,15 @@ jobs:
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
       - name: Run Typecheck
@@ -89,14 +90,10 @@ jobs:
           touch apps/desktop/src-tauri/binaries/ater-api-aarch64-apple-darwin
           chmod +x apps/desktop/src-tauri/binaries/ater-api-aarch64-apple-darwin
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          workspaces: "apps/desktop/src-tauri -> target"
 
       # Full build (not just check) so that native libraries are linked and tested
       - name: Run cargo build --release
@@ -119,16 +116,25 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'mock_key' }}
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
       - name: Install Playwright Browsers
         run: cd apps/desktop && npx playwright install --with-deps chromium
       - name: Run Playwright Tests (Desktop Mocks)
@@ -170,14 +176,10 @@ jobs:
           New-Item -Path "apps/desktop/src-tauri/binaries/ater-api-x86_64-pc-windows-msvc.exe" -ItemType File -Force
         shell: pwsh
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          workspaces: "apps/desktop/src-tauri -> target"
 
       - name: Run cargo check
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

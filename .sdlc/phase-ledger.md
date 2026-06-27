@@ -1,54 +1,50 @@
-# Phase Ledger: desktop-and-test-alignment
+# Phase Ledger: perfect-ci-cd
 
-## Phase 1: Backend Test Refactoring
+## Phase 1: Optimizing CI/CD Caching
 Status: completed
 OpenSpec source:
-- Main change: openspec/changes/desktop-and-test-alignment/
+- Main change: openspec/changes/perfect-ci-cd/
 - Phase spec/change: none
 OpenSpec tasks:
-- [x] 1.1 Update `apps/api/tests/test_tutor_runtime.py` to make test functions async and await `TutorSessionManager.submit_answer` calls.
-- [x] 1.2 Update `apps/api/tests/test_learning_runtime_e2e.py` to make `test_wager_scoring_correct_high_confidence`, `test_wager_scoring_incorrect_high_confidence`, `test_misconception_logged_for_high_confidence_error`, and `test_score_clamped_at_zero` async and await `submit_answer`.
+- [x] 1.1 Re-order setup steps in `.github/workflows/ci.yml` and add `cache: 'pnpm'`
+- [x] 1.2 Re-order setup steps in `.github/workflows/release.yml` and add `cache: 'pnpm'`
+- [x] 1.3 Integrate `swatinem/rust-cache@v2` into `.github/workflows/ci.yml` for macOS and Windows jobs
+- [x] 1.4 Integrate `swatinem/rust-cache@v2` into `.github/workflows/release.yml` for macOS and Windows jobs
+- [x] 1.5 Cache Playwright browser binaries in `.github/workflows/ci.yml`
 OpenSpec requirements/scenarios:
-- `tutor-runtime`: Run tutor tests headlessly without network or AI
+- `Cross-platform Caching in CI/CD`: The CI/CD workflows SHALL cache Node (`pnpm`) dependencies and Rust (`cargo`) build target directories to optimize execution time.
 Allowed files/areas:
-- `apps/api/tests/test_tutor_runtime.py`
-- `apps/api/tests/test_learning_runtime_e2e.py`
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
 Forbidden scope:
-- Modifying FastAPI endpoints, logic in tutor_service.py or database schemas.
+- unrelated refactors
+- upgrading main Tauri or Rust compiler versions
+- changing release repository details
 Verification:
-- `cd apps/api && uv run python -m pytest tests/`
+- Validate GHA workflow syntax using local validator or lint checks.
 Manual preview impact:
-- None (backend tests only).
+- None (CI workflow changes).
 Completion report:
-- Successfully refactored all failing sync tutor-runtime tests to be async and await submit_answer, using the `@pytest.mark.asyncio` decorator. Verified that the entire pytest suite passes successfully with zero errors.
+- Successfully optimized Node/pnpm dependency caching and Rust compiler target/registry caching using `swatinem/rust-cache@v2` on both macOS and Windows runners. Configured Playwright browser binary caching to speed up E2E workflow runs.
 
-## Phase 2: Desktop Code Warning Cleanup and Styling Alignment
-Status: completed
+
+## Phase 2: Hardening Windows CI & Environment Defaults
+Status: pending
 OpenSpec source:
-- Main change: openspec/changes/desktop-and-test-alignment/
+- Main change: openspec/changes/perfect-ci-cd/
 - Phase spec/change: none
 OpenSpec tasks:
-- [x] 2.1 Fix React Hook dependency issues in `apps/desktop/src/routes/settings.tsx`.
-- [x] 2.2 Cleanup unused variables and typing warnings in `apps/desktop/src/routes/teacher.tsx`.
-- [x] 2.3 Cleanup typing warnings in `apps/desktop/src/routes/welcome.tsx` and test files.
-- [x] 3.1 Audit desktop layouts (AuthenticatedLayout, AppHeader, AppSidebar) for Outfit font usage and consistent HSL/Bento token bindings.
-- [x] 3.2 Verify outer padding and panel gaps conform to `docs/DESIGN.md` guidelines.
+- [ ] 2.1 Upgrade Windows CI job `check-rust-windows` to `test-rust-windows` to run a full build and test suite (`cargo test`)
+- [ ] 3.1 Add default fallback values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.github/workflows/ci.yml`
 OpenSpec requirements/scenarios:
-- Visual design rules and CSS layout guidelines.
+- `Windows Test Validation`: The CI workflow SHALL perform full build and unit testing (`cargo test`) for Rust code on the Windows runner.
 Allowed files/areas:
-- `apps/desktop/src/routes/settings.tsx`
-- `apps/desktop/src/routes/teacher.tsx`
-- `apps/desktop/src/routes/welcome.tsx`
-- `apps/desktop/src/components/layout/authenticated-layout.tsx`
-- `apps/desktop/src/components/layout/app-sidebar.tsx`
-- `apps/desktop/src/components/layout/app-header.tsx`
+- `.github/workflows/ci.yml`
 Forbidden scope:
-- Changing business logic, introducing un-approved fonts, or purple/violet colors.
+- unrelated refactors
+- upgrading main Tauri or Rust compiler versions
+- changing release repository details
 Verification:
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm build`
+- Validate GHA workflow syntax.
 Manual preview impact:
-- Visual elements and panels inside the desktop client are aligned with the Outfit font and Bento box spacing guidelines.
-Completion report:
-- Resolved react-hooks dependency warnings in settings.tsx by adding an eslint-disable-next-line comment. Cleaned up unused variable warnings in teacher.tsx and onboarding.tsx, and typed parameters with proper interfaces (TutorSession). Audited layout files and confirmed strict adherence to Outfit font styling and HSL tokens. Build and typecheck pass with zero errors.
+- None.
