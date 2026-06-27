@@ -86,6 +86,49 @@ class AterPlanner:
         ])
         return response.model_dump()
 
+    @staticmethod
+    def sanitize_curriculum_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
+        """Deduplicates and validates chapters and notes in a curriculum plan."""
+        seen_chapters = set()
+        seen_notes = set()
+        cleaned_chapters = []
+        
+        for ch in plan.get("chapters", []):
+            ch_title = ch.get("title", "").strip()
+            if not ch_title:
+                continue
+            
+            # Normalize title to check for duplicates
+            norm_ch_title = lo.normalize_title(ch_title).lower()
+            if norm_ch_title in seen_chapters:
+                continue
+            seen_chapters.add(norm_ch_title)
+            
+            ch_notes = ch.get("atomic_notes", [])
+            cleaned_notes = []
+            for note in ch_notes:
+                note = str(note).strip()
+                if not note:
+                    continue
+                norm_note = lo.normalize_title(note).lower()
+                # Skip duplicate notes globally across the curriculum
+                if norm_note in seen_notes:
+                    continue
+                seen_notes.add(norm_note)
+                cleaned_notes.append(note)
+                
+            # Only keep chapter if it has notes
+            if cleaned_notes:
+                ch["atomic_notes"] = cleaned_notes[:10]  # Max 10 notes per chapter
+                cleaned_chapters.append(ch)
+                
+        # Re-assign cleaned chapters and re-index the orders
+        plan["chapters"] = cleaned_chapters[:12]  # Limit to max 12 chapters
+        for i, ch in enumerate(plan["chapters"], 1):
+            ch["order"] = i
+            
+        return plan
+
     async def generate_curriculum(self, prompt: str, existing_chapters: Optional[List[str]] = None, learning_mode: str = "self-study") -> Dict[str, Any]:
         """
         Plans a structured curriculum for the given prompt, potentially extending existing chapters.
@@ -107,7 +150,8 @@ class AterPlanner:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Request: {prompt}"}
         ])
-        return response.model_dump()
+        plan_dict = response.model_dump()
+        return self.sanitize_curriculum_plan(plan_dict)
 
     def write_curriculum(self, curriculum: Dict[str, Any], mode: Literal["Generate All", "Progressive"], semester: Optional[str] = None, course: Optional[str] = None, unit: Optional[str] = None) -> Dict[str, Any]:
         """

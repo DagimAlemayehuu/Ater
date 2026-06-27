@@ -1,5 +1,5 @@
 {
-  "status": "implementing",
+  "status": "archived",
   "activeChange": "theme-and-contrast-refactor",
   "githubIssue": "#8",
   "baseBranch": "main",
@@ -7,6 +7,7 @@
   "worktree": null,
   "currentPhase": 1,
   "retryBudget": 3,
+  "associatedChanges": [],
   "lastVerification": {
     "status": "passed",
     "results": {
@@ -19,7 +20,7 @@
     {
       "id": 1,
       "name": "Button Component, Stylesheet, and Practice Buttons Refactor",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         "1.1 Update `button.tsx` default variant to use a responsive hover class: change `hover:bg-[#2c2c30]` to `hover:bg-muted-foreground/20 dark:hover:bg-[#2c2c30]`.",
         "1.2 Update `index.css` to add any necessary global utility classes if required, and double-check theme variables.",
@@ -37,7 +38,7 @@
     {
       "id": 2,
       "name": "Page and Layout Backgrounds Refactor",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         "2.1 Refactor `login.tsx` root container to change `bg-[#0e0e0f]` to `bg-background`.",
         "2.2 Refactor `welcome.tsx` root container to change `bg-[#0a0a0b]` to `bg-background`.",
@@ -54,7 +55,7 @@
     {
       "id": 3,
       "name": "Replace bg-foreground Buttons and Verify",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         "4.1 Replace `bg-foreground text-background` buttons in `OracleUIBlocks.tsx` with `bg-primary text-primary-foreground` to resolve pure black/white contrast issues.",
         "4.2 Replace `bg-foreground text-background` buttons/tabs in other routes/components (e.g. `settings.tsx`, `onboarding.tsx`, `agents.tsx`, `notebooks.tsx`, `InteractiveLessonRenderer.tsx`, `InteractiveLessonPlayer.tsx`) with `bg-primary text-primary-foreground`.",

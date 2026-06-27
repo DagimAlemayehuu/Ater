@@ -348,20 +348,16 @@ class AterLessonCompiler:
         content_html = ""
         
         if variant == "simple":
-            defs = self._extract_definitions(parsed, clean_title)
-            defs_html = "\n".join([f"                    <li><strong>{t}</strong>: {d}</li>" for t, d in defs])
             content_html = f"""
             <section class="page-container active">
               <div class="lesson-card">
                 <div class="section-body">
-                  <h2>Mental Model</h2>
+                  <h2>{parsed["mental_model"]["title"]}</h2>
                   {mental_model_html}
-                  <h2>{parsed["h1"]["title"]} (Core Idea)</h2>
+                  <h2>{parsed["h1"]["title"]}</h2>
                   {h1_html}
-                  <h2>Key Definitions</h2>
-                  <ul>
-{defs_html}
-                  </ul>
+                  <h2>{parsed["h2"]["title"]}</h2>
+                  {h2_html}
                 </div>
                 <div class="nav-row">
                   <span></span>
@@ -642,51 +638,34 @@ class AterLessonCompiler:
   <title>{clean_title}</title>
   <style>
     :root {{
-      color-scheme: dark;
-      --bg: #111113;
-      --panel: #151517;
-      --surface: #18181b;
-      --surface-2: #202024;
-      --line: #2b2b30;
-      --line-strong: #3a3a40;
-      --text: #f4f4f5;
-      --muted: #a1a1aa;
-      --soft: #d4d4d8;
-      --good: #8bd49c;
-      --warn: #f4c06a;
-      --bad: #ff8f8f;
-    }}
-    @media (prefers-color-scheme: light) {{
-      :root:not(.dark) {{
-        color-scheme: light;
-        --bg: #fafafa;
-        --panel: #ffffff;
-        --surface: #f4f4f5;
-        --surface-2: #e4e4e7;
-        --line: #e4e4e7;
-        --line-strong: #d4d4d8;
-        --text: #18181b;
-        --muted: #71717a;
-        --soft: #27272a;
-        --good: #16a34a;
-        --warn: #ca8a04;
-        --bad: #dc2626;
-      }}
+      color-scheme: light;
+      --bg: #fafafa;
+      --panel: #f2f2f2;
+      --surface: #ebebeb;
+      --surface-2: #e0e0e0;
+      --line: #d9d9d9;
+      --line-strong: #c7c7c7;
+      --text: #262626;
+      --muted: #737373;
+      --soft: #404040;
+      --good: #15803d;
+      --warn: #a16207;
+      --bad: #b91c1c;
     }}
     :root.light {{
       color-scheme: light;
       --bg: #fafafa;
-      --panel: #ffffff;
-      --surface: #f4f4f5;
-      --surface-2: #e4e4e7;
-      --line: #e4e4e7;
-      --line-strong: #d4d4d8;
-      --text: #18181b;
-      --muted: #71717a;
-      --soft: #27272a;
-      --good: #16a34a;
-      --warn: #ca8a04;
-      --bad: #dc2626;
+      --panel: #f2f2f2;
+      --surface: #ebebeb;
+      --surface-2: #e0e0e0;
+      --line: #d9d9d9;
+      --line-strong: #c7c7c7;
+      --text: #262626;
+      --muted: #737373;
+      --soft: #404040;
+      --good: #15803d;
+      --warn: #a16207;
+      --bad: #b91c1c;
     }}
     :root.dark {{
       color-scheme: dark;
@@ -708,14 +687,14 @@ class AterLessonCompiler:
     body {{
       margin: 0;
       min-height: 100vh;
-      background: transparent;
+      background: var(--bg);
       color: var(--text);
       font-family: Outfit, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.58;
     }}
     .lesson-shell {{
       min-height: 100vh;
-      padding: 34px 28px 48px;
+      padding: 12px;
       background: var(--bg);
     }}
     .lesson-frame {{
@@ -806,7 +785,7 @@ class AterLessonCompiler:
     code {{
       border: 1px solid var(--line);
       border-radius: 4px;
-      background: #101011;
+      background: var(--surface);
       padding: 1px 5px;
       color: var(--text);
       font-size: .92em;
@@ -831,7 +810,7 @@ class AterLessonCompiler:
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #101011;
+      background: var(--surface);
       padding: 14px;
       color: var(--soft);
       font-size: 12px;
@@ -978,7 +957,7 @@ class AterLessonCompiler:
       white-space: pre-wrap;
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #101011;
+      background: var(--surface);
       color: var(--soft);
       padding: 18px;
       font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
@@ -1020,6 +999,27 @@ class AterLessonCompiler:
       * {{ scroll-behavior: auto !important; transition: none !important; }}
     }}
   </style>
+  <script>
+    (function () {{
+      function applyTheme(value) {{
+        var theme = value === "dark" || value === "light"
+          ? value
+          : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(theme);
+      }}
+      try {{
+        applyTheme(new URLSearchParams(window.location.search).get("theme"));
+        window.addEventListener("message", function (event) {{
+          if (event && event.data && event.data.type === "ater:set-theme") {{
+            applyTheme(event.data.theme);
+          }}
+        }});
+      }} catch (_) {{
+        applyTheme(null);
+      }}
+    }})();
+  </script>
 </head>
 <body>
   <main class="lesson-shell">

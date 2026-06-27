@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ater SDLC Run State",
+  "type": "object",
+  "required": ["status", "activeChange", "baseBranch", "phases", "associatedChanges", "blockers"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "initialized",
+        "planned",
+        "implementing",
+        "implemented",
+        "verifying",
+        "verified",
+        "ready-for-release",
+        "archived",
+        "blocked"
+      ]
+    },
+    "activeChange": { "type": ["string", "null"] },
+    "githubIssue": { "type": ["string", "null"] },
+    "baseBranch": { "type": "string" },
+    "branch": { "type": ["string", "null"] },
+    "worktree": { "type": ["string", "null"] },
+    "currentPhase": { "type": ["string", "number", "null"] },
+    "retryBudget": { "type": "number" },
+    "phases": { "type": "array" },
+    "associatedChanges": { "type": "array", "items": { "type": "string" } },
+    "blockers": { "type": "array" },
+    "lastVerification": { "type": ["object", "null"] },
+    "preview": { "type": ["object", "string", "null"] },
+    "manualVerification": { "type": ["object", "string", "null"] }
+  },
+  "additionalProperties": true
+}

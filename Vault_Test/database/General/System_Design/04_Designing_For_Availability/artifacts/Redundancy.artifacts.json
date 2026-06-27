@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "note_title": "Redundancy",
+  "note_path": "database/General/System_Design/04_Designing_For_Availability/Redundancy.md",
+  "active_version": 2,
+  "pinned_artifact_types": [],
+  "versions": [
+    {
+      "version": 1,
+      "created_at": "2026-06-27T15:31:33.892951+00:00",
+      "artifacts": []
+    },
+    {
+      "version": 2,
+      "created_at": "2026-06-27T15:32:36.088729+00:00",
+      "artifacts": [
+        {
+          "type": "reveal_card",
+          "front": "What is the core concept of Redundancy?",
+          "back": "Details about Redundancy can be found in the note content."
+        }
+      ]
+    }
+  ]
+}

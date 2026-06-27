@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "note_title": "Optimizing_Database_Queries",
+  "note_path": "database/General/System_Design/05_Designing_For_Performance/Optimizing_Database_Queries.md",
+  "active_version": 2,
+  "pinned_artifact_types": [],
+  "versions": [
+    {
+      "version": 1,
+      "created_at": "2026-06-27T15:31:33.895251+00:00",
+      "artifacts": []
+    },
+    {
+      "version": 2,
+      "created_at": "2026-06-27T15:32:44.074689+00:00",
+      "artifacts": [
+        {
+          "type": "reveal_card",
+          "front": "What is the core concept of Optimizing_Database_Queries?",
+          "back": "Details about Optimizing_Database_Queries can be found in the note content."
+        }
+      ]
+    }
+  ]
+}

@@ -49,6 +49,7 @@ import { Send, Trash2, Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
 import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
+import { useTheme } from '@/context/theme-provider'
 
 interface Message {
   role: 'user' | 'assistant';
@@ -76,8 +77,10 @@ interface OracleViewProps {
 /* ─── Oracle Chat View ─── */
 function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSelect }: OracleViewProps) {
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
   const { currentHub, history: studyHistory } = usePomodoroStore();
   const { config, saveConfig } = useConfig();
+  const lessonIframeRef = useRef<HTMLIFrameElement>(null);
 
   // Load conversation list
   const [conversations, setConversations] = useState<SavedConversation[]>(() => {
@@ -136,6 +139,25 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
       return false;
     }
   });
+
+  const themedPreviewUrl = useMemo(() => {
+    if (!preview?.previewUrl) return ''
+    try {
+      const url = new URL(preview.previewUrl)
+      url.searchParams.set('theme', resolvedTheme)
+      return url.toString()
+    } catch {
+      const separator = preview.previewUrl.includes('?') ? '&' : '?'
+      return `${preview.previewUrl}${separator}theme=${encodeURIComponent(resolvedTheme)}`
+    }
+  }, [preview?.previewUrl, resolvedTheme]);
+
+  useEffect(() => {
+    lessonIframeRef.current?.contentWindow?.postMessage({
+      type: 'ater:set-theme',
+      theme: resolvedTheme,
+    }, '*')
+  }, [resolvedTheme, themedPreviewUrl, panelOpen]);
 
 
   // Listen for NEXT_NOTE events from the iframe to transition to the next chapter/lesson
@@ -1136,11 +1158,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                     </div>
                   </div>
                   <iframe
-                    key={`${preview.lessonPath}:${preview.previewUrl}`}
+                    ref={lessonIframeRef}
+                    key={`${preview.lessonPath}:${themedPreviewUrl}`}
                     title={preview.title}
-                    src={preview.previewUrl}
+                    src={themedPreviewUrl}
                     sandbox="allow-scripts allow-forms"
-                    className="flex-1 w-full bg-background border-none"
+                    className="flex-1 w-full bg-bento-bg border-none"
                     style={{ pointerEvents: isDraggingSplit ? 'none' : 'auto' }}
                   />
                 </aside>

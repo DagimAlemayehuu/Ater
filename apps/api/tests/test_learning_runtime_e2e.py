@@ -362,9 +362,10 @@ class TestPhase2Compilation:
         assert "DAG" in html or "directed acyclic" in html.lower(), (
             "Simple variant must include Mental Model content"
         )
-        assert "Key Definitions" in html, (
-            "Simple variant must include the Key Definitions section"
+        assert "Branching and Reachability" in html, (
+            "Simple variant must preserve the Atomic Note's second teaching section"
         )
+        assert "Key Definitions" not in html
 
     def test_cram_html_variant(self, git_vault, full_atomic_note_content):
         note_file = self._setup_note(git_vault, full_atomic_note_content)

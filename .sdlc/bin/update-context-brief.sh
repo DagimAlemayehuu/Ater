@@ -1,146 +1,176 @@
 #!/usr/bin/env python3
-# .sdlc/bin/update-context-brief.sh
-# Updates .sdlc/context-brief.md from durable artifacts.
+"""Regenerate .sdlc/context-brief.md from durable SDLC/OpenSpec state."""
 
-import os
-import sys
+from __future__ import annotations
+
 import json
+import re
 import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
-def run_cmd(cmd):
+RUN_JSON = Path(".sdlc/run.json")
+OUT = Path(".sdlc/context-brief.md")
+
+
+def read_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
     try:
-        return subprocess.check_output(cmd, shell=True, text=True).strip()
+        return json.loads(path.read_text())
+    except Exception:
+        return {}
+
+
+def git_branch() -> str:
+    try:
+        return subprocess.check_output(["git", "branch", "--show-current"], text=True).strip()
     except Exception:
         return ""
 
-def main():
-    # Attempt to resolve active change
-    active_change = ""
-    resolve_script = ".sdlc/bin/resolve-active-change.sh"
-    if os.path.exists(resolve_script):
-        active_change = run_cmd(f"bash {resolve_script}")
-    
-    # Read current state from run.json
-    run_data = {}
-    if os.path.exists(".sdlc/run.json"):
-        try:
-            with open(".sdlc/run.json", "r") as f:
-                run_data = json.load(f)
-        except Exception:
-            pass
 
-    status = run_data.get("status", "initialized")
-    github_issue = run_data.get("githubIssue", "")
-    current_phase = run_data.get("currentPhase", "")
-    last_verification = run_data.get("lastVerification", "")
+def bullets_from_section(path: Path, heading: str) -> list[str]:
+    if not path.exists():
+        return []
+    text = path.read_text()
+    match = re.search(
+        rf"^##\s+{re.escape(heading)}\s*$([\s\S]*?)(?=^##\s+|\Z)",
+        text,
+        re.MULTILINE,
+    )
+    if not match:
+        return []
+    return [
+        line.strip()
+        for line in match.group(1).splitlines()
+        if line.strip().startswith("- ")
+    ]
 
-    # Overwrite with command line arguments if provided
-    # Usage: update-context-brief.sh [active_change] [current_phase] [verification_result] [note]
+
+def task_summary(change: str) -> str:
+    path = change_base(change) / "tasks.md"
+    if not path.exists():
+        return "tasks.md missing"
+    text = path.read_text()
+    total = len(re.findall(r"(?m)^\s*-\s*\[[ x/]\]\s+", text))
+    done = len(re.findall(r"(?m)^\s*-\s*\[x\]\s+", text, flags=re.IGNORECASE))
+    return f"{done}/{total} tasks complete"
+
+
+def artifact_links(change: str) -> list[str]:
+    base = change_base(change)
+    links = []
+    for rel in ("proposal.md", "design.md", "spec.md", "tasks.md"):
+        path = base / rel
+        if path.exists():
+            links.append(f"- `{path}`")
+    specs = sorted((base / "specs").glob("*/spec.md")) if (base / "specs").exists() else []
+    for path in specs:
+        links.append(f"- `{path}`")
+    return links
+
+
+def change_base(change: str) -> Path:
+    active = Path("openspec/changes") / change
+    if active.exists():
+        return active
+    archived = sorted(Path("openspec/changes/archive").glob(f"*-{change}"))
+    if archived:
+        return archived[-1]
+    return active
+
+
+def next_command(run: dict) -> str:
+    change = run.get("activeChange")
+    status = run.get("status")
+    if not change:
+        return "sdlc-plan <change-description>"
+    if status in ("planned",):
+        return f"sdlc-orchestrate {change}"
+    if status in ("implementing", "blocked"):
+        return f"sdlc-orchestrate {change}"
+    if status in ("implemented", "verifying", "verified", "ready-for-release"):
+        return f"sdlc-verify {change}"
+    return f"sdlc-plan or sdlc-orchestrate {change}, depending on status"
+
+
+def main() -> int:
+    run = read_json(RUN_JSON)
     if len(sys.argv) > 1 and sys.argv[1]:
-        active_change = sys.argv[1]
+        run["activeChange"] = sys.argv[1]
     if len(sys.argv) > 2 and sys.argv[2]:
-        current_phase = sys.argv[2]
-    if len(sys.argv) > 3 and sys.argv[3]:
-        last_verification = sys.argv[3]
-    
-    note = sys.argv[4] if len(sys.argv) > 4 else ""
+        run["currentPhase"] = sys.argv[2]
+    note = sys.argv[3] if len(sys.argv) > 3 else ""
 
-    # Parse specs and decisions
+    active = run.get("activeChange") or ""
+    associated = run.get("associatedChanges") or []
+    changes = [active] + associated if active else associated
+
+    lines = [
+        "# Context Brief",
+        "",
+        f"Updated: {datetime.now(timezone.utc).isoformat()}",
+        "",
+        "## Current Objective",
+        f"- Status: `{run.get('status', 'unknown')}`",
+        f"- Active change: `{active or 'None'}`",
+        f"- Associated changes: `{', '.join(associated) if associated else 'None'}`",
+        f"- Current phase: `{run.get('currentPhase') or 'None'}`",
+        f"- Git branch: `{git_branch() or 'unknown'}`",
+        f"- GitHub issue: `{run.get('githubIssue') or 'None'}`",
+        "",
+        "## OpenSpec Artifacts",
+    ]
+
+    if changes:
+        for change in changes:
+            lines.append(f"- `{change}`: {task_summary(change)}")
+            lines.extend(artifact_links(change))
+    else:
+        lines.append("- No active OpenSpec change.")
+
+    lines.extend(["", "## Phase State"])
+    phases = run.get("phases") or []
+    if phases:
+        for phase in phases:
+            lines.append(
+                f"- Phase {phase.get('id')}: {phase.get('name')} "
+                f"({phase.get('status')}, attempts={phase.get('attempts', 0)})"
+            )
+    else:
+        lines.append("- No phases recorded.")
+
+    lines.extend(["", "## Verification State"])
+    last = run.get("lastVerification") or {}
+    if last:
+        lines.append(f"- Last verification: `{last.get('status', 'unknown')}`")
+        if last.get("profile"):
+            lines.append(f"- Profile: `{last.get('profile')}`")
+        if last.get("finishedAt"):
+            lines.append(f"- Finished: `{last.get('finishedAt')}`")
+    else:
+        lines.append("- Last verification: not run")
+
+    lines.extend(["", "## Decisions Made"])
     decisions = []
-    open_questions = []
-    spec_link = "None"
-    
-    if active_change:
-        change_dir = f"openspec/changes/{active_change}"
-        spec_path = f"{change_dir}/spec.md"
-        if os.path.exists(spec_path):
-            spec_link = f"[{active_change} spec.md](file://{os.path.abspath(spec_path)})"
-            # Read spec.md to extract Decisions and Open Questions
-            try:
-                with open(spec_path, "r") as f:
-                    lines = f.readlines()
-                
-                in_decisions = False
-                in_questions = False
-                for line in lines:
-                    if line.startswith("## Decisions"):
-                        in_decisions = True
-                        in_questions = False
-                        continue
-                    elif line.startswith("## Open Questions"):
-                        in_questions = True
-                        in_decisions = False
-                        continue
-                    elif line.startswith("##") or line.startswith("# "):
-                        in_decisions = False
-                        in_questions = False
-                    
-                    if in_decisions and line.strip() and not line.startswith("##"):
-                        decisions.append(line.strip())
-                    if in_questions and line.strip() and not line.startswith("##"):
-                        open_questions.append(line.strip())
-            except Exception as e:
-                decisions.append(f"Error reading decisions: {str(e)}")
+    for change in changes:
+        decisions.extend(bullets_from_section(Path("openspec/changes") / change / "design.md", "Decisions"))
+        decisions.extend(bullets_from_section(Path("openspec/changes") / change / "proposal.md", "Decisions"))
+    lines.extend(decisions or ["- No explicit decisions extracted."])
 
-    # Format output
-    brief_content = f"""# Context Brief
+    lines.extend(["", "## Blockers"])
+    blockers = run.get("blockers") or []
+    lines.extend([f"- {b}" for b in blockers] or ["- None recorded."])
 
-## Current Objective
-- Active implementation/verification for change: `{active_change or 'None'}`
-- Current phase: `{current_phase or 'None'}`
-- Git Branch: `{run_cmd("git branch --show-current")}`
-
-## Active OpenSpec Change
-- Link to spec: {spec_link}
-- GitHub Issue: {github_issue or 'None'}
-
-## Decisions Made
-"""
-    if decisions:
-        brief_content += "\n".join(decisions) + "\n"
-    else:
-        brief_content += "- No new decisions recorded in spec.md.\n"
-
-    brief_content += "\n## Files and Artifacts That Matter\n"
-    brief_content += "- [AGENTS.md](file://{})\n".format(os.path.abspath("AGENTS.md"))
-    brief_content += "- [docs/CONTEXT.md](file://{})\n".format(os.path.abspath("docs/CONTEXT.md"))
-    brief_content += "- [docs/SOP.md](file://{})\n".format(os.path.abspath("docs/SOP.md"))
-    if active_change:
-        brief_content += f"- Active Change Directory: `openspec/changes/{active_change}`\n"
-
-    brief_content += f"""
-## Verification State
-- Last Verification Result: {last_verification or 'Not run yet'}
-
-## Open Questions
-"""
-    if open_questions:
-        brief_content += "\n".join(open_questions) + "\n"
-    else:
-        brief_content += "- None.\n"
-
-    # Next command suggestion
-    next_cmd = "sdlc-plan <change-description>"
-    if active_change:
-        if current_phase == "Plan":
-            next_cmd = f"sdlc-orchestrate {active_change}"
-        elif current_phase == "Orchestrate":
-            next_cmd = f"sdlc-verify {active_change}"
-        elif current_phase == "Verify":
-            next_cmd = f"sdlc-verify --archive {active_change}"
-
-    brief_content += f"""
-## Next Agent Should
-- Execute: `{next_cmd}`
-"""
+    lines.extend(["", "## Next Agent Should", f"- Execute: `{next_command(run)}`"])
     if note:
-        brief_content += f"- Caller Note: {note}\n"
+        lines.append(f"- Caller note: {note}")
 
-    # Write file
-    with open(".sdlc/context-brief.md", "w") as f:
-        f.write(brief_content)
+    OUT.write_text("\n".join(lines) + "\n")
+    print(f"Updated {OUT}")
+    return 0
 
-    print("Updated .sdlc/context-brief.md successfully.")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

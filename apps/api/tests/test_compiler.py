@@ -172,7 +172,14 @@ This details the box properties.
         # Simple Variant
         html_simple = compiler.compile_to_html(note_file, "simple")
         assert "Imagine a simple box." in html_simple
-        assert "Key Definitions" in html_simple
+        assert "<h2>How It Works</h2>" in html_simple
+        assert "<h2>Key Details</h2>" in html_simple
+        assert "Key Definitions" not in html_simple
+        assert "prefers-color-scheme: light" not in html_simple
+        assert "--bg: #fafafa" in html_simple
+        assert "--bg: #111113" in html_simple
+        assert ":root.light" in html_simple
+        assert ":root.dark" in html_simple
         
         # Cram Variant
         html_cram = compiler.compile_to_html(note_file, "cram")

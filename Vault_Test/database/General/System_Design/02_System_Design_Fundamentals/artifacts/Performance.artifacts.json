@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "note_title": "Performance",
+  "note_path": "database/General/System_Design/02_System_Design_Fundamentals/Performance.md",
+  "active_version": 2,
+  "pinned_artifact_types": [],
+  "versions": [
+    {
+      "version": 1,
+      "created_at": "2026-06-27T15:31:33.889163+00:00",
+      "artifacts": []
+    },
+    {
+      "version": 2,
+      "created_at": "2026-06-27T15:31:50.096083+00:00",
+      "artifacts": [
+        {
+          "type": "reveal_card",
+          "front": "What is the core concept of Performance?",
+          "back": "Details about Performance can be found in the note content."
+        }
+      ]
+    }
+  ]
+}

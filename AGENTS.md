@@ -30,6 +30,6 @@ This file resides in the root directory because it is actively queried by the sy
 ---
 
 ## 3. Core Developer Workflow Checklists
-* **Plan:** Call the master skill `sdlc-plan` to explore with the user and create the OpenSpec change.
-* **Orchestrate:** Call the master skill `sdlc-orchestrate` to implement isolated OpenSpec phases.
-* **Verify:** Call the master skill `sdlc-verify` to audit, preview locally, run the manual checklist, integrate, sync specs, and archive.
+* **Plan:** Call the master skill `sdlc-plan` to explore conversationally with the user and create one main OpenSpec implementation brief. Planning never writes implementation code or phase specs.
+* **Orchestrate:** Call the master skill `sdlc-orchestrate` to read the main spec, decompose into phase specs/child changes when needed, implement autonomously, and verify every phase independently.
+* **Verify:** Call the master skill `sdlc-verify` to audit, preview locally, generate and walk the manual checklist, fix failures through the SDLC loop, integrate, sync specs/docs, archive, and clean up.

@@ -17,6 +17,7 @@ import json
 import logging
 import sqlite3
 import asyncio
+import yaml
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -38,6 +39,34 @@ from src.api.deps import AppSecrets
 from src.domains.obsidian.client import ObsidianClient
 from src.domains.ai.factory import ModelFactory
 from src.domains.ater.service import AterService
+from src.domains.ater.agents import (
+    TheoryAgent,
+    PractitionerAgent,
+    QuestionAgent,
+    VerifierAgent,
+    EpistemicClassifierAgent,
+    get_persona,
+    get_professional_domain
+)
+from src.domains.ater.quiz_builder import (
+    determine_dynamic_question_count,
+    select_dynamic_question_types
+)
+from src.domains.ater.templates import render_atomic_note, build_dynamic_section_plan, build_skeleton_note
+from src.domains.ater.healer import LogicHealer
+from src.domains.ater.schemas import AtomicNoteSchema
+from src.domains.ater.validator import AterValidator
+from src.domains.ater.router import DomainRouter
+from src.domains.ater.teaching_quality import (
+    TeachingConceptSpec,
+    build_default_grounding_context,
+    build_deterministic_teaching_note,
+    build_deterministic_teaching_quiz,
+    ensure_teaching_markdown_quality,
+    finalize_teaching_markdown,
+    infer_teaching_modality,
+    validate_teaching_markdown,
+)
 
 logger = logging.getLogger("AterAssistant")
 
@@ -226,54 +255,226 @@ def _ensure_interactive_quiz_block(content: str, topic: str, note_title: str) ->
     return content.rstrip() + "\n\n## The Proving Grounds\n" + block + "\n"
 
 
+async def _fetch_web_context(topic: str, note_title: str) -> str:
+    """Query DuckDuckGo for the concept and build a grounding context."""
+    clean_title = note_title.replace('_', ' ')
+    query = f"{topic} {clean_title} explanation definition technical"
+    logger.info(f"Querying DuckDuckGo for context: {query}")
+    try:
+        if DDGS is None:
+            return ""
+        # Run DDGS in a separate thread to prevent blocking the async loop
+        def do_search():
+            with DDGS() as ddgs:
+                return list(ddgs.text(query, max_results=3))
+        results = await asyncio.to_thread(do_search)
+        if not results:
+            return ""
+        context_parts = []
+        for r in results:
+            title = r.get("title", "")
+            body = r.get("body", "")
+            context_parts.append(f"Source: {title}\nExcerpt: {body}")
+        return "\n\n".join(context_parts)
+    except Exception as e:
+        logger.warning(f"DuckDuckGo search failed for '{query}': {e}")
+        return ""
+
+
 async def _generate_learning_runtime_note_markdown(
     llm: Any,
+    llm_creative: Any,
     topic: str,
     chapter_title: str,
     note_title: str,
     prompt: str,
+    all_note_titles: List[str] = None
 ) -> str:
     if not llm:
         return ""
+        
+    if all_note_titles is None:
+        all_note_titles = [note_title]
 
-    system = """You are Ater's Atomic Note writer.
-Write one high-quality Obsidian Atomic Note section body for an interactive lesson system.
+    # 1. Fetch web grounding context
+    base_spec = TeachingConceptSpec(
+        topic=topic,
+        chapter_title=chapter_title,
+        note_title=note_title,
+        prompt=prompt,
+        related_titles=tuple(all_note_titles or ()),
+    )
+    source_context = await _fetch_web_context(topic, note_title)
+    if not source_context:
+        source_context = build_default_grounding_context(base_spec)
 
-Rules:
-- Return Markdown body only. Do not include YAML frontmatter.
-- Use exactly these section headings:
-  ## Mental Model
-  ## What You Must Know
-  ## Common Mistakes
-  ## The Proving Grounds
-- Teach in simple English first, as if the learner is 12, then add rigor.
-- Make the content specific to the note title, not generic filler.
-- Mental Model must be continuous prose, not bullets.
-- The Proving Grounds must include an interactive-quiz fenced block with at least 3 questions.
-- Use varied question types where useful: mcq, fill_in, matching, trace, writing, find_error.
-- Keep it concise enough for a weak model, but complete enough to teach the concept.
-"""
-    user = f"""Learning request: {prompt}
-Topic: {topic}
-Chapter: {chapter_title}
-Atomic Note: {note_title}
+    # 2. Epistemic modality classification
+    # Keep this deterministic in Teach Anything Markdown. The model budget is
+    # better spent on prose than on classifying note shape.
+    modality = infer_teaching_modality(note_title, source_context)
 
-Write the note body now."""
-    try:
-        res = await llm.ainvoke([
-            SystemMessage(content=system),
-            HumanMessage(content=user),
-        ])
-        content = str(getattr(res, "content", "") or "").strip()
-        content = re.sub(r"^```(?:markdown|md)?\s*", "", content, flags=re.IGNORECASE).strip()
-        content = re.sub(r"\s*```$", "", content).strip()
-        required = ["## Mental Model", "## What You Must Know", "## Common Mistakes", "## The Proving Grounds"]
-        if not content or not all(section in content for section in required):
-            return ""
-        return _ensure_interactive_quiz_block(content, topic, note_title)
-    except Exception as e:
-        logger.warning(f"[Learning Runtime] Note generation failed for {note_title}: {e}")
-        return ""
+    # 3. Mode/Persona selection
+    routed_mode = DomainRouter().route(
+        f"{topic}\n{chapter_title}\n{note_title}\n{prompt}\n{source_context[:1200]}",
+        course=topic,
+    )
+    mode = routed_mode if routed_mode != "DOMAIN-UNKNOWN" else "ACADEMIC-GENERAL"
+    
+    domain = get_persona(mode, modality)
+    concept_spec = TeachingConceptSpec(
+        topic=topic,
+        chapter_title=chapter_title,
+        note_title=note_title,
+        prompt=prompt,
+        mode=mode,
+        modality=modality,
+        source_context=source_context,
+        related_titles=tuple(all_note_titles or ()),
+    )
+    
+    # 4. Instantiate agents
+    theory_agent = TheoryAgent(llm_creative or llm, domain)
+    practitioner_agent = PractitionerAgent(llm, domain)
+    verifier = VerifierAgent(llm)
+    healer = LogicHealer(canonical_titles=set(all_note_titles))
+    validator = AterValidator()
+
+    # 5. Build note schema
+    note_schema = AtomicNoteSchema(
+        title=note_title,
+        description=f"Concept: {note_title}",
+        source_context=source_context,
+        concept_modality=modality,
+        mode=mode
+    )
+
+    # 6. Generation attempts
+    generation_attempts = 0
+    max_attempts = 1
+    
+    # Thin concepts segment
+    thin_concepts = ", ".join([f"[[{t}]]" for t in all_note_titles[:15]])
+
+    while generation_attempts < max_attempts:
+        generation_attempts += 1
+        try:
+            # 6.1 Theory Pass
+            theory_parts = await theory_agent.generate_micro(
+                note_schema=note_schema,
+                source_text=source_context,
+                all_concepts=thin_concepts,
+                used_scenarios=[],
+                academic_level="General",
+                course_title=topic,
+                max_tokens=6000
+            )
+            # Heal and validate length
+            for k in ["mental_model", "core_logic", "formal_model"]:
+                if k in theory_parts:
+                    theory_parts[k] = healer.heal_all(theory_parts[k], exclude_title=note_title)
+                    
+            if len(theory_parts.get("mental_model", "")) < 80 or len(theory_parts.get("core_logic", "")) < 30:
+                raise ValueError("Analogy or core logic length check failed.")
+
+            # 6.2 Practitioner Pass
+            prac_parts = await practitioner_agent.generate_micro(
+                note_title=note_title,
+                theory_body=theory_parts.get("core_logic", ""),
+                primary_language="General",
+                mode=mode,
+                source_text=source_context,
+                academic_level="General",
+                course_title=topic,
+                max_tokens=8000,
+                plain_english=theory_parts.get("mental_model", "")
+            )
+            if "formal_model" in prac_parts:
+                prac_parts["formal_model"] = healer.heal_all(prac_parts["formal_model"], exclude_title=note_title)
+                
+            # Merge parts
+            note_data = {
+                "title": note_title,
+                "course": topic,
+                "unit": "1",
+                "semester": "General",
+                "mode": mode,
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "prerequisites": [],
+                "source_pages": [],
+                "h1_title": domain.get("h1", "The Core Logic Explained"),
+                "h2_title": domain.get("h2", "The Textbook Translation"),
+                "artifact_title": domain.get("artifact", "Source Artifact"),
+                "artifact_type": domain.get("type", "Markdown Table"),
+                "section_plan": build_dynamic_section_plan(domain, modality),
+                "hub": f"[[{topic}_Hub]]",
+                "source": "Web Research"
+            }
+            note_data.update(theory_parts)
+            note_data.update(prac_parts)
+            note_data["dynamic3_content"] = prac_parts.get("limitations", "")
+
+            # 6.3 Assessment Pass
+            # Code owns quiz shape for the Markdown path. The weak model should
+            # spend its budget on explanatory prose, not fragile JSON.
+            quiz_qs = build_deterministic_teaching_quiz(concept_spec)
+            note_data["possible_questions"] = "\n```interactive-quiz\n" + json.dumps(quiz_qs, indent=2) + "\n```"
+
+            # 6.4 Assembly and Validation
+            body_content = render_atomic_note(note_data, healer=healer)
+            body_content = validator.repair_code_fences(body_content)
+            body_content = finalize_teaching_markdown(body_content, concept_spec)
+            quality_report = validate_teaching_markdown(body_content, concept_spec)
+            if not quality_report.ok:
+                logger.warning(
+                    "Teach quality gate still had issues for '%s' after finalization: %s. Recompiling deterministic slots.",
+                    note_title,
+                    quality_report.summary(),
+                )
+                body_content = build_deterministic_teaching_note(concept_spec)
+            
+            # Check duplication
+            if validator.check_section_duplication(body_content):
+                logger.warning("Section duplication detected for '%s'. Recompiling deterministic slots.", note_title)
+                body_content = build_deterministic_teaching_note(concept_spec)
+
+            # Structure validation
+            metadata = {
+                "title": note_title,
+                "tags": ["atomic-note", mode.lower(), topic.lower().replace(" ", "-")],
+                "course": topic,
+                "unit": "1",
+                "semester": "General",
+                "mode": mode,
+                "type": "Atomic Note",
+                "hub": f"[[{topic}_Hub]]",
+                "source": "Web Research",
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "prerequisites": [],
+                "source_pages": [],
+                "generated": True
+            }
+            yaml_part = yaml.safe_dump(metadata, default_flow_style=False)
+            final_markdown = f"---\n{yaml_part}---\n{body_content}"
+            
+            is_valid, validation_errors = validator.validate_structure(final_markdown, course=topic, mode=mode)
+            if not is_valid:
+                logger.warning(
+                    "Structure validation still had issues for '%s': %s. Recompiling deterministic slots.",
+                    note_title,
+                    validation_errors,
+                )
+                body_content = build_deterministic_teaching_note(concept_spec)
+
+            # Return successfully generated markdown body
+            return body_content
+
+        except Exception as exc:
+            logger.warning(f"Generation attempt {generation_attempts} failed for '{note_title}': {exc}")
+            await asyncio.sleep(1)
+
+    # Deterministic compilation if the prose model is unavailable or unusable.
+    logger.warning(f"Model prose unavailable for '{note_title}'. Compiling deterministic teaching note.")
+    return build_deterministic_teaching_note(concept_spec)
 
 
 async def _stream_learning_runtime_lesson(
@@ -319,6 +520,12 @@ async def _stream_learning_runtime_lesson(
         topic_name = str(curriculum.get("topic") or topic or "Learning Path")
         chapters = curriculum.get("chapters") or []
 
+        # Collect all planned note titles to use as reference list for healers/agents
+        all_note_titles = []
+        for chapter in chapters:
+            for raw_note_title in chapter.get("atomic_notes") or []:
+                all_note_titles.append(str(raw_note_title))
+
         for chapter in chapters:
             chapter_title = str(chapter.get("title") or "Foundations")
             order = int(chapter.get("order") or 1)
@@ -341,16 +548,36 @@ async def _stream_learning_runtime_lesson(
                     yield {"type": "status", "message": f"Writing atomic note: {note_title}..."}
                     generated_body = await _generate_learning_runtime_note_markdown(
                         llm=getattr(service, "llm", None),
+                        llm_creative=getattr(service, "llm_creative", None),
                         topic=topic_name,
                         chapter_title=chapter_title,
                         note_title=note_title,
                         prompt=latest_prompt,
+                        all_note_titles=all_note_titles
                     )
-                    post.content = _ensure_interactive_quiz_block(
-                        generated_body or _learning_runtime_note_markdown(topic_name, note_title),
-                        topic_name,
-                        note_title,
-                    )
+                    if generated_body:
+                        write_spec = TeachingConceptSpec(
+                            topic=topic_name,
+                            chapter_title=chapter_title,
+                            note_title=note_title,
+                            prompt=latest_prompt,
+                            related_titles=tuple(all_note_titles or ()),
+                        )
+                        post.content = ensure_teaching_markdown_quality(generated_body, write_spec)
+                    else:
+                        fallback_body = _ensure_interactive_quiz_block(
+                            _learning_runtime_note_markdown(topic_name, note_title),
+                            topic_name,
+                            note_title,
+                        )
+                        write_spec = TeachingConceptSpec(
+                            topic=topic_name,
+                            chapter_title=chapter_title,
+                            note_title=note_title,
+                            prompt=latest_prompt,
+                            related_titles=tuple(all_note_titles or ()),
+                        )
+                        post.content = ensure_teaching_markdown_quality(fallback_body, write_spec)
                     vm = service.vm
                     yaml_part = vm.dump_obsidian_yaml(post.metadata)
                     body = post.content if post.content.startswith("\n") else f"\n{post.content}"
