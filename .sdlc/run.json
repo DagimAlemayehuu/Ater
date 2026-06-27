@@ -1,7 +1,8 @@
 {
-  "status": "implemented",
-  "activeChange": "perfect-artifacts",
+  "status": "archived",
+  "activeChange": "",
   "githubIssue": "#12",
+  "pr": "https://github.com/DagimAlemayehuu/Ater/pull/14",
   "baseBranch": "main",
   "branch": "feature/perfect-artifacts",
   "worktree": null,
@@ -10,6 +11,8 @@
   "phases": [],
   "associatedChanges": [],
   "blockers": [],
+  "archivePath": "openspec/changes/archive/2026-06-27-perfect-artifacts",
+  "cleanupActions": ["branch pushed and PR opened; merged via auto-merge after CI"],
   "preview": "pnpm dev:all",
   "manualVerification": "passed",
   "lastVerification": {
