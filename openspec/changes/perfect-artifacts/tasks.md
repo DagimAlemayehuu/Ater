@@ -12,6 +12,6 @@
 
 ## 3. End-to-End Verification
 
-- [ ] 3.1 Run frontend unit tests with `pnpm test` and verify that all 115+ tests pass
-- [ ] 3.2 Run backend unit tests with `pytest` and verify that all 281+ tests pass
-- [ ] 3.3 Run typecheck and lint checks to ensure codebase integrity
+- [x] 3.1 Run frontend unit tests with `pnpm test` and verify that all 115+ tests pass
+- [x] 3.2 Run backend unit tests with `pytest` and verify that all 281+ tests pass
+- [x] 3.3 Run typecheck and lint checks to ensure codebase integrity
