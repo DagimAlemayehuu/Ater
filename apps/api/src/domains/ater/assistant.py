@@ -45,8 +45,7 @@ from src.domains.ater.agents import (
     QuestionAgent,
     VerifierAgent,
     EpistemicClassifierAgent,
-    get_persona,
-    get_professional_domain
+    get_persona
 )
 from src.domains.ater.quiz_builder import (
     determine_dynamic_question_count,
