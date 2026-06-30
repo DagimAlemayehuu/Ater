@@ -43,13 +43,19 @@ export const TokenTracker: React.FC = () => {
   
   useEffect(() => {
     const buildMap = async () => {
-      const map: Record<string, string> = {};
-      if (config?.savedApiKeys) {
-        for (const k of config.savedApiKeys) {
-          const hash = await hashKey(k.key);
-          map[hash] = k.name;
-        }
+      if (!config?.savedApiKeys) {
+        setKeyHashMap({});
+        return;
       }
+
+      const entries = await Promise.all(
+        config.savedApiKeys.map(async (k) => {
+          const hash = await hashKey(k.key);
+          return [hash, k.name];
+        })
+      );
+
+      const map = Object.fromEntries(entries);
       setKeyHashMap(map);
     };
     buildMap();
