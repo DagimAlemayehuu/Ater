@@ -44,7 +44,6 @@ from src.domains.ater.agents import (
     PractitionerAgent,
     QuestionAgent,
     VerifierAgent,
-    EpistemicClassifierAgent,
     get_persona,
     get_professional_domain
 )
