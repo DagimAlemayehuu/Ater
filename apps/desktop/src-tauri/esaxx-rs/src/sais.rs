@@ -1,4 +1,5 @@
 use crate::types::{Bucket, SArray, StringT, SuffixError};
+use rayon::prelude::*;
 
 fn has_high_bit(j: usize) -> bool {
     (0x0001usize & j.reverse_bits()) == 1
@@ -205,16 +206,11 @@ fn suffixsort(
     // compact all the sorted substrings into the first m items of SA
     // 2*m must be not larger than n (proveable)
 
-    // TODO: This was in the parallel loop.
-    let mut p;
-    let mut j;
-    let mut m = 0;
-    for i in 0..n {
-        p = suffix_array[i];
-        c0 = string[p] as usize;
+    let collected: Vec<_> = suffix_array[0..n].par_iter().filter_map(|&p| {
+        let c0 = string[p] as usize;
         if p > 0 && (string[p - 1] as usize) > c0 {
-            // TODO overly complex. But fricking hard to get right.
-            j = p + 1;
+            let mut j = p + 1;
+            let mut c1 = 0;
             if j < n {
                 c1 = string[j] as usize;
             }
@@ -223,12 +219,16 @@ fn suffixsort(
                 j += 1;
             }
             if j < n && c0 < c1 {
-                suffix_array[m] = p;
-                m += 1;
+                return Some(p);
             }
         }
-    }
-    j = m + (n >> 1);
+        None
+    }).collect();
+
+    let m = collected.len();
+    suffix_array[..m].copy_from_slice(&collected);
+
+    let mut j = m + (n >> 1);
     for item in suffix_array.iter_mut().take(j).skip(m) {
         *item = 0;
     }
@@ -255,6 +255,7 @@ fn suffixsort(
     let mut qlen = 0;
     let mut plen;
     let mut diff;
+    let mut p;
     for i in 0..m {
         p = suffix_array[i];
         plen = suffix_array[m + (p >> 1)];

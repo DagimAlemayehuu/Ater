@@ -2807,6 +2807,7 @@ name = "esaxx-rs"
 version = "0.1.10"
 dependencies = [
  "cc",
+ "rayon",
 ]
 
 [[package]]
