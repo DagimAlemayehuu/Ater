@@ -31,7 +31,6 @@ from .planner import AterPlanner
 from .validator import StructureValidationError
 from .governor import governor, DailyLimitExceededException
 from .schemas import SovereignPlan, AtomicNoteSchema, NoteContent, NoteSchema, ProbeEnrichment
-import ruamel.yaml
 import logging
 
 logger = logging.getLogger("Ater")
@@ -156,10 +155,6 @@ class AterService:
 
         from .validator import AterValidator
         self.validator = AterValidator()
-        
-        # Initialize YAML compiler
-        self.yaml = ruamel.yaml.YAML()
-        self.yaml.indent(mapping=2, sequence=4, offset=2)
 
     @classmethod
     def set_status(cls, session_id: str, message: str):
@@ -837,7 +832,6 @@ class AterService:
             secrets=self.secrets,
             vm=self.vm,
             governor=self.governor,
-            pyyaml=self.yaml,
             list_planner_hubs_fn=self.list_planner_hubs,
             find_hub_fn=self._find_hub,
             get_unit_dir_fn=self._get_unit_dir,

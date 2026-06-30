@@ -4,6 +4,8 @@ import asyncio
 import time
 import random
 import logging
+import io
+import ruamel.yaml
 from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -346,7 +348,6 @@ async def generate_practice(
     secrets,
     vm,
     governor,
-    pyyaml,
     list_planner_hubs_fn,
     find_hub_fn,
     get_unit_dir_fn,
@@ -849,7 +850,12 @@ async def generate_practice(
         "score": None,
         "completed": False
     }
-    yaml_frontmatter = f"---\n{pyyaml.dump(yaml_data, sort_keys=False)}---\n"
+
+    ryaml = ruamel.yaml.YAML()
+    ryaml.indent(mapping=2, sequence=4, offset=2)
+    stream = io.StringIO()
+    ryaml.dump(yaml_data, stream)
+    yaml_frontmatter = f"---\n{stream.getvalue()}---\n"
 
     md_content = f"# Ater MASTERY SESSION: {hub['title'].upper()}\n\n"
     md_content += f"> Session ID: `{session_id}` | Date: {datetime.now().strftime('%Y-%m-%d')} | Difficulty: {config.difficulty}\n"
