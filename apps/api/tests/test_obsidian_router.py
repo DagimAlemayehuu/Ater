@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
-import os
 import tempfile
+from unittest.mock import patch
 
 from src.domains.obsidian.router import router, DB_DIR_PREFIX
 from fastapi import FastAPI
@@ -49,13 +49,14 @@ def test_create_vault_database_missing_vault_path():
     assert response.status_code == 401
     assert "X-Vault-Path header missing" in response.json()["detail"]
 
-def test_create_vault_database_exception():
-    # Simulate an exception by providing an invalid path
-    app.dependency_overrides[get_app_secrets] = override_get_app_secrets("/root/invalid_path/that/cannot/be/created")
+def test_create_vault_database_exception(test_vault):
+    app.dependency_overrides[get_app_secrets] = override_get_app_secrets(test_vault)
 
-    response = client.post(
-        "/vault/databases",
-        json={"name": "test_db"}
-    )
+    # Simulate an exception by mocking mkdir
+    with patch("pathlib.Path.mkdir", side_effect=PermissionError("Permission denied")):
+        response = client.post(
+            "/vault/databases",
+            json={"name": "test_db"}
+        )
 
     assert response.status_code == 500

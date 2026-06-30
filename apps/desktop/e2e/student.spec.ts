@@ -137,17 +137,21 @@ test.describe('Ater Active Student Hub', () => {
     // Body should be visible
     await expect(page.locator('body')).toBeVisible();
 
-    // Verify explorer renders our mock structure (folder/notes)
-    const folderNode = page.getByText(/Computer_Science/i);
-    await expect(folderNode).toBeVisible();
+    // Use page.waitForFunction to wait for the directory list to populate, if necessary
+    // or wait for a specific element that appears after the files are loaded.
+
+    // Check for Computer_Science exactly to make it visible
+    const folderNode = page.getByText('Computer_Science', { exact: true });
+    await expect(folderNode).toBeVisible({ timeout: 10000 });
     await folderNode.click();
 
-    const noteNode = page.getByText(/Data_Structures_And_Algorithms/i);
-    await expect(noteNode).toBeVisible();
+    // Need to escape _ or maybe it's displayed as spaces in the UI? Let's check with regex just in case
+    const noteNode = page.getByText(/Data.Structures.And.Algorithms/i);
+    await expect(noteNode).toBeVisible({ timeout: 10000 });
     await noteNode.click();
 
     // Verify note content area opens and shows mocked note text
-    await expect(page.getByText(/high-fidelity note/i)).toBeVisible();
+    await expect(page.getByText(/high-fidelity note/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('should successfully interact with Settings and run AI Connection Tests', async ({ page }) => {
@@ -157,17 +161,19 @@ test.describe('Ater Active Student Hub', () => {
     // Settings page rendering check
     await expect(page.locator('body')).toBeVisible();
     
-    // Click on the AI & Keys tab trigger
-    await page.getByRole('tab', { name: /AI & Keys/i }).click();
-    await expect(page.getByText(/AI Provider & Keys/i)).toBeVisible();
+    // Click on the AI & Keys tab trigger (may take a moment to be interactive)
+    const aiKeysTab = page.getByRole('tab', { name: /AI & Keys/i });
+    await expect(aiKeysTab).toBeVisible({ timeout: 10000 });
+    await aiKeysTab.click();
+    await expect(page.getByText(/AI Provider & Keys/i)).toBeVisible({ timeout: 10000 });
 
     // Click Check if Key Works (testAiConnection command returns success in expanded mock)
     const validateBtn = page.getByRole('button', { name: /Check if Key Works/i });
-    await expect(validateBtn).toBeVisible();
+    await expect(validateBtn).toBeVisible({ timeout: 10000 });
     await validateBtn.click();
 
     // Verify mock connection status notification is visible
-    await expect(page.getByText(/successful/i).first()).toBeVisible();
+    await expect(page.getByText(/successful/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should explore Academic Dashboard structure and verify active modules', async ({ page }) => {
@@ -178,8 +184,8 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
     
     // Verify that we display mocked semesters & courses properly
-    await expect(page.getByText(/Semester 1/i)).toBeVisible();
-    await expect(page.getByText(/Computer Science/i).first()).toBeVisible();
+    await expect(page.getByText(/Semester 1/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Computer Science/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should support practice session loading and answering recall questions', async ({ page }) => {
@@ -188,6 +194,6 @@ test.describe('Ater Active Student Hub', () => {
 
     // Check practice interface has rendered
     await expect(page.locator('body')).toBeVisible();
-    await expect(page.getByText(/Practice Sessions|Practice/i).first()).toBeVisible();
+    await expect(page.getByText(/Practice Sessions|Practice/i).first()).toBeVisible({ timeout: 10000 });
   });
 });
