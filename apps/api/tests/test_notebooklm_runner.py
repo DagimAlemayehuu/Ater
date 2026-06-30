@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.domains.notebooklm.runner import NotebookLMRunner
+from src.domains.notebooklm.runner import NotebookLMRunner, NotebookLMException
 
 
 @pytest.mark.asyncio
@@ -233,3 +233,57 @@ def test_auth_status_endpoint_can_bypass_cache(monkeypatch):
     assert response.status_code == 200
     assert response.json()["auth_status"] == "configured"
     assert received == {"force": True}
+
+
+def test_notebooklm_exception_can_be_instantiated():
+    exc = NotebookLMException("Something went wrong")
+    assert isinstance(exc, Exception)
+    assert str(exc) == "Something went wrong"
+
+
+@pytest.mark.asyncio
+async def test_notebooklm_runner_command_failed_raises_exception(monkeypatch):
+    class FakeProcess:
+        returncode = 1
+
+        async def communicate(self):
+            return b"", b"Error processing request"
+
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        return FakeProcess()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    monkeypatch.setattr(NotebookLMRunner, "get_nlm_binary", classmethod(lambda cls: "nlm"))
+
+    with pytest.raises(NotebookLMException, match="NotebookLM Command Failed: Error processing request"):
+        await NotebookLMRunner.run_command(["some", "command"])
+
+
+@pytest.mark.asyncio
+async def test_notebooklm_runner_invalid_json_raises_exception(monkeypatch):
+    class FakeProcess:
+        returncode = 0
+
+        async def communicate(self):
+            return b"invalid json", b""
+
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        return FakeProcess()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    monkeypatch.setattr(NotebookLMRunner, "get_nlm_binary", classmethod(lambda cls: "nlm"))
+
+    with pytest.raises(NotebookLMException, match="Invalid JSON response from CLI:"):
+        await NotebookLMRunner.run_command(["some", "command"], parse_json=True)
+
+
+@pytest.mark.asyncio
+async def test_notebooklm_runner_start_login_raises_exception(monkeypatch):
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        raise RuntimeError("Something failed")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    monkeypatch.setattr(NotebookLMRunner, "get_nlm_binary", classmethod(lambda cls: "nlm"))
+
+    with pytest.raises(NotebookLMException, match="Failed to trigger login browser: Something failed"):
+        await NotebookLMRunner.start_login()
