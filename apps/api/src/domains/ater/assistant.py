@@ -48,10 +48,6 @@ from src.domains.ater.agents import (
     get_persona,
     get_professional_domain
 )
-from src.domains.ater.quiz_builder import (
-    determine_dynamic_question_count,
-    select_dynamic_question_types
-)
 from src.domains.ater.templates import render_atomic_note, build_dynamic_section_plan, build_skeleton_note
 from src.domains.ater.healer import LogicHealer
 from src.domains.ater.schemas import AtomicNoteSchema
