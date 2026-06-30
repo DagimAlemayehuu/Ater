@@ -42,11 +42,7 @@ from src.domains.ater.service import AterService
 from src.domains.ater.agents import (
     TheoryAgent,
     PractitionerAgent,
-    QuestionAgent,
-    VerifierAgent,
-    EpistemicClassifierAgent,
-    get_persona,
-    get_professional_domain
+    get_persona
 )
 from src.domains.ater.quiz_builder import (
     determine_dynamic_question_count,
@@ -337,7 +333,6 @@ async def _generate_learning_runtime_note_markdown(
     # 4. Instantiate agents
     theory_agent = TheoryAgent(llm_creative or llm, domain)
     practitioner_agent = PractitionerAgent(llm, domain)
-    verifier = VerifierAgent(llm)
     healer = LogicHealer(canonical_titles=set(all_note_titles))
     validator = AterValidator()
 
