@@ -734,7 +734,7 @@ class ArchitectAgent:
         
         # FIX: Missing commas between fields (e.g. "field1": "val" "field2": "val")
         # This regex looks for: "key": value whitespace "key":
-        json_str = re.sub(r'("[\s\S]*?"\s*:\s*(?:".*?"|\d+|true|false|null|\[.*?\]|\{.*?\}))\s*(")', r'\1, \2', json_str)
+        json_str = re.sub(r'("[\s\S]*?"\s*:\s*(?:".*?"|\d+|true|false|null|\[.*?\]|\{.*?\}))\s*(?=")', r'\1, ', json_str)
 
         # Handle unescaped backslashes in LaTeX
         def escape_invalid_slashes(match):
