@@ -169,9 +169,13 @@ async def test_misconception_logging(temp_vault, srs_db):
     conn.close()
 
 
-def test_tutor_advance_progression(temp_vault, srs_db):
+@pytest.mark.asyncio
+async def test_tutor_advance_progression(temp_vault, srs_db):
     manager = TutorSessionManager(srs_db, temp_vault)
     manager.start_session("session4", "database/learning paths/Git_Hub.md")
+    
+    # Submit correct answer to pass recall gate
+    await manager.submit_answer("session4", "q1", is_correct=True, wager="low", user_answer="Remote Mirror")
     
     res = manager.advance_note("session4")
     # Only one note in curriculum, advancing should mark session complete
@@ -218,6 +222,40 @@ def test_tutor_endpoints_e2e(temp_vault, srs_db):
     })
     assert res.status_code == 200
     assert res.json()["score"] == 10
+
+    # 4. Submit Transfer Answer Endpoint
+    note_file = temp_vault / "database/General/Git/01_Foundations/Git_Three_State_Model.md"
+    import frontmatter
+    post = frontmatter.loads(note_file.read_text(encoding="utf-8"))
+    post.metadata["transfer_task"] = {
+        "type": "checklist",
+        "prompt": "Complete the reflection.",
+        "domain": "GENERAL",
+        "grading_criteria": "Self-graded checklist."
+    }
+    from src.domains.ater.vault_manager import VaultManager
+    vm = VaultManager(str(temp_vault))
+    yaml_part = vm.dump_obsidian_yaml(post.metadata)
+    body = post.content if post.content.startswith("\n") else f"\n{post.content}"
+    note_file.write_text(f"---\n{yaml_part}---\n{body}", encoding="utf-8")
+
+    res = client.post("/api/ater/tutor/transfer/submit", json={
+        "session_id": "test_e2e",
+        "note_path": "database/General/Git/01_Foundations/Git_Three_State_Model.md",
+        "user_answer": "completed checklist reflection"
+    })
+    assert res.status_code == 200
+    res_data = res.json()
+    assert res_data["is_correct"] is True
+    assert "checklist" in res_data["feedback"].lower()
+
+    # 5. Check advance success since both recall and transfer are cleared!
+    res = client.post("/api/ater/tutor/advance", json={
+        "session_id": "test_e2e"
+    })
+    assert res.status_code == 200
+    assert res.json()["can_advance"] is True
+    assert res.json()["status"] == "completed"
     
     # Clean overrides
     app.dependency_overrides.clear()

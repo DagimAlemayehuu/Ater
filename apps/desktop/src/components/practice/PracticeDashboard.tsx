@@ -59,96 +59,68 @@ export function PracticeDashboard({
     <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
-          <div className="flex flex-row items-center justify-between gap-4">
-            <div className="flex bg-bento-card p-1 rounded-[8px] border border-border w-auto">
-              <button
-                onClick={() => setView('dashboard')}
-                className={cn(
-                  'flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ',
-                  view === 'dashboard'
-                    ? 'bg-bento-item text-foreground border border-border'
-                    : 'text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50'
-                )}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => setView('history')}
-                className={cn(
-                  'flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] ',
-                  view === 'history'
-                    ? 'bg-bento-item text-foreground border border-border'
-                    : 'text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50'
-                )}
-              >
-                History
-              </button>
-              <button
-                onClick={() => setView('vault')}
-                className={cn(
-                  'flex-none px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1',
-                  view === 'vault'
-                    ? 'bg-bento-item text-foreground border border-border'
-                    : 'text-muted-foreground/40 hover:text-foreground hover:bg-bento-item/50'
-                )}
-              >
-                <BookOpen size={10} />
-                Reference Vault
-              </button>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+            <div>
+              <h1 className="text-[14px] font-black uppercase tracking-widest text-foreground font-sans">Practice Dashboard</h1>
+              <p className="text-[9px] font-mono font-black uppercase tracking-widest text-muted-foreground/60 mt-1">Spaced-repetition metrics and cognitive telemetry</p>
             </div>
-            <div className="flex gap-2 w-auto">
-              <Button
+            <div className="flex gap-2 shrink-0">
+              <button
                 data-tour="practice-due-btn"
                 onClick={handleReviewDueCards}
-                className="h-9 flex-none px-6 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none"
+                className="h-9 px-4 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <FlameKindling size={10} className="mr-1" />
+                <FlameKindling size={11} />
                 Review Due
-              </Button>
-              <Button
+              </button>
+              <button
                 data-tour="practice-custom-btn"
                 onClick={() => setView('configuring')}
-                className="h-9 flex-none px-6 bg-bento-card border border-border hover:border-foreground/50 text-foreground rounded-[8px] font-black uppercase tracking-widest text-[9px] transition-none"
+                className="h-9 px-4 border border-border/40 bg-bento-card hover:bg-bento-item text-foreground hover:border-foreground/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                Custom
-              </Button>
+                Custom Session
+              </button>
             </div>
           </div>
 
-          <div data-tour="practice-stats-grid" className="grid grid-cols-3 gap-4">
-            <div className="p-6 bg-bento-card border border-border rounded-[12px] flex flex-col gap-1">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Average Score</span>
-              <span className="text-2xl font-black tracking-tight">{totalPrecision}%</span>
+          {/* Stats Grid */}
+          <div data-tour="practice-stats-grid" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-6 bg-bento-card border border-border/40 rounded-[8px] flex flex-col gap-1 hover:border-foreground/20 transition-all">
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Average Score</span>
+              <span className="text-2xl font-black tracking-tight text-foreground font-sans">{totalPrecision}%</span>
             </div>
-            <div className="p-6 bg-bento-card border border-border rounded-[12px] flex flex-col gap-1">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Total Practices</span>
-              <span className="text-2xl font-black tracking-tight">{pastPractices.length}</span>
+            <div className="p-6 bg-bento-card border border-border/40 rounded-[8px] flex flex-col gap-1 hover:border-foreground/20 transition-all">
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Total Practices</span>
+              <span className="text-2xl font-black tracking-tight text-foreground font-sans">{pastPractices.length}</span>
             </div>
-            <div className="p-6 bg-bento-card border border-border rounded-[12px] flex flex-col gap-1">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Stability</span>
-              <span className="text-2xl font-black tracking-tight uppercase text-foreground">{stability}</span>
+            <div className="p-6 bg-bento-card border border-border/40 rounded-[8px] flex flex-col gap-1 hover:border-foreground/20 transition-all">
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Stability</span>
+              <span className="text-2xl font-black tracking-tight uppercase text-foreground font-sans">{stability}</span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-8">
-            <div className="grid grid-cols-2 gap-8">
-              <div className="p-8 bg-bento-card border border-border rounded-[12px] space-y-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Trend</h3>
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Trend Chart */}
+              <div className="p-6 bg-bento-card border border-border/40 rounded-[8px] space-y-6 hover:border-foreground/20 transition-all">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground font-sans">Trend</h3>
                 <div className="w-full h-64">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <LineChart data={validPractices.slice(-10).map((p, i) => ({ name: i + 1, score: parseInt(p.score) || 0 }))}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.1)" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                       <XAxis dataKey="name" hide />
                       <YAxis domain={[0, 100]} hide />
-                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '10px' }} />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(20,20,22,0.95)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', fontSize: '10px', color: '#fff' }} />
                       <Line type="monotone" dataKey="score" stroke="hsl(var(--foreground))" strokeWidth={2} dot={{ r: 2, fill: 'hsl(var(--background))' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="p-8 bg-bento-card border border-border rounded-[12px] space-y-8">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2">
+              {/* Cognitive Modalities */}
+              <div className="p-6 bg-bento-card border border-border/40 rounded-[8px] space-y-6 hover:border-foreground/20 transition-all">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground font-sans flex items-center gap-2">
                   <span>Cognitive Modalities</span>
                   {!hasLogs && (
                     <span className="text-[8px] font-medium tracking-normal text-muted-foreground/30 normal-case">
@@ -156,7 +128,7 @@ export function PracticeDashboard({
                     </span>
                   )}
                 </h3>
-                <div className="grid grid-cols-3 gap-x-12 gap-y-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
                   {[
                     { type: 'Choice (MCQ/TF)', p: getModalityScore(['mcq', 'true_false']) },
                     { type: 'Synthesis & Analysis', p: getModalityScore(['synthesis', 'scenario']) },
@@ -168,13 +140,13 @@ export function PracticeDashboard({
                     { type: 'Edge Case Mastery', p: getModalityScore(['calculation', 'data_analysis']) },
                     { type: 'Industrial Application', p: getModalityScore(['code']) },
                   ].map((stat, i) => (
-                    <div key={i} className="space-y-3">
-                      <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em]">
-                        <span className="text-muted-foreground/40">{stat.type}</span>
-                        <span className="text-foreground/90">{stat.p}%</span>
+                    <div key={i} className="space-y-2">
+                      <div className="flex justify-between text-[9px] font-black uppercase tracking-wider">
+                        <span className="text-muted-foreground/60 truncate pr-1">{stat.type}</span>
+                        <span className="text-foreground/90 shrink-0">{stat.p}%</span>
                       </div>
-                      <div className="h-1.5 bg-bento-item rounded-full overflow-hidden">
-                        <div className="h-full bg-primary/60" style={{ width: `${stat.p}%` }}></div>
+                      <div className="h-1 bg-bento-item rounded-full overflow-hidden">
+                        <div className="h-full bg-foreground" style={{ width: `${stat.p}%` }}></div>
                       </div>
                     </div>
                   ))}

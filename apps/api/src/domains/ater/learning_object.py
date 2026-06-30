@@ -350,6 +350,7 @@ def validate_learning_objects(vault_path: str, strict: bool = False) -> list[str
                             logging.getLogger("Ater").warning(f"[WARNING] {msg}")
 
         art_pack_rel = note_meta.get("artifact_pack")
+        pack_data = None
         if not art_pack_rel:
             errors.append(f"Atomic Note '{note_stem}' (at {note_path}) is missing 'artifact_pack' path")
         else:
@@ -396,5 +397,38 @@ def validate_learning_objects(vault_path: str, strict: bool = False) -> list[str
                         errors.append(f"Artifact pack at '{pack_path}' is malformed: {'; '.join(pack_errors)}")
                 except Exception as e:
                     errors.append(f"Failed to load or parse artifact pack JSON at '{pack_path}': {e}")
+
+        # Validate transfer task metadata
+        transfer_task = note_meta.get("transfer_task")
+        if transfer_task:
+            if not isinstance(transfer_task, dict):
+                errors.append(f"Atomic Note '{note_stem}' (at {note_path}) has invalid 'transfer_task' (must be dict)")
+            else:
+                for fld in ["type", "prompt", "domain"]:
+                    if not transfer_task.get(fld):
+                        errors.append(f"Atomic Note '{note_stem}' transfer_task is missing required field '{fld}'")
+
+        # Validate offline_ready claims
+        if note_meta.get("offline_ready"):
+            # Check note content for interactive-quiz
+            content = note_path.read_text(encoding="utf-8")
+            if not re.search(r"```interactive-quiz\s*\n?(.*?)\n?```", content, re.DOTALL):
+                errors.append(f"Atomic Note '{note_stem}' is marked offline_ready but has no embedded interactive-quiz block")
+            
+            # Check all lesson variants exist
+            variants = ["simple", "deep", "cram", "exam"]
+            lesson_vars = note_meta.get("lesson_variants") or {}
+            for var in variants:
+                var_path_rel = lesson_vars.get(var)
+                if not var_path_rel or not (note_path.parent / var_path_rel).exists():
+                    errors.append(f"Atomic Note '{note_stem}' is marked offline_ready but is missing compiled lesson variant '{var}'")
+
+            # Check artifact pack exists and is valid
+            if not pack_data:
+                errors.append(f"Atomic Note '{note_stem}' is marked offline_ready but has no valid artifact pack")
+
+            # Check transfer task is defined
+            if not transfer_task:
+                errors.append(f"Atomic Note '{note_stem}' is marked offline_ready but is missing 'transfer_task' metadata")
                     
     return errors

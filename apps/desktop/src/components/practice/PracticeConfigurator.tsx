@@ -87,21 +87,21 @@ export function PracticeConfigurator({
   return (
     <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
       <div className="flex-1 overflow-hidden flex flex-col p-10">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 border-b border-border/40 pb-5">
           <button
             onClick={() => setView('dashboard')}
-            className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border rounded-[8px] bg-bento-card transition-colors"
+            className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border/40 rounded-[6px] bg-bento-card hover:bg-bento-item transition-all cursor-pointer"
           >
             Cancel
           </button>
-          <div className="text-xl font-black tracking-tight text-foreground">{totalQuestions} Questions</div>
+          <div className="text-xl font-sans font-black tracking-tight text-foreground">{totalQuestions} Questions</div>
         </div>
 
-        <div data-tour="practice-config-panel" className="grid grid-cols-4 gap-4 flex-1 min-h-0">
+        <div data-tour="practice-config-panel" className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
           <div className="col-span-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-            <div className="p-4 bg-bento-card border border-border rounded-[12px] space-y-5">
+            <div className="p-4 bg-bento-card border border-border/40 rounded-[8px] space-y-5">
               <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Hub</Label>
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Hub</Label>
                 <Select
                   value={selectedHub}
                   onValueChange={(val: string) => {
@@ -109,15 +109,15 @@ export function PracticeConfigurator({
                     loadHubNotes(val)
                   }}
                 >
-                  <SelectTrigger className="w-full h-10 bg-bento-item border-border rounded-[8px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 transition-colors">
+                  <SelectTrigger className="w-full h-10 bg-transparent border border-border/40 rounded-[6px] px-4 text-[10px] font-black uppercase tracking-tight hover:border-foreground/20 transition-colors text-foreground">
                     <SelectValue placeholder="Select Topic..." />
                   </SelectTrigger>
-                  <SelectContent className="border-border bg-bento-card">
+                  <SelectContent className="border-border/40 bg-bento-panel">
                     <SelectItem value="all" className="text-[10px] font-black uppercase tracking-tight text-primary">
                       Global Interleaved (All Topics)
                     </SelectItem>
                     {hubs.map((hub) => (
-                      <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight">
+                      <SelectItem key={hub.id} value={hub.id} className="text-[10px] font-black uppercase tracking-tight text-foreground">
                         {cleanTitle(hub.title)}
                       </SelectItem>
                     ))}
@@ -126,7 +126,7 @@ export function PracticeConfigurator({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">
                   Difficulty
                 </Label>
                 <RadioGroup
@@ -142,7 +142,7 @@ export function PracticeConfigurator({
                         <RadioGroupItem value={level.val} id={level.val} className="peer sr-only" />
                         <Label
                           htmlFor={level.val}
-                          className="flex h-10 border border-border rounded-[8px] bg-bento-item peer-data-[state=checked]:bg-foreground/10 peer-data-[state=checked]:border-foreground/40 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-foreground/5 transition-all"
+                          className="flex h-10 border border-border/40 rounded-[8px] bg-transparent peer-data-[state=checked]:bg-bento-item peer-data-[state=checked]:border-foreground/50 peer-data-[state=checked]:text-foreground items-center justify-center cursor-pointer text-[10px] font-black hover:bg-foreground/5 transition-all"
                         >
                           {level.label}
                         </Label>
@@ -153,24 +153,23 @@ export function PracticeConfigurator({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Notes</Label>
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Notes</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full h-10 border-border bg-bento-item text-[10px] font-black uppercase px-4 justify-between hover:bg-foreground/5 transition-colors"
+                    <button
+                      className="w-full h-10 border border-border/40 bg-transparent text-[10px] font-black uppercase px-4 justify-between hover:bg-foreground/5 rounded-[6px] transition-colors flex items-center cursor-pointer"
                     >
                       <span>{advancedConfig.selectedAtomicNotes.length} Selected</span>
                       <Layers size={12} className="opacity-40" />
-                    </Button>
+                    </button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-[300px] p-0 rounded-[12px] border border-border bg-bento-card overflow-hidden"
+                    className="w-[300px] p-0 rounded-[8px] border border-border/40 bg-bento-panel overflow-hidden"
                     align="start"
                   >
                     <Command className="bg-transparent">
-                      <div className="p-3 border-b border-border flex justify-between items-center bg-bento-item/50">
-                        <span className="text-[8px] font-black uppercase text-muted-foreground/40">
+                      <div className="p-3 border-b border-border/40 flex justify-between items-center bg-bento-item/50">
+                        <span className="text-[8px] font-black uppercase text-muted-foreground/60">
                           {availableNotes.length} Total
                         </span>
                         <Button
@@ -204,7 +203,7 @@ export function PracticeConfigurator({
                               <div
                                 className={cn(
                                   'w-3 h-3 border flex items-center justify-center rounded-[3px] transition-colors',
-                                  isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-border'
+                                  isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-border/40'
                                 )}
                               >
                                 {isSelected && <Check size={8} />}
@@ -220,7 +219,7 @@ export function PracticeConfigurator({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">
                   Total (Min)
                 </Label>
                 <Select
@@ -232,12 +231,12 @@ export function PracticeConfigurator({
                     }))
                   }
                 >
-                  <SelectTrigger className="w-full h-10 bg-bento-item border-border rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors">
+                  <SelectTrigger className="w-full h-10 bg-transparent border border-border/40 rounded-[6px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors text-foreground">
                     <SelectValue placeholder="No Limit" />
                   </SelectTrigger>
-                  <SelectContent className="border-border bg-bento-card">
+                  <SelectContent className="border-border/40 bg-bento-panel">
                     {[null, 5, 10, 15, 30, 60].map((m) => (
-                      <SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase">
+                      <SelectItem key={String(m)} value={String(m)} className="text-[10px] font-black uppercase text-foreground">
                         {m ? `${m}m` : 'None'}
                       </SelectItem>
                     ))}
@@ -246,7 +245,7 @@ export function PracticeConfigurator({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">
                   Per Q (Sec)
                 </Label>
                 <Select
@@ -258,12 +257,12 @@ export function PracticeConfigurator({
                     }))
                   }
                 >
-                  <SelectTrigger className="w-full h-10 bg-bento-item border-border rounded-[8px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors">
+                  <SelectTrigger className="w-full h-10 bg-transparent border border-border/40 rounded-[6px] px-4 text-[10px] font-black uppercase hover:border-foreground/20 transition-colors text-foreground">
                     <SelectValue placeholder="No Limit" />
                   </SelectTrigger>
-                  <SelectContent className="border-border bg-bento-card">
+                  <SelectContent className="border-border/40 bg-bento-panel">
                     {[null, 15, 30, 60, 120].map((s) => (
-                      <SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase">
+                      <SelectItem key={String(s)} value={String(s)} className="text-[10px] font-black uppercase text-foreground">
                         {s ? `${s}s` : 'None'}
                       </SelectItem>
                     ))}
@@ -273,9 +272,9 @@ export function PracticeConfigurator({
             </div>
           </div>
 
-          <div className="col-span-3 p-8 bg-bento-card border border-border rounded-[12px] flex flex-col min-h-0">
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-6 gap-4">
-              <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+          <div className="col-span-1 lg:col-span-3 p-8 bg-bento-card border border-border/40 rounded-[8px] flex flex-col min-h-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/40 pb-4 mb-6 gap-4">
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
                 Question Types Distribution
               </h3>
               <div className="flex items-center gap-4">
@@ -284,25 +283,23 @@ export function PracticeConfigurator({
                     <button
                       key={k}
                       onClick={() => applyPreset(k)}
-                      className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-bento-item hover:bg-foreground/5 border border-border text-muted-foreground hover:text-foreground transition-all rounded-[4px]"
+                      className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-transparent hover:bg-bento-item border border-border/40 text-muted-foreground hover:text-foreground transition-all rounded-[4px] cursor-pointer"
                       title={p.label}
                     >
                       {p.label}
                     </button>
                   ))}
                 </div>
-                <Button
-                  variant="outline"
-                  size="default"
+                <button
                   onClick={randomizeDistribution}
-                  className="h-7 px-2.5 text-[8px] font-black uppercase border-border bg-bento-item hover:bg-foreground/5 rounded-[4px]"
+                  className="h-7 px-2.5 text-[8px] font-black uppercase border border-border/40 bg-transparent hover:bg-bento-item rounded-[4px] flex items-center justify-center cursor-pointer gap-1 text-foreground"
                 >
-                  <Zap size={10} className="mr-1" />
+                  <Zap size={10} />
                   Random
-                </Button>
+                </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 gap-x-6 gap-y-4 content-start">
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 content-start">
               {[
                 { key: 'mcq', label: 'Multiple Choice' },
                 { key: 'true_false', label: 'True or False' },
@@ -320,13 +317,13 @@ export function PracticeConfigurator({
               ].map((type) => (
                 <div
                   key={type.key}
-                  className="space-y-2 p-3 bg-bento-item/50 border border-border hover:border-foreground/20 transition-colors rounded-[8px]"
+                  className="space-y-2 p-3 bg-transparent border border-border/40 hover:border-foreground/20 transition-colors rounded-[8px]"
                 >
                   <div className="flex justify-between items-center">
-                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
+                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
                       {type.label}
                     </Label>
-                    <span className="text-[9px] font-black tabular-nums text-foreground/80">
+                    <span className="text-[9px] font-black font-mono text-foreground/80">
                       {
                         advancedConfig.questionDistribution[
                           type.key as keyof AdvancedPracticeConfig['questionDistribution']
@@ -348,14 +345,14 @@ export function PracticeConfigurator({
                 </div>
               ))}
             </div>
-            <Button
+            <button
               data-tour="start-practice-btn"
               onClick={handleStartSession}
               disabled={isLoading}
-              className="h-11 w-full bg-primary text-primary-foreground border border-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest rounded-[8px] mt-6 transition-colors"
+              className="h-11 w-full bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-[6px] mt-6 transition-all flex items-center justify-center cursor-pointer disabled:opacity-30"
             >
               Start Practice
-            </Button>
+            </button>
           </div>
         </div>
       </div>

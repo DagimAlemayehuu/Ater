@@ -256,3 +256,24 @@ class PractitionerResponse(BaseModel):
 
 class QuizResponse(BaseModel):
     questions: List[Question] = Field(..., min_length=1, max_length=30)
+
+class ProgressiveRoadmapItem(BaseModel):
+    path: str
+    title: str
+    status: Literal["locked", "unlocked", "completed", "generated", "current"]
+    offline_ready: bool
+    source_pages: List[int] = Field(default_factory=list)
+
+class ProgressiveSessionResponse(BaseModel):
+    session_id: str
+    hub_path: str
+    current_note_path: str
+    completed_notes: List[str]
+    active_note_unlocks: List[str]
+    generated_ahead_paths: List[str]
+    transfer_gate_outcomes: Dict[str, Any]
+    offline_readiness: Dict[str, bool]
+    score: int
+    status: str
+    curriculum: List[str]
+    roadmap: List[ProgressiveRoadmapItem] = Field(default_factory=list)

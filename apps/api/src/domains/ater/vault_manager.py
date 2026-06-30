@@ -169,6 +169,31 @@ class VaultManager:
         # ── 3. Atomic Notes (Academic Root) ──
         clean_atomic = self.super_clean(raw_title)
         canonical_title = self.get_canonical_title(clean_atomic)
+        
+        # Check if we should place in a Chapter folder
+        if session_meta and "chapters" in session_meta:
+            note_chapter_title = None
+            note_chapter_order = None
+            for ch in session_meta["chapters"]:
+                ch_notes = ch.get("atomic_notes") or []
+                if any(n.replace(" ", "_").lower() == canonical_title.replace(" ", "_").lower() for n in ch_notes):
+                    note_chapter_title = ch.get("title")
+                    note_chapter_order = ch.get("order")
+                    break
+            
+            if note_chapter_title and note_chapter_order is not None:
+                from src.domains.ater import learning_object as lo
+                target_path_rel = lo.get_note_path(
+                    topic=raw_hub,
+                    chapter_title=note_chapter_title,
+                    order=note_chapter_order,
+                    note_title=canonical_title,
+                    semester=raw_semester,
+                    course=raw_course,
+                    unit=unit_num
+                )
+                return self.vault_path / target_path_rel
+
         return target_dir / f"{canonical_title}.md"
 
     @staticmethod

@@ -65,7 +65,6 @@ from src.domains.academics.router import router as academics_router
 from src.api.routers.ai import router as ai_router
 from src.api.routers.ater import router as ater_router, validate_vault_path
 from src.api.routers.notebooklm import router as notebooklm_router
-from src.domains.teacher.router import router as teacher_router
 from src.api.lifespan import ServerLifespanManager
 import src.api.state as state
 
@@ -150,7 +149,6 @@ app.include_router(academics_router, prefix="/api", dependencies=[Depends(valida
 app.include_router(ai_router, prefix="/api")
 app.include_router(ater_router, prefix="/api")
 app.include_router(notebooklm_router, prefix="/api")
-app.include_router(teacher_router, prefix="/api")
 
 @app.get("/api/health")
 async def health_check():

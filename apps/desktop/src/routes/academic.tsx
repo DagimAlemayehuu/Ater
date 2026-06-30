@@ -9,7 +9,6 @@ import {useHeader} from '@/context/header-context'
 import {useLayout} from '@/context/layout-provider'
 import {PracticeModule} from './practice'
 import {TabButton} from './academic-tabs/SharedComponents'
-import AcademicCalendar from '@/components/academic/AcademicCalendar'
 import ProgramTab from './academic-tabs/ProgramTab'
 import CoursesTab from './academic-tabs/CoursesTab'
 import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
@@ -20,6 +19,7 @@ import {cleanTitle, DEFAULT_SCHEMAS, wrapWL} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { BlockingLoader } from '@/components/ui/loading-state'
+import { useSidebarContent } from '@/context/sidebar-content-context'
 
 export default function AcademicDashboard() {
   const { history: storeHistory } = usePomodoroStore()
@@ -49,8 +49,9 @@ export default function AcademicDashboard() {
     return prev
   })
   const {setRightContent} = useHeader()
- const {setIsFullscreen} = useLayout()
- const nav = useNavigate()
+  const {setIsFullscreen} = useLayout()
+  const {setSidebarContent} = useSidebarContent()
+  const nav = useNavigate()
  // const API_BASE = SIDECAR_BASE_URL
 
  // ── Data fetching ──────────────────────────────────────────────────────────
@@ -240,37 +241,22 @@ export default function AcademicDashboard() {
  } catch {toast.error('Sync failed')}
  }, [fetchData, fetchDatabases])
 
- useEffect(() => {
-   setRightContent(
-     <div className="flex items-center gap-2 shrink-0">
-       <button 
-         aria-label="Sync Vault Databases" 
-         onClick={handleSync} 
-         data-tour="db-sync"
-         className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest" 
-         title="Sync Vault Databases"
-       >
-         <RefreshCw size={12} />
-       </button>
-       <button 
-         onClick={() => setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')}
-         title={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar (Cmd+C)'}
-         aria-label={activeTab === 'CALENDAR' ? 'Return to Hub' : 'View Academic Calendar'}
-         data-tour="db-calendar"
-         className={cn(
-           'h-8 flex items-center gap-1.5 px-3 rounded-[8px] text-[9px] font-black uppercase tracking-widest focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
-           activeTab === 'CALENDAR' 
-             ? 'bg-primary text-primary-foreground border border-primary' 
-             : 'bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30'
-         )}
-       >
-         <CalendarDays size={12} />
-         <span className="inline">{activeTab === 'CALENDAR' ? 'Dashboard' : 'Calendar'}</span>
-       </button>
-     </div>
-   )
-   return () => setRightContent(null)
- }, [handleSync, activeTab, setRightContent])
+  useEffect(() => {
+    setRightContent(
+      <div className="flex items-center gap-2 shrink-0">
+        <button 
+          aria-label="Sync Vault Databases" 
+          onClick={handleSync} 
+          data-tour="db-sync"
+          className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer" 
+          title="Sync Vault Databases"
+        >
+          <RefreshCw size={12} />
+        </button>
+      </div>
+    )
+    return () => setRightContent(null)
+  }, [handleSync, setRightContent])
 
  // ── Tab definitions ────────────────────────────────────────────────────────
  const augmentedDatabases = useMemo(() => {
@@ -289,6 +275,37 @@ export default function AcademicDashboard() {
  {id: 'PRACTICE' as AcademicTab, label: 'Practice', icon: <Layers size={11} />, dataTour: 'tab-academic-practice'},
  ], [])
 
+  useEffect(() => {
+    setSidebarContent(
+      <div className="flex flex-col gap-1 w-full font-sans">
+        <div className="px-3 mb-2 flex items-center gap-2 select-none">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Academic Navigation</span>
+          <div className="h-px flex-1 bg-border/20" />
+        </div>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSearchParams({ tab: t.id })}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none focus-visible:ring-1 focus-visible:ring-primary",
+              activeTab === t.id
+                ? "bg-bento-item text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+            )}
+            data-tour={t.dataTour}
+          >
+            <span className="shrink-0 text-muted-foreground">{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>,
+      'academic'
+    )
+    return () => {
+      setSidebarContent(null, 'academic')
+    }
+  }, [activeTab, tabs, setSidebarContent, setSearchParams])
+
  // ── Keyboard Shortcuts ─────────────────────────────────────────────────────
  useEffect(() => {
  const handleKeyDown = (e: KeyboardEvent) => {
@@ -300,12 +317,6 @@ export default function AcademicDashboard() {
    e.preventDefault()
    const index = parseInt(e.key) - 1
    if (tabs[index]) setActiveTab(tabs[index].id)
-  }
-
-  // Calendar: Cmd/Ctrl + C
-  if (e.key.toLowerCase() === 'c' && (e.metaKey || e.ctrlKey)) {
-   e.preventDefault()
-   setActiveTab(prev => prev === 'CALENDAR' ? 'PROGRAM' : 'CALENDAR')
   }
  }
  window.addEventListener('keydown', handleKeyDown)
@@ -377,28 +388,10 @@ export default function AcademicDashboard() {
 
  return (
   <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
-     {/* Top bar Bento Box */}
-     <div className={cn("shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center shadow-sm z-30", activeTab === 'CALENDAR' && "hidden")}>
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide h-full">
-        {tabs.map(t => (
-         <TabButton key={t.id} active={activeTab === t.id} onClick={() => setSearchParams({ tab: t.id })} icon={t.icon} label={t.label} data-tour={t.dataTour} />
-        ))}
-      </div>
-     </div>
-
      {/* Tab content area */}
      <div className="flex-1 overflow-hidden">
       {data && (
        <>
-        {activeTab === 'CALENDAR' && (
-         <div className="h-full flex flex-col p-4 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm">
-          <AcademicCalendar 
-           events={calendarEvents} 
-           onSelectEvent={(path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`)} 
-          />
-         </div>
-        )}
-        
         {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
 
         {activeTab === 'COURSES' && (

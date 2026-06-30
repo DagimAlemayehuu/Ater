@@ -87,25 +87,25 @@ export default function PomodoroStats() {
   }, [filteredHistory, timeFilter, referenceNow]);
 
   return (
-    <div className="bg-bento-panel border border-border shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground font-sans">
+    <div className="bg-bento-panel border border-border/40 shadow-2xl rounded-[12px] w-[1000px] h-[640px] overflow-hidden flex flex-col text-foreground font-sans">
       {/* Header */}
-      <div className="h-16 border-b border-border flex items-center justify-between px-8 bg-bento-panel shrink-0">
+      <div className="h-16 border-b border-border/40 flex items-center justify-between px-8 bg-bento-panel shrink-0">
         <div className="flex items-center gap-6">
            <div className="flex items-center gap-2">
-             <BarChart2 size={18} className="text-muted-foreground/40" />
-             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Analytics Engine</span>
+             <BarChart2 size={18} className="text-muted-foreground/45" />
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 font-mono">Analytics Engine</span>
            </div>
            
-           <div className="flex items-center gap-1 bg-bento-item p-1 rounded-[8px] border border-border">
+           <div className="flex items-center gap-1 bg-bento-item p-1 rounded-[8px] border border-border/40">
              {(['OVERALL', 'NOTES', 'PRACTICE'] as const).map(tab => (
                <button 
                  key={tab}
                  onClick={() => setActiveTab(tab)}
                  className={cn(
-                   "px-4 h-7 text-[9px] font-black uppercase tracking-widest rounded-[6px]",
+                   "px-4 h-7 text-[9px] font-black uppercase tracking-widest rounded-[6px] cursor-pointer",
                    activeTab === tab 
-                     ? "bg-bento-panel text-foreground shadow-sm border border-border/60" 
-                     : "text-muted-foreground/40 hover:text-foreground"
+                     ? "bg-bento-card text-foreground shadow-sm border border-border/40" 
+                     : "text-muted-foreground/60 hover:text-foreground"
                  )}
                >
                  {tab}
@@ -115,24 +115,24 @@ export default function PomodoroStats() {
         </div>
 
         <div className="flex items-center gap-4">
-           <div className="flex items-center bg-bento-item p-1 rounded-[8px] border border-border">
+           <div className="flex items-center bg-bento-item p-1 rounded-[8px] border border-border/40">
               {['D', 'W', 'M', 'Y'].map((f) => (
                 <button 
                   key={f}
                   onClick={() => setTimeFilter(f as any)}
                   className={cn(
-                    "px-4 h-7 text-[10px] font-bold rounded-[6px] transition-none uppercase tracking-widest",
+                    "px-4 h-7 text-[10px] font-bold rounded-[6px] transition-none uppercase tracking-widest cursor-pointer",
                     timeFilter === f 
-                      ? "bg-bento-panel text-foreground shadow-sm border border-border/60" 
-                      : "text-muted-foreground/60 hover:text-muted-foreground"
+                      ? "bg-bento-card text-foreground shadow-sm border border-border/40" 
+                      : "text-muted-foreground/60 hover:text-foreground"
                   )}
                 >
                   {f}
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowStats(false)} className="p-2 hover:bg-bento-item rounded-[8px] border border-transparent hover:border-border transition-none">
-              <X size={20} className="text-muted-foreground/40" />
+            <button onClick={() => setShowStats(false)} className="p-2 hover:bg-bento-item rounded-[8px] border border-transparent hover:border-border/40 transition-none cursor-pointer">
+              <X size={18} className="text-muted-foreground/45" />
             </button>
         </div>
       </div>
@@ -142,33 +142,33 @@ export default function PomodoroStats() {
           <div className="flex-1 flex p-10 gap-10">
             <div className="flex-1 flex flex-col space-y-10 overflow-hidden">
               <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2">Focus Volume</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2 font-mono">Focus Volume</span>
                 <div className="flex items-baseline gap-4">
-                  <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground">{stats.totalSessions}</span>
-                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">Sessions</span>
+                  <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground font-sans">{stats.totalSessions}</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40 font-mono">Sessions</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-5">
-                <div className="bg-bento-item border border-border rounded-[8px] p-6 flex flex-col gap-2">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total Focused Time</div>
-                  <div className="text-2xl font-bold text-foreground">{stats.totalMinutes}m</div>
+                <div className="bg-bento-item border border-border/40 rounded-[8px] p-6 flex flex-col gap-2">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 font-mono">Total Focused Time</div>
+                  <div className="text-2xl font-bold text-foreground font-sans">{stats.totalMinutes}m</div>
                 </div>
-                <div className="bg-bento-item border border-border rounded-[8px] p-6 flex flex-col gap-2">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Active Hubs</div>
-                  <div className="text-2xl font-bold text-foreground">{stats.categories.length}</div>
+                <div className="bg-bento-item border border-border/40 rounded-[8px] p-6 flex flex-col gap-2">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 font-mono">Active Hubs</div>
+                  <div className="text-2xl font-bold text-foreground font-sans">{stats.categories.length}</div>
                 </div>
               </div>
 
-              <div className="flex-1 bg-bento-panel border border-border rounded-[12px] p-10 relative overflow-hidden">
-                <div className="absolute top-8 left-10 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20">Temporal Intensity</div>
+              <div className="flex-1 bg-bento-panel border border-border/40 rounded-[8px] p-10 relative overflow-hidden">
+                <div className="absolute top-8 left-10 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 font-mono">Temporal Intensity</div>
                 <div className="h-full w-full pt-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.barData}>
-                      <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.05} />
+                      <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.03} />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'currentColor', opacity: 0.3, fontSize: 9, fontWeight: 900 }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: 'currentColor', opacity: 0.1, fontSize: 9, fontWeight: 900 }} />
-                      <Tooltip cursor={{ fill: 'currentColor', fillOpacity: 0.02 }} contentStyle={{ backgroundColor: 'var(--bento-panel)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '10px' }} />
+                      <Tooltip cursor={{ fill: 'currentColor', fillOpacity: 0.02 }} contentStyle={{ backgroundColor: 'rgba(20,20,22,0.95)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', fontSize: '10px' }} />
                       <Bar dataKey="value" fill="currentColor" fillOpacity={0.6} radius={[0, 0, 0, 0]} barSize={24} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -177,16 +177,16 @@ export default function PomodoroStats() {
             </div>
 
             <div className="w-[320px] flex flex-col space-y-6">
-              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Hub Weight</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 font-mono">Hub Weight</div>
               <div className="flex-1 space-y-4 overflow-y-auto custom-scrollbar pr-2">
                 {stats.categories.map((cat) => (
-                  <div key={cat.name} className="bg-bento-item border border-border rounded-[8px] p-6">
+                  <div key={cat.name} className="bg-bento-item border border-border/40 rounded-[8px] p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 truncate">{cat.name}</span>
-                      <span className="text-xl font-bold text-foreground">{cat.count}</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 truncate pr-1">{cat.name}</span>
+                      <span className="text-xl font-bold text-foreground font-sans">{cat.count}</span>
                     </div>
-                    <div className="h-2 w-full bg-bento-panel rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${cat.percent}%` }} />
+                    <div className="h-1.5 w-full bg-bento-panel rounded-full overflow-hidden">
+                      <div className="h-full bg-foreground rounded-full" style={{ width: `${cat.percent}%` }} />
                     </div>
                   </div>
                 ))}
@@ -198,16 +198,16 @@ export default function PomodoroStats() {
         {activeTab === 'NOTES' && (
           <div className="flex-1 flex flex-col p-10 gap-8 overflow-hidden">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2">Epistemic Effort</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2 font-mono">Effort Profile</span>
               <div className="flex items-baseline gap-4">
-                <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground">{stats.notes.length}</span>
-                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">Notes Deep-dived</span>
+                <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground font-sans">{stats.notes.length}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40 font-mono">Notes Focused</span>
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-2 gap-10 overflow-hidden">
-               <div className="bg-bento-panel border border-border rounded-[12px] p-10 flex flex-col">
-                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 mb-8">Focus Time per Note (Min)</div>
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-10 overflow-hidden">
+               <div className="bg-bento-panel border border-border/40 rounded-[8px] p-10 flex flex-col">
+                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 mb-8 font-mono">Focus Time per Note (Min)</div>
                  <div className="flex-1">
                    <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={stats.noteData} layout="vertical" margin={{ left: 40 }}>
@@ -219,12 +219,12 @@ export default function PomodoroStats() {
                  </div>
                </div>
 
-               <div className="flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
-                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Recent Note Sessions</div>
+               <div className="flex flex-col space-y-3 overflow-y-auto custom-scrollbar pr-2">
+                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-2 font-mono">Recent Note Sessions</div>
                  {stats.notes.slice(-10).reverse().map((n, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 bg-bento-item border border-border rounded-[8px]">
-                     <span className="text-[10px] font-black uppercase truncate pr-4">{n.notePath?.split(/[/\\]/).pop()?.replace('.md', '')}</span>
-                     <span className="text-[10px] font-bold tabular-nums opacity-60">{Math.round(n.duration || 0)}m</span>
+                   <div key={i} className="flex items-center justify-between p-4 bg-bento-item border border-border/40 rounded-[8px]">
+                     <span className="text-[10px] font-black uppercase truncate pr-4 text-foreground/80">{n.notePath?.split(/[/\\]/).pop()?.replace('.md', '')}</span>
+                     <span className="text-[10px] font-mono font-bold opacity-60 text-foreground">{Math.round(n.duration || 0)}m</span>
                    </div>
                  ))}
                </div>
@@ -235,22 +235,22 @@ export default function PomodoroStats() {
         {activeTab === 'PRACTICE' && (
           <div className="flex-1 flex flex-col p-10 gap-8 overflow-hidden">
             <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2">Recall Mastery</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20 mb-2 font-mono">Recall Mastery</span>
               <div className="flex items-baseline gap-4">
-                <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground">
+                <span className="text-7xl font-bold tracking-tighter tabular-nums text-foreground font-sans">
                   {Math.round(stats.practices.reduce((acc, p) => acc + ((p.score ?? 0) / (p.totalQuestions ?? 1)), 0) / (stats.practices.length || 1) * 100)}%
                 </span>
-                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">Average Performance</span>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40 font-mono">Average Score</span>
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-2 gap-10 overflow-hidden">
-               <div className="bg-bento-panel border border-border rounded-[12px] p-10 flex flex-col">
-                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 mb-8">Performance Trend</div>
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-10 overflow-hidden">
+               <div className="bg-bento-panel border border-border/40 rounded-[8px] p-10 flex flex-col">
+                 <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 mb-8 font-mono">Performance Trend</div>
                  <div className="flex-1">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={stats.practiceData}>
-                        <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.05} />
+                        <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.03} />
                         <XAxis dataKey="name" hide />
                         <YAxis hide domain={[0, 100]} />
                         <Bar dataKey="score" fill="currentColor" fillOpacity={0.6} radius={[0, 0, 0, 0]} />
@@ -259,16 +259,16 @@ export default function PomodoroStats() {
                  </div>
                </div>
 
-               <div className="flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
-                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Practice History</div>
+               <div className="flex flex-col space-y-3 overflow-y-auto custom-scrollbar pr-2">
+                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-2 font-mono">Practice History</div>
                  {stats.practices.slice(-10).reverse().map((p, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 bg-bento-item border border-border rounded-[8px]">
+                   <div key={i} className="flex items-center justify-between p-4 bg-bento-item border border-border/40 rounded-[8px]">
                      <div className="flex flex-col">
-                       <span className="text-[10px] font-black uppercase truncate">{p.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub}</span>
-                       <span className="text-[8px] font-bold opacity-30">{new Date(p.timestamp).toLocaleDateString()}</span>
+                       <span className="text-[10px] font-black uppercase truncate text-foreground/80">{p.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub}</span>
+                       <span className="text-[8px] font-mono font-bold opacity-30 mt-0.5">{new Date(p.timestamp).toLocaleDateString()}</span>
                      </div>
                      <span className={cn(
-                       "text-[10px] font-black",
+                       "text-[10px] font-mono font-black",
                        (p.score || 0) / (p.totalQuestions || 1) >= 0.8 ? "text-foreground" : 
                        (p.score || 0) / (p.totalQuestions || 1) >= 0.5 ? "text-foreground/60" : "text-foreground/30"
                      )}>

@@ -288,7 +288,8 @@ async def _generate_learning_runtime_note_markdown(
     chapter_title: str,
     note_title: str,
     prompt: str,
-    all_note_titles: List[str] = None
+    all_note_titles: List[str] = None,
+    source_context: str = None
 ) -> str:
     if not llm:
         return ""
@@ -304,9 +305,10 @@ async def _generate_learning_runtime_note_markdown(
         prompt=prompt,
         related_titles=tuple(all_note_titles or ()),
     )
-    source_context = await _fetch_web_context(topic, note_title)
     if not source_context:
-        source_context = build_default_grounding_context(base_spec)
+        source_context = await _fetch_web_context(topic, note_title)
+        if not source_context:
+            source_context = build_default_grounding_context(base_spec)
 
     # 2. Epistemic modality classification
     # Keep this deterministic in Teach Anything Markdown. The model budget is

@@ -12,6 +12,8 @@ import { supabase } from '@/lib/supabase'
 import { fetchSidecarJson } from '@/lib/sidecarHttp'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openUrl } from '@tauri-apps/plugin-shell'
+import { useSidebarContent } from '@/context/sidebar-content-context'
+import { Settings as SettingsIcon, Key, Network, Timer, Activity } from 'lucide-react'
 
 // Local UI Components to avoid dependency issues
 const Card = ({children, className}: any) => (
@@ -83,6 +85,45 @@ const cleanModel = (modelName: string, keyVal: string) => {
 export default function Settings() {
   const {config, saveConfig} = useConfig()
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
+  const {setSidebarContent} = useSidebarContent()
+  const [activeTab, setActiveTab] = useState('general')
+
+  useEffect(() => {
+    setSidebarContent(
+      <div className="flex flex-col gap-1 w-full font-sans">
+        <div className="px-3 mb-2 flex items-center gap-2 select-none">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Settings Options</span>
+          <div className="h-px flex-1 bg-border/20" />
+        </div>
+        {[
+          { id: 'general', label: 'General', icon: <SettingsIcon size={11} />, dataTour: 'tab-general' },
+          { id: 'ai', label: 'AI & Keys', icon: <Key size={11} />, dataTour: 'tab-ai-config' },
+          { id: 'integrations', label: 'Integrations', icon: <Network size={11} />, dataTour: 'tab-integrations' },
+          { id: 'focus', label: 'Focus Timer', icon: <Timer size={11} />, dataTour: 'tab-timer' },
+          { id: 'intelligence', label: 'Usage Tracker', icon: <Activity size={11} />, dataTour: 'tab-token-tracker' },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none focus-visible:ring-1 focus-visible:ring-primary",
+              activeTab === t.id
+                ? "bg-bento-item text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+            )}
+            data-tour={t.dataTour}
+          >
+            <span className="shrink-0 text-muted-foreground">{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>,
+      'settings'
+    )
+    return () => {
+      setSidebarContent(null, 'settings')
+    }
+  }, [activeTab, setSidebarContent])
   
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [selectedVaultKeyId, setSelectedVaultKeyId] = useState<string | null>(null)
@@ -1438,51 +1479,7 @@ export default function Settings() {
 
   return (
     <div className="h-full flex flex-col font-sans bg-transparent text-foreground overflow-hidden gap-3">
-      <Tabs.Root defaultValue="general" className="flex-1 flex flex-col overflow-hidden gap-3">
-        {/* Navigation Bento Box */}
-        <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center shadow-sm z-30">
-          <Tabs.List className="flex items-center gap-1 h-full">
-            <Tabs.Trigger 
-              value="general"
-              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
-            >
-              General
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
-            </Tabs.Trigger>
-            <Tabs.Trigger 
-              value="ai"
-              data-tour="tab-ai-config"
-              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
-            >
-              AI & Keys
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
-            </Tabs.Trigger>
-            <Tabs.Trigger 
-              value="integrations"
-              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
-            >
-              Integrations
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
-            </Tabs.Trigger>
-            <Tabs.Trigger 
-              value="focus"
-              data-tour="tab-timer"
-              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
-            >
-              Focus Timer
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
-            </Tabs.Trigger>
-            <Tabs.Trigger 
-              value="intelligence"
-              data-tour="tab-token-tracker"
-              className="relative h-full px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/10 group"
-            >
-              Usage Tracker
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground hidden group-data-[state=active]:block" />
-            </Tabs.Trigger>
-          </Tabs.List>
-        </div>
-
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden gap-3">
         {/* Content Bento Box */}
         <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
           <div className="h-full overflow-y-auto custom-scrollbar p-10 pb-24">

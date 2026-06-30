@@ -182,7 +182,7 @@ export function PracticeSession({
                     await session.submitFeynmanChallenge()
                   }}
                   disabled={session.isFeynmanValidating || !session.feynmanExplanation.trim()}
-                  className="h-10 flex-1 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest rounded-[8px]"
+                  className="h-10 flex-1 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[9px] font-black uppercase tracking-widest rounded-[8px] transition-all"
                 >
                   {session.isFeynmanValidating ? 'Analyzing Telemetry...' : 'Validate & Unlock'}
                 </Button>
@@ -765,7 +765,7 @@ export function PracticeSession({
                         ].includes(currentQuestion.type)
                       )
                     }
-                    className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none"
+                    className="h-10 px-10 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                   >
                     {session.isSubmitting ? 'Submitting...' : 'Submit Answer'}
                   </Button>
@@ -781,7 +781,7 @@ export function PracticeSession({
                               nextQuestion(false)
                             }}
                             variant="outline"
-                            className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40"
+                            className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40 rounded-[6px]"
                           >
                             Wrong
                           </Button>
@@ -794,7 +794,7 @@ export function PracticeSession({
                               currentQuestion.required_keywords.length > 0 &&
                               currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])
                             }
-                            className="h-10 px-6 bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-10 px-6 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed rounded-[6px] transition-all"
                             title={
                               Array.isArray(currentQuestion.required_keywords) &&
                               currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])
@@ -812,7 +812,7 @@ export function PracticeSession({
                       session.scores[currentQuestion.id] !== undefined) && (
                       <Button
                         onClick={() => nextQuestion()}
-                        className="h-10 px-10 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-none"
+                        className="h-10 px-10 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                       >
                         Next
                       </Button>

@@ -937,7 +937,9 @@ async def log_practice(
         return {"status": "ignored", "reason": "db not initialized"}
     
     try:
-        conn = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(db_path), timeout=10)
+        fsrs_note_path = None
+        fsrs_rating = None
         conn.execute(
             "INSERT INTO practice_log (id, note_id, question_type, is_correct, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
             (
@@ -996,15 +998,20 @@ async def log_practice(
                 vault_path = Path(secrets.vault_path)
                 note_path = resolve_note_path(note_id, vault_path)
                 if note_path:
-                    try:
-                        from src.domains.ater.srs import SRSEngine
-                        engine = SRSEngine(db_path)
-                        engine.review(note_path, rating=3 if is_correct else 1)
-                    except Exception as fsrs_err:
-                        logger.error(f"[SRS Sync] Failed to update FSRS card: {fsrs_err}")
+                    fsrs_note_path = note_path
+                    fsrs_rating = 3 if is_correct else 1
             
         conn.commit()
         conn.close()
+
+        if fsrs_note_path:
+            try:
+                from src.domains.ater.srs import SRSEngine
+                engine = SRSEngine(db_path)
+                engine.review(fsrs_note_path, rating=fsrs_rating)
+            except Exception as fsrs_err:
+                logger.error(f"[SRS Sync] Failed to update FSRS card: {fsrs_err}")
+
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1086,13 +1093,13 @@ async def log_practice_result(
     try:
         conn = sqlite3.connect(str(db_path))
         conn.execute(
-            "INSERT INTO practice_log (id, hub_id, note_path, question_type, is_correct, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO practice_log (id, note_id, question_type, is_correct, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
             (
                 str(uuid.uuid4()),
-                payload.get("hub_id", "unknown"),
                 payload.get("note_path", "unknown"),
                 "summary",
-                1 if payload.get("score", 0) == payload.get("total_questions", 1) else 0,
+                1 if payload.get("score", 0) == payload.get("total", payload.get("total_questions", 1)) else 0,
+                0,
                 datetime.now().isoformat()
             )
         )
@@ -2278,6 +2285,43 @@ async def submit_tutor_answer_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/practice/remediate")
+async def practice_remediate_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    note_path = payload.get("note_path")
+    question = payload.get("question")
+    user_answer = payload.get("user_answer", "")
+    attempt_number = int(payload.get("attempt_number", 0))
+    seen_question_types = payload.get("seen_question_types", [])
+    seen_lesson_summaries = payload.get("seen_lesson_summaries", [])
+    
+    if not note_path or not question:
+        raise HTTPException(status_code=400, detail="note_path and question are required")
+        
+    try:
+        from src.domains.ater.tutor_service import TutorSessionManager
+        from src.domains.ater.service import AterService
+        
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        ai_service = AterService(secrets)
+        manager = TutorSessionManager(db_path, Path(secrets.vault_path), ai_service)
+        
+        lesson = await manager.generate_detailed_remediation_lesson(note_path, question, user_answer, attempt_number, seen_lesson_summaries)
+        remediation_q = await manager.generate_clean_remediation_question(note_path, question, user_answer, lesson, attempt_number, seen_question_types)
+        
+        return {
+            "detailed_lesson": lesson,
+            "remediation_question": remediation_q
+        }
+    except Exception as e:
+        import traceback
+        logger.error(f"[RemediationRouter] Error generating remediation: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/ater/tutor/adaptive_question")
 async def get_adaptive_tutor_question_endpoint(
     payload: Dict[str, Any] = Body(...),
@@ -2414,6 +2458,31 @@ async def advance_tutor_session_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/tutor/transfer/submit")
+async def submit_transfer_answer_endpoint(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    session_id = payload.get("session_id")
+    note_path = payload.get("note_path")
+    user_answer = payload.get("user_answer")
+    if not session_id or not note_path or not user_answer:
+        raise HTTPException(status_code=400, detail="session_id, note_path, and user_answer are required")
+        
+    try:
+        from src.domains.ater.tutor_service import TutorSessionManager
+        from src.domains.ater.service import AterService
+        db_path = Path(secrets.inbox_path or (Path(secrets.vault_path) / "Inbox")) / "ater_queue.db"
+        
+        ai_service = AterService(secrets)
+        manager = TutorSessionManager(db_path, Path(secrets.vault_path), ai_service)
+        result = await manager.submit_transfer_answer(session_id, note_path, user_answer)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/ater/cram/start")
 async def start_cram_session_endpoint(
     payload: Dict[str, Any] = Body(...),
@@ -2474,6 +2543,33 @@ async def upload_source_file(
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+@router.post("/ater/inbox/upload")
+async def upload_file_to_inbox(
+    file: UploadFile = File(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    
+    effective_inbox = secrets.inbox_path
+    if not effective_inbox:
+        effective_inbox = str(Path(secrets.vault_path) / "Inbox")
+        
+    inbox_dir = Path(effective_inbox)
+    inbox_dir.mkdir(parents=True, exist_ok=True)
+    
+    target_path = inbox_dir / file.filename
+    try:
+        with open(target_path, "wb") as f:
+            f.write(await file.read())
+        return {
+            "status": "success", 
+            "file_name": file.filename, 
+            "path": str(target_path.absolute())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file to Inbox: {e}")
 
 @router.post("/ater/source/plan")
 async def ater_source_plan(
@@ -2601,5 +2697,4 @@ async def get_learner_recommendations_endpoint(
         return {"recommendations": recommendations}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 

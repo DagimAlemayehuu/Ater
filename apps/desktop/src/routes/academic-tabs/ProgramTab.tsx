@@ -353,29 +353,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
   return (
     <div className="h-full flex gap-3 overflow-hidden">
-      {/* Left Roadmap Panel Bento Box */}
-      <aside data-tour="program-bento" className="w-64 shrink-0 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col overflow-hidden shadow-sm">
-        <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/5">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 flex items-center gap-2">
-            <GraduationCap size={12} /> Roadmap
-          </span>
-          <button onClick={() => setShowSetup(!showSetup)}
-            data-tour="program-edit"
-            className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all">
-            {showSetup ? 'Back' : programYears.length > 0 ? 'Edit' : 'Setup'}
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
-          {programYears.length > 0
-            ? <AcademicRoadmap items={programYears} semesters={semesters} activeId={selectedYearId} onSelect={setSelectedYearId} />
-            : <div className="py-12 flex flex-col items-center justify-center text-center opacity-30">
-                <GraduationCap size={32} className="mb-3" />
-                <p className="text-[10px] font-black uppercase tracking-widest">No program yet</p>
-              </div>
-          }
-        </div>
-      </aside>
-
       {/* Right: Overview Bento Box */}
       <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar p-10 pb-24 space-y-10">
         {programYears.length === 0 || showSetup ? (
@@ -386,12 +363,20 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
         ) : (
           <div className="space-y-10">
             {/* Program Header */}
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Academic Program</p>
-              <h1 className="text-4xl font-black uppercase tracking-tight text-foreground">{activeProgram || 'Your Program'}</h1>
-              <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 block mt-1">
-                {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level'))}
-              </span>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Academic Program</p>
+                <h1 className="text-4xl font-black uppercase tracking-tight text-foreground">{activeProgram || 'Your Program'}</h1>
+                <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 block mt-1">
+                  {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level'))}
+                </span>
+              </div>
+              <button 
+                onClick={() => setShowSetup(true)}
+                className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all"
+              >
+                Edit Program
+              </button>
             </div>
 
             {/* Program Stats */}

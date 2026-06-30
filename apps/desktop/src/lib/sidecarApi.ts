@@ -91,6 +91,58 @@ async function normalizeVaultIpcPath(path: string): Promise<string> {
     return toVaultRelativePath(path, vaultPath)
 }
 
+export async function getBaseHeaders(contentType?: string): Promise<Record<string, string>> {
+    const sidecarToken = await invoke<string>('get_sidecar_token');
+    const store = await getAppStore();
+    const headers: Record<string, string> = {};
+    if (contentType) {
+        headers['Content-Type'] = contentType;
+    }
+    
+    const aiProvider = await store.get<string>('aiProvider');
+    if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+    
+    const aiApiKey = await store.get<string>('aiApiKey');
+    if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+    
+    const aiModel = await store.get<string>('aiModel');
+    if (aiModel) headers['X-AI-Model'] = aiModel;
+    
+    const aiBaseUrl = await store.get<string>('aiBaseUrl');
+    if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+    
+    const aiMaxTpm = await store.get<number>('aiMaxTpm');
+    if (aiMaxTpm) headers['X-AI-Max-TPM'] = String(aiMaxTpm);
+    
+    const aiMaxRpm = await store.get<number>('aiMaxRpm');
+    if (aiMaxRpm) headers['X-AI-Max-RPM'] = String(aiMaxRpm);
+    
+    const aiMaxTpd = await store.get<number>('aiMaxTpd');
+    if (aiMaxTpd) headers['X-AI-Max-TPD'] = String(aiMaxTpd);
+    
+    const aiMaxRpd = await store.get<number>('aiMaxRpd');
+    if (aiMaxRpd) headers['X-AI-Max-RPD'] = String(aiMaxRpd);
+    
+    const aiMaxConcurrency = await store.get<number>('aiMaxConcurrency');
+    if (aiMaxConcurrency) headers['X-AI-Max-Concurrency'] = String(aiMaxConcurrency);
+    
+    const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+    if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+    
+    const inboxPath = await store.get<string>('inboxPath');
+    if (inboxPath) headers['X-Inbox-Path'] = inboxPath;
+    
+    const academicFolderPath = await store.get<string>('academicFolderPath');
+    if (academicFolderPath) headers['X-Academic-Path'] = academicFolderPath;
+    
+    const autoDeploy = await store.get<boolean>('autoDeploy');
+    if (autoDeploy !== undefined && autoDeploy !== null) headers['X-Auto-Deploy'] = String(autoDeploy);
+
+    headers['X-Ater-Token'] = sidecarToken;
+    
+    return headers;
+}
+
 async function ensureDbInitialized(): Promise<void> {
     if (isInitialized) return
     try {
@@ -1187,64 +1239,11 @@ export const sidecarApi = {
         }
     },
 
-    teacherChatStream: async (payload: {
-        history: { role: string; content: string }[],
-    }): Promise<Response> => {
-        if (await isDemoActive()) {
-            const latest = payload.history[payload.history.length - 1]?.content || 'Focused lesson';
-            const stream = new ReadableStream({
-                async start(controller) {
-                    const encoder = new TextEncoder();
-                    const demoHtml = `<!doctype html><html><body style="margin:0;background:#111113;color:#ebebeb;font-family:sans-serif;padding:32px"><h1>Demo Teacher Lesson</h1><p>This preview appears inside Ater.</p><button onclick="document.querySelector('p').textContent='Interactive check passed.'">Run check</button></body></html>`;
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', message: 'Preparing teaching workspace...' })}\n\n`));
-                    await new Promise(r => setTimeout(r, 100));
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content: `I created a demo lesson workspace for **${latest.replace(/</g, '&lt;')}**.` })}\n\n`));
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                        type: 'lesson_created',
-                        title: 'Demo Teacher Lesson',
-                        lesson_path: 'Lessons/demo/lessons/0001-demo.html',
-                        preview_url: 'data:text/html;charset=utf-8,' + encodeURIComponent(demoHtml)
-                    })}\n\n`));
-                    controller.close();
-                }
-            });
-            return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
-        }
-
+    aterInboxUpload: async (filePath: string, fileName: string) => {
         try {
-            if (useSecurityStore.getState().isFeatureLocked('oracle-chat')) {
-                throw new Error("ACCESS_DENIED: Module [oracle-chat] restricted by controller.");
-            }
-            const store = await getAppStore();
-            const port = await invoke<number>('get_sidecar_port');
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-            const aiProvider = await store.get<string>('aiProvider');
-            const aiApiKey = await store.get<string>('aiApiKey');
-            const aiModel = await store.get<string>('aiModel');
-            const aiBaseUrl = await store.get<string>('aiBaseUrl');
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const inboxPath = await store.get<string>('inboxPath');
-            const academicFolderPath = await store.get<string>('academicFolderPath');
-
-            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
-            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
-            if (aiModel) headers['X-AI-Model'] = aiModel;
-            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
-            if (inboxPath) headers['X-Inbox-Path'] = inboxPath;
-            if (academicFolderPath) headers['X-Academic-Path'] = academicFolderPath;
-
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            headers['X-Ater-Token'] = sidecarToken;
-
-            return await fetch(`http://127.0.0.1:${port}/api/teacher/chat`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload),
-            });
+            return await invoke<any>('ater_inbox_upload', { filePath, fileName })
         } catch (err) {
-            console.error('[Teacher] teacherChatStream failed:', err);
+            console.error('[Upload] Failed to upload to inbox:', err);
             throw err;
         }
     },
@@ -1878,14 +1877,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/lesson/preview/register`, {
                 method: 'POST',
@@ -1917,14 +1909,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/start`, {
                 method: 'POST',
@@ -1956,14 +1941,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/submit`, {
                 method: 'POST',
@@ -1977,6 +1955,57 @@ export const sidecarApi = {
             return await res.json();
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitTutorAnswer failed:', err);
+            throw err;
+        }
+    },
+    practiceRemediate: async (payload: { note_path: string; question: any; user_answer: string; attempt_number?: number; seen_question_types?: string[]; seen_lesson_summaries?: string[] }) => {
+        if (isSimulationMode()) {
+            return {
+                detailed_lesson: "This is a simulated remediation lesson explaining the correct system design concepts.",
+                remediation_question: {
+                    id: `${payload.question?.id || 'q'}_remediation`,
+                    type: 'writing',
+                    question: 'Explain the core principles of system scalability and trade-offs in your own words.',
+                    answer: 'Scalability is the ability of a system to handle increased load...',
+                    explanation: 'This tests conceptual understanding of system scalability.',
+                    note_id: payload.note_path,
+                    is_remediation: true
+                }
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const store = await getAppStore();
+            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'X-Ater-Token': sidecarToken
+            };
+            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+
+            // Pass AI provider headers so the sidecar uses the user's configured model
+            const aiProvider = await store.get<string>('aiProvider');
+            const aiApiKey = await store.get<string>('aiApiKey');
+            const aiModel = await store.get<string>('aiModel');
+            const aiBaseUrl = await store.get<string>('aiBaseUrl');
+            if (aiProvider) headers['X-AI-Provider'] = aiProvider;
+            if (aiApiKey) headers['X-AI-Key'] = aiApiKey;
+            if (aiModel) headers['X-AI-Model'] = aiModel;
+            if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/practice/remediate`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to generate remediation (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] practiceRemediate failed:', err);
             throw err;
         }
     },
@@ -1996,14 +2025,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/adaptive_question`, {
                 method: 'POST',
@@ -2041,14 +2063,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/adaptive_check`, {
                 method: 'POST',
@@ -2071,13 +2086,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders();
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/session_by_hub?hub_path=${encodeURIComponent(hub_path)}`, {
                 method: 'GET',
@@ -2107,13 +2116,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders();
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/status?session_id=${encodeURIComponent(session_id)}`, {
                 method: 'GET',
@@ -2129,9 +2132,9 @@ export const sidecarApi = {
             throw err;
         }
     },
-    advanceTutorSession: async (payload: { session_id: string }) => {
+    advanceTutorSession: async (payload: { session_id: string }): Promise<{ can_advance: boolean; session: any; message?: string }> => {
         if (isSimulationMode()) {
-            return {
+            const mockSession = {
                 session_id: payload.session_id,
                 hub_path: 'mock_hub.md',
                 current_note_path: 'mock_note2.md',
@@ -2141,17 +2144,14 @@ export const sidecarApi = {
                 status: 'active',
                 curriculum: ['mock_note.md', 'mock_note2.md']
             };
+            return {
+                can_advance: true,
+                session: mockSession
+            };
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/advance`, {
                 method: 'POST',
@@ -2162,9 +2162,42 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to advance tutor session (HTTP ${res.status})`);
             }
-            return await res.json();
+            const data = await res.json();
+            return {
+                can_advance: !!data.can_advance,
+                session: data,
+                message: data.message || undefined
+            };
         } catch (err: any) {
             console.error('[Tauri Native RAG] advanceTutorSession failed:', err);
+            throw err;
+        }
+    },
+    submitTransferAnswer: async (payload: { session_id: string; note_path: string; user_answer: string }) => {
+        if (isSimulationMode()) {
+            return {
+                is_correct: true,
+                feedback: 'Pass (Simulation)',
+                remediation: '',
+                session: null
+            };
+        }
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/transfer/submit`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to submit transfer answer (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] submitTransferAnswer failed:', err);
             throw err;
         }
     },
@@ -2177,14 +2210,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/consolidation/start`, {
                 method: 'POST',
@@ -2216,14 +2242,7 @@ export const sidecarApi = {
         }
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                'X-Ater-Token': sidecarToken
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/consolidation/verify`, {
                 method: 'POST',
@@ -2244,12 +2263,7 @@ export const sidecarApi = {
     startCramSession: async (payload: any) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json'
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/start`, {
                 method: 'POST',
@@ -2269,10 +2283,7 @@ export const sidecarApi = {
     getCramStatus: async (sessionId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {};
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders();
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/status?session_id=${encodeURIComponent(sessionId)}`, {
                 method: 'GET',
@@ -2291,12 +2302,7 @@ export const sidecarApi = {
     submitCramAnswer: async (payload: any) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const store = await getAppStore();
-            const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json'
-            };
-            if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
+            const headers = await getBaseHeaders('application/json');
 
             const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/submit`, {
                 method: 'POST',

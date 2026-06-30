@@ -10,6 +10,245 @@ export interface PracticeSessionConfig {
   requireConfidenceWager?: boolean;
 }
 
+function normalizeAnswerValue(value: any): string {
+  if (Array.isArray(value)) {
+    return value.map(normalizeAnswerValue).join('|');
+  }
+  if (value && typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function resolveSelectedAnswer(question: Question, selected: any): any {
+  const options = (question as any).options;
+  if (options && selected !== undefined && selected !== null && !Array.isArray(selected) && typeof selected !== 'object') {
+    if (Object.prototype.hasOwnProperty.call(options, selected)) {
+      return options[selected];
+    }
+  }
+  return selected;
+}
+
+function gradeLocally(question: Question, selected: any): boolean {
+  const expected = (question as any).answer;
+  const resolved = resolveSelectedAnswer(question, selected);
+
+  if ((question as any).type === 'matching' && Array.isArray((question as any).pairs)) {
+    const selectedMap = selected || {};
+    return (question as any).pairs.every((pair: any) => selectedMap[pair.left] === pair.right);
+  }
+
+  if ((question as any).type === 'order' && Array.isArray(expected) && Array.isArray(selected)) {
+    return expected.length === selected.length && expected.every((item: any, idx: number) => normalizeAnswerValue(item) === normalizeAnswerValue(selected[idx]));
+  }
+
+  if (Array.isArray(expected) && Array.isArray(resolved)) {
+    return expected.length === resolved.length && expected.every((item: any, idx: number) => normalizeAnswerValue(item) === normalizeAnswerValue(resolved[idx]));
+  }
+
+  if (Array.isArray(expected)) {
+    return expected.some(item => normalizeAnswerValue(item) === normalizeAnswerValue(resolved));
+  }
+
+  return normalizeAnswerValue(expected) === normalizeAnswerValue(selected) || normalizeAnswerValue(expected) === normalizeAnswerValue(resolved);
+}
+
+function isObjectiveQuestion(question: Question): boolean {
+  return ['mcq', 'true_false', 'fill_in', 'matching', 'order'].includes((question as any).type);
+}
+
+function formatAnswerValue(value: any): string {
+  if (Array.isArray(value)) return value.join(', ');
+  if (value && typeof value === 'object') return JSON.stringify(value);
+  return String(value ?? '');
+}
+
+function gradeOpenEndedLocally(question: Question, selected: any): boolean {
+  const answerText = normalizeAnswerValue(selected);
+  const requiredKeywords = (question as any).required_keywords;
+  if (Array.isArray(requiredKeywords) && requiredKeywords.length > 0) {
+    const hits = requiredKeywords.filter((kw: string) => answerText.includes(normalizeAnswerValue(kw))).length;
+    return hits >= Math.max(1, Math.ceil(requiredKeywords.length * 0.6));
+  }
+
+  const expected = formatAnswerValue((question as any).answer);
+  const expectedTerms = expected
+    .toLowerCase()
+    .match(/[a-z0-9]{4,}/g)
+    ?.filter((term, idx, arr) => arr.indexOf(term) === idx) || [];
+
+  if (expectedTerms.length === 0) return answerText.trim().length >= 24;
+  const hits = expectedTerms.filter(term => answerText.includes(term)).length;
+  return hits >= Math.max(1, Math.min(3, Math.ceil(expectedTerms.length * 0.4)));
+}
+
+function buildLocalExplanation(question: Question, selected: any, isCorrect: boolean): string {
+  const answerText = formatAnswerValue((question as any).answer);
+  const baseExplanation = (question as any).explanation || `The correct answer is ${answerText}.`;
+
+  if (isCorrect) {
+    return [
+      `### Core Concept Summary`,
+      ``,
+      baseExplanation,
+    ].join('\n');
+  }
+
+  return [
+    `### Concept Breakdown & Explanation`,
+    ``,
+    baseExplanation,
+    ``,
+    `To Master This Concept:`,
+    `Focus on the core mechanics, system dependencies, or rules that make this explanation correct. Ensure you can explain the flow from inputs to outcomes without relying on option labels.`,
+  ].join('\n');
+}
+
+const SUPPORTED_PROVING_GROUND_TYPES = [
+  'mcq',
+  'true_false',
+  'writing',
+  'fill_in',
+  'matching',
+  'order',
+  'debug',
+  'synthesis',
+  'trace',
+  'scenario',
+  'code',
+  'calculation',
+  'data_analysis',
+  'find_error',
+] as const;
+
+function normalizeQuestionType(type: any): Question['type'] {
+  const raw = String(type || 'writing').trim().toLowerCase();
+  const aliases: Record<string, Question['type']> = {
+    'multiple-choice': 'mcq',
+    multiple_choice: 'mcq',
+    'multiple choice': 'mcq',
+    'true-false': 'true_false',
+    'true false': 'true_false',
+    'true/false': 'true_false',
+    'fill-in': 'fill_in',
+    'fill in': 'fill_in',
+    'find-error': 'find_error',
+    'find error': 'find_error',
+  };
+  const normalized = aliases[raw] || raw;
+  return (SUPPORTED_PROVING_GROUND_TYPES as readonly string[]).includes(normalized) ? normalized as Question['type'] : 'writing';
+}
+
+function chooseFallbackQuestionType(question: Question, attempt: number, seenTypes: string[] = []): Question['type'] {
+  const original = question as any;
+  const context = [
+    original.type,
+    original.question,
+    original.content,
+    original.codeSnippet,
+    original.buggyCode,
+    original.explanation,
+  ].join(' ').toLowerCase();
+  const seen = new Set(seenTypes.map(normalizeQuestionType));
+  const ranked: Question['type'][] = [];
+
+  if (/```|def |class |function|bug|debug|exception|runtime|compile/.test(context)) {
+    ranked.push('debug', 'trace', 'code', 'find_error', 'scenario');
+  }
+  if (/calculate|equation|formula|solve|number|ratio|probability|derivative|integral/.test(context)) {
+    ranked.push('calculation', 'trace', 'data_analysis', 'fill_in');
+  }
+  if (/table|dataset|chart|graph|trend|correlation|row|column/.test(context)) {
+    ranked.push('data_analysis', 'calculation', 'scenario');
+  }
+  if (/sequence|order|step|workflow|pipeline|process|first|then/.test(context)) {
+    ranked.push('order', 'trace', 'scenario');
+  }
+  if (/compare|contrast|mapping|pair|relationship|matches|term/.test(context)) {
+    ranked.push('matching', 'synthesis', 'mcq');
+  }
+
+  ranked.push(normalizeQuestionType(original.type), 'scenario', 'synthesis', 'fill_in', 'matching', 'mcq', 'writing', 'true_false');
+  const offset = attempt > 0 ? ['scenario', 'trace', 'synthesis'] as Question['type'][] : [];
+  for (const type of [...offset, ...ranked]) {
+    if (!seen.has(type)) return type;
+  }
+  return ranked[attempt % ranked.length] || 'scenario';
+}
+
+function buildFallbackRemediationQuestion(question: Question, selected: any, attempt: number, notePathValue?: string, seenTypes: string[] = []): Question {
+  const original = question as any;
+  const answerText = Array.isArray(original.answer)
+    ? original.answer.join(', ')
+    : typeof original.answer === 'object' && original.answer !== null
+      ? JSON.stringify(original.answer)
+      : String(original.answer ?? '');
+  const qType = chooseFallbackQuestionType(question, attempt, seenTypes);
+  const base: any = {
+    ...original,
+    id: `${original.id}_remediation_${attempt + 1}`,
+    type: qType,
+    difficulty: `L${Math.min(4, attempt + 2)}`,
+    question: `Apply this concept in a new case: ${original.question || 'Explain the core concept.'}`,
+    answer: answerText || 'A correct answer applies the concept mechanism directly.',
+    explanation: original.explanation || `Explain the mechanism from first principles.`,
+    options: undefined,
+    note_id: original.note_id || notePathValue,
+    is_remediation: true,
+  };
+
+  if (qType === 'mcq') {
+    base.question = `Which option best applies this concept: ${original.question || 'the lesson concept'}?`;
+    base.options = {
+      A: answerText || 'The explanation that preserves the concept mechanism.',
+      B: 'A surface-level answer that only repeats a keyword.',
+      C: 'A related fact that does not answer the question.',
+      D: 'The inverse of the concept relationship.',
+    };
+    base.answer = 'A';
+  } else if (qType === 'true_false') {
+    base.question = `True or False: ${answerText || original.explanation || 'The concept must be applied through its mechanism, not by keyword matching.'}`;
+    base.options = { True: 'True', False: 'False' };
+    base.answer = 'True';
+  } else if (qType === 'fill_in') {
+    const blank = answerText.slice(0, 80) || 'the correct relationship';
+    base.question = `Complete the key claim about this concept.`;
+    base.textWithBlanks = `The concept works because [[${blank}]].`;
+    base.text_with_blanks = base.textWithBlanks;
+    base.answer = [blank];
+  } else if (qType === 'matching') {
+    base.question = 'Match each concept role to its function.';
+    base.pairs = [
+      { left: 'Core mechanism', right: 'Transforms inputs into the expected result' },
+      { left: 'Misleading cue', right: 'Looks relevant but does not explain causality' },
+      { left: 'Application check', right: 'Uses the concept in a new case' },
+    ];
+    base.answer = 'See pairs for correct matching.';
+  } else if (qType === 'order') {
+    const steps = ['Identify the relevant condition', 'Apply the concept mechanism', 'State the resulting implication'];
+    base.question = 'Put the reasoning steps in the correct order.';
+    base.steps = [...steps].reverse();
+    base.answer = steps;
+  } else if (qType === 'debug' || qType === 'find_error') {
+    base.question = 'Find the conceptual flaw in this reasoning and correct it.';
+    base.content = 'Claim: the answer is valid because a related keyword appears, even if the mechanism is not applied.';
+    base.buggyCode = base.content;
+    base.answer = 'The flaw is substituting keyword recognition for applying the concept mechanism.';
+  } else if (qType === 'code') {
+    base.question = 'Write pseudocode or a small function that applies this concept.';
+    base.codeSnippet = '# input -> mechanism -> output';
+    base.language = 'text';
+  } else if (qType === 'calculation' || qType === 'data_analysis' || qType === 'trace') {
+    base.content = original.content || original.question || '';
+    if (qType === 'trace') {
+      base.steps = ['Start from the condition', 'Apply the mechanism', 'State the consequence'];
+    }
+  }
+
+  return base as Question;
+}
+
 export function usePracticeSession() {
   const { addPracticeResult, currentHub } = usePomodoroStore();
 
@@ -21,12 +260,12 @@ export function usePracticeSession() {
 
   // Answering & grading state
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
-  const [revealedStates, setRevealedStates] = useState<Record<number, boolean>>({});
-  const [scores, setScores] = useState<Record<number, boolean>>({});
+  const [revealedStates, setRevealedStates] = useState<Record<string | number, boolean>>({});
+  const [scores, setScores] = useState<Record<string | number, boolean>>({});
   const [showScore, setShowScore] = useState(false);
   const [streak, setStreak] = useState(0);
-  const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
-  const [confidenceWagers, setConfidenceWagers] = useState<Record<number, number>>({});
+  const [bookmarked, setBookmarked] = useState<Set<string | number>>(new Set());
+  const [confidenceWagers, setConfidenceWagers] = useState<Record<string | number, number>>({});
   const [keywordChecks, setKeywordChecks] = useState<Record<string, boolean>>({});
 
   // Feynman cognitive lock state
@@ -42,11 +281,14 @@ export function usePracticeSession() {
   const [remediationQuestion, setRemediationQuestion] = useState<Record<string, Question | null>>({});
   const [retryActive, setRetryActive] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [failureAttempts, setFailureAttempts] = useState<Record<string, number>>({});
+  // Per-question history: tracks seen question types and lesson summaries to avoid repetition
+  const [remediationHistory, setRemediationHistory] = useState<Record<string, { seenTypes: string[]; lessonSummaries: string[] }>>({});
 
   // Timer states
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
-  
+
   // Timing references
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -64,7 +306,7 @@ export function usePracticeSession() {
     if (!q || !q.note_id) return false;
     const card = srsCardsCache[q.note_id];
     if (!card) return false;
-    
+
     // Retrievability = (1 + t / (9 * s))^-1
     const getRetrievability = (c: any): number => {
       const stability = Math.max(0.01, c.stability || 0);
@@ -101,17 +343,24 @@ export function usePracticeSession() {
     questionsList: Question[],
     config: PracticeSessionConfig,
     notePathValue?: string,
-    quizPathValue?: string | null
+    quizPathValue?: string | null,
+    initialQuestionIndex: number = 0
   ) => {
-    setQuestions(questionsList);
-    setCurrentQuestionIdx(0);
+    const stem = notePathValue ? notePathValue.split('/').pop()?.replace(/\.[^/.]+$/, "") || 'q' : 'q';
+    const normalizedQuestions = questionsList.map((q, idx) => ({
+      ...q,
+      id: q.id !== undefined && q.id !== null ? q.id : `${stem}_q${idx + 1}`
+    }));
+    setQuestions(normalizedQuestions);
+    const safeInitialIndex = Math.max(0, Math.min(initialQuestionIndex, Math.max(questionsList.length - 1, 0)));
+    setCurrentQuestionIdx(safeInitialIndex);
     setNotePath(notePathValue);
     setSessionPath(quizPathValue || null);
-    
+
     setUserAnswers({});
     setRevealedStates({});
     setScores({});
-    setShowScore(false);
+    setShowScore(questionsList.length > 0 && initialQuestionIndex >= questionsList.length);
     setStreak(0);
     setBookmarked(new Set());
     setConfidenceWagers({});
@@ -119,6 +368,11 @@ export function usePracticeSession() {
     setUnlockedNotes(new Set());
     setFeynmanExplanation('');
     setFeynmanError(null);
+    setQuestionHint({});
+    setMisconceptionText({});
+    setRemediationQuestion({});
+    setRetryActive({});
+    setFailureAttempts({});
 
     configRef.current = config;
     practiceStartTimeRef.current = Date.now();
@@ -166,95 +420,119 @@ export function usePracticeSession() {
     const ans = userAnswers[currentQuestion.id];
     if (ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0)) return;
 
-    let isCorrect = false;
-    const userVal = String(ans).trim().toLowerCase();
+    const objective = isObjectiveQuestion(currentQuestion);
+    const localCorrect = objective ? gradeLocally(currentQuestion, ans) : gradeOpenEndedLocally(currentQuestion, ans);
+    const resolvedUserAnswer = formatAnswerValue(resolveSelectedAnswer(currentQuestion, ans));
 
-    if (currentQuestion.type === 'true_false') {
-      const userBool = userVal === 'true';
-      const correctBool = typeof currentQuestion.answer === 'boolean' 
-        ? currentQuestion.answer 
-        : String(currentQuestion.answer).toLowerCase() === 'true';
-      isCorrect = userBool === correctBool;
-    } else if (currentQuestion.type === 'mcq') {
-      isCorrect = userVal.toUpperCase() === String(currentQuestion.answer || '').trim().toUpperCase();
-      if (currentQuestion.options && !isCorrect) {
-        const correctText = String(currentQuestion.options[currentQuestion.answer as string] || '').trim().toLowerCase();
-        isCorrect = userVal === correctText;
+    setIsSubmitting(true);
+    try {
+      const explanation = buildLocalExplanation(currentQuestion, ans, localCorrect);
+      if (!sessionPath) {
+        setScores(prev => ({ ...prev, [currentQuestion.id]: localCorrect }));
+        setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
+        setStreak(prev => localCorrect ? prev + 1 : 0);
       }
-    } else if (currentQuestion.type === 'fill_in') {
-      const userAnswersArr = userAnswers[currentQuestion.id] || [];
-      const rawAnswer = currentQuestion.answer || [];
-      const correctAnswersArr = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
-      isCorrect = correctAnswersArr.every((ansVal: string, idx: number) =>
-        String(userAnswersArr[idx] || '').trim().toLowerCase() === String(ansVal || '').trim().toLowerCase()
-      );
-    } else if (currentQuestion.type === 'matching') {
-      const userPairs = userAnswers[currentQuestion.id] || {};
-      const correctPairs = currentQuestion.pairs || [];
-      isCorrect = Array.isArray(correctPairs) && correctPairs.every((p: any) =>
-        String(userPairs[p.left] || '').trim().toLowerCase() === String(p.right || '').trim().toLowerCase()
-      );
-    } else if (currentQuestion.type === 'order') {
-      const userOrder = userAnswers[currentQuestion.id] || currentQuestion.steps || [];
-      const correctOrder = currentQuestion.answer || [];
-      isCorrect = Array.isArray(correctOrder) && correctOrder.every((step: string, idx: number) =>
-        String(userOrder[idx] || '').trim().toLowerCase() === String(step).trim().toLowerCase()
-      );
-    }
 
-    if (sessionPath) {
-      setIsSubmitting(true);
-      try {
-        const res = await sidecarApi.submitTutorAnswer({
+      const isCorrect = localCorrect;
+
+      // Store explanation in question hints so the UI can render it
+      setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: explanation }));
+
+      if (sessionPath) {
+        const subRes = await sidecarApi.submitTutorAnswer({
           session_id: sessionPath,
           question_id: String(currentQuestion.id),
           is_correct: isCorrect,
-          wager: confidenceWagers[currentQuestion.id] === 10 ? 'high' : 'low',
-          user_answer: String(ans)
+          wager: 'low',
+          user_answer: resolvedUserAnswer
         });
-        
+
         if (isCorrect) {
           setScores(prev => ({ ...prev, [currentQuestion.id]: true }));
           setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
           setStreak(prev => prev + 1);
         } else {
-          const diag = res.diagnosis;
+          const diag = subRes.diagnosis;
           if (diag.remediation_question) {
-            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: diag.misconception_text }));
+            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: diag.misconception_text || explanation }));
             setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: diag.remediation_question }));
             setScores(prev => ({ ...prev, [currentQuestion.id]: false }));
             setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
             setStreak(0);
           } else {
-            setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: diag.hint || "Try again!" }));
+            setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: explanation }));
             setRetryActive(prev => ({ ...prev, [currentQuestion.id]: true }));
           }
         }
-      } catch (err: any) {
-        toast.error(err.message || 'Submission failed');
-      } finally {
-        setIsSubmitting(false);
-      }
-    } else {
-      setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
-      setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
-      setStreak(prev => isCorrect ? prev + 1 : 0);
+      } else {
+        setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
+        setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
 
-      // Call logging endpoints
-      const timeTakenMs = Date.now() - questionStartTimeRef.current;
-      if (notePath) {
-        sidecarApi.recordPerformance({
-          note_path: notePath,
-          was_correct: isCorrect,
-          time_ms: timeTakenMs,
-          question_type: currentQuestion.type,
-          difficulty: String(currentQuestion.difficulty || '1'),
-          confidence: confidenceWagers[currentQuestion.id] || undefined,
-          question_id: String(currentQuestion.id)
-        }).catch(console.error);
+        const activeTutorSessionId = localStorage.getItem('ater_active_session_id');
+        const isRemediationNote = typeof notePath === 'string' && notePath.includes('remediation_temp');
+        if (activeTutorSessionId && !isRemediationNote) {
+          await sidecarApi.submitTutorAnswer({
+            session_id: activeTutorSessionId,
+            question_id: String(currentQuestion.id),
+            is_correct: isCorrect,
+            wager: 'low',
+            user_answer: resolvedUserAnswer,
+          }).catch((err) => {
+            console.error('[usePracticeSession] Tutor recall persistence failed:', err);
+          });
+        }
+
+        if (!isCorrect) {
+          const attempt = failureAttempts[String(currentQuestion.id)] || 0;
+          const history = remediationHistory[String(currentQuestion.id)] || { seenTypes: [], lessonSummaries: [] };
+          try {
+            const remRes = await sidecarApi.practiceRemediate({
+              note_path: notePath || '',
+              question: currentQuestion,
+              user_answer: resolvedUserAnswer,
+              attempt_number: attempt,
+              seen_question_types: history.seenTypes,
+              seen_lesson_summaries: history.lessonSummaries,
+            });
+            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: remRes.detailed_lesson }));
+            setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: remRes.remediation_question }));
+            // Record the new type and a short summary to avoid future repetition
+            const newType = remRes.remediation_question?.type || 'writing';
+            const lessonSummary = (remRes.detailed_lesson || '').slice(0, 120);
+            setRemediationHistory(prev => ({
+              ...prev,
+              [String(currentQuestion.id)]: {
+                seenTypes: [...history.seenTypes, newType],
+                lessonSummaries: [...history.lessonSummaries, lessonSummary],
+              }
+            }));
+          } catch (e) {
+            console.error("Failed to generate AI remediation, using local fallback:", e);
+            const remediation = buildFallbackRemediationQuestion(currentQuestion, ans, attempt, notePath, history.seenTypes);
+            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: explanation }));
+            setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: remediation }));
+          }
+          setFailureAttempts(prev => ({ ...prev, [currentQuestion.id]: attempt + 1 }));
+        }
+
+        const timeTakenMs = Date.now() - questionStartTimeRef.current;
+        if (notePath) {
+          await sidecarApi.recordPerformance({
+            note_path: notePath,
+            was_correct: isCorrect,
+            time_ms: timeTakenMs,
+            question_type: currentQuestion.type,
+            confidence: 3,
+            question_id: String(currentQuestion.id)
+          }).catch(console.error);
+        }
       }
+    } catch (err: any) {
+      toast.error(err.message || 'Verification failed');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [currentQuestion, isRevealed, userAnswers, currentQuestionIdx, notePath, confidenceWagers, sessionPath, isSubmitting]);
+  }, [currentQuestion, isRevealed, userAnswers, currentQuestionIdx, notePath, sessionPath, isSubmitting, failureAttempts, remediationHistory]);
 
   const handleRetry = useCallback(() => {
     if (!currentQuestion) return;
@@ -271,6 +549,7 @@ export function usePracticeSession() {
       nextQuestions.splice(currentQuestionIdx + 1, 0, rq);
       setQuestions(nextQuestions);
       setCurrentQuestionIdx(prev => prev + 1);
+      setRevealedStates(prev => ({ ...prev, [currentQuestionIdx + 1]: false }));
       setKeywordChecks({});
       questionStartTimeRef.current = Date.now();
     }
@@ -292,6 +571,22 @@ export function usePracticeSession() {
         confidence: confidenceWagers[currentQuestion.id] || undefined,
         question_id: String(currentQuestion.id)
       }).catch(console.error);
+
+      const activeTutorSessionId = localStorage.getItem('ater_active_session_id');
+      const isRemediationNote = typeof notePath === 'string' && notePath.includes('remediation_temp');
+      if (activeTutorSessionId && !isRemediationNote) {
+        const ans = userAnswers[currentQuestion.id];
+        const resolvedUserAnswer = ans !== undefined ? formatAnswerValue(resolveSelectedAnswer(currentQuestion, ans)) : '';
+        sidecarApi.submitTutorAnswer({
+          session_id: activeTutorSessionId,
+          question_id: String(currentQuestion.id),
+          is_correct: isCorrect,
+          wager: 'low',
+          user_answer: resolvedUserAnswer,
+        }).catch((err) => {
+          console.error('[usePracticeSession] Tutor self-grade recall persistence failed:', err);
+        });
+      }
     }
 
     // Direct progression for self-graded questions in MiniPracticeUI
@@ -306,7 +601,7 @@ export function usePracticeSession() {
         setShowScore(true);
       }
     }
-  }, [currentQuestion, currentQuestionIdx, questions.length, notePath, scores, addPracticeResult, currentHub, confidenceWagers]);
+  }, [currentQuestion, currentQuestionIdx, questions.length, notePath, scores, addPracticeResult, currentHub, confidenceWagers, userAnswers]);
 
   const nextQuestion = useCallback(async (latestGrade?: boolean) => {
     if (!currentQuestion) return;
@@ -340,8 +635,8 @@ export function usePracticeSession() {
       questionStartTimeRef.current = Date.now();
     } else {
       // Complete practice session
-      const finalScores = latestGrade !== undefined 
-        ? { ...scores, [currentQuestion.id]: latestGrade } 
+      const finalScores = latestGrade !== undefined
+        ? { ...scores, [currentQuestion.id]: latestGrade }
         : scores;
       const correctCount = Object.values(finalScores).filter(Boolean).length;
       const total = questions.length;
@@ -384,7 +679,7 @@ export function usePracticeSession() {
   // Feynman Lock Unlock handler
   const submitFeynmanChallenge = useCallback(async () => {
     if (!currentQuestion || !currentQuestion.note_id || !feynmanExplanation.trim()) return;
-    
+
     setIsFeynmanValidating(true);
     setFeynmanError(null);
 
@@ -393,7 +688,7 @@ export function usePracticeSession() {
       if (res.success) {
         toast.success("Cognitive Lock Unlocked! Memory weights updated.");
         const noteId = currentQuestion.note_id;
-        
+
         setUnlockedNotes(prev => {
           const next = new Set(prev);
           next.add(noteId);
@@ -413,7 +708,7 @@ export function usePracticeSession() {
             }
           };
         });
-        
+
         setFeynmanExplanation('');
       } else {
         if (res.missing_keywords && res.missing_keywords.length > 0) {
@@ -447,6 +742,10 @@ export function usePracticeSession() {
     setFeynmanError(null);
     setGlobalTimeLeft(null);
     setQuestionTimeLeft(null);
+    setRemediationHistory({});
+    setFailureAttempts({});
+    setMisconceptionText({});
+    setRemediationQuestion({});
     if (autoAdvanceTimeoutRef.current) {
       clearTimeout(autoAdvanceTimeoutRef.current);
       autoAdvanceTimeoutRef.current = null;
@@ -480,13 +779,13 @@ export function usePracticeSession() {
         if (prev === null) return null;
         if (prev <= 1) {
           toast.warning("Question time expired! Marked as incorrect.");
-          
+
           // Submit empty/incorrect answer if not revealed
           if (!isRevealed) {
             setScores(s => ({ ...s, [currentQuestion.id]: false }));
             setRevealedStates(r => ({ ...r, [currentQuestionIdx]: true }));
             setStreak(0);
-            
+
             // Log telemetry performance
             const timeTakenMs = Date.now() - questionStartTimeRef.current;
             if (notePath) {
