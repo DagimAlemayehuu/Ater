@@ -42,7 +42,6 @@ from src.domains.ater.service import AterService
 from src.domains.ater.agents import (
     TheoryAgent,
     PractitionerAgent,
-    VerifierAgent,
     get_persona
 )
 from src.domains.ater.templates import render_atomic_note, build_dynamic_section_plan
