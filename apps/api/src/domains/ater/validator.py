@@ -474,7 +474,36 @@ class AterValidator:
             # before checking for terminal punctuation to avoid false-positives.
             stripped = section_body.strip()
             # Cleanly remove common markdown horizontal rules at the end of sections
-            cleaned = re.sub(r'[\s\n\-\*_]+$', '', stripped)
+            cleaned = stripped
+            while True:
+                cleaned = cleaned.rstrip()
+                if not cleaned:
+                    break
+
+                last_char = cleaned[-1]
+                if last_char not in ('-', '*', '_'):
+                    break
+
+                # Count consecutive occurrences of this specific character (ignoring spaces/tabs)
+                # scanning backwards to see if it forms a valid markdown horizontal rule.
+                count = 0
+                idx = len(cleaned) - 1
+                while idx >= 0:
+                    c = cleaned[idx]
+                    if c == last_char:
+                        count += 1
+                        idx -= 1
+                    elif c in (' ', '\t'):
+                        idx -= 1
+                    else:
+                        break
+
+                # Ensure the sequence was at least 3 characters and is preceded by a newline (or start of string)
+                # to prevent incorrectly stripping valid text like '***bold and italic***'
+                if count >= 3 and (idx < 0 or cleaned[idx] == '\n'):
+                    cleaned = cleaned[:idx + 1]
+                else:
+                    break
             
             if len(cleaned) > 10:  # skip trivially empty sections only
                 is_math_mode = mode in ("MATH-PURE", "ECON-MICRO", "ECON-MACRO", "QUANT-LOGIC") or any(

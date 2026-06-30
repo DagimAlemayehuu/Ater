@@ -183,3 +183,91 @@ title: RatioCheck
 """
     assert AterValidator.check_section_duplication(note_c)
 
+
+def test_validator_markdown_artifacts_truncation():
+    """Test that markdown artifacts (---, ***, ___) are stripped but valid trailing markdown (e.g. **bold**) is preserved."""
+    # A valid note ending in a horizontal rule.
+    note_with_hr = """---
+title: HR Note
+type: Atomic Note
+course: General
+---
+
+# 1. Mental Model
+This is a complete sentence ending with a horizontal rule.
+---
+
+# 2. Section Two
+This is section two. [[Concept_1]]
+
+# 3. Proving Grounds
+```interactive-quiz
+[
+  {
+    "id": "q1",
+    "type": "recall",
+    "difficulty": "L1",
+    "question": "What is the CPU compared to in the mental model?",
+    "answer": "A conductor",
+    "explanation": "The analogy maps the CPU to an orchestra conductor."
+  },
+  {
+    "id": "q2",
+    "type": "apply",
+    "difficulty": "L2",
+    "question": "Apply it.",
+    "answer": "Like this.",
+    "explanation": "Because."
+  }
+]
+```
+"""
+    is_valid, errors = AterValidator.validate_structure(note_with_hr, course="General")
+    # If the horizontal rule was incorrectly handled, we might get a SECTION_TRUNCATION error.
+    assert is_valid, f"Expected note with horizontal rule to pass, got: {errors}"
+
+    # A valid note ending with **bold** text which lacks terminal punctuation like a period.
+    note_with_bold = """---
+title: Bold Note
+type: Atomic Note
+course: General
+---
+
+# 1. Mental Model
+This section ends with **bold text**
+
+# 2. Section Two
+This is section two. [[Concept_2]]
+
+# 3. Proving Grounds
+```interactive-quiz
+[
+  {
+    "id": "q1",
+    "type": "recall",
+    "difficulty": "L1",
+    "question": "What is the CPU compared to in the mental model?",
+    "answer": "A conductor",
+    "explanation": "The analogy maps the CPU to an orchestra conductor."
+  },
+  {
+    "id": "q2",
+    "type": "apply",
+    "difficulty": "L2",
+    "question": "Apply it.",
+    "answer": "Like this.",
+    "explanation": "Because."
+  }
+]
+```
+"""
+    # Previously, \-\*_+$ would strip ** and cause "bold text" to be evaluated as a truncated string
+    # (since the terminal check might fail, although "t" is at the end, but wait, if it ends with "text",
+    # 't' is not a valid terminal, and it matches [A-Za-z], so it would be flagged as truncated).
+    # Wait, the valid_terminal check includes `*`, but if `**` was stripped, it ends in `t` and is flagged!
+    # Let's verify that bold text is correctly processed now.
+    is_valid, errors = AterValidator.validate_structure(note_with_bold, course="General")
+    # "bold text**" ends with "*", which is in valid_terminal!
+    # With the fix, `**` is NOT stripped, so last char is `*`, which is valid.
+    # Without the fix, `**` WAS stripped, last char was `t`, so it WAS flagged as truncated.
+    assert is_valid, f"Expected note ending in **bold** to pass, got: {errors}"
