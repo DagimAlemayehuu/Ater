@@ -152,7 +152,7 @@ export function CreateBanner({ label, onConfirm, onCancel, placeholder }: {
 export function BigPropertyCard({ label, value, schema, onUpdate }: {
   label: string; value: any; schema?: any; onUpdate: (val: any) => void
 }) {
-  const cardId = useMemo(() => Math.random().toString(36).substr(2, 9), [])
+  const cardId = useMemo(() => crypto.randomUUID(), [])
   const [editing, setEditing] = useState(false)
   const [editVal, setEditVal] = useState(stripWL(value ?? ''))
 

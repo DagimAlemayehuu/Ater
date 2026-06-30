@@ -70,7 +70,7 @@ export const usePomodoroStore = create<PomodoroState>()(
       setShowStats: (show) => set({ showStats: show }),
       
       addHistory: (session) => set((state) => {
-        const id = Math.random().toString(36).substr(2, 9);
+        const id = crypto.randomUUID();
         // Async API call
         sidecarApi.logStudySession(session.hub, session.duration * 60, state.mode).catch(console.error);
         
@@ -89,7 +89,7 @@ export const usePomodoroStore = create<PomodoroState>()(
       }),
 
       addNoteFocus: (notePath, duration, hub) => set((state) => {
-        const id = Math.random().toString(36).substr(2, 9);
+        const id = crypto.randomUUID();
         // Async API call
         sidecarApi.logNoteVisit(notePath, duration).catch(console.error);
 
@@ -109,7 +109,7 @@ export const usePomodoroStore = create<PomodoroState>()(
       }),
 
       addPracticeResult: (hub, score, total, notePath) => set((state) => {
-        const id = Math.random().toString(36).substr(2, 9);
+        const id = crypto.randomUUID();
         // Async API call
         sidecarApi.logPracticeResult(hub, score, total, notePath).catch(console.error);
 
