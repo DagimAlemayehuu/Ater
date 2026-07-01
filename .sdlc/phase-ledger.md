@@ -1,48 +1,52 @@
-# Phase Ledger: perfect-artifacts
+# Phase Ledger: perfect-ci-cd
 
-## Phase 1: Loop Guard Preprocessor do-while Support
+## Phase 1: Optimizing CI/CD Caching
 Status: completed
 OpenSpec source:
-- Main change: openspec/changes/perfect-artifacts/
+- Main change: openspec/changes/perfect-ci-cd/
 - Phase spec/change: none
 OpenSpec tasks:
-- [x] 1.1 Add helper `isDoWhileKeyword` to detect if `while` is the ending of a `do-while` loop in `apps/desktop/src/lib/artifacts/sandbox.ts`
-- [x] 1.2 Update `injectLoopGuardToJS` to support `do` loops (injecting guard declarations and increment statements) and skip rewriting the ending `while` keyword of `do-while` loops
-- [x] 1.3 Add unit tests to `apps/desktop/src/tests/sandboxFrame.test.ts` verifying that `do-while` loops are successfully guarded and execute/throw correctly
+- [x] 1.1 Re-order setup steps in `.github/workflows/ci.yml` and add `cache: 'pnpm'`
+- [x] 1.2 Re-order setup steps in `.github/workflows/release.yml` and add `cache: 'pnpm'`
+- [x] 1.3 Integrate `swatinem/rust-cache@v2` into `.github/workflows/ci.yml` for macOS and Windows jobs
+- [x] 1.4 Integrate `swatinem/rust-cache@v2` into `.github/workflows/release.yml` for macOS and Windows jobs
+- [x] 1.5 Cache Playwright browser binaries in `.github/workflows/ci.yml`
 OpenSpec requirements/scenarios:
-- `Loop Guard Watchdog` -> `Halting infinite do while loops in sandbox`
+- `Cross-platform Caching in CI/CD`: The CI/CD workflows SHALL cache Node (`pnpm`) dependencies and Rust (`cargo`) build target directories to optimize execution time.
 Allowed files/areas:
-- `apps/desktop/src/lib/artifacts/sandbox.ts`
-- `apps/desktop/src/tests/sandboxFrame.test.ts`
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
 Forbidden scope:
-- UnifiedSandboxViewer or other UI files.
+- unrelated refactors
+- upgrading main Tauri or Rust compiler versions
+- changing release repository details
 Verification:
-- `pnpm --filter @ater/desktop test`
+- Validate GHA workflow syntax using local validator or lint checks.
 Manual preview impact:
-- None (internal loop preprocessor only).
+- None (CI workflow changes).
 Completion report:
-- Added `isDoWhileKeyword` helper and `do` keyword matching in the loop preprocessor. Standard and single-statement do-while loops are now fully supported, parsed, and guarded correctly without throwing syntax errors. All 9 loop preprocessor test cases passed successfully.
+- Successfully optimized Node/pnpm dependency caching and Rust compiler target/registry caching using `swatinem/rust-cache@v2` on both macOS and Windows runners. Configured Playwright browser binary caching to speed up E2E workflow runs.
 
-## Phase 2: Sandbox Viewer Auto-Compilation and Retry
+
+## Phase 2: Hardening Windows CI & Environment Defaults
 Status: completed
 OpenSpec source:
-- Main change: openspec/changes/perfect-artifacts/
+- Main change: openspec/changes/perfect-ci-cd/
 - Phase spec/change: none
 OpenSpec tasks:
-- [x] 2.1 Update `handleOfflineRetry` in `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx` to clear active compile errors when retrying connection
-- [x] 2.2 Add auto-compilation `useEffect` in `UnifiedSandboxViewer` that triggers LLM compilation of `sandboxSpec` nodes when they lack sandbox HTML code
-- [x] 2.3 Store note content in local state when reading an Obsidian note in `UnifiedSandboxViewer` to pass it as context for LLM compilation
+- [x] 2.1 Upgrade Windows CI job `check-rust-windows` to `test-rust-windows` to run a full build and test suite (`cargo test`)
+- [x] 3.1 Add default fallback values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.github/workflows/ci.yml`
 OpenSpec requirements/scenarios:
-- `Unified Sandbox Render Component` -> `Auto compile sandbox specs in Obsidian Note Viewer`
-- `Offline Error Warning` -> `Retrying compilation after network error clears active error state`
+- `Windows Test Validation`: The CI workflow SHALL perform full build and unit testing (`cargo test`) for Rust code on the Windows runner.
 Allowed files/areas:
-- `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx`
+- `.github/workflows/ci.yml`
 Forbidden scope:
-- Sandbox preprocessor logic (sandbox.ts) or other routes.
+- unrelated refactors
+- upgrading main Tauri or Rust compiler versions
+- changing release repository details
 Verification:
-- `pnpm --filter @ater/desktop test`
-- Manual testing of note view compilation and retry button.
+- Validate GHA workflow syntax.
 Manual preview impact:
-- When opening an Obsidian note with an uncompiled `<sandbox-spec>`, it will automatically compile and display in the split pane preview.
+- None.
 Completion report:
-- Added auto-compilation useEffect inside UnifiedSandboxViewer utilizing local state noteContentText to fetch the note's markdown content as generation context. Updated the handleOfflineRetry button handler to clear active compile errors, enabling re-triggering of compilation after simulated offline/unhealthy sidecar retries.
+- Successfully upgraded Windows CI from simple cargo check to full release build and cargo test execution (`test-rust-windows`). Added fallback values for all Supabase frontend environment variables in `ci.yml` to prevent failures when building PRs from fork repositories.

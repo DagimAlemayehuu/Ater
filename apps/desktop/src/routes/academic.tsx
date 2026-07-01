@@ -212,18 +212,20 @@ export default function AcademicDashboard() {
       const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
       const cleanName = name.replace(/_/g, ' ').trim()
       
+      const createPromises = []
       for (let i = 0; i < years; i++) {
         const title = `Year ${romans[i] || (i + 1)}`
         const status = i < currentYearIdx ? '[[Completed]]' : i === currentYearIdx ? '[[Active]]' : '[[Planned]]'
         const isCurrent = i === currentYearIdx
         
-        await sidecarApi.createVaultRow('years', title, {
+        createPromises.push(sidecarApi.createVaultRow('years', title, {
           Status: status,
           'Academic Level': `[[${level}]]`,
           'Current Year': isCurrent,
           Program: `[[${cleanName}]]`
-        })
+        }))
       }
+      await Promise.all(createPromises)
       toast.success('Program roadmap deployed')
       fetchData()
     } catch (err) {

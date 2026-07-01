@@ -326,14 +326,20 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             // Update store — skip undefined values (not JSON-serializable by Tauri IPC).
             // Delete the key from the store instead so it cleanly reverts to default.
-            for (const key of Object.keys(entries)) {
-                const val = entries[key];
-                if (val === undefined) {
-                    try { await store.delete(key); } catch { /* key may not exist yet */ }
-                } else {
-                    await store.set(key, val);
-                }
-            }
+            await Promise.all(
+                Object.keys(entries).map(async (key) => {
+                    const val = entries[key];
+                    if (val === undefined) {
+                        try {
+                            await store.delete(key);
+                        } catch {
+                            /* key may not exist yet */
+                        }
+                    } else {
+                        await store.set(key, val);
+                    }
+                })
+            );
 
             await store.save();
             setConfig(updatedConfig);
