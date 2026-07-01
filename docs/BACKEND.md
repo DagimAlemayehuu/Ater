@@ -41,3 +41,18 @@ All API services reside in `apps/api/src/domains/`:
   * `notebooklm_research`: Compiles research dossiers from notebook sources.
   * `notebooklm_studio_create`: Triggers studio asset generation.
 * Prompt directives and guidelines are stored in `templates.py`.
+
+---
+
+## 5. Persistent Chat Runtime (`ater/chat_runtime/`)
+* **`ChatStorage` (`store.py`):**
+  * Manages the SQLite database schemas for conversations, messages, branches, attachments, memories, stream runs, and tool call logs.
+* **`ContextPacker` (`context.py`):**
+  * Assembles system prompt, memories, historical messages, and attached source chunks under a strict token budget.
+* **`MemoryManager` (`memory.py`):**
+  * Extracts preferences, facts, and settings from assistant turns and manages durable/session memory records.
+* **`AttachmentManager` (`attachments.py`):**
+  * Handles PDF robust extraction, Markdown paragraph chunking, Obsidian note resolution, and ingestion promotion to source-grounded planner.
+* **`StreamingManager` (`streaming.py`):**
+  * Orchestrates turn-based SSE stream generation, cancellation checks, message regeneration, branching edit paths, and audits tool calls with automatic sensitive argument redaction.
+

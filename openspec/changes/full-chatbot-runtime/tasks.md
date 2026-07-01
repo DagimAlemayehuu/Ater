@@ -57,8 +57,8 @@
 
 ## 7. Verification And Documentation
 
-- [ ] 7.1 Run backend tests for chatbot runtime, source-driven learning, Teach Anything, tutor runtime, and learning runtime E2E with mocked models.
-- [ ] 7.2 Run desktop tests for Oracle chat UX, sidecar API client, artifact panel interactions, and LearningWorkspace restore behavior.
-- [ ] 7.3 Add or update developer documentation describing chat runtime storage, context packing, memory policy, attachment handling, and frontend migration rules.
-- [ ] 7.4 Run OpenSpec validation/status checks for `full-chatbot-runtime`.
-- [ ] 7.5 Produce a manual desktop verification checklist covering persistent conversations, memory controls, attachments, regeneration, cancellation, Teach Anything, source learning, tutor restore, and offline reopening.
+- [x] 7.1 Run backend tests for chatbot runtime, source-driven learning, Teach Anything, tutor runtime, and learning runtime E2E with mocked models.
+- [x] 7.2 Run desktop tests for Oracle chat UX, sidecar API client, artifact panel interactions, and LearningWorkspace restore behavior.
+- [x] 7.3 Add or update developer documentation describing chat runtime storage, context packing, memory policy, attachment handling, and frontend migration rules.
+- [x] 7.4 Run OpenSpec validation/status checks for `full-chatbot-runtime`.
+- [x] 7.5 Produce a manual desktop verification checklist covering persistent conversations, memory controls, attachments, regeneration, cancellation, Teach Anything, source learning, tutor restore, and offline reopening.
