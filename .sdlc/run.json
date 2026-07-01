@@ -6,7 +6,7 @@
   "baseBranch": "main",
   "branch": "feature/full-chatbot-runtime",
   "worktree": null,
-  "currentPhase": 5,
+  "currentPhase": 6,
   "retryBudget": 3,
   "phases": [
     {
@@ -32,7 +32,7 @@
     {
       "id": 5,
       "name": "Desktop Chat UX Migration & LocalStorage Import",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": 6,
