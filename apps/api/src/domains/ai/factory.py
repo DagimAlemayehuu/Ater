@@ -79,7 +79,7 @@ class TrackingCallbackHandler(AsyncCallbackHandler, BaseCallbackHandler):
             # This completely eliminates "ghost tokens" from over-estimated permits.
             exact_tokens = limit_data.get('total_tokens', 0)
             if exact_tokens > 0:
-                governor._record_usage_db(exact_tokens, 1)
+                governor._record_usage_db(tokens=exact_tokens, requests=1)
                 
             if limit_data.get("requests_limit") or limit_data.get("tokens_limit"):
                 governor.update_limits_from_provider(
