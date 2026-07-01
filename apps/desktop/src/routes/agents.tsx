@@ -607,11 +607,43 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
     useArtifactStore.getState().resetArtifacts();
 
-    await loadMessages(convId);
-    setPreview(conv.preview);
-    setPanelOpen(conv.panelOpen);
-    if (onNoteSelect) {
-      onNoteSelect(conv.preview ? (conv.preview.notePath || conv.preview.lessonPath || null) : null);
+    try {
+      const msgs = await sidecarApi.getMessages(convId);
+      setMessages(msgs);
+
+      // Restore tutor session from metadata if present
+      const assistantWithMeta = [...msgs].reverse().find(m => m.role === 'assistant' && m.metadata?.session_id);
+      if (assistantWithMeta && assistantWithMeta.metadata) {
+        const meta = assistantWithMeta.metadata;
+        const notePath = meta.note_path || meta.lesson_path || '';
+        const nextPreview = {
+          title: meta.title || 'Teacher Lesson',
+          lessonPath: meta.lesson_path || '',
+          notePath,
+          hubPath: meta.hub_path || '',
+          previewUrl: '',
+        };
+        setPreview(nextPreview);
+        if (meta.session_id) {
+          try {
+            const session = await sidecarApi.getTutorStatus(meta.session_id);
+            if (session) {
+              setTutorSession(session);
+              setPanelOpen(true);
+            }
+          } catch (e) {
+            console.error('[Oracle] Failed to restore tutor session:', e);
+          }
+        }
+      } else {
+        setPreview(conv.preview);
+        setPanelOpen(conv.panelOpen);
+        if (onNoteSelect) {
+          onNoteSelect(conv.preview ? (conv.preview.notePath || conv.preview.lessonPath || null) : null);
+        }
+      }
+    } catch (err) {
+      console.error('[Oracle] Failed to load messages:', err);
     }
   }, [conversations, isLoading, onNoteSelect, loadMessages]);
 
