@@ -18,12 +18,12 @@
 
 ## 3. Attachments And Source Context
 
-- [ ] 3.1 Implement chat attachment records for PDF, Markdown, text, Obsidian note, and active artifact attachment types.
-- [ ] 3.2 Implement attachment text extraction and chunk metadata for PDFs, Markdown, and text files using existing source/PDF utilities where possible.
-- [ ] 3.3 Implement selected Obsidian note attachments by storing vault-relative paths and readable content references.
-- [ ] 3.4 Add attachment context retrieval into the context packer with citation/source IDs.
-- [ ] 3.5 Add promotion path from chat attachment to source-driven curriculum planning.
-- [ ] 3.6 Add backend tests for attachment extraction, note attachment grounding, attachment citations, and source-driven promotion.
+- [x] 3.1 Implement chat attachment records for PDF, Markdown, text, Obsidian note, and active artifact attachment types.
+- [x] 3.2 Implement attachment text extraction and chunk metadata for PDFs, Markdown, and text files using existing source/PDF utilities where possible.
+- [x] 3.3 Implement selected Obsidian note attachments by storing vault-relative paths and readable content references.
+- [x] 3.4 Add attachment context retrieval into the context packer with citation/source IDs.
+- [x] 3.5 Add promotion path from chat attachment to source-driven curriculum planning.
+- [x] 3.6 Add backend tests for attachment extraction, note attachment grounding, attachment citations, and source-driven promotion.
 
 ## 4. Streaming And Tool Audit
 

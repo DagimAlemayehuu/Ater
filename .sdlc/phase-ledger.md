@@ -55,17 +55,17 @@ Completion report:
 - Implemented ContextPacker for priority prompt composition and token budget management, writing context snapshot JSON to sqlite. Implemented MemoryManager supporting durable and session scopes with heuristic turn extraction. Verified all 4 tests in test_context_memory.py passing in 0.16s.
 
 ## Phase 3: Attachments & Source Context
-Status: pending
+Status: completed
 OpenSpec source:
 - Main change: openspec/changes/full-chatbot-runtime/
 - Phase spec/change: none
 OpenSpec tasks:
-- [ ] 3.1 Implement chat attachment records for PDF, Markdown, text, Obsidian note, and active artifact attachment types.
-- [ ] 3.2 Implement attachment text extraction and chunk metadata for PDFs, Markdown, and text files using existing source/PDF utilities where possible.
-- [ ] 3.3 Implement selected Obsidian note attachments by storing vault-relative paths and readable content references.
-- [ ] 3.4 Add attachment context retrieval into the context packer with citation/source IDs.
-- [ ] 3.5 Add promotion path from chat attachment to source-driven curriculum planning.
-- [ ] 3.6 Add backend tests for attachment extraction, note attachment grounding, attachment citations, and source-driven promotion.
+- [x] 3.1 Implement chat attachment records for PDF, Markdown, text, Obsidian note, and active artifact attachment types.
+- [x] 3.2 Implement attachment text extraction and chunk metadata for PDFs, Markdown, and text files using existing source/PDF utilities where possible.
+- [x] 3.3 Implement selected Obsidian note attachments by storing vault-relative paths and readable content references.
+- [x] 3.4 Add attachment context retrieval into the context packer with citation/source IDs.
+- [x] 3.5 Add promotion path from chat attachment to source-driven curriculum planning.
+- [x] 3.6 Add backend tests for attachment extraction, note attachment grounding, attachment citations, and source-driven promotion.
 OpenSpec requirements/scenarios:
 - `Chat attachments`: The system SHALL allow chat messages to include local-first attachments for grounding normal conversation and learning flows.
 - `Chat attachment source grounding`: Source-driven learning SHALL support sources attached through the durable chatbot runtime.
@@ -74,10 +74,11 @@ Allowed files/areas:
 - `apps/api/tests/`
 Forbidden scope:
 - unrelated refactors
+- frontend client UI changes
 Verification:
 - Run: `cd apps/api && uv run python -m pytest tests/`
 Completion report:
-- pending
+- Implemented AttachmentManager class for extracting, chunking, and saving attachments. Handled PDF robust loading, text, markdown, and Obsidian note attachments. Added promotion route to source planner. Verified via test_attachments.py (2 tests passed in 3.7s).
 
 ## Phase 4: Streaming, Cancellation & Tool Auditing
 Status: pending

@@ -6,7 +6,7 @@
   "baseBranch": "main",
   "branch": "feature/full-chatbot-runtime",
   "worktree": null,
-  "currentPhase": 3,
+  "currentPhase": 4,
   "retryBudget": 3,
   "phases": [
     {
@@ -22,7 +22,7 @@
     {
       "id": 3,
       "name": "Attachments & Source Context",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": 4,
