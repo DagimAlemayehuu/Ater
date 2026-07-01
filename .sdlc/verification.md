@@ -22,7 +22,7 @@
   - `test-desktop`: Vitest run, typechecks, and production build run on Ubuntu/macOS/Windows.
   - `test-rust`: Rust cargo test run on macos-14.
   - `test-e2e`: Playwright E2E suite run on ubuntu-latest.
-  - `check-rust-windows`: Cargo check run on windows-latest.
+  - `test-rust-windows`: Cargo build and unit test run on windows-latest.
 - **Optional**: N/A
 - **Missing**: N/A
 
