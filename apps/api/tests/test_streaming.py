@@ -40,7 +40,7 @@ async def test_streaming_success_and_tool_audit(temp_db, secrets):
     events = []
     async for event in sm.stream_assistant_turn(cid, "Hello! Please run tool.", secrets):
         events.append(event)
-        
+    print("EVENTS ARE:", events)
     assert len(events) > 0
     assert any("run_start" in e for e in events)
     assert any("chunk" in e for e in events)

@@ -2464,5 +2464,303 @@ export const sidecarApi = {
             console.error('[Tauri Native RAG] getLearnerRecommendations failed:', err);
             throw err;
         }
+    },
+    // --- Chat Runtime Client API ---
+    createConversation: async (title: string, metadata?: any) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ title, metadata })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] createConversation failed:', err);
+            throw err;
+        }
+    },
+    listConversations: async (includeArchived?: boolean) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations?include_archived=${!!includeArchived}`, {
+                method: 'GET',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] listConversations failed:', err);
+            throw err;
+        }
+    },
+    getConversation: async (convId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}`, {
+                method: 'GET',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] getConversation failed:', err);
+            throw err;
+        }
+    },
+    updateConversation: async (convId: string, data: { title?: string; metadata?: any }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify(data)
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] updateConversation failed:', err);
+            throw err;
+        }
+    },
+    deleteConversation: async (convId: string, hard?: boolean) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}?hard=${!!hard}`, {
+                method: 'DELETE',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] deleteConversation failed:', err);
+            throw err;
+        }
+    },
+    archiveConversation: async (convId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/archive`, {
+                method: 'POST',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] archiveConversation failed:', err);
+            throw err;
+        }
+    },
+    restoreConversation: async (convId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/restore`, {
+                method: 'POST',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] restoreConversation failed:', err);
+            throw err;
+        }
+    },
+    getMessages: async (convId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/messages`, {
+                method: 'GET',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] getMessages failed:', err);
+            throw err;
+        }
+    },
+    cancelStream: async (runId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/stream/cancel`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ run_id: runId })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] cancelStream failed:', err);
+            throw err;
+        }
+    },
+    regenerateMessage: async (convId: string, messageId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/regenerate`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ message_id: messageId })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] regenerateMessage failed:', err);
+            throw err;
+        }
+    },
+    branchMessage: async (convId: string, messageId: string, content: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/branch`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ message_id: messageId, content })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] branchMessage failed:', err);
+            throw err;
+        }
+    },
+    listMemories: async (conversationId?: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const url = conversationId 
+                ? `http://127.0.0.1:${port}/api/chat/memories?conversation_id=${conversationId}`
+                : `http://127.0.0.1:${port}/api/chat/memories`;
+            const res = await fetch(url, {
+                method: 'GET',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] listMemories failed:', err);
+            throw err;
+        }
+    },
+    createMemory: async (data: { scope: string; content: string; confidence?: number; conversation_id?: string; status?: string }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(data)
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] createMemory failed:', err);
+            throw err;
+        }
+    },
+    patchMemory: async (memoryId: string, data: { enabled?: boolean; status?: string }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories/${memoryId}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify(data)
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] patchMemory failed:', err);
+            throw err;
+        }
+    },
+    deleteMemory: async (memoryId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories/${memoryId}`, {
+                method: 'DELETE',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] deleteMemory failed:', err);
+            throw err;
+        }
+    },
+    uploadAttachment: async (convId: string, filePath: string, fileType: string, messageId?: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/attachments`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ file_path: filePath, file_type: fileType, message_id: messageId })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] uploadAttachment failed:', err);
+            throw err;
+        }
+    },
+    listAttachments: async (convId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/attachments`, {
+                method: 'GET',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] listAttachments failed:', err);
+            throw err;
+        }
+    },
+    promoteAttachment: async (attachmentId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/attachments/${attachmentId}/promote`, {
+                method: 'POST',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] promoteAttachment failed:', err);
+            throw err;
+        }
+    },
+    getMessageTools: async (messageId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/messages/${messageId}/tools`, {
+                method: 'GET',
+                headers
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] getMessageTools failed:', err);
+            throw err;
+        }
     }
 };
+
