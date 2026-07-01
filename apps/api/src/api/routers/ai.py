@@ -950,6 +950,24 @@ async def get_messages(
 ):
     return deps["storage"].get_messages(conv_id)
 
+@router.post("/chat/conversations/{conv_id}/messages")
+async def append_historical_message(
+    conv_id: str,
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    role = payload.get("role", "user")
+    content = payload.get("content", "")
+    status = payload.get("status", "completed")
+    parent_message_id = payload.get("parent_message_id")
+    return deps["storage"].append_message(
+        conv_id=conv_id,
+        role=role,
+        content=content,
+        status=status,
+        parent_message_id=parent_message_id
+    )
+
 @router.post("/chat/conversations/{conv_id}/stream")
 async def stream_turn(
     conv_id: str,

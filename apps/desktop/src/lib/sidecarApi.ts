@@ -2588,6 +2588,22 @@ export const sidecarApi = {
             throw err;
         }
     },
+    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/messages`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ role, content, parent_message_id: parentMessageId })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('[Oracle Client] appendMessage failed:', err);
+            throw err;
+        }
+    },
     cancelStream: async (runId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
@@ -2759,6 +2775,31 @@ export const sidecarApi = {
             return await res.json();
         } catch (err) {
             console.error('[Oracle Client] getMessageTools failed:', err);
+            throw err;
+        }
+    },
+    streamConversationTurn: async (
+        convId: string,
+        payload: {
+            message: string;
+            parent_message_id?: string;
+            token_budget?: number;
+            rag_context?: string;
+            user_context?: any;
+            active_artifact?: any;
+        }
+    ) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const sidecarToken = await invoke<string>('get_sidecar_token');
+            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/stream`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            console.error('[Oracle Client] streamConversationTurn failed:', err);
             throw err;
         }
     }

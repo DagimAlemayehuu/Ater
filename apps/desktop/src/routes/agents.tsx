@@ -48,8 +48,10 @@ import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
 import { open } from '@tauri-apps/plugin-dialog'
 
 interface Message {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
+  status?: string;
   customAction?: {
     label: string
     hubPath: string
@@ -114,35 +116,93 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
   };
 
   // Load conversation list
-  const [conversations, setConversations] = useState<SavedConversation[]>(() => {
-    try {
-      const saved = localStorage.getItem('ater_oracle_conversations');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [conversations, setConversations] = useState<SavedConversation[]>([]);
 
   // Active conversation ID
   const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
     return localStorage.getItem('ater_oracle_active_conversation_id') || null;
   });
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const list = await sidecarApi.listConversations(true);
+      const mapped = list.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        messages: [],
+        preview: c.metadata?.preview || null,
+        panelOpen: c.metadata?.panelOpen || false,
+        timestamp: c.updated_at ? new Date(c.updated_at).getTime() : Date.now(),
+        archived: c.archived || false
+      }));
+      setConversations(mapped);
+    } catch (err) {
+      console.error('[Oracle] Failed to list conversations:', err);
+    }
+  }, []);
+
+  const loadMessages = useCallback(async (convId: string) => {
+    try {
+      const msgs = await sidecarApi.getMessages(convId);
+      setMessages(msgs);
+    } catch (err) {
+      console.error('[Oracle] Failed to get messages:', err);
+    }
+  }, []);
+
+  // Import legacy localStorage conversations on first run
+  useEffect(() => {
+    const importLegacy = async () => {
+      const isImported = localStorage.getItem('ater_oracle_legacy_imported');
+      if (isImported === 'true') return;
+
+      const saved = localStorage.getItem('ater_oracle_conversations');
+      if (!saved) {
+        localStorage.setItem('ater_oracle_legacy_imported', 'true');
+        return;
+      }
+
+      try {
+        const legacyConvs = JSON.parse(saved);
+        for (const c of legacyConvs) {
+          const created = await sidecarApi.createConversation(c.title || 'Imported Chat', {
+            preview: c.preview,
+            panelOpen: c.panelOpen
+          });
+          if (created && created.id) {
+            for (const msg of (c.messages || [])) {
+              await sidecarApi.appendMessage(created.id, msg.role, msg.content);
+            }
+          }
+        }
+        localStorage.setItem('ater_oracle_legacy_imported', 'true');
+        loadConversations();
+      } catch (err) {
+        console.error('[Oracle] Legacy import failed:', err);
+      }
+    };
+    importLegacy();
+  }, [loadConversations]);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  useEffect(() => {
+    if (activeConversationId) {
+      loadMessages(activeConversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [activeConversationId, loadMessages]);
+
   const activeConv = useMemo(() => {
     if (!activeConversationId) return null;
     return conversations.find(c => c.id === activeConversationId) || null;
   }, [activeConversationId, conversations]);
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (activeConv) return activeConv.messages;
-    try {
-      const saved = localStorage.getItem('ater_oracle_chat_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
@@ -508,30 +568,25 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     }
   }, [input]);
 
-  const handleClearCurrentChat = useCallback(() => {
+  const handleClearCurrentChat = useCallback(async () => {
+    if (activeConversationId) {
+      try {
+        await sidecarApi.deleteConversation(activeConversationId, true);
+        loadConversations();
+      } catch (err) {
+        console.error('[Oracle] Clear failed:', err);
+      }
+    }
     setMessages([]);
     setPreview(null);
     setPanelOpen(false);
     useArtifactStore.getState().resetArtifacts();
     generatedSpecRef.current.clear();
-
     if (onNoteSelect) {
       onNoteSelect(null);
     }
-
-    if (activeConversationId) {
-      setConversations(prev => {
-        const updated = prev.map(c =>
-          c.id === activeConversationId
-            ? { ...c, title: 'New Chat', messages: [], preview: null, panelOpen: false, timestamp: Date.now() }
-            : c
-        );
-        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
-        return updated;
-      });
-    }
     toast.success('Chat cleared.');
-  }, [activeConversationId, onNoteSelect]);
+  }, [activeConversationId, onNoteSelect, loadConversations]);
 
   // Listen to the custom clear event from header
   useEffect(() => {
@@ -539,7 +594,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     return () => window.removeEventListener('ater-clear-chat', handleClearCurrentChat);
   }, [handleClearCurrentChat]);
 
-  const handleSelectConversation = useCallback((convId: string) => {
+  const handleSelectConversation = useCallback(async (convId: string) => {
     if (isLoading) {
       toast.warning("Please wait until response is complete.");
       return;
@@ -552,63 +607,25 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
     useArtifactStore.getState().resetArtifacts();
 
-    setMessages(conv.messages);
+    await loadMessages(convId);
     setPreview(conv.preview);
     setPanelOpen(conv.panelOpen);
     if (onNoteSelect) {
       onNoteSelect(conv.preview ? (conv.preview.notePath || conv.preview.lessonPath || null) : null);
     }
-  }, [conversations, isLoading, onNoteSelect]);
+  }, [conversations, isLoading, onNoteSelect, loadMessages]);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
     if (isLoading) {
       toast.warning("Please wait until response is complete.");
       return;
     }
-    const newId = `ater-conv-${Date.now()}`;
-    setActiveConversationId(newId);
-    localStorage.setItem('ater_oracle_active_conversation_id', newId);
-
-    setMessages([]);
-    setPreview(null);
-    setPanelOpen(false);
-    useArtifactStore.getState().resetArtifacts();
-    generatedSpecRef.current.clear();
-    if (onNoteSelect) {
-      onNoteSelect(null);
-    }
-  }, [isLoading, onNoteSelect]);
-
-  const handleDeleteConversation = useCallback((e: React.MouseEvent, convId: string) => {
-    e.stopPropagation();
-    if (isLoading) {
-      toast.warning("Please wait until response is complete.");
-      return;
-    }
-
-    setConversations(prev => {
-      const updated = prev.filter(c => c.id !== convId);
-      localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
-      return updated;
-    });
-
-    if (activeConversationId === convId) {
-      // Find what's left
-      const saved = localStorage.getItem('ater_oracle_conversations');
-      const list = saved ? JSON.parse(saved) : [];
-      if (list.length > 0) {
-        setActiveConversationId(list[0].id);
-        localStorage.setItem('ater_oracle_active_conversation_id', list[0].id);
-        setMessages(list[0].messages);
-        setPreview(list[0].preview);
-        setPanelOpen(list[0].panelOpen);
-        if (onNoteSelect) {
-          const selectedPreview = list[0].preview;
-          onNoteSelect(selectedPreview ? (selectedPreview.notePath || selectedPreview.lessonPath || null) : null);
-        }
-      } else {
-        setActiveConversationId(null);
-        localStorage.removeItem('ater_oracle_active_conversation_id');
+    try {
+      const created = await sidecarApi.createConversation('New Chat');
+      if (created && created.id) {
+        setActiveConversationId(created.id);
+        localStorage.setItem('ater_oracle_active_conversation_id', created.id);
+        loadConversations();
         setMessages([]);
         setPreview(null);
         setPanelOpen(false);
@@ -618,9 +635,52 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
           onNoteSelect(null);
         }
       }
+    } catch (err) {
+      toast.error('Failed to create new conversation');
     }
-    toast.success('Conversation deleted.');
-  }, [activeConversationId, isLoading, onNoteSelect]);
+  }, [isLoading, onNoteSelect, loadConversations]);
+
+  const handleDeleteConversation = useCallback(async (e: React.MouseEvent, convId: string) => {
+    e.stopPropagation();
+    if (isLoading) {
+      toast.warning("Please wait until response is complete.");
+      return;
+    }
+
+    try {
+      await sidecarApi.deleteConversation(convId, true);
+      const updated = conversations.filter(c => c.id !== convId);
+      setConversations(updated);
+
+      if (activeConversationId === convId) {
+        if (updated.length > 0) {
+          const first = updated[0];
+          setActiveConversationId(first.id);
+          localStorage.setItem('ater_oracle_active_conversation_id', first.id);
+          await loadMessages(first.id);
+          setPreview(first.preview);
+          setPanelOpen(first.panelOpen);
+          if (onNoteSelect) {
+            onNoteSelect(first.preview ? (first.preview.notePath || first.preview.lessonPath || null) : null);
+          }
+        } else {
+          setActiveConversationId(null);
+          localStorage.removeItem('ater_oracle_active_conversation_id');
+          setMessages([]);
+          setPreview(null);
+          setPanelOpen(false);
+          useArtifactStore.getState().resetArtifacts();
+          generatedSpecRef.current.clear();
+          if (onNoteSelect) {
+            onNoteSelect(null);
+          }
+        }
+      }
+      toast.success('Conversation deleted.');
+    } catch (err) {
+      toast.error('Failed to delete conversation');
+    }
+  }, [activeConversationId, isLoading, onNoteSelect, conversations, loadMessages]);
 
   useEffect(() => {
     setSidebarContent(
@@ -1096,9 +1156,17 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
     let currentId = activeConversationId;
     if (!currentId) {
-      currentId = `ater-conv-${Date.now()}`;
-      setActiveConversationId(currentId);
-      localStorage.setItem('ater_oracle_active_conversation_id', currentId);
+      try {
+        const created = await sidecarApi.createConversation('New Chat');
+        currentId = created.id;
+        setActiveConversationId(currentId);
+        localStorage.setItem('ater_oracle_active_conversation_id', currentId!);
+      } catch (err) {
+        toast.error('Failed to initialize conversation');
+        setIsLoading(false);
+        setActiveStatus(null);
+        return;
+      }
     }
 
     if (!textToSend) {
@@ -1178,8 +1246,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
       // 3. Call Assistant Stream API
       setActiveStatus('Contacting assistant...');
-      const response = await sidecarApi.oracleChatStream({
-        history: newMessages,
+      const parentMessageId = messages.length > 0 ? messages[messages.length - 1].id : undefined;
+
+      const response = await sidecarApi.streamConversationTurn(currentId!, {
+        message: text,
+        parent_message_id: parentMessageId,
         rag_context: ragContext,
         active_artifact: getActiveArtifactPayload(),
         user_context: userContext
@@ -1187,7 +1258,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '', status: 'incomplete' }]);
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Response body has no reader.');
@@ -1210,7 +1281,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
           try {
             const parsed = JSON.parse(trimmed.slice(6));
-            if (parsed.type === 'status') {
+            if (parsed.type === 'run_start') {
+              setActiveRunId(parsed.run_id);
+            } else if (parsed.type === 'status') {
               setActiveStatus(parsed.message);
               setGeneratingStatus(parsed.message);
             } else if (parsed.type === 'chunk') {
@@ -1351,6 +1424,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     } finally {
       setIsLoading(false);
       setActiveStatus(null);
+      setActiveRunId(null);
+      loadConversations();
     }
   };
 
@@ -1585,18 +1660,40 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
                 rows={1}
                 disabled={isLoading}
               />
-              <button
-                onClick={() => handleSendMessage()}
-                disabled={isLoading || !input.trim()}
-                className={cn(
-                  "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150",
-                  input.trim() && !isLoading
-                    ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40"
-                    : "text-muted-foreground/30 cursor-not-allowed"
-                )}
-              >
-                <Send size={14} />
-              </button>
+              {isLoading && activeRunId ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await sidecarApi.cancelStream(activeRunId);
+                      setIsLoading(false);
+                      setActiveStatus("Cancelled.");
+                      setGeneratingStatus(null);
+                      setActiveRunId(null);
+                      toast.success("Generation stopped.");
+                    } catch (err) {
+                      toast.error("Failed to cancel generation");
+                    }
+                  }}
+                  className="h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] bg-red-950/20 text-red-500 hover:bg-red-950/40 border border-red-500/20 shrink-0"
+                  title="Cancel Generation"
+                >
+                  <X size={14} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSendMessage()}
+                  disabled={isLoading || !input.trim()}
+                  className={cn(
+                    "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150 shrink-0",
+                    input.trim() && !isLoading
+                      ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40"
+                      : "text-muted-foreground/30 cursor-not-allowed"
+                  )}
+                >
+                  <Send size={14} />
+                </button>
+              )}
             </div>
           </div>
         </div>
