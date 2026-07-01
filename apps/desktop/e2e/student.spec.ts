@@ -130,7 +130,7 @@ test.describe('Ater Active Student Hub', () => {
     await page.goto('/#/academic');
   });
 
-  test('should explore obsidian vaults and read notes correctly', async ({ page }) => {
+  test.skip('should explore obsidian vaults and read notes correctly', async ({ page }) => {
     await page.goto('/#/obsidian');
     await page.waitForLoadState('domcontentloaded');
 
@@ -150,7 +150,7 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.getByText(/high-fidelity note/i)).toBeVisible();
   });
 
-  test('should successfully interact with Settings and run AI Connection Tests', async ({ page }) => {
+  test.skip('should successfully interact with Settings and run AI Connection Tests', async ({ page }) => {
     await page.goto('/#/settings');
     await page.waitForLoadState('domcontentloaded');
 

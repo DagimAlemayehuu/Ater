@@ -596,17 +596,6 @@ window.__TAURI__ = {
 };
 
 // ── Tauri v2 Internal Bridge Mocking ──
-
-// Intercept fetch calls for sidecar HTTP requests during E2E
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
-  const url = args[0];
-  if (typeof url === 'string' && url.includes('/api/notebooklm/auth/status')) {
-    return new Response(JSON.stringify({ auth_status: 'configured', email: 'test@example.com' }), { status: 200 });
-  }
-  return originalFetch(...args);
-};
-
 window.__TAURI_INTERNALS__ = {
   invoke: async (cmd, args, options) => {
     return window.__TAURI__.core.invoke(cmd, args);
