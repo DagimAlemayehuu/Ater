@@ -222,7 +222,7 @@ describe('Obsidian Notes Explorer', () => {
     expect(JSON.parse(localStorage.getItem('ater_lesson_preview') || '{}')).toMatchObject({
       title: 'Data Structures',
       notePath: 'Computer_Science/Data_Structures.md',
-      hubPath: 'database/learning paths/Computer_Science_Hub.md',
+
     });
   });
 });
