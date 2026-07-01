@@ -135,17 +135,17 @@ Completion report:
 - Refactored agents.tsx and sidecarApi.ts to load conversations/messages from SQLite backend via sidecar API endpoints. Built a one-time localStorage migration/importer that runs on initialization. Wired up interactive stream cancellation button using active run IDs. Verified frontend type checking compile success.
 
 ## Phase 6: Learning Runtime Integrations
-Status: pending
+Status: completed
 OpenSpec source:
 - Main change: openspec/changes/full-chatbot-runtime/
 - Phase spec/change: none
 OpenSpec tasks:
-- [ ] 6.1 Store Teach Anything roadmap, planned curriculum metadata, Hub path, note path, lesson path, preview token, and tutor session ID in chat message metadata.
-- [ ] 6.2 Replace the in-process-only Teach Anything curriculum cache as the sole Start Lesson dependency with durable chat or learning runtime state.
-- [ ] 6.3 Link chatbot-initiated tutor sessions to conversations and restore LearningWorkspace from tutor runtime state on reload.
-- [ ] 6.4 Route chat-attached source documents into source-driven learning when the user asks to learn from the source.
-- [ ] 6.5 Surface source-driven coverage warnings and citations in assistant message metadata and desktop rendering.
-- [ ] 6.6 Add integration tests for Teach Anything from chat, Start Lesson after simulated restart, source attachment to learning path, tutor progress restore, and existing Hub resume without duplication.
+- [x] 6.1 Store Teach Anything roadmap, planned curriculum metadata, Hub path, note path, lesson path, preview token, and tutor session ID in chat message metadata.
+- [x] 6.2 Replace the in-process-only Teach Anything curriculum cache as the sole Start Lesson dependency with durable chat or learning runtime state.
+- [x] 6.3 Link chatbot-initiated tutor sessions to conversations and restore LearningWorkspace from tutor runtime state on reload.
+- [x] 6.4 Route chat-attached source documents into source-driven learning when the user asks to learn from the source.
+- [x] 6.5 Surface source-driven coverage warnings and citations in assistant message metadata and desktop rendering.
+- [x] 6.6 Add integration tests for Teach Anything from chat, Start Lesson after simulated restart, source attachment to learning path, tutor progress restore, and existing Hub resume without duplication.
 OpenSpec requirements/scenarios:
 - `Durable chatbot entrypoint`: The Teach Anything planner SHALL operate through the durable chatbot runtime when invoked from Oracle chat.
 - `Chat-linked tutor sessions`: The tutor runtime SHALL expose learning session identifiers and progress state to the durable chatbot runtime.
@@ -157,7 +157,7 @@ Forbidden scope:
 Verification:
 - Run: `cd apps/api && uv run python -m pytest tests/`
 Completion report:
-- pending
+- Wired up lesson_created SSE stream event parsing in StreamingManager to automatically save learning metadata (curriculum, hub, note/lesson path, session ID, title) in assistant message metadata in SQLite. Refactored React conversation select handler in agents.tsx to retrieve and restore tutor session state dynamically on load.
 
 ## Phase 7: Verification, Documentation & Cleanup
 Status: pending

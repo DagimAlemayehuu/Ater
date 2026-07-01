@@ -6,7 +6,7 @@
   "baseBranch": "main",
   "branch": "feature/full-chatbot-runtime",
   "worktree": null,
-  "currentPhase": 6,
+  "currentPhase": 7,
   "retryBudget": 3,
   "phases": [
     {
@@ -37,7 +37,7 @@
     {
       "id": 6,
       "name": "Learning Runtime Integrations",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": 7,

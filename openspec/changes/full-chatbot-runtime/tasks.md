@@ -48,12 +48,12 @@
 
 ## 6. Learning Runtime Integrations
 
-- [ ] 6.1 Store Teach Anything roadmap, planned curriculum metadata, Hub path, note path, lesson path, preview token, and tutor session ID in chat message metadata.
-- [ ] 6.2 Replace the in-process-only Teach Anything curriculum cache as the sole Start Lesson dependency with durable chat or learning runtime state.
-- [ ] 6.3 Link chatbot-initiated tutor sessions to conversations and restore LearningWorkspace from tutor runtime state on reload.
-- [ ] 6.4 Route chat-attached source documents into source-driven learning when the user asks to learn from the source.
-- [ ] 6.5 Surface source-driven coverage warnings and citations in assistant message metadata and desktop rendering.
-- [ ] 6.6 Add integration tests for Teach Anything from chat, Start Lesson after simulated restart, source attachment to learning path, tutor progress restore, and existing Hub resume without duplication.
+- [x] 6.1 Store Teach Anything roadmap, planned curriculum metadata, Hub path, note path, lesson path, preview token, and tutor session ID in chat message metadata.
+- [x] 6.2 Replace the in-process-only Teach Anything curriculum cache as the sole Start Lesson dependency with durable chat or learning runtime state.
+- [x] 6.3 Link chatbot-initiated tutor sessions to conversations and restore LearningWorkspace from tutor runtime state on reload.
+- [x] 6.4 Route chat-attached source documents into source-driven learning when the user asks to learn from the source.
+- [x] 6.5 Surface source-driven coverage warnings and citations in assistant message metadata and desktop rendering.
+- [x] 6.6 Add integration tests for Teach Anything from chat, Start Lesson after simulated restart, source attachment to learning path, tutor progress restore, and existing Hub resume without duplication.
 
 ## 7. Verification And Documentation
 
