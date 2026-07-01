@@ -40,6 +40,7 @@ describe('NoteCanvas', () => {
     vi.mocked(sidecarApi.readObsidianNote).mockResolvedValue(mockNote)
 
     render(<NoteCanvas notePath="Sample" />)
+    vi.mocked(sidecarApi.listObsidianFiles).mockResolvedValue({ files: [] });
 
     await waitFor(() => {
       expect(screen.getByText('Sample Note Body')).toBeInTheDocument()
@@ -72,6 +73,7 @@ describe('NoteCanvas', () => {
     render(<NoteCanvas notePath="What_Is_Git" onNavigate={onNavigate} />)
 
     await waitFor(() => {
+    vi.mocked(sidecarApi.listObsidianFiles).mockResolvedValue({ files: [] });
       expect(screen.getByText('Step 2 of 3')).toBeInTheDocument()
     })
 
@@ -102,6 +104,7 @@ describe('NoteCanvas', () => {
       }
       return mockNote
     })
+    vi.mocked(sidecarApi.listObsidianFiles).mockResolvedValue({ files: [] });
 
     render(<NoteCanvas notePath="Second_Note" onClose={onClose} />)
 
