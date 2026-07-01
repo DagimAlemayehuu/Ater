@@ -6,7 +6,7 @@
   "baseBranch": "main",
   "branch": "feature/full-chatbot-runtime",
   "worktree": null,
-  "currentPhase": 4,
+  "currentPhase": 5,
   "retryBudget": 3,
   "phases": [
     {
@@ -27,7 +27,7 @@
     {
       "id": 4,
       "name": "Streaming, Cancellation & Tool Auditing",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": 5,

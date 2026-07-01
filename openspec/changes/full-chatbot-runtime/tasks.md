@@ -27,12 +27,12 @@
 
 ## 4. Streaming And Tool Audit
 
-- [ ] 4.1 Implement conversation-ID based assistant streaming endpoint that creates stream run records and durable assistant messages.
-- [ ] 4.2 Preserve the existing `/api/ater/assistant/chat` path as a compatibility wrapper during migration.
-- [ ] 4.3 Implement stream cancellation that marks runs cancelled and persists partial assistant messages as incomplete.
-- [ ] 4.4 Implement retry, regenerate, and branch-from-message operations.
-- [ ] 4.5 Wrap AterAssistant tool execution so every tool call records redacted arguments, status, timing, result summary, errors, and emitted frontend actions.
-- [ ] 4.6 Add backend tests for streaming completion, cancellation, retry, regenerate, branch, tool audit success, tool audit failure, and redaction.
+- [x] 4.1 Implement conversation-ID based assistant streaming endpoint that creates stream run records and durable assistant messages.
+- [x] 4.2 Preserve the existing `/api/ater/assistant/chat` path as a compatibility wrapper during migration.
+- [x] 4.3 Implement stream cancellation that marks runs cancelled and persists partial assistant messages as incomplete.
+- [x] 4.4 Implement retry, regenerate, and branch-from-message operations.
+- [x] 4.5 Wrap AterAssistant tool execution so every tool call records redacted arguments, status, timing, result summary, errors, and emitted frontend actions.
+- [x] 4.6 Add backend tests for streaming completion, cancellation, retry, regenerate, branch, tool audit success, tool audit failure, and redaction.
 
 ## 5. Desktop Chat UX Migration
 

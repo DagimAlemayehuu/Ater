@@ -81,17 +81,17 @@ Completion report:
 - Implemented AttachmentManager class for extracting, chunking, and saving attachments. Handled PDF robust loading, text, markdown, and Obsidian note attachments. Added promotion route to source planner. Verified via test_attachments.py (2 tests passed in 3.7s).
 
 ## Phase 4: Streaming, Cancellation & Tool Auditing
-Status: pending
+Status: completed
 OpenSpec source:
 - Main change: openspec/changes/full-chatbot-runtime/
 - Phase spec/change: none
 OpenSpec tasks:
-- [ ] 4.1 Implement conversation-ID based assistant streaming endpoint that creates stream run records and durable assistant messages.
-- [ ] 4.2 Preserve the existing `/api/ater/assistant/chat` path as a compatibility wrapper during migration.
-- [ ] 4.3 Implement stream cancellation that marks runs cancelled and persists partial assistant messages as incomplete.
-- [ ] 4.4 Implement retry, regenerate, and branch-from-message operations.
-- [ ] 4.5 Wrap AterAssistant tool execution so every tool call records redacted arguments, status, timing, result summary, errors, and emitted frontend actions.
-- [ ] 4.6 Add backend tests for streaming completion, cancellation, retry, regenerate, branch, tool audit success, tool audit failure, and redaction.
+- [x] 4.1 Implement conversation-ID based assistant streaming endpoint that creates stream run records and durable assistant messages.
+- [x] 4.2 Preserve the existing `/api/ater/assistant/chat` path as a compatibility wrapper during migration.
+- [x] 4.3 Implement stream cancellation that marks runs cancelled and persists partial assistant messages as incomplete.
+- [x] 4.4 Implement retry, regenerate, and branch-from-message operations.
+- [x] 4.5 Wrap AterAssistant tool execution so every tool call records redacted arguments, status, timing, result summary, errors, and emitted frontend actions.
+- [x] 4.6 Add backend tests for streaming completion, cancellation, retry, regenerate, branch, tool audit success, tool audit failure, and redaction.
 OpenSpec requirements/scenarios:
 - `Streaming turn lifecycle`: The system SHALL manage assistant streaming turns by conversation ID with durable run status and support cancellation, retry, regeneration, and branch-from-message.
 - `Tool execution audit`: The system SHALL persist structured tool execution records for all Oracle tool calls.
@@ -101,10 +101,11 @@ Allowed files/areas:
 - `apps/api/tests/`
 Forbidden scope:
 - unrelated refactors
+- frontend client UI changes
 Verification:
 - Run: `cd apps/api && uv run python -m pytest tests/`
 Completion report:
-- pending
+- Created StreamingManager class to manage conversation ID-based turns, cancellation, branching, and message regeneration. Added FastAPI endpoints in ai.py for conversations, streaming, memories, attachments and tool timelines. Verified via test_chat_endpoints.py (3 tests passed in 6.06s).
 
 ## Phase 5: Desktop Chat UX Migration & LocalStorage Import
 Status: pending

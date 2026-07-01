@@ -101,6 +101,9 @@ class AttachmentManager:
             message_id=message_id
         )
 
+    def get_attachments(self, conversation_id: str) -> List[Dict[str, Any]]:
+        return self.storage.get_attachments(conversation_id)
+
     def promote_to_source_grounded_curriculum(self, attachment_id: str) -> Dict[str, Any]:
         """
         Promotes a chat attachment to the source ingestion structure for the curriculum planner.

@@ -853,3 +853,254 @@ Provide the questions in a clean, readable Markdown format with bold question nu
         return {"answer": res.content, "questions": res.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Persistent Chat Runtime Router Endpoints ---
+from src.domains.ater.chat_runtime import ChatStorage
+from src.domains.ater.chat_runtime.memory import MemoryManager
+from src.domains.ater.chat_runtime.attachments import AttachmentManager
+from src.domains.ater.chat_runtime.streaming import StreamingManager
+
+def get_chat_runtime_components(secrets: AppSecrets = Depends(get_app_secrets)):
+    base_dir = Path(secrets.inbox_path) if secrets.inbox_path else (Path(secrets.vault_path) / "Inbox" if secrets.vault_path else Path("."))
+    db_path = base_dir / "ater_queue.db"
+    storage = ChatStorage(db_path)
+    memory_manager = MemoryManager(storage)
+    attachment_manager = AttachmentManager(storage, secrets.vault_path)
+    streaming_manager = StreamingManager(storage, memory_manager, attachment_manager)
+    return {
+        "storage": storage,
+        "memory_manager": memory_manager,
+        "attachment_manager": attachment_manager,
+        "streaming_manager": streaming_manager
+    }
+
+@router.post("/chat/conversations")
+async def create_conversation(
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    title = payload.get("title", "New Conversation")
+    metadata = payload.get("metadata", {})
+    return deps["storage"].create_conversation(title=title, metadata=metadata)
+
+@router.get("/chat/conversations")
+async def list_conversations(
+    include_archived: bool = Query(False),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    return deps["storage"].list_conversations(include_archived=include_archived)
+
+@router.get("/chat/conversations/{conv_id}")
+async def get_conversation(
+    conv_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    conv = deps["storage"].get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conv
+
+@router.patch("/chat/conversations/{conv_id}")
+async def patch_conversation(
+    conv_id: str,
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    storage = deps["storage"]
+    updated = False
+    if "title" in payload:
+        updated = storage.rename_conversation(conv_id, payload["title"])
+    if "metadata" in payload:
+        curr = storage.get_conversation(conv_id)
+        if curr:
+            new_meta = {**curr.get("metadata", {}), **payload["metadata"]}
+            updated = storage.update_conversation_metadata(conv_id, new_meta)
+    return {"success": updated}
+
+@router.delete("/chat/conversations/{conv_id}")
+async def delete_conversation(
+    conv_id: str,
+    hard: bool = Query(False),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    success = deps["storage"].delete_conversation(conv_id, hard=hard)
+    return {"success": success}
+
+@router.post("/chat/conversations/{conv_id}/archive")
+async def archive_conversation(
+    conv_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    success = deps["storage"].archive_conversation(conv_id, archive=True)
+    return {"success": success}
+
+@router.post("/chat/conversations/{conv_id}/restore")
+async def restore_conversation(
+    conv_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    success = deps["storage"].archive_conversation(conv_id, archive=False)
+    return {"success": success}
+
+# --- Messages & Streaming ---
+@router.get("/chat/conversations/{conv_id}/messages")
+async def get_messages(
+    conv_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    return deps["storage"].get_messages(conv_id)
+
+@router.post("/chat/conversations/{conv_id}/stream")
+async def stream_turn(
+    conv_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    user_message = payload.get("message", "")
+    parent_message_id = payload.get("parent_message_id")
+    token_budget = payload.get("token_budget", 8000)
+
+    if not secrets.ai_key:
+        raise HTTPException(status_code=400, detail="AI API key is required. Please set it in Settings.")
+
+    async def sse_generator():
+        try:
+            async for event in deps["streaming_manager"].stream_assistant_turn(
+                conversation_id=conv_id,
+                user_message_content=user_message,
+                secrets=secrets,
+                parent_message_id=parent_message_id,
+                token_budget=token_budget
+            ):
+                yield event
+        except Exception as e:
+            logger.error(f"[Chat Stream] turn error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+@router.post("/chat/stream/cancel")
+async def cancel_stream(
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    run_id = payload.get("run_id", "")
+    success = deps["streaming_manager"].cancel_stream_run(run_id)
+    return {"success": success}
+
+@router.post("/chat/conversations/{conv_id}/regenerate")
+async def regenerate_message(
+    conv_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    assistant_message_id = payload.get("message_id", "")
+    content = deps["streaming_manager"].regenerate_message(conv_id, assistant_message_id, secrets)
+    if not content:
+        raise HTTPException(status_code=400, detail="Invalid assistant message or parent not found")
+    return {"success": True, "prompt": content}
+
+@router.post("/chat/conversations/{conv_id}/branch")
+async def branch_message(
+    conv_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    message_id = payload.get("message_id", "")
+    new_content = payload.get("content", "")
+    res = deps["streaming_manager"].branch_from_message(conv_id, message_id, new_content, secrets)
+    return res
+
+# --- Memories ---
+@router.get("/chat/memories")
+async def list_memories(
+    conversation_id: Optional[str] = Query(None),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    return deps["memory_manager"].list_memories(conversation_id)
+
+@router.post("/chat/memories")
+async def create_memory(
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    scope = payload.get("scope", "durable")
+    content = payload.get("content", "")
+    confidence = payload.get("confidence", 1.0)
+    conversation_id = payload.get("conversation_id")
+    source_message_id = payload.get("source_message_id")
+    status = payload.get("status", "accepted")
+
+    if scope == "durable":
+        return deps["memory_manager"].create_durable_memory(
+            content=content, confidence=confidence, source_message_id=source_message_id, status=status
+        )
+    else:
+        return deps["memory_manager"].create_session_memory(
+            conversation_id=conversation_id, content=content, confidence=confidence, source_message_id=source_message_id, status=status
+        )
+
+@router.patch("/chat/memories/{memory_id}")
+async def patch_memory(
+    memory_id: str,
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    storage = deps["storage"]
+    success = False
+    if "enabled" in payload:
+        success = storage.update_memory_status(memory_id, payload["enabled"])
+    if "status" in payload:
+        success = storage.update_memory_approval(memory_id, payload["status"])
+    return {"success": success}
+
+@router.delete("/chat/memories/{memory_id}")
+async def delete_memory(
+    memory_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    success = deps["storage"].delete_memory(memory_id)
+    return {"success": success}
+
+# --- Attachments ---
+@router.post("/chat/conversations/{conv_id}/attachments")
+async def upload_attachment(
+    conv_id: str,
+    payload: Dict[str, Any] = Body(...),
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    file_path = payload.get("file_path", "")
+    file_type = payload.get("file_type", "")
+    message_id = payload.get("message_id")
+    
+    attachment = deps["attachment_manager"].attach_file(
+        conversation_id=conv_id, file_path=file_path, file_type=file_type, message_id=message_id
+    )
+    return attachment
+
+@router.get("/chat/conversations/{conv_id}/attachments")
+async def list_attachments(
+    conv_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    return deps["attachment_manager"].get_attachments(conv_id)
+
+@router.post("/chat/attachments/{attachment_id}/promote")
+async def promote_attachment(
+    attachment_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    promoted = deps["attachment_manager"].promote_to_source_grounded_curriculum(attachment_id)
+    return promoted
+
+# --- Tool Timeline ---
+@router.get("/chat/messages/{message_id}/tools")
+async def get_message_tools(
+    message_id: str,
+    deps: Dict[str, Any] = Depends(get_chat_runtime_components)
+):
+    return deps["storage"].get_tool_calls(message_id)
+
