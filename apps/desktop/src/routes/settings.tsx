@@ -576,7 +576,7 @@ export default function Settings() {
     }
 
     const newKey: SavedApiKey = {
-      id: Math.random().toString(36).substring(2),
+      id: crypto.randomUUID(),
       name: newKeyName,
       provider: newKeyProvider,
       key: newKeyValue,

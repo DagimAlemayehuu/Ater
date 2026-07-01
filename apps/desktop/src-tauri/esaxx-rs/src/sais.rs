@@ -32,7 +32,7 @@ fn induce_sa(
 ) {
     debug_assert!(n <= suffix_array.len());
     get_counts(string, counts);
-    get_buckets(counts, buckets, false);
+    get_buckets(counts, buckets, false); // find starts of buckets
 
     let mut c0;
     let mut j = n - 1;
@@ -65,9 +65,8 @@ fn induce_sa(
     }
 
     // Compute SA
-    // XXX: true here.
     get_counts(string, counts);
-    get_buckets(counts, buckets, true);
+    get_buckets(counts, buckets, true); // find ends of buckets
     c1 = 0;
     index = buckets[c1];
     for i in (0..n).rev() {
@@ -102,7 +101,7 @@ fn compute_bwt(
     // TODO
     let mut pidx = 0;
     get_counts(string, counts);
-    get_buckets(counts, buckets, false);
+    get_buckets(counts, buckets, false); // find starts of buckets
     let mut j = n - 1;
     let mut c1 = string[j] as usize;
     let mut c0;
@@ -139,7 +138,7 @@ fn compute_bwt(
 
     // Compute SA
     get_counts(string, counts);
-    get_buckets(counts, buckets, true);
+    get_buckets(counts, buckets, true); // find ends of buckets
     c1 = 0;
     index = buckets[c1];
     for i in (0..n).rev() {
@@ -182,7 +181,7 @@ fn suffixsort(
     let mut counts = vec![0; k];
     let mut buckets = vec![0; k];
     get_counts(string, &mut counts);
-    get_buckets(&counts, &mut buckets, true);
+    get_buckets(&counts, &mut buckets, true); // find ends of buckets
     // stage 1:
     // reduce the problem by at least 1/2
     // sort all the S-substrings
@@ -324,7 +323,7 @@ fn suffixsort(
     /* put all left-most S characters into their buckets */
 
     get_counts(string, &mut counts);
-    get_buckets(&counts, &mut buckets, true);
+    get_buckets(&counts, &mut buckets, true); // find ends of buckets
     for item in suffix_array.iter_mut().take(n).skip(m) {
         *item = 0;
     }

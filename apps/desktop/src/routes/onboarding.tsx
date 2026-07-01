@@ -360,7 +360,7 @@ export default function Onboarding() {
     }
 
     const newKey: SavedApiKey = {
-      id: Math.random().toString(36).substring(2),
+      id: crypto.randomUUID(),
       name: newKeyName,
       provider: newKeyProvider,
       key: newKeyValue,
@@ -503,32 +503,38 @@ export default function Onboarding() {
         if (programPreset && programPreset !== 'custom') {
           try {
             if (programPreset === 'cs') {
-              // Scaffold semesters
-              await sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' });
-              await sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Spring]]' });
-              await sidecarApi.createVaultRow('semesters', 'Semester III', { Year: '[[Year II]]', Status: '[[Active]]', Season: '[[Fall]]' });
-              await sidecarApi.createVaultRow('semesters', 'Semester IV', { Year: '[[Year II]]', Status: '[[Planned]]', Season: '[[Spring]]' });
-              await sidecarApi.createVaultRow('semesters', 'Semester V', { Year: '[[Year III]]', Status: '[[Planned]]', Season: '[[Fall]]' });
+              await Promise.all([
+                // Scaffold semesters
+                sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' }),
+                sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Spring]]' }),
+                sidecarApi.createVaultRow('semesters', 'Semester III', { Year: '[[Year II]]', Status: '[[Active]]', Season: '[[Fall]]' }),
+                sidecarApi.createVaultRow('semesters', 'Semester IV', { Year: '[[Year II]]', Status: '[[Planned]]', Season: '[[Spring]]' }),
+                sidecarApi.createVaultRow('semesters', 'Semester V', { Year: '[[Year III]]', Status: '[[Planned]]', Season: '[[Fall]]' }),
 
-              // Scaffold courses
-              await sidecarApi.createVaultRow('courses', 'CS 101', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Turing]]', Difficulty: '[[Introductory]]' });
-              await sidecarApi.createVaultRow('courses', 'MATH 151', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A-]]', Status: '[[Completed]]', Professor: '[[Dr. Euler]]', Difficulty: '[[Medium]]' });
-              await sidecarApi.createVaultRow('courses', 'MATH 201', { Semester: '[[Semester II]]', Credits: 4, Grade: '[[B+]]', Status: '[[Completed]]', Professor: '[[Dr. Gauss]]', Difficulty: '[[Hard]]' });
-              await sidecarApi.createVaultRow('courses', 'CS 201', { Semester: '[[Semester III]]', Credits: 4, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Knuth]]', Difficulty: '[[Hard]]' });
-              await sidecarApi.createVaultRow('courses', 'CS 301', { Semester: '[[Semester V]]', Credits: 4, Grade: '[[Planned]]', Status: '[[Planned]]', Professor: '[[Dr. Ritchie]]', Difficulty: '[[Expert]]' });
+                // Scaffold courses
+                sidecarApi.createVaultRow('courses', 'CS 101', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Turing]]', Difficulty: '[[Introductory]]' }),
+                sidecarApi.createVaultRow('courses', 'MATH 151', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A-]]', Status: '[[Completed]]', Professor: '[[Dr. Euler]]', Difficulty: '[[Medium]]' }),
+                sidecarApi.createVaultRow('courses', 'MATH 201', { Semester: '[[Semester II]]', Credits: 4, Grade: '[[B+]]', Status: '[[Completed]]', Professor: '[[Dr. Gauss]]', Difficulty: '[[Hard]]' }),
+                sidecarApi.createVaultRow('courses', 'CS 201', { Semester: '[[Semester III]]', Credits: 4, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Knuth]]', Difficulty: '[[Hard]]' }),
+                sidecarApi.createVaultRow('courses', 'CS 301', { Semester: '[[Semester V]]', Credits: 4, Grade: '[[Planned]]', Status: '[[Planned]]', Professor: '[[Dr. Ritchie]]', Difficulty: '[[Expert]]' }),
+              ]);
             } else if (programPreset === 'ds') {
-              await sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' });
-              await sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Active]]', Season: '[[Spring]]' });
+              await Promise.all([
+                sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' }),
+                sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Active]]', Season: '[[Spring]]' }),
 
-              await sidecarApi.createVaultRow('courses', 'DS 101', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Bayes]]', Difficulty: '[[Introductory]]' });
-              await sidecarApi.createVaultRow('courses', 'MATH 201', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A-]]', Status: '[[Completed]]', Professor: '[[Dr. Gauss]]', Difficulty: '[[Hard]]' });
-              await sidecarApi.createVaultRow('courses', 'DS 201', { Semester: '[[Semester II]]', Credits: 4, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Fisher]]', Difficulty: '[[Hard]]' });
+                sidecarApi.createVaultRow('courses', 'DS 101', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Bayes]]', Difficulty: '[[Introductory]]' }),
+                sidecarApi.createVaultRow('courses', 'MATH 201', { Semester: '[[Semester I]]', Credits: 4, Grade: '[[A-]]', Status: '[[Completed]]', Professor: '[[Dr. Gauss]]', Difficulty: '[[Hard]]' }),
+                sidecarApi.createVaultRow('courses', 'DS 201', { Semester: '[[Semester II]]', Credits: 4, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Fisher]]', Difficulty: '[[Hard]]' }),
+              ]);
             } else if (programPreset === 'business') {
-              await sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' });
-              await sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Active]]', Season: '[[Spring]]' });
+              await Promise.all([
+                sidecarApi.createVaultRow('semesters', 'Semester I', { Year: '[[Year I]]', Status: '[[Completed]]', Season: '[[Fall]]' }),
+                sidecarApi.createVaultRow('semesters', 'Semester II', { Year: '[[Year I]]', Status: '[[Active]]', Season: '[[Spring]]' }),
 
-              await sidecarApi.createVaultRow('courses', 'BUS 101', { Semester: '[[Semester I]]', Credits: 3, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Drucker]]', Difficulty: '[[Introductory]]' });
-              await sidecarApi.createVaultRow('courses', 'ECON 201', { Semester: '[[Semester II]]', Credits: 3, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Smith]]', Difficulty: '[[Medium]]' });
+                sidecarApi.createVaultRow('courses', 'BUS 101', { Semester: '[[Semester I]]', Credits: 3, Grade: '[[A]]', Status: '[[Completed]]', Professor: '[[Dr. Drucker]]', Difficulty: '[[Introductory]]' }),
+                sidecarApi.createVaultRow('courses', 'ECON 201', { Semester: '[[Semester II]]', Credits: 3, Grade: '[[Active]]', Status: '[[Active]]', Professor: '[[Dr. Smith]]', Difficulty: '[[Medium]]' }),
+              ]);
             }
           } catch (presetErr) {
             console.warn('[Onboarding] Preset course scaffolding failed:', presetErr);

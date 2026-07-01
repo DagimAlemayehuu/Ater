@@ -1,44 +1,41 @@
 # Context Brief
 
-Updated: 2026-06-27T19:29:17.733205+00:00
+Updated: 2026-06-27T19:29:09.493006+00:00
 
 ## Current Objective
 - Status: `implemented`
-- Active change: `perfect-artifacts`
+- Active change: `perfect-ci-cd`
 - Associated changes: `None`
-- Current phase: `None`
-- Git branch: `feature/perfect-artifacts`
-- GitHub issue: `#12`
+- Current phase: `2`
+- Git branch: `feat/perfect-ci-cd`
+- GitHub issue: `#11`
 
 ## OpenSpec Artifacts
-- `perfect-artifacts`: 9/9 tasks complete
-- `openspec/changes/perfect-artifacts/proposal.md`
-- `openspec/changes/perfect-artifacts/design.md`
-- `openspec/changes/perfect-artifacts/tasks.md`
-- `openspec/changes/perfect-artifacts/specs/interactive-artifacts-expansion/spec.md`
+- `perfect-ci-cd`: 7/7 tasks complete
+- `openspec/changes/perfect-ci-cd/proposal.md`
+- `openspec/changes/perfect-ci-cd/design.md`
+- `openspec/changes/perfect-ci-cd/tasks.md`
+- `openspec/changes/perfect-ci-cd/specs/perfect-ci-cd/spec.md`
 
 ## Phase State
-- No phases recorded.
+- Phase 1: Optimizing CI/CD Caching (completed, attempts=1)
+- Phase 2: Hardening Windows CI & Environment Defaults (completed, attempts=1)
 
 ## Verification State
 - Last verification: not run
 
 ## Decisions Made
-- Finding the first non-whitespace character before `while`.
-- If it is `}`, we track brace depth backward to locate the matching `{`.
-- Once `{` is found, we scan backward to check if the word before `{` is `do`.
-- We also handle single-statement `do-while` loops without braces by scanning backward for `do` without crossing other block delimiters (`{`, `}`, `;`).
-- If it is a `do-while` ending, we skip injecting a loop guard block on that specific `while`.
-- When encountering a `do` keyword, if followed by `{`, we inject a guard counter declaration before the `do`, and increment/check the counter inside the `{` block.
-- Using a full parser: Adds significant bundle size and parsing overhead, which is not suitable for a lightweight, self-contained desktop sidecar client.
-- Simple regex: Fails on complex nested structures. The backward scanning approach is extremely reliable and lightweight.
-- We will add a `useEffect` inside `UnifiedSandboxViewer` that checks if the active chapter has `sandboxSpec` but is missing `sandbox` code.
-- To prevent duplicate compilation triggers, a ref `compilingSpecsRef = useRef<Set<string>>(new Set())` will track active compiles.
-- If a compile succeeds, we update the version using `addVersion`. If it fails, we record the error using `recordCompileError`.
-- We will update the `handleOfflineRetry` function to clear the active `compileError` of the active artifact so that the `useEffect` can re-trigger compilation.
+- **Why**: `actions/setup-node` can automatically cache pnpm packages, but only if the `pnpm` executable is present first.
+- **Decision**: Install `pnpm` first via `pnpm/action-setup@v3`, and then call `actions/setup-node@v4` with `cache: 'pnpm'`.
+- **Why**: Rust release-mode compilation of the Tauri app and sidecar bindings takes several minutes. `swatinem/rust-cache` is highly optimized, handles multiple workspaces/cargo targets automatically, and avoids cache bloat.
+- **Decision**: Replace manual `actions/cache` steps with `swatinem/rust-cache@v2` across macOS and Windows runners.
+- **Why**: Windows is an official release target. Only running `cargo check` fails to catch linking issues (e.g. `ort` ONNX runtime libraries, Arrow/LanceDB DLLs) or test suite failures.
+- **Decision**: Rename `check-rust-windows` to `test-rust-windows`, compile using `cargo build --release`, and execute `cargo test` using the Windows host runner.
+- **Why**: `npx playwright install` downloads about 100-150MB of browser binaries on every run.
+- **Decision**: Cache `~/.cache/ms-playwright` using `actions/cache@v4` keyed on lockfile hash, and only install browser binaries if there is a cache miss.
 
 ## Blockers
 - None recorded.
 
 ## Next Agent Should
-- Execute: `sdlc-verify perfect-artifacts`
+- Execute: `sdlc-verify perfect-ci-cd`
