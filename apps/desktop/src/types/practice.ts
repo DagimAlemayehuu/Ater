@@ -55,7 +55,7 @@ export type QuestionType =
   | "find_error";
 
 export interface BaseQuestion {
-  id: number;
+  id: number | string;
   note_id?: string;
   note_title?: string;
   type: QuestionType;

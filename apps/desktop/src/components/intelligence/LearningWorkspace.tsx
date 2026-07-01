@@ -1,10 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, BookOpen, Check, Circle, Lock, Send, X } from 'lucide-react'
-import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, Check, ChevronRight, Circle, Loader2, Map, FileText, Info } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
-import { buildLessonRoadmap, type LessonRoadmapItem } from '@/lib/lessonRoadmap'
+import { getSimpleLessonPath } from '@/lib/lessonRoadmap'
+import { AterMarkdown, ProvingGroundsPractice } from '@/components/obsidian/MarkdownViewer'
+import type { Question } from '@/types/practice'
+import { parseHubTree, type NavNode } from '@/components/obsidian/HubConnectionsNav'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
 
 interface LessonPreview {
   title: string
@@ -20,220 +23,17 @@ interface LearningWorkspaceProps {
   onTutorSessionChange: (session: any) => void
   onPreviewChange: (preview: LessonPreview | null) => void
   onClose: () => void
+  isGenerating?: boolean
+  generatingStatus?: string | null
 }
-
-const cleanMarkdown = (content: string) => content
-  .replace(/^---[\s\S]*?---\n?/, '')
-  .replace(/```interactive-quiz[\s\S]*?```/g, '')
-  .trim()
 
 const titleFromPath = (path?: string) => {
   const raw = (path || '').split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson'
   return raw.replace(/^\d+[_\s-]*/, '').replace(/[_-]/g, ' ')
 }
 
-function getAnswerValue(answer: any): string {
-  if (Array.isArray(answer)) return answer.join(', ')
-  if (answer === null || answer === undefined) return ''
-  return String(answer)
-}
-
-function AdaptiveProvingGrounds({
-  sessionId,
-  notePath,
-  onPassed,
-}: {
-  sessionId: string
-  notePath: string
-  onPassed: () => Promise<void>
-}) {
-  const [question, setQuestion] = useState<any | null>(null)
-  const [answer, setAnswer] = useState<any>('')
-  const [history, setHistory] = useState<any[]>([])
-  const [feedback, setFeedback] = useState<any | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(false)
-
-  const loadQuestion = useCallback(async () => {
-    if (!sessionId || !notePath) return
-    setLoading(true)
-    setFeedback(null)
-    setAnswer('')
-    try {
-      const res = await sidecarApi.getAdaptiveTutorQuestion({ session_id: sessionId, note_path: notePath, history })
-      setQuestion(res.question)
-    } catch (err: any) {
-      toast.error(`Failed to load Proving Grounds: ${err.message || err}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [history, notePath, sessionId])
-
-  useEffect(() => {
-    setHistory([])
-    setQuestion(null)
-    setAnswer('')
-    setFeedback(null)
-  }, [notePath])
-
-  useEffect(() => {
-    if (!question && !loading) {
-      void loadQuestion()
-    }
-  }, [loadQuestion, loading, question])
-
-  const submit = async () => {
-    if (!question || checking || getAnswerValue(answer).trim().length === 0) return
-    setChecking(true)
-    try {
-      const res = await sidecarApi.checkAdaptiveTutorAnswer({
-        session_id: sessionId,
-        note_path: notePath,
-        question,
-        user_answer: answer,
-        history,
-      })
-      const nextHistory = [
-        ...history,
-        {
-          question_id: question.id,
-          type: question.type,
-          user_answer: answer,
-          is_correct: res.is_correct,
-        },
-      ]
-      setHistory(nextHistory)
-      setFeedback(res)
-      if (res.is_correct) {
-        toast.success('Correct. Moving to the next lesson.')
-        await onPassed()
-      } else if (res.next_question) {
-        setQuestion(res.next_question)
-        setAnswer('')
-      }
-    } catch (err: any) {
-      toast.error(`Failed to check answer: ${err.message || err}`)
-    } finally {
-      setChecking(false)
-    }
-  }
-
-  const renderAnswerControl = () => {
-    const type = String(question?.type || 'writing').toLowerCase()
-    if (type === 'mcq' || type === 'multiple-choice') {
-      const options = question?.options || {}
-      return (
-        <div className="grid gap-2">
-          {Object.entries(options).map(([key, value]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setAnswer(key)}
-              className={cn(
-                'flex items-start gap-3 rounded-[6px] border px-3 py-2 text-left text-[12px] transition-colors',
-                answer === key ? 'border-foreground/50 bg-foreground/10 text-foreground' : 'border-border/50 bg-bento-card text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <span className="font-mono text-[10px] font-black">{key}</span>
-              <span>{String(value)}</span>
-            </button>
-          ))}
-        </div>
-      )
-    }
-    if (type === 'true_false' || type === 'true-false') {
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          {['True', 'False'].map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setAnswer(value)}
-              className={cn(
-                'h-10 rounded-[6px] border text-[10px] font-black uppercase tracking-widest transition-colors',
-                answer === value ? 'border-foreground/50 bg-foreground/10 text-foreground' : 'border-border/50 bg-bento-card text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-      )
-    }
-    return (
-      <textarea
-        value={getAnswerValue(answer)}
-        onChange={(event) => setAnswer(event.target.value)}
-        placeholder="Write your answer..."
-        className="min-h-[120px] w-full resize-none rounded-[6px] border border-border/50 bg-bento-card p-3 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/30 focus:border-foreground/30"
-      />
-    )
-  }
-
-  return (
-    <section className="border-t border-border/40 bg-bento-bg px-8 py-6">
-      <div className="mx-auto max-w-3xl space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground/50">Proving Grounds</p>
-            <h2 className="text-sm font-black uppercase tracking-widest text-foreground">Check Your Understanding</h2>
-          </div>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
-            {history.length} checked
-          </span>
-        </div>
-
-        <div className="rounded-[8px] border border-border/50 bg-bento-panel p-4">
-          {loading || !question ? (
-            <div className="py-8 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading question</div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{question.type || 'writing'}</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">{question.difficulty || 'L1'}</span>
-              </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-                <AterMarkdown content={question.question || ''} />
-              </div>
-              {renderAnswerControl()}
-              <button
-                type="button"
-                onClick={submit}
-                disabled={checking || getAnswerValue(answer).trim().length === 0}
-                className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-border/60 bg-muted/30 px-4 text-[10px] font-black uppercase tracking-widest text-foreground transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Send size={12} />
-                Check
-              </button>
-            </div>
-          )}
-        </div>
-
-        {feedback && (
-          <div className={cn(
-            'rounded-[8px] border p-4',
-            feedback.is_correct ? 'border-foreground/30 bg-foreground/5' : 'border-border/60 bg-bento-panel',
-          )}>
-            <div className="mb-2 flex items-center gap-2">
-              {feedback.is_correct ? <Check size={14} /> : <X size={14} />}
-              <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
-                {feedback.is_correct ? 'Correct' : 'Try The Follow-Up'}
-              </span>
-            </div>
-            <p className="text-[12px] leading-relaxed text-muted-foreground">{feedback.feedback}</p>
-            {!feedback.is_correct && feedback.hint && (
-              <p className="mt-3 text-[12px] leading-relaxed text-foreground">{feedback.hint}</p>
-            )}
-            {!feedback.is_correct && feedback.lesson && (
-              <div className="prose prose-sm dark:prose-invert mt-4 max-w-none border-t border-border/40 pt-4">
-                <AterMarkdown content={feedback.lesson} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  )
+const isTemporaryLessonPath = (path?: string | null) => {
+  return typeof path === 'string' && path.includes('remediation_temp')
 }
 
 export function LearningWorkspace({
@@ -242,143 +42,674 @@ export function LearningWorkspace({
   onTutorSessionChange,
   onPreviewChange,
   onClose,
+  isGenerating = false,
+  generatingStatus = null,
 }: LearningWorkspaceProps) {
-  const [content, setContent] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [content, setContent] = useState<string>('')
+  const [loadedContentPath, setLoadedContentPath] = useState<string | null>(null)
+  const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
+  const [showProperties, setShowProperties] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [hubContent, setHubContent] = useState<string>('')
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  const [activePractice, setActivePractice] = useState<{ quizData: Question | Question[]; notePath?: string; initialQuestionIndex?: number } | null>(null)
+  const [pendingReturnPractice, setPendingReturnPractice] = useState<{ quizData: Question | Question[]; notePath?: string; initialQuestionIndex?: number; originalPath?: string } | null>(null)
+  const [remediationReloadNonce, setRemediationReloadNonce] = useState(0)
+  const lessonScrollRef = React.useRef<HTMLDivElement | null>(null)
+  const preservePracticeOnNextNoteChangeRef = React.useRef(false)
+  const navigate = useNavigate()
+
   const notePath = preview.notePath || tutorSession?.current_note_path || ''
-  const lessonRoadmap = useMemo(() => buildLessonRoadmap(tutorSession), [tutorSession])
+  const hubPath = tutorSession?.hub_path || preview.hubPath || ''
+  const lessonTitle = useMemo(() => {
+    const rawTitle = noteMetadata?.title || preview.title || titleFromPath(notePath)
+    return String(rawTitle).replace(/\[\[(.*?)\]\]/g, '$1').replace(/[_-]/g, ' ').trim()
+  }, [noteMetadata?.title, preview.title, notePath])
 
   useEffect(() => {
-    if (!notePath) return
-    setLoading(true)
-    sidecarApi.readObsidianNote(notePath)
-      .then((res: any) => setContent(res.content || ''))
-      .catch((err: any) => toast.error(`Failed to load lesson note: ${err.message || err}`))
-      .finally(() => setLoading(false))
-  }, [notePath])
+    if (preservePracticeOnNextNoteChangeRef.current) {
+      preservePracticeOnNextNoteChangeRef.current = false
+    } else {
+      setActivePractice(null)
+    }
+    if (tutorSession?.session_id) {
+      localStorage.setItem('ater_active_session_id', tutorSession.session_id);
+    }
+    if (notePath && !isTemporaryLessonPath(notePath)) {
+      localStorage.setItem('ater_study_active_note_path', notePath)
+      localStorage.setItem('ater_canonical_lesson_path', notePath)
+      localStorage.setItem('ater_original_note_path', notePath)
+    }
+  }, [tutorSession?.session_id, notePath]);
 
-  const openItem = (item: LessonRoadmapItem) => {
-    if (item.status === 'locked') return
-    onPreviewChange({
-      title: item.title,
-      lessonPath: item.lessonPath,
-      notePath: item.path,
-      hubPath: preview.hubPath || tutorSession?.hub_path || '',
-      previewUrl: '',
+  useEffect(() => {
+    if (tutorSession || isGenerating) return
+
+    let active = true
+    const restoreSession = async () => {
+      const activeSessionId = localStorage.getItem('ater_active_session_id')
+      try {
+        if (activeSessionId) {
+          const session = await sidecarApi.getTutorStatus(activeSessionId)
+          if (active && session) {
+            onTutorSessionChange(session)
+            return
+          }
+        }
+        if (hubPath) {
+          const session = await sidecarApi.getTutorSessionByHub(hubPath)
+          if (active && session) {
+            onTutorSessionChange(session)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to restore tutor session in lesson workspace:', err)
+      }
+    }
+
+    void restoreSession()
+    return () => {
+      active = false
+    }
+  }, [hubPath, isGenerating, onTutorSessionChange, tutorSession])
+
+  useEffect(() => {
+    if (!hubPath) {
+      setHubContent('')
+      return
+    }
+    let active = true
+    const loadHub = async () => {
+      try {
+        const res = await sidecarApi.readObsidianNote(hubPath)
+        if (active) {
+          setHubContent(res.content || '')
+        }
+      } catch (err) {
+        console.error('Failed to load hub note content:', err)
+      }
+    }
+    void loadHub()
+    return () => {
+      active = false
+    }
+  }, [hubPath])
+
+  const tree = useMemo(() => {
+    return parseHubTree(hubContent)
+  }, [hubContent])
+
+  useEffect(() => {
+    const expandAll = (nodes: NavNode[]) => {
+      setExpandedNodes(prev => {
+        const next = new Set(prev)
+        let changed = false
+        const traverse = (itemList: NavNode[]) => {
+          for (const node of itemList) {
+            if (!next.has(node.label)) {
+              next.add(node.label)
+              changed = true
+            }
+            if (node.children.length > 0) traverse(node.children)
+          }
+        }
+        traverse(nodes)
+        return changed ? next : prev
+      })
+    }
+    if (tree.length > 0) {
+      expandAll(tree)
+    }
+  }, [tree])
+
+  const toggleNode = (label: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
     })
   }
 
-  const completeCurrentNote = async () => {
-    if (!tutorSession?.session_id) return
-    const updated = await sidecarApi.advanceTutorSession({ session_id: tutorSession.session_id })
-    onTutorSessionChange(updated)
-    if (updated?.current_note_path) {
+  const getNoteStem = (p: string) => {
+    return p.split(/[/\\]/).pop()?.replace(/\.(md|pdf)$/i, '')?.replace(/_/g, ' ')?.toLowerCase() || ''
+  }
+
+  const completedStems = useMemo(() => {
+    return new Set(
+      (Array.isArray(tutorSession?.completed_notes) ? tutorSession.completed_notes : [])
+        .map((p: string) => getNoteStem(p))
+    )
+  }, [tutorSession?.completed_notes])
+
+  const unlockedStems = useMemo(() => {
+    return new Set(
+      (Array.isArray(tutorSession?.active_note_unlocks) ? tutorSession.active_note_unlocks : [])
+        .map((p: string) => getNoteStem(p))
+    )
+  }, [tutorSession?.active_note_unlocks])
+
+  const currentStem = useMemo(() => {
+    return getNoteStem(notePath)
+  }, [notePath])
+
+  const getNodeStatus = (target: string | null) => {
+    if (!target) return 'locked'
+    const stem = getNoteStem(target)
+
+    // Check API roadmap first
+    const apiItem = tutorSession?.roadmap?.find((r: any) => getNoteStem(r.path) === stem)
+    if (apiItem) {
+      return apiItem.status
+    }
+
+    if (completedStems.has(stem)) return 'completed'
+    if (stem === currentStem) return 'current'
+    if (unlockedStems.has(stem)) return 'unlocked'
+    return 'locked'
+  }
+
+  const openItemByTarget = (target: string) => {
+    const targetStem = getNoteStem(target)
+    const matchPath = tutorSession?.curriculum?.find((p: string) => getNoteStem(p) === targetStem)
+    if (matchPath) {
+      setActivePractice(null)
       onPreviewChange({
-        title: titleFromPath(updated.current_note_path),
-        lessonPath: updated.current_note_path,
-        notePath: updated.current_note_path,
-        hubPath: updated.hub_path || preview.hubPath || '',
+        title: target.replace(/_/g, ' '),
+        lessonPath: getSimpleLessonPath(matchPath),
+        notePath: matchPath,
+        hubPath: hubPath,
         previewUrl: '',
       })
     } else {
-      toast.success('Learning path completed.')
+      console.warn(`Target not found in curriculum: ${target}`)
     }
+  }
+
+  useEffect(() => {
+    const handleContinue = async (event: Event) => {
+      const detail = (event as CustomEvent<{ notePath?: string }>).detail || {}
+      const completedPath = detail.notePath || notePath
+      if (!completedPath || !tutorSession?.session_id) return
+
+      try {
+        const res = await sidecarApi.advanceTutorSession({ session_id: tutorSession.session_id })
+        if (res && res.can_advance) {
+          onTutorSessionChange(res.session)
+          const nextPath = res.session.current_note_path
+          if (nextPath && nextPath !== completedPath) {
+            onPreviewChange({
+              title: titleFromPath(nextPath),
+              lessonPath: getSimpleLessonPath(nextPath),
+              notePath: nextPath,
+              hubPath: preview.hubPath || res.session.hub_path || '',
+              previewUrl: '',
+            })
+          }
+        } else {
+          toast.error(res?.message || 'Mastery gates (Recall and Transfer) must be cleared first before advancing.')
+        }
+      } catch (err: any) {
+        console.error('Failed to advance progress:', err)
+        toast.error('Failed to advance lesson map progress.')
+      }
+    }
+
+    window.addEventListener('ater:practice-continue', handleContinue)
+    return () => window.removeEventListener('ater:practice-continue', handleContinue)
+  }, [notePath, onPreviewChange, onTutorSessionChange, preview.hubPath, tutorSession])
+
+  // Listen for remediation lesson navigation
+  useEffect(() => {
+    const handleOpenRemediation = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        tempPath: string
+        originalPath?: string
+        resumePractice?: boolean
+        quizData?: Question | Question[]
+        returnQuestionIndex?: number
+      }>).detail || {};
+      if (detail.tempPath) {
+        const originalPath = detail.originalPath || (notePath && !isTemporaryLessonPath(notePath) ? notePath : localStorage.getItem('ater_original_note_path') || undefined);
+        if (originalPath && !isTemporaryLessonPath(originalPath)) {
+          localStorage.setItem('ater_original_note_path', originalPath);
+          localStorage.setItem('ater_canonical_lesson_path', originalPath);
+        }
+        if (detail.resumePractice) {
+          const resumeQuizData = detail.quizData || activePractice?.quizData;
+          if (resumeQuizData) {
+            setPendingReturnPractice({
+              quizData: resumeQuizData,
+              notePath: originalPath || activePractice?.notePath,
+              initialQuestionIndex: detail.returnQuestionIndex ?? activePractice?.initialQuestionIndex ?? 0,
+              originalPath,
+            });
+          }
+        }
+        setActivePractice(null);
+        setRemediationReloadNonce((nonce) => nonce + 1);
+        onPreviewChange({
+          title: 'Remediation Lesson',
+          lessonPath: detail.tempPath,
+          notePath: detail.tempPath,
+          hubPath: preview.hubPath || tutorSession?.hub_path || '',
+          previewUrl: '',
+        });
+      }
+    };
+
+    const handleRestoreOriginal = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        originalPath: string
+        resumePractice?: boolean
+        quizData?: Question | Question[]
+        returnQuestionIndex?: number
+      }>).detail || {};
+      if (detail.originalPath) {
+        localStorage.setItem('ater_study_active_note_path', detail.originalPath);
+        localStorage.setItem('ater_canonical_lesson_path', detail.originalPath);
+        const resumeQuizData = detail.resumePractice ? detail.quizData || pendingReturnPractice?.quizData : null;
+        const resumePractice = resumeQuizData
+          ? {
+            quizData: resumeQuizData,
+            notePath: detail.originalPath,
+            initialQuestionIndex: detail.returnQuestionIndex ?? pendingReturnPractice?.initialQuestionIndex ?? 0,
+          }
+          : null;
+        setActivePractice(resumePractice);
+        if (resumePractice) {
+          preservePracticeOnNextNoteChangeRef.current = true;
+          setPendingReturnPractice(null);
+          localStorage.removeItem('ater_pending_practice_resume');
+        }
+        onPreviewChange({
+          title: titleFromPath(detail.originalPath),
+          lessonPath: getSimpleLessonPath(detail.originalPath),
+          notePath: detail.originalPath,
+          hubPath: preview.hubPath || tutorSession?.hub_path || '',
+          previewUrl: '',
+        });
+      }
+    };
+
+    window.addEventListener('ater:open-remediation-lesson', handleOpenRemediation);
+    window.addEventListener('ater:restore-original-lesson', handleRestoreOriginal);
+
+    return () => {
+      window.removeEventListener('ater:open-remediation-lesson', handleOpenRemediation);
+      window.removeEventListener('ater:restore-original-lesson', handleRestoreOriginal);
+    };
+  }, [activePractice, notePath, onPreviewChange, pendingReturnPractice, preview.hubPath, tutorSession]);
+
+  // Clean up temporary note when the learning workspace unmounts
+  useEffect(() => {
+    return () => {
+      void sidecarApi.deleteObsidianItem('database/learning paths/remediation_temp.md').catch(() => {});
+    };
+  }, []);
+
+  // Load active note markdown content
+  useEffect(() => {
+    if (!notePath || isGenerating) {
+      setContent('')
+      setLoadedContentPath(null)
+      setNoteMetadata({})
+      return
+    }
+
+    let active = true
+    const loadNote = async () => {
+      setLoading(true)
+      setLoadError(null)
+      setContent('')
+      setLoadedContentPath(null)
+      setNoteMetadata({})
+
+      try {
+        const res = await sidecarApi.readObsidianNote(notePath)
+        if (!active) return
+
+        const noteText = res.content || ''
+        setContent(noteText)
+        setLoadedContentPath(notePath)
+        setNoteMetadata(res.metadata || {})
+      } catch (err: any) {
+        console.error('Failed to load note content:', err)
+        if (active) {
+          setLoadError(`Failed to load lesson note: ${err?.message || err || 'Unknown error'}`)
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    void loadNote()
+    return () => {
+      active = false
+    }
+  }, [notePath, isGenerating, remediationReloadNonce])
+
+  useEffect(() => {
+    const scrollNode = lessonScrollRef.current;
+    if (!scrollNode) return;
+    if (typeof scrollNode.scrollTo === 'function') {
+      scrollNode.scrollTo({ top: 0 });
+    } else {
+      scrollNode.scrollTop = 0;
+    }
+  }, [notePath, content, activePractice, remediationReloadNonce]);
+
+  const renderNode = (node: NavNode, idx: number): React.ReactNode => {
+    const status = getNodeStatus(node.target)
+    const completed = status === 'completed'
+    const active = status === 'active' || status === 'current'
+    const unlocked = status === 'unlocked'
+    const generated = status === 'generated'
+    const locked = status === 'locked' || status === 'generated'
+    const hasChildren = node.children.length > 0
+    const isExpanded = expandedNodes.has(node.label)
+
+    return (
+      <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
+        <div
+          className={cn(
+            "group flex items-center gap-1.5 py-1 px-3 rounded-[4px] relative mx-1 transition-all",
+            active && "bg-primary/10 text-foreground font-semibold shadow-sm ring-1 ring-primary/20",
+            completed && !active && "text-muted-foreground/55",
+            unlocked && !active && "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
+            !active && !completed && !unlocked && "text-muted-foreground/55",
+            locked && "opacity-45 select-none"
+          )}
+        >
+          {node.depth > 0 && (
+            <div className="absolute left-0 top-0 bottom-0 flex" style={{width: node.depth * 14}}>
+              {Array.from({length: node.depth}).map((_, i) => (
+                <div key={i} className="w-[14px] border-r border-border/20 h-full" />
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 w-full" style={{marginLeft: node.depth * 14}}>
+            <div
+              className="w-4 h-4 shrink-0 flex items-center justify-center cursor-pointer"
+              onClick={(e) => {e.stopPropagation(); toggleNode(node.label);}}
+            >
+              {hasChildren ? (
+                <ChevronRight className={cn("w-3 h-3 text-muted-foreground/40 transition-transform", isExpanded ? "rotate-90" : "")} />
+              ) : null}
+            </div>
+
+            <input
+              type="checkbox"
+              checked={completed}
+              readOnly
+              aria-label={`${completed ? 'Completed' : active ? 'Current' : locked ? 'Locked' : 'Upcoming'} lesson: ${node.label.replace(/_/g, ' ')}`}
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 appearance-none border border-border bg-bento-card rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3.5px] after:h-[7.5px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 transition-all hover:border-foreground/20",
+                completed && "opacity-80",
+                active && "border-primary/70 bg-primary/10",
+                locked && "cursor-not-allowed opacity-20"
+              )}
+            />
+
+            {node.target ? (
+              <button
+                onClick={() => {
+                  if (locked) {
+                    toast.error('This lesson is locked. Master previous topics first!')
+                    return
+                  }
+                  openItemByTarget(node.target!)
+                }}
+                className={cn(
+                  "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground font-medium",
+                  active && "text-foreground font-black",
+                  completed && !active && "text-muted-foreground/50 font-medium line-through",
+                  generated && "text-muted-foreground/40",
+                  status === 'locked' && "text-muted-foreground/35",
+                  unlocked && !active && !completed && "text-muted-foreground/70"
+                )}
+              >
+                {node.label.replace(/_/g, ' ')}
+              </button>
+            ) : (
+              <span
+                onClick={() => toggleNode(node.label)}
+                className="text-[9px] font-black uppercase tracking-widest opacity-35 flex-1 select-none cursor-pointer"
+              >
+                {node.label.replace(/_/g, ' ')}
+              </span>
+            )}
+          </div>
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="flex flex-col">
+            {node.children.map((child, cidx) => renderNode(child, cidx))}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
     <div className="flex h-full min-h-0 flex-1 bg-bento-bg">
-      <aside className="hidden w-[300px] shrink-0 border-r border-border/40 bg-bento-panel lg:flex lg:flex-col">
-        <div className="h-14 shrink-0 border-b border-border/40 px-4 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="truncate text-[10px] font-black uppercase tracking-widest text-foreground">Lesson Map</p>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Atomic Notes</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="size-8 rounded-[6px] border border-border/50 bg-bento-card text-muted-foreground hover:text-foreground flex items-center justify-center"
-            aria-label="Back to chat"
-          >
-            <ArrowLeft size={14} />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 custom-scrollbar">
-          {lessonRoadmap.length > 0 ? (
-            <div className="space-y-4">
-              {lessonRoadmap.map((chapter) => (
-                <section key={chapter.id} className="space-y-1.5">
-                  <h3 className="px-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{chapter.title}</h3>
-                  {chapter.items.map((item) => {
-                    const active = item.status === 'active'
-                    const completed = item.status === 'completed'
-                    const locked = item.status === 'locked'
-                    return (
-                      <button
-                        key={item.path}
-                        type="button"
-                        disabled={locked}
-                        onClick={() => openItem(item)}
-                        className={cn(
-                          'flex w-full items-center gap-2 rounded-[6px] border px-2.5 py-2 text-left transition-colors',
-                          'border-border/40 bg-bento-bg text-muted-foreground hover:text-foreground',
-                          active && 'border-foreground/40 bg-foreground/10 text-foreground',
-                          completed && 'text-foreground/70',
-                          locked && 'cursor-not-allowed opacity-35 hover:text-muted-foreground',
-                        )}
-                      >
-                        <span className="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-border/60">
-                          {completed ? <Check size={10} /> : locked ? <Lock size={10} /> : active ? <Circle size={8} className="fill-current" /> : null}
-                        </span>
-                        <span className={cn('min-w-0 flex-1 truncate text-[11px] font-semibold', completed && 'line-through opacity-60')}>{item.title}</span>
-                      </button>
-                    )
-                  })}
-                </section>
-              ))}
+      {/* Main Area */}
+      <main className="min-w-0 flex-1 flex flex-col min-h-0 bg-bento-bg">
+        {isGenerating ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bento-panel select-none">
+            <div className="mb-6">
+              <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
             </div>
-          ) : (
-            <div className="py-16 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Loading map</div>
-          )}
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1 overflow-y-auto custom-scrollbar">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/40 bg-bento-bg/95 px-6 backdrop-blur">
-          <div className="flex items-center gap-3 min-w-0">
-            <BookOpen size={16} className="text-muted-foreground/60" />
-            <div className="min-w-0">
-              <p className="truncate text-[11px] font-black uppercase tracking-widest text-foreground">{titleFromPath(notePath)}</p>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Markdown Lesson</p>
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Generating Lesson</h3>
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 max-w-md leading-relaxed">
+              {generatingStatus || 'Writing curriculum stubs and compiling notes...'}
+            </p>
+          </div>
+        ) : loading || (notePath && loadedContentPath !== notePath) ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bento-panel select-none">
+            <Loader2 size={24} className="text-muted-foreground/40 animate-spin mb-3" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Loading Lesson Content...</span>
+          </div>
+        ) : loadError ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bento-panel">
+            <div className="max-w-md rounded-[12px] border border-border bg-bento-card p-6">
+              <div className="mx-auto mb-4 flex size-10 items-center justify-center rounded-[8px] border border-border bg-bento-panel text-muted-foreground">
+                <Info size={18} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Lesson Could Not Load</h3>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{loadError}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-5 h-9 rounded-[8px] border border-border bg-bento-item px-4 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-muted/50"
+              >
+                Back
+              </button>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 rounded-[6px] border border-border/50 bg-muted/20 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
-          >
-            Chat
-          </button>
-        </header>
-
-        <article className="mx-auto max-w-3xl px-8 py-8">
-          {loading ? (
-            <div className="py-24 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading lesson</div>
-          ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <AterMarkdown content={cleanMarkdown(content)} path={notePath} />
+        ) : (
+          <div ref={lessonScrollRef} className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar p-8">
+            <div className={cn("mx-auto w-full space-y-6", activePractice ? "max-w-6xl" : "max-w-3xl")}>
+              {!activePractice && showProperties && Object.keys(noteMetadata).length > 0 && (
+                <div className="bg-bento-panel border border-border/50 rounded-[12px] p-4 text-xs space-y-2 select-none">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Properties</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {Object.entries(noteMetadata).map(([key, val]) => {
+                      if (typeof val === 'object' && val !== null) {
+                        return (
+                          <div key={key} className="flex flex-col gap-0.5 bg-bento-card border border-border/40 rounded-[8px] p-2">
+                            <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black">{key.replace(/[_-]/g, ' ')}</span>
+                            <span className="text-foreground font-medium truncate">{JSON.stringify(val)}</span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={key} className="flex flex-col gap-0.5 bg-bento-card border border-border/40 rounded-[8px] p-2">
+                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black">{key.replace(/[_-]/g, ' ')}</span>
+                          <span className="text-foreground font-medium truncate">{String(val)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              {!activePractice && (
+              <header className="border-b border-border/50 pb-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[8px] border border-border/60 bg-bento-panel text-muted-foreground">
+                    <FileText size={16} strokeWidth={1.7} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/50">
+                      Current Lesson
+                    </div>
+                    <h1 className="mt-1 break-words text-2xl font-black leading-tight tracking-normal text-foreground">
+                      {lessonTitle}
+                    </h1>
+                  </div>
+                </div>
+              </header>
+              )}
+              {activePractice ? (
+                <ProvingGroundsPractice
+                  quizData={activePractice.quizData}
+                  notePath={activePractice.notePath}
+                  initialQuestionIndex={activePractice.initialQuestionIndex || 0}
+                  initialStarted
+                  onExit={() => setActivePractice(null)}
+                />
+              ) : (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <AterMarkdown content={content} path={notePath} onOpenPractice={setActivePractice} />
+                </div>
+              )}
             </div>
-          )}
-        </article>
-
-        {tutorSession?.session_id && notePath && (
-          <AdaptiveProvingGrounds
-            key={`${tutorSession.session_id}:${notePath}`}
-            sessionId={tutorSession.session_id}
-            notePath={notePath}
-            onPassed={completeCurrentNote}
-          />
+          </div>
         )}
       </main>
+
+      {/* Sidebar: Lesson Map (on the right) */}
+      {!isGenerating && (
+        <aside className="hidden w-[300px] shrink-0 border-l border-border/40 bg-bento-panel lg:flex lg:flex-col select-none">
+          <div className="h-14 shrink-0 border-b border-border/40 px-4 flex items-center justify-between">
+            <div className="min-w-0 flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase bg-transparent">
+              <Map size={16} strokeWidth={1.5} />
+              MAP
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="size-8 rounded-[6px] border border-border/50 bg-bento-card text-muted-foreground hover:text-foreground flex items-center justify-center"
+              aria-label="Back to chat"
+            >
+              <ArrowLeft size={14} />
+            </button>
+          </div>
+
+          {/* Tools toolbar */}
+          {((noteMetadata?.source_file || noteMetadata?.source) || Object.keys(noteMetadata).length > 0) && (
+            <div className="px-4 py-2 border-b border-border/40 flex items-center justify-start gap-1.5 bg-muted/10 shrink-0">
+              {/* Jump to PDF button */}
+              {(noteMetadata?.source_file || noteMetadata?.source) && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const src = noteMetadata.source_file || noteMetadata.source
+                    if (!src) return;
+                    let cleanPath = src
+                    if (Array.isArray(src) && src.length > 0) {
+                      cleanPath = src[0]
+                    }
+                    if (typeof cleanPath === 'string') {
+                      cleanPath = cleanPath.replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0]
+                      if (cleanPath.includes('#')) {
+                        cleanPath = cleanPath.split('#')[0]
+                      }
+                    }
+
+                    const wps = Array.isArray(noteMetadata.source_pages)
+                      ? noteMetadata.source_pages
+                      : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []))
+
+                    const numericWaypoints = wps.map(Number).filter(n => !isNaN(n))
+                    const firstPage = numericWaypoints.length > 0 ? numericWaypoints[0] : 1
+
+                    let resolvedPath = cleanPath
+                    try {
+                      const searchRes = await sidecarApi.findVaultPage(cleanPath)
+                      if (searchRes.found && searchRes.path) {
+                        resolvedPath = searchRes.path
+                      } else {
+                        const parts = cleanPath.split(/[/\\]/)
+                        const filename = parts[parts.length - 1]
+                        if (filename) {
+                          const searchRes2 = await sidecarApi.findVaultPage(filename)
+                          if (searchRes2.found && searchRes2.path) {
+                            resolvedPath = searchRes2.path
+                          }
+                        }
+                      }
+                    } catch (err) {
+                      console.error("[Jump] Path resolution failed", err)
+                    }
+                    navigate(`/obsidian?path=${encodeURIComponent(resolvedPath)}&page=${firstPage}`)
+                  }}
+                  className="h-7 px-2.5 flex items-center gap-1.5 rounded-[6px] border border-border bg-bento-card text-muted-foreground hover:text-foreground text-[10px] font-bold uppercase tracking-wider transition-all"
+                  title="Jump to Source PDF"
+                >
+                  <FileText size={12} />
+                  Jump to PDF
+                </button>
+              )}
+
+              {/* Toggle Properties Button */}
+              {Object.keys(noteMetadata).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowProperties(prev => !prev)}
+                  className={cn(
+                    "h-7 px-2.5 flex items-center gap-1.5 rounded-[6px] border text-[10px] font-bold uppercase tracking-wider transition-all",
+                    showProperties
+                      ? "bg-foreground/10 border-foreground/30 text-foreground"
+                      : "bg-bento-card border-border text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Toggle Properties"
+                >
+                  <Info size={12} />
+                  Properties
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Hub Topic context select block */}
+          {(() => {
+            const hubName = tutorSession?.hub_path || preview.hubPath || '';
+            if (!hubName) return null;
+            const clean = hubName.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || '';
+            return (
+              <div className="p-4 pb-1 shrink-0">
+                <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>
+                <div className="w-full flex items-center justify-between bg-bento-item border border-border rounded-[12px] p-3 text-sm text-left">
+                  <span className="truncate text-foreground font-medium">{clean.replace(/[_-]/g, ' ')}</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Sibling fallbacks / Connections list */}
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 custom-scrollbar">
+            {tree.length > 0 ? (
+              <div className="flex flex-col space-y-0.5">
+                {tree.map((node, idx) => renderNode(node, idx))}
+              </div>
+            ) : (
+              <div className="py-16 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Loading map</div>
+            )}
+          </div>
+        </aside>
+      )}
     </div>
   )
 }

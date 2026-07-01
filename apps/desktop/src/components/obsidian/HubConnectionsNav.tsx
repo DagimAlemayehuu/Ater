@@ -28,9 +28,11 @@ export function parseHubTree(content: string): NavNode[] {
 
     const wm = wikilinkRe.exec(text)
     const target = wm ? wm[1].trim() : null
-    const label = wm
+    let label = wm
       ? (wm[2] || wm[1]).trim().split(/[/\\]/).pop() || wm[1]
       : text.replace(/\[x\]|\[ \]/ig, '').replace(/\*\*/g, '').trim()
+
+    label = label.replace(/^[\s🔒🔐🔓🔑]+/g, '').trim()
 
     const isChecked = typeof text === 'string' && text.toLowerCase().startsWith('[x]')
     const node: NavNode = {label, target, depth: 0, children: [], isChecked}

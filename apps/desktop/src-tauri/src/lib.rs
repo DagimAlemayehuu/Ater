@@ -523,6 +523,7 @@ pub fn run() {
             commands::ater_list_inbox,
             commands::ater_list_generated,
             commands::ater_watcher_toggle,
+            commands::ater_inbox_upload,
             commands::get_ai_rate_limits,
             commands::get_ai_usage,
             commands::get_all_keys_usage,

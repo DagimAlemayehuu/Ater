@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {useState, useRef, useEffect, useMemo, useCallback, useTransition} from 'react'
 import {
- Trash2, ShieldCheck, RefreshCw, 
- Sparkles, Paperclip, FileText, Folder, ChevronRight, 
-  X, Zap, 
+ Trash2, ShieldCheck, RefreshCw,
+ Sparkles, Paperclip, FileText, Folder, ChevronRight,
+  X, Zap,
  Database, Search, Archive,
  ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
   Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
   Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
-  Activity, Play, SkipForward, MapPin
+  Activity, Play, SkipForward, MapPin, BookOpenCheck
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/button'
 import { PanelLoader } from '@/components/ui/loading-state'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
-import { HtmlLessonViewer } from '@/components/obsidian/HtmlLessonViewer'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
 import { ObsidianEditor } from '@/components/obsidian/ObsidianEditor'
 import { NoteProperties } from '@/components/obsidian/NoteProperties'
@@ -28,6 +27,7 @@ import { KnowledgeFooter } from '@/components/obsidian/KnowledgeFooter'
 import { useLayout } from '@/context/layout-provider'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
+import { useSidebarContent } from '@/context/sidebar-content-context'
 import React, { lazy, Suspense } from 'react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
 import { updateProperty, deleteProperty, toggleChecklistLink, parseFrontmatter } from '@/lib/markdownHelper'
@@ -51,6 +51,10 @@ interface FileNode {
 const cleanTitle = (val: any): string => {
   if (val === undefined || val === null) return ''
   return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
+}
+
+const isTemporaryLessonPath = (path?: string | null) => {
+  return typeof path === 'string' && path.includes('remediation_temp')
 }
 
 interface FileTreeItemProps {
@@ -119,22 +123,22 @@ const FileTreeItem = React.memo(({
   const isRenaming = renamingPath === node.path
 
   return (
-    <div 
+    <div
      className="flex flex-col"
      onDragOver={(e) => onDragOver(e, node.path)}
      onDragLeave={(e) => onDragLeave(e, node.path)}
      onDragEnd={onDragEnd}
      onDrop={(e) => onDrop(e, node.path)}
     >
-      <div 
+      <div
         draggable
         data-tour={!node.isFolder ? 'obsidian-file-item' : undefined}
         onDragStart={(e) => onDragStart(e, node.path)}
         onClick={() => node.isFolder ? onToggleFolder(node.path) : onSelectFile(node.path)}
         className={cn(
           "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
-          isSelected 
-            ? "bg-bento-item text-foreground font-semibold shadow-sm" 
+          isSelected
+            ? "bg-bento-item text-foreground font-semibold shadow-sm"
             : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
           dragOverPath === node.path && "bg-bento-item/50 ring-1 ring-[#242426] ring-inset",
           draggedPath === node.path && "opacity-40 grayscale"
@@ -145,7 +149,7 @@ const FileTreeItem = React.memo(({
             <ChevronRight className={cn("w-3 h-3 ", isExpanded ? "rotate-90" : "")} />
           ) : null}
         </div>
-        
+
         {node.isFolder ? (
           <Folder className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/60")} />
         ) : (typeof node.path === 'string' && node.path.toLowerCase().endsWith('.pdf')) ? (
@@ -153,7 +157,7 @@ const FileTreeItem = React.memo(({
         ) : (
           <FileText className={cn("w-3.5 h-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground/40")} />
         )}
-        
+
         {isRenaming ? (
           <input
             autoFocus
@@ -235,9 +239,16 @@ const FileTreeItem = React.memo(({
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
-  const { 
-    setCurrentHub, setIsActive, setShowOverlay, 
-    setTimeLeft, setShowStats, mode, addNoteFocus, currentHub 
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+  const {
+    setCurrentHub, setIsActive, setShowOverlay,
+    setTimeLeft, setShowStats, mode, addNoteFocus, currentHub
   } = usePomodoroStore()
   const location = useLocation()
 
@@ -265,95 +276,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
   const noteContentRef = useRef('')
 
-  // Companion files states & memos for hybrid lessons
-  const [viewMode, setViewMode] = useState<'notes' | 'lesson'>('notes')
-  const [companionContent, setCompanionContent] = useState<string>('')
-
-  const lessonVariantPath = useMemo(() => {
-    if (!selectedPath || !selectedPath.toLowerCase().endsWith('.md')) return null
-    
-    const simple = noteMetadata?.simple || noteMetadata?.lesson_variants?.simple;
-    const deep = noteMetadata?.deep || noteMetadata?.lesson_variants?.deep;
-    const cram = noteMetadata?.cram || noteMetadata?.lesson_variants?.cram;
-    const exam = noteMetadata?.exam || noteMetadata?.lesson_variants?.exam;
-    
-    const rel = simple || deep || cram || exam;
-    if (!rel || typeof rel !== 'string') return null
-    
-    const parts = selectedPath.replace(/\\/g, '/').split('/');
-    parts.pop();
-    const parentDir = parts.join('/');
-    const fullPath = parentDir ? `${parentDir}/${rel}` : rel;
-    return fullPath.replace(/\\/g, '/');
-  }, [selectedPath, noteMetadata])
-
-  const hasMatchingHtml = useMemo(() => {
-    if (!selectedPath || !selectedPath.toLowerCase().endsWith('.md')) return false
-    if (lessonVariantPath) return true;
-    const htmlPath = selectedPath.replace(/\.md$/i, '.html').replace(/\\/g, '/').toLowerCase();
-    return files.some(f => f.path.replace(/\\/g, '/').toLowerCase() === htmlPath);
-  }, [selectedPath, files, lessonVariantPath])
-
-  const hasMatchingMd = useMemo(() => {
-    if (!selectedPath || !selectedPath.toLowerCase().endsWith('.html')) return false
-    const mdPath = selectedPath.replace(/\.html$/i, '.md').replace(/\\/g, '/').toLowerCase();
-    return files.some(f => f.path.replace(/\\/g, '/').toLowerCase() === mdPath);
-  }, [selectedPath, files])
-
-  const isLessonNote = useMemo(() => {
-    if (!selectedPath) return false
-    const pathLower = selectedPath.toLowerCase()
-    return (
-      pathLower.includes('/lessons/') ||
-      pathLower.includes('\\lessons\\') ||
-      hasMatchingHtml ||
-      hasMatchingMd ||
-      noteMetadata?.type?.toLowerCase() === 'lesson' ||
-      noteMetadata?.mode === 'EDUCATION'
-    )
-  }, [selectedPath, hasMatchingHtml, hasMatchingMd, noteMetadata])
-
-  useEffect(() => {
-    if (selectedPath) {
-      if (selectedPath.toLowerCase().endsWith('.html')) {
-        setViewMode('lesson')
-      } else if (hasMatchingHtml) {
-        setViewMode('lesson')
-      } else {
-        setViewMode('notes')
-      }
-    }
-  }, [selectedPath, hasMatchingHtml])
-
-  useEffect(() => {
-    let active = true
-    if (selectedPath && hasMatchingHtml) {
-      const htmlPath = lessonVariantPath || selectedPath.replace(/\.md$/i, '.html')
-      sidecarApi.readObsidianNote(htmlPath)
-        .then(res => {
-          if (active) setCompanionContent(res.content || '')
-        })
-        .catch(err => console.error('Failed to load companion HTML', err))
-    } else if (selectedPath && hasMatchingMd) {
-      const mdPath = selectedPath.replace(/\.html$/i, '.md')
-      sidecarApi.readObsidianNote(mdPath)
-        .then(res => {
-          if (active) {
-            setCompanionContent(res.content || '')
-            if (res.metadata) {
-              setNoteMetadata(res.metadata)
-            }
-          }
-        })
-        .catch(err => console.error('Failed to load companion MD', err))
-    } else {
-      setCompanionContent('')
-    }
-    return () => {
-      active = false
-    }
-  }, [selectedPath, hasMatchingHtml, hasMatchingMd, lessonVariantPath])
-
   const {
     artifacts,
     isPanelOpen,
@@ -362,6 +284,37 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     resetArtifacts
   } = useArtifactStore()
   const [isDraggingSplit, setIsDraggingSplit] = useState(false)
+  // Listen for remediation lesson navigation in Knowledge Base
+  useEffect(() => {
+    const handleOpenRemediation = (event: Event) => {
+      const detail = (event as CustomEvent<{ tempPath: string }>).detail || {};
+      if (detail.tempPath) {
+        setSelectedPath(detail.tempPath);
+      }
+    };
+
+    const handleRestoreOriginal = (event: Event) => {
+      const detail = (event as CustomEvent<{ originalPath: string }>).detail || {};
+      if (detail.originalPath) {
+        setSelectedPath(detail.originalPath);
+      }
+    };
+
+    window.addEventListener('ater:open-remediation-lesson', handleOpenRemediation);
+    window.addEventListener('ater:restore-original-lesson', handleRestoreOriginal);
+
+    return () => {
+      window.removeEventListener('ater:open-remediation-lesson', handleOpenRemediation);
+      window.removeEventListener('ater:restore-original-lesson', handleRestoreOriginal);
+    };
+  }, []);
+
+  // Clean up temporary note when leaving Knowledge Base
+  useEffect(() => {
+    return () => {
+      void sidecarApi.deleteObsidianItem('database/learning paths/remediation_temp.md').catch(() => {});
+    };
+  }, []);
 
   // Dragging split logic for resizing
   useEffect(() => {
@@ -427,6 +380,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const { push, history, currentIndex } = useNavigation()
   const { setCenterContent, setRightContent } = useHeader()
   const { isFullscreen, setIsFullscreen } = useLayout()
+  const { setSidebarContent } = useSidebarContent()
   const handlePdfStateChange = useCallback((state: any) => {
     setPdfState({
       page: state.page,
@@ -445,7 +399,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         addNoteFocus(lastPathRef.current, duration, currentHub);
       }
     }
-    
+
     // Reset for the NEW note
     entryTimeRef.current = Date.now();
     lastPathRef.current = selectedPath;
@@ -467,22 +421,21 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   useEffect(() => {
     // Center Content (Status/Meta)
     setCenterContent(null)
- 
+
      // Right Content (Actions)
-     const selectedIsHtml = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.html')
      setRightContent(
        <div className="flex items-center gap-1.5">
          {selectedPath && (
            <>
              {isEditing ? (
                <div className="flex items-center gap-1.5">
-                 <button 
+                 <button
                    onClick={handleSaveNote}
                    className="h-8 px-3 bg-primary text-primary-foreground rounded-[8px] text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm hover:opacity-90"
                  >
                    <Save size={12} /> SAVE
                  </button>
-                 <button 
+                 <button
                    onClick={() => setIsEditing(false)}
                    className="h-8 px-3 bg-muted text-muted-foreground rounded-[8px] text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-accent"
                  >
@@ -491,17 +444,15 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                </div>
              ) : (
                <div className="flex items-center gap-1">
-                 {!selectedIsHtml && (
-                   <button 
-                     onClick={() => setIsEditing(true)}
-                     className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
-                     title="Edit Note"
-                   >
-                      <Edit3 size={14} />
-                   </button>
-                 )}
+                 <button
+                   onClick={() => setIsEditing(true)}
+                   className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
+                   title="Edit Note"
+                 >
+                    <Edit3 size={14} />
+                 </button>
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
-                   <button 
+                   <button
                       data-tour="btn-jump-pdf"
                       onClick={async () => {
                         const src = noteMetadata.source_file || noteMetadata.source
@@ -516,12 +467,12 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                              cleanPath = cleanPath.split('#')[0]
                            }
                          }
-                        
+
                         // 2. Resolve Waypoints
-                        const wps = Array.isArray(noteMetadata.source_pages) 
-                          ? noteMetadata.source_pages 
+                        const wps = Array.isArray(noteMetadata.source_pages)
+                          ? noteMetadata.source_pages
                           : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []))
-                        
+
                         const numericWaypoints = wps.map(Number).filter(n => !isNaN(n))
                         const firstPage = numericWaypoints.length > 0 ? numericWaypoints[0] : 1
 
@@ -557,13 +508,13 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                      <FileText size={14} />
                    </button>
                  )}
-                   <button 
+                   <button
                       data-tour="btn-toggle-properties"
                       onClick={() => config && saveConfig({ showProperties: !config.showProperties })}
                       className={cn(
                         "w-8 h-8 flex items-center justify-center rounded-[8px] border  shadow-sm",
-                         config?.showProperties 
-                         ? "bg-foreground/10 border-foreground/50 text-foreground" 
+                         config?.showProperties
+                         ? "bg-foreground/10 border-foreground/50 text-foreground"
                          : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
                       )}
                       title="Toggle Properties"
@@ -574,7 +525,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              )}
            </>
          )}
- 
+
          {selectedPath && typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf') && (
             <div className="flex items-center gap-1.5">
               {/* Waypoint Navigation (if multiple) */}
@@ -591,8 +542,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                         }}
                         className={cn(
                           "w-5 h-5 flex items-center justify-center text-[10px] font-black rounded-[8px] border transition-none",
-                          currentWaypointIndex === idx 
-                            ? "bg-foreground/10 border-foreground/50 text-foreground shadow-sm" 
+                          currentWaypointIndex === idx
+                            ? "bg-foreground/10 border-foreground/50 text-foreground shadow-sm"
                             : "bg-background/50 border-border/40 text-muted-foreground/60 hover:border-foreground/40 hover:text-foreground"
                         )}
                         title={`Jump to Page ${page}`}
@@ -605,7 +556,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
               )}
 
               <div className="flex items-center gap-1 bg-muted/30 px-2 py-0.5 rounded-[8px] border border-border/50 h-8">
-             <button 
+             <button
                onClick={() => pdfRef.current?.handlePrev()}
                className="p-1 hover:bg-background rounded-[8px]  text-muted-foreground hover:text-foreground"
              >
@@ -616,7 +567,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                <span className="text-[9px] font-bold text-muted-foreground/40">/</span>
                <span className="text-[10px] font-black text-muted-foreground tabular-nums">{pdfState.pageCount}</span>
              </div>
-             <button 
+             <button
                onClick={() => pdfRef.current?.handleNext()}
                className="p-1 hover:bg-background rounded-[8px]  text-muted-foreground hover:text-foreground"
              >
@@ -625,14 +576,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
            </div>
             </div>
          )}
- 
+
          {selectedPath && (
-           <button 
+           <button
              onClick={() => setIsFullscreen(!isFullscreen)}
              className={cn(
                "w-8 h-8 flex items-center justify-center rounded-[8px] border  shadow-sm",
-                isFullscreen 
-                ? "bg-foreground/10 border-foreground/50 text-foreground" 
+                isFullscreen
+                ? "bg-foreground/10 border-foreground/50 text-foreground"
                 : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
              )}
              title={isFullscreen ? "Exit Focus Mode" : "Focus Mode"}
@@ -642,16 +593,16 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
          )}
        </div>
      )
- 
+
      return () => {
        setCenterContent(null)
        setRightContent(null)
      }
   }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, setIsFullscreen])
- 
+
  // --- Sync & Topology Cache ---
  const currentHubPath = useRef<string | null>(null);
- 
+
 
  // --- File Operations State ---
  const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -776,15 +727,15 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
  // Heuristic: If it's a Hub note itself, the hub is "self"
  const isHubNote = (typeof loadedPath === 'string' && loadedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub'
- 
+
  if (!rawHub && !isHubNote) {
  setHubConnections(null)
  return
 }
- 
+
  try {
  let topologies: string | null = null
- 
+
  const extractSection = (content: string) => {
  if (!content) return null
  const normalized = content.replace(/\r\n/g, '\n');
@@ -803,7 +754,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub]
   const hubVal = hubItems[0]
   const cleanHubName = String(hubVal).replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim()
-  
+
   if (cleanHubName) {
   const res = await sidecarApi.findVaultPage(cleanHubName)
   const tryPath = async (p: string) => {
@@ -817,7 +768,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   if (res.found && res.path) {
   topologies = await tryPath(res.path)
 }
-  
+
   if (!topologies) {
   const searchPaths = [
    `database/study planner/${cleanHubName}.md`,
@@ -833,7 +784,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 }
 }
- 
+
  if (topologies) {
   const pageName = typeof loadedPath === 'string' ? loadedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '' : ''
   if (pageName) {
@@ -878,7 +829,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const hubItems = Array.isArray(rawHub) ? rawHub : [rawHub];
   cleanHubName = String(hubItems[0] || '').replace(/^\[+/, '').replace(/\]+$/, '').trim();
  }
-  
+
   const isCurrentAHub = (typeof selectedPath === 'string' && selectedPath.toLowerCase().includes('_hub.md')) || noteMetadata?.type?.toLowerCase() === 'hub';
   if (!cleanHubName && isCurrentAHub) {
   cleanHubName = typeof selectedPath === 'string' ? selectedPath.split(/[/\\]/).pop()?.replace('.md', '') || '' : '';
@@ -887,7 +838,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   if (cleanHubName) {
   const res = await sidecarApi.findVaultPage(cleanHubName);
   const hubPath = res.path || (files.find(f => f.name.toLowerCase().includes(cleanHubName.toLowerCase()))?.path);
-  
+
   if (hubPath) {
   const hubData = await sidecarApi.readObsidianNote(hubPath);
   if (hubData.content) {
@@ -915,7 +866,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   if (!resTarget.found) {
   resTarget = (await sidecarApi.findVaultPage(target || label)) as {found: boolean, path: string | null};
  }
-  
+
   if (resTarget.found && resTarget.path) {
   await updateFrontmatterProperty(resTarget.path, 'read', isChecked);
   if (selectedPath === resTarget.path) {
@@ -979,7 +930,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
   const refreshed = await sidecarApi.readObsidianNote(selectedPath);
   setNoteMetadata(refreshed.metadata ?? {});
-  
+
   // Sync 'read' to Hub checkbox (bi-directional)
   if (name.toLowerCase() === 'read') {
   const label = selectedPath.split(/[/\\]/).pop()?.replace('.md', '') ?? '';
@@ -1012,8 +963,10 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 }
 
- // --- Sync & Polling ---
+  // --- Sync & Polling ---
   useEffect(() => {
+    if (location.pathname !== '/obsidian') return
+
     const searchParams = new URLSearchParams(location.search)
     const initSearch = searchParams.get('search')
     const initPath = searchParams.get('path')
@@ -1021,17 +974,17 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     const initFilterRaw = searchParams.get('filterPages')
     const initFilterPages = initFilterRaw ? initFilterRaw.split(',').map(Number) : []
     const initFullscreen = searchParams.get('fullscreen') === 'true'
-    
+
     if (initFullscreen) {
       setIsFullscreen(true)
     }
-    
+
     if (initPath) {
       // Sync state from URL if different
       if (initPath !== selectedPath || initPage !== selectedPage) {
         selectFile(initPath, initPage, true, initFilterPages)
       }
-      
+
       // Expand parent folders
       const parts = initPath.split(/[/\\]/)
       const toExpand: string[] = []
@@ -1046,36 +999,48 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         return next
       })
     } else {
-      setSelectedPath(null)
-      setNoteMetadata({})
-      setNoteContent('')
-      setEditedContent('')
+      if (selectedPath !== null) {
+        setSelectedPath(null)
+      }
+      if (Object.keys(noteMetadata).length > 0) {
+        setNoteMetadata({})
+      }
+      if (noteContent !== '') {
+        setNoteContent('')
+      }
+      if (editedContent !== '') {
+        setEditedContent('')
+      }
       if (initSearch) {
-        setSearchQuery(initSearch)
-        setInputValue(initSearch)
+        if (searchQuery !== initSearch) {
+          setSearchQuery(initSearch)
+          setInputValue(initSearch)
+        }
       } else {
-        setSearchQuery('')
-        setInputValue('')
+        if (searchQuery !== '') {
+          setSearchQuery('')
+          setInputValue('')
+        }
       }
     }
-  }, [location.search, selectedPath, selectedPage])
+  }, [location.search, location.pathname, selectedPath, selectedPage, noteMetadata, noteContent, editedContent, searchQuery])
 
  useEffect(() => {
  fetchFiles()
  fetchStatus()
  fetchInbox()
- 
+
  // Polling for realtime sync
  const interval = setInterval(() => {
  fetchFiles()
  fetchStatus()
 }, 15000)
- 
+
  return () => clearInterval(interval)
 }, [config?.obsidianVaultPath])
 
  // --- Actions ---
- const fetchFiles = async () => {
+ const fetchFiles = useCallback(async () => {
  setLoadingFiles(true)
  try {
  const res = await sidecarApi.listObsidianFiles()
@@ -1085,7 +1050,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } finally {
  setLoadingFiles(false)
 }
-}
+}, [])
 
  const fetchStatus = async () => {
  try {
@@ -1102,7 +1067,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } finally {setLoadingInbox(false)}
 }
 
- const handleDeleteItem = async (path: string, isFolder: boolean) => {
+ const handleDeleteItem = useCallback(async (path: string, isFolder: boolean) => {
  try {
  await sidecarApi.deleteObsidianItem(path)
  await fetchFiles()
@@ -1117,9 +1082,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
  toast.error(`Delete failed: ${err.message}`)
 }
-}
+}, [fetchFiles, selectedPath])
 
- const handleCreateItem = async () => {
+ const handleCreateItem = useCallback(async () => {
  if (!newItemName) {
  setCreatingInPath(null)
  setCreatingType(null)
@@ -1145,9 +1110,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
  toast.error(`Creation failed: ${err.message}`)
 }
-}
+}, [creatingInPath, creatingType, newItemName, fetchFiles])
 
- const handleRenameItem = async () => {
+ const handleRenameItem = useCallback(async () => {
  if (!renamingPath || !newItemName) {
  setRenamingPath(null)
  return
@@ -1155,7 +1120,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
  const parentPath = renamingPath.includes('/') ? renamingPath.substring(0, renamingPath.lastIndexOf('/')) : ''
  let newPath = parentPath ? `${parentPath}/${newItemName}` : newItemName
- 
+
  // Preserve extension for files if not provided
  if (!renamingPath.endsWith('/') && renamingPath.includes('.')) {
  const ext = renamingPath.split('.').pop()
@@ -1175,9 +1140,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
   toast.error(`Rename failed: ${err.message}`)
  }
-}
+}, [renamingPath, newItemName, fetchFiles, selectedPath])
 
-const selectFile = async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
+const selectFile = useCallback(async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
     const norm = String(path).toLowerCase();
     const cleanItemName = path.split(/[/\\]/).pop()?.replace('.md', '') || '';
     if (norm.includes('database/courses/')) {
@@ -1219,8 +1184,8 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       }
 
       if (sourceMatches) {
-        const wps = Array.isArray(noteMetadata.source_pages) 
-          ? noteMetadata.source_pages 
+        const wps = Array.isArray(noteMetadata.source_pages)
+          ? noteMetadata.source_pages
           : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []));
         const numericWaypoints = wps.map(Number).filter(n => !isNaN(n));
         setWaypoints(numericWaypoints);
@@ -1235,7 +1200,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     if (selectedPath === path && path.toLowerCase().endsWith('.pdf')) {
       setSelectedPage(page);
       pdfRef.current?.handleJump(page);
-      
+
       // Sync URL search params
       if (!fromHistory) {
         const searchParams = new URLSearchParams(location.search);
@@ -1244,7 +1209,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         else searchParams.delete('page');
         if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
         else searchParams.delete('filterPages');
-        navigate({ search: searchParams.toString() }, { replace: false });
+        navigate(`/obsidian?${searchParams.toString()}`);
       }
       return;
     }
@@ -1260,8 +1225,28 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
     selectRequestId.current += 1
     const currentReq = selectRequestId.current
-    
+
     console.log(`[selectFile] START: ${path} (reqId: ${currentReq})`)
+
+    if (!fromHistory) {
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('path', path);
+      if (page > 1) searchParams.set('page', page.toString());
+      else searchParams.delete('page');
+
+      if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
+      else searchParams.delete('filterPages');
+
+      navigate(`/obsidian?${searchParams.toString()}`);
+
+      push({
+        type: 'file',
+        path: path,
+        metadata: { page, filterPages }
+      }, false);
+      return;
+    }
+
     setSelectedPath(path)
     setSelectedPage(page)
     setSelectedFilteredPages(filterPages)
@@ -1280,25 +1265,6 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         setLoadingNote(false);
       }
     }, 15000);
-    
-    if (!fromHistory) {
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('path', path);
-      if (page > 1) searchParams.set('page', page.toString());
-      else searchParams.delete('page');
-      
-      if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
-      else searchParams.delete('filterPages');
-      
-      navigate({ search: searchParams.toString() }, { replace: false });
-
-      push({ 
-        type: 'file', 
-        path: path, 
-        metadata: { page, filterPages } 
-        // Note: we don't store keepMetadata in history as it's a one-time intent
-      }, false);
-    }
 
     // PDFs are handled by an iframe, we don't need to read content here
     if (typeof path === 'string' && path.toLowerCase().endsWith('.pdf')) {
@@ -1319,23 +1285,23 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     try {
       console.log(`[selectFile] Fetching content: ${path}`);
       const res = await sidecarApi.readObsidianNote(path)
-      
+
       // Prevent stale data from overwriting new request
       if (selectRequestId.current !== currentReq) {
         console.log(`[selectFile] Request ${currentReq} is stale, ignoring result.`);
         return
       }
-      
+
       const content = res.content || '';
       const metadata = res.metadata || {};
-      
+
       setNoteMetadata(metadata);
       setNoteContent(content);
       noteContentRef.current = content;
       setEditedContent(content);
       setIsEditing(false);
       setLoadedPath(path);
-      
+
       console.log(`[selectFile] SUCCESS: ${path} (${content.length} chars)`);
     } catch (err) {
       console.error(`[selectFile] ERROR: Failed to read note: ${path}`, err)
@@ -1348,10 +1314,10 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       clearTimeout(loadingTimeout);
       clearTimeout(safetyTimeout);
       if (selectRequestId.current === currentReq) {
-        setLoadingNote(false) 
+        setLoadingNote(false)
       }
     }
-  }
+  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push])
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
     let cleanPageName = pageName;
@@ -1376,7 +1342,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
     selectRequestId.current += 1;
     const currentReq = selectRequestId.current;
-    
+
     setLoadingNote(true);
     const safetyTimeout = setTimeout(() => {
       if (selectRequestId.current === currentReq) {
@@ -1388,7 +1354,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     try {
       console.log(`[WikiLink] Finding page: ${cleanPageName} (resolvedPageNumber: ${resolvedPageNumber})`);
       const res = await sidecarApi.findVaultPage(cleanPageName);
-      
+
       if (selectRequestId.current !== currentReq) return;
       if (res.found && res.path) {
         await selectFile(res.path, resolvedPageNumber, false, filterPages);
@@ -1401,17 +1367,17 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         if (pageName.includes('/')) {
           newPath = pageName.endsWith('.md') ? pageName : `${pageName}.md`;
         } else {
-          let folder = 'database/bases/Inbox'; 
+          let folder = 'database/bases/Inbox';
           if (selectedPath && selectedPath.includes('/')) {
             folder = selectedPath.substring(0, selectedPath.lastIndexOf('/'));
           }
           newPath = folder ? `${folder}/${pageName}.md` : `${pageName}.md`;
         }
-        
+
         const initialContent = `---\ntitle: ${pageName.split(/[/\\]/).pop()?.replace('.md', '')}\nread: false\n---\n\n# ${pageName.split(/[/\\]/).pop()?.replace('.md', '')}\n`;
-        
+
         await sidecarApi.createObsidianFile(newPath, initialContent);
-        await fetchFiles(); 
+        await fetchFiles();
         await selectFile(newPath, 1, false, []);
       }
     } catch (err) {
@@ -1424,6 +1390,55 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       }
     }
   }
+
+  const openSelectedInLessonRuntime = useCallback(async () => {
+    if (!selectedPath || selectedPath.toLowerCase().endsWith('.pdf') || isTemporaryLessonPath(selectedPath)) {
+      toast.error('Select an atomic lesson note first.')
+      return
+    }
+
+    let hubPath = ''
+    const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub
+    const isHubNote = selectedPath.toLowerCase().includes('_hub.md') || String(noteMetadata?.type || '').toLowerCase() === 'hub'
+
+    if (isHubNote) {
+      hubPath = selectedPath
+    } else if (rawHub) {
+      const hubValue = Array.isArray(rawHub) ? rawHub[0] : rawHub
+      const hubName = String(hubValue || '')
+        .replace(/^\[+/, '')
+        .replace(/\]+$/, '')
+        .split('|')[0]
+        .trim()
+
+      if (hubName) {
+        try {
+          const res = await sidecarApi.findVaultPage(hubName)
+          if (res.found && res.path) {
+            hubPath = res.path
+          }
+        } catch (err) {
+          console.error('Failed to resolve lesson hub from Knowledge Base:', err)
+        }
+      }
+    }
+
+    const title = cleanTitle(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson')
+    const preview = {
+      title,
+      lessonPath: selectedPath,
+      notePath: selectedPath,
+      hubPath,
+      previewUrl: '',
+    }
+
+    localStorage.setItem('ater_lesson_preview', JSON.stringify(preview))
+    localStorage.setItem('ater_lesson_panel_open', JSON.stringify(true))
+    localStorage.setItem('ater_study_active_note_path', selectedPath)
+    localStorage.setItem('ater_canonical_lesson_path', selectedPath)
+    localStorage.setItem('ater_original_note_path', selectedPath)
+    navigate('/agents?tab=ater')
+  }, [navigate, noteMetadata, selectedPath])
 
   const fetchHubs = async () => {
     setLoadingHubs(true)
@@ -1450,7 +1465,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     const groups: Record<string, any[]> = {}
     hubs.filter(hub => {
       if (!searchQuery) return true;
-      return (typeof hub.title === 'string' && hub.title.toLowerCase().includes((searchQuery || '').toLowerCase())) || 
+      return (typeof hub.title === 'string' && hub.title.toLowerCase().includes((searchQuery || '').toLowerCase())) ||
              (hub.course && typeof hub.course === 'string' && hub.course.toLowerCase().includes((searchQuery || '').toLowerCase()));
     }).forEach(hub => {
       const course = hub.course || 'Uncategorized'
@@ -1470,7 +1485,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       const isPdf = typeof f.path === 'string' && f.path.toLowerCase().endsWith('.pdf');
       if (!isPdf) return false;
       if (!searchQuery) return true;
-      return (typeof f.name === 'string' && f.name.toLowerCase().includes((searchQuery || '').toLowerCase())) || 
+      return (typeof f.name === 'string' && f.name.toLowerCase().includes((searchQuery || '').toLowerCase())) ||
              (typeof f.path === 'string' && f.path.toLowerCase().includes((searchQuery || '').toLowerCase()));
     })
     const groups: Record<string, any[]> = {}
@@ -1483,12 +1498,12 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     return groups
   }, [files, searchQuery])
 
-  const toggleFolder = (path: string) => {
+  const toggleFolder = useCallback((path: string) => {
  const newExpanded = new Set(expandedFolders)
  if (newExpanded.has(path)) newExpanded.delete(path)
  else newExpanded.add(path)
  setExpandedFolders(newExpanded)
-}
+}, [expandedFolders])
 
  const toggleAutoDeploy = async () => {
  await saveConfig({autoDeploy: !config?.autoDeploy})
@@ -1516,7 +1531,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  setBatchFeed([])
  setIsCompleted(false)
  setIsAwaitingConfirmation(false)
- 
+
  try {
  const res = await sidecarApi.aterProcess({file_path: selectedInboxFile.path})
  setActivePlan(res.plan_raw)
@@ -1524,7 +1539,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  setSessionId(res.session_id)
  setTotalBatches(res.plan_structured?.batches?.length || 1)
  setCurrentBatch(0)
- 
+
  // Auto Deploy Circuit
  if (config?.autoDeploy) {
  // Proceed immediately without manual confirmation
@@ -1540,20 +1555,20 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  const confirmDeployment = async (forcedId?: string) => {
  const targetId = forcedId || sessionId
  if (!targetId) return
- 
+
  setProcessing(true)
  setIsAwaitingConfirmation(false) // Hide button if manual
- 
+
  try {
  let currentHasMore = true
  let tempBatch = 0
  while (currentHasMore) {
  const res = await sidecarApi.aterConfirm({session_id: targetId})
- 
+
  if (res.status === 'error') {
  throw new Error((res as any).message || (res as any).detail || "Backend generation failed.");
 }
- 
+
  tempBatch = res.current_batch || (tempBatch + 1)
  setCurrentBatch(tempBatch)
  setBatchFeed(prev => [...prev, {batch: tempBatch, results: res.results}])
@@ -1563,9 +1578,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  setIsCompleted(true)
  fetchFiles() // Refresh explorer
 } catch (err: any) {
- setAterError(err.message) 
+ setAterError(err.message)
 } finally {
- setProcessing(false) 
+ setProcessing(false)
 }
 }
 
@@ -1577,7 +1592,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     setBatchFeed([])
     setIsCompleted(false)
     setIsAwaitingConfirmation(false)
-    
+
     try {
       const res = await sidecarApi.aterProcess({file_path: path})
       setActivePlan(res.plan_raw)
@@ -1585,7 +1600,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       setSessionId(res.session_id)
       setTotalBatches(res.plan_structured?.batches?.length || 1)
       setCurrentBatch(0)
-      
+
       if (config?.autoDeploy) {
         setTimeout(() => confirmDeployment(res.session_id), 800)
       } else {
@@ -1618,17 +1633,17 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  // --- Tree Construction ---
  const fileTree = useMemo(() => {
  const root: FileNode[] = []
- 
+
  files.filter(file => !file.path.endsWith('.html')).forEach(file => {
  const parts = file.path.split(/[/\\]/).filter(p => p.length > 0)
  let currentLevel = root
- 
+
  parts.forEach((part: string, index: number) => {
  const isLast = index === parts.length - 1
  const currentPath = parts.slice(0, index + 1).join('/')
- 
+
  let existing = currentLevel.find(node => node.name === part)
- 
+
  if (!existing) {
  const isFolder = !isLast || file.is_dir
  existing = {
@@ -1639,7 +1654,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 }
  currentLevel.push(existing)
 }
- 
+
  if (!isLast && existing.children) {
  currentLevel = existing.children
 }
@@ -1656,7 +1671,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  if (node.children) sortNodes(node.children)
 })
 }
- 
+
  sortNodes(root)
  return root
 }, [files])
@@ -1690,7 +1705,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
   const filteredFiles = useMemo(() => {
     if (!searchQuery) return fileTree
-    
+
     const filterTree = (nodes: FileNode[]): FileNode[] => {
       return nodes
         .filter(node => matchesSearch(node, searchQuery))
@@ -1707,7 +1722,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
  const [dragOverPath, setDragOverPath] = useState<string | null>(null)
  const expandTimerRef = useRef<NodeJS.Timeout | null>(null)
 
- const handleDrop = async (e: React.DragEvent, targetPath: string | null) => {
+ const handleDrop = useCallback(async (e: React.DragEvent, targetPath: string | null) => {
   e.preventDefault()
   e.stopPropagation()
   setDragOverPath(null)
@@ -1715,10 +1730,10 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
    clearTimeout(expandTimerRef.current)
    expandTimerRef.current = null
   }
-  
+
   const sourcePath = draggedPath || e.dataTransfer.getData('text/plain')
   if (!sourcePath) return
-  
+
   // 1. Determine the target folder. If dropped on a file, use its parent folder.
   let targetFolderPath = targetPath
   if (targetPath) {
@@ -1731,9 +1746,9 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 
   const fileName = sourcePath.split(/[/\\]/).pop()
   if (!fileName) return
-  
+
   const newPath = targetFolderPath ? `${targetFolderPath}/${fileName}` : fileName
-  
+
   // 2. Prevent dropping into self or into a subfolder of self
   if (sourcePath === newPath) return
   if (targetFolderPath && (targetFolderPath === sourcePath || targetFolderPath.startsWith(sourcePath + '/'))) {
@@ -1750,7 +1765,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
   } finally {
    setDraggedPath(null)
   }
- }
+ }, [draggedPath, files, fetchFiles])
 
  const renderTree = useCallback((nodes: FileNode[], level = 0) => {
   const result = nodes.map(node => (
@@ -1875,7 +1890,199 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
 ]);
 
   const selectedIsPdf = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')
-  const selectedIsHtml = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.html')
+
+  useEffect(() => {
+    setSidebarContent(
+      <div className="flex flex-col w-full min-h-0 text-left">
+        {/* Global Toolbar */}
+        <div className="pb-3 flex items-center justify-between gap-1 select-none shrink-0 border-b border-border/10">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Knowledge Base</span>
+          <div className="flex items-center gap-1">
+            <button
+              className="p-1 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-muted/30 shrink-0"
+              title="New Note"
+              onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              className="p-1 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-muted/30 shrink-0"
+              title="New Folder"
+              onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              className="p-1 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-muted/30 shrink-0"
+              title="Refresh Vault"
+              onClick={fetchFiles}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              className={cn(
+                "p-1 rounded-[4px] shrink-0",
+                showGraphView
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              )}
+              onClick={() => setShowGraphView(!showGraphView)}
+              title="Toggle Graph View"
+            >
+              <Network className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Search Box */}
+        <div className="my-2.5 relative shrink-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/50" />
+          <input
+            type="text"
+            placeholder="Search files..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-7 pl-7 pr-3 bg-muted/20 border border-border/30 rounded-[6px] text-[11px] focus:outline-none focus:border-foreground/30 transition-all font-medium placeholder:text-muted-foreground/40"
+          />
+        </div>
+
+        {/* Sidebar Tabs */}
+        <div className="flex border-b border-border/20 text-[9px] font-black tracking-widest mb-2 shrink-0 select-none">
+          <button
+            onClick={() => setSidebarTab('explorer')}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center",
+              sidebarTab === 'explorer'
+                ? "text-foreground border-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            )}
+          >
+            FILES
+          </button>
+          <button
+            onClick={() => setSidebarTab('hubs')}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center",
+              sidebarTab === 'hubs'
+                ? "text-foreground border-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            )}
+          >
+            HUBS
+          </button>
+          <button
+            onClick={() => setSidebarTab('pdfs')}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center",
+              sidebarTab === 'pdfs'
+                ? "text-foreground border-foreground"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            )}
+          >
+            PDFS
+          </button>
+        </div>
+
+        {/* Tab Contents */}
+        <div className="flex-1 pr-1 text-xs">
+          {sidebarTab === 'explorer' && (
+            <div
+              className="py-1 min-h-full"
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+              }}
+              onDrop={(e) => handleDrop(e, null)}
+            >
+              {files.length > 0 ? renderTree(filteredFiles) : (
+                <div className="py-6 text-center opacity-40">
+                  <Folder className="w-6 h-6 mx-auto mb-1 opacity-20" />
+                  <p className="text-[9px] font-black uppercase tracking-widest">Vault Empty</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {sidebarTab === 'hubs' && (
+            <div className="flex flex-col gap-3 py-1">
+              {loadingHubs ? (
+                <div className="py-6 flex justify-center"><RefreshCw size={14} className="animate-spin text-muted-foreground/30" /></div>
+              ) : Object.keys(groupedHubs).length > 0 ? (
+                Object.entries(groupedHubs).map(([course, courseHubs]) => (
+                  <div key={course} className="flex flex-col gap-0.5">
+                    <div className="px-1 py-0.5 flex items-center gap-2 select-none">
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{course}</span>
+                      <div className="h-px flex-1 bg-border/20" />
+                    </div>
+                    {courseHubs.map(hub => (
+                      <button
+                        key={hub.id}
+                        onClick={() => selectFile(hub.path)}
+                        className={cn(
+                          "flex flex-col p-1.5 rounded-[4px] text-left transition-none text-[11px]",
+                          selectedPath === hub.path ? "bg-muted/80 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-black opacity-50 tabular-nums">U{hub.unit || '0'}</span>
+                          <span className="truncate">{hub.title.replace(' Hub', '')}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="py-10 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">No hubs found</div>
+              )}
+            </div>
+          )}
+
+          {sidebarTab === 'pdfs' && (
+            <div className="flex flex-col gap-3 py-1">
+              {Object.entries(groupedPdfs).map(([folder, folderPdfs]) => (
+                <div key={folder} className="flex flex-col gap-0.5">
+                  <div className="px-1 py-0.5 flex items-center gap-2 select-none">
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{folder}</span>
+                    <div className="h-px flex-1 bg-border/20" />
+                  </div>
+                  {folderPdfs.map(file => (
+                    <button
+                      key={file.path}
+                      onClick={() => selectFile(file.path)}
+                      className={cn(
+                        "flex items-center gap-2 p-1.5 rounded-[4px] text-left transition-all text-[11px]",
+                        selectedPath === file.path
+                          ? "bg-muted/80 text-foreground font-semibold"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
+                      )}
+                    >
+                      <FileText size={12} className={cn(
+                        "shrink-0",
+                        selectedPath === file.path ? "text-foreground" : "text-muted-foreground/50"
+                      )} />
+                      <span className="truncate">{file.name.replace('.pdf', '')}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+              {Object.keys(groupedPdfs).length === 0 && (
+                <div className="py-10 text-center text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">No PDFs found</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    , 'obsidian');
+  }, [
+    sidebarTab, searchQuery, files, filteredFiles, loadingHubs, groupedHubs, groupedPdfs, selectedPath, showGraphView,
+    setSidebarContent, fetchFiles, selectFile, renderTree, handleDrop, setCreatingInPath, setCreatingType, setNewItemName
+  ]);
+
+  useEffect(() => {
+    return () => {
+      setSidebarContent(null, 'obsidian');
+    };
+  }, [setSidebarContent]);
 
   return (
   <div className="flex flex-row h-full w-full select-none bg-transparent gap-3 overflow-hidden font-sans relative">
@@ -1910,200 +2117,6 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       }
     `}} />
 
-    {/* ExplorerSidebar */}
-    {!isFullscreen && (
-      <aside 
-        onMouseEnter={() => window.focus()}
-        className="relative border border-border/40 flex flex-col bg-bento-panel shadow-sm shrink-0 group/sidebar z-40 overflow-hidden rounded-[12px] panel-transition"
-        style={{width: `${sidebarWidth}px`}}
-      >
-        {/* Resize Handle */}
-        <div 
-          className={cn(
-            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-foreground/20",
-            isResizing ? "bg-foreground w-1" : "bg-transparent"
-          )}
-          onMouseDown={startResizing}
-        />
-        
-        {/* Global Toolbar */}
-        <div className="p-4 flex items-center justify-between gap-2">
-          <button 
-            className="p-1.5 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
-            title="New Note"
-            onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
-          >
-            <Plus className="w-[18px] h-[18px]" />
-          </button>
-          <button 
-            className="p-1.5 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-bento-item shrink-0" 
-            title="New Folder"
-            onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
-          >
-            <FolderPlus className="w-[18px] h-[18px]" />
-          </button>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={inputValue}
-              onChange={(e) => {
-                const val = e.target.value;
-                setInputValue(val);
-                startTransition(() => {
-                  setSearchQuery(val);
-                });
-              }}
-              className={cn(
-                "w-full bg-background border border-border/40 rounded-[4px] py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-border transition-colors",
-                isPending && "opacity-75"
-              )}
-            />
-          </div>
-          <button 
-            data-tour="btn-toggle-graph"
-            className={cn(
-              "p-1.5 rounded-[4px] shrink-0 transition-colors", 
-              showGraphView 
-                ? "text-foreground bg-bento-item" 
-                : "text-muted-foreground hover:text-foreground hover:bg-bento-item"
-            )} 
-            onClick={() => setShowGraphView(!showGraphView)} 
-            title="Toggle Graph View"
-          >
-            <Network className="w-[18px] h-[18px]" />
-          </button>
-        </div>
-
-        {/* Sidebar Tabs */}
-        <div className="flex border-b border-border/40 px-4 text-xs font-semibold tracking-[0.02em] mb-2 shrink-0">
-          <button 
-            onClick={() => setSidebarTab('explorer')}
-            className={cn(
-              "px-3 py-3 border-b-2 outline-none transition-none",
-              sidebarTab === 'explorer' 
-                ? "text-foreground border-foreground font-semibold" 
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            )}
-          >
-            EXPLORER
-          </button>
-          <button 
-            onClick={() => setSidebarTab('hubs')}
-            className={cn(
-              "px-3 py-3 border-b-2 outline-none transition-none",
-              sidebarTab === 'hubs' 
-                ? "text-foreground border-foreground font-semibold" 
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            )}
-          >
-            HUBS
-          </button>
-          <button 
-            onClick={() => setSidebarTab('pdfs')}
-            className={cn(
-              "px-3 py-3 border-b-2 outline-none transition-none",
-              sidebarTab === 'pdfs' 
-                ? "text-foreground border-foreground font-semibold" 
-                : "text-muted-foreground border-transparent hover:text-foreground"
-            )}
-          >
-            PDFS
-          </button>
-        </div>
-
-        {/* Tab Contents */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 text-sm text-muted-foreground">
-          {sidebarTab === 'explorer' && (
-            <div 
-              className="py-2 min-h-full"
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.dataTransfer.dropEffect = 'move'
-              }}
-              onDrop={(e) => handleDrop(e, null)}
-            >
-              {files.length > 0 ? renderTree(filteredFiles) : (
-                <div className="py-10 text-center opacity-40">
-                  <Folder className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Vault Empty</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {sidebarTab === 'hubs' && (
-            <div className="flex flex-col p-2 gap-4">
-              {loadingHubs ? (
-                <div className="py-8 flex justify-center"><RefreshCw size={16} className="animate-spin text-muted-foreground/30" /></div>
-              ) : Object.keys(groupedHubs).length > 0 ? (
-                Object.entries(groupedHubs).map(([course, courseHubs]) => (
-                  <div key={course} className="flex flex-col gap-1">
-                    <div className="px-2 py-1 flex items-center gap-2">
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{course}</span>
-                      <div className="h-px flex-1 bg-border/40" />
-                    </div>
-                    {courseHubs.map(hub => (
-                      <button 
-                        key={hub.id}
-                        onClick={() => selectFile(hub.path)}
-                        className={cn(
-                          "flex flex-col p-2 rounded-[4px] hover:bg-bento-item text-left transition-none mx-1",
-                          selectedPath === hub.path ? "bg-bento-item text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black opacity-50 tabular-nums">U{hub.unit || '0'}</span>
-                          <span className="text-[12px] truncate">{hub.title.replace(' Hub', '')}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ))
-              ) : (
-                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No hubs found</div>
-              )}
-            </div>
-          )}
-
-          {sidebarTab === 'pdfs' && (
-            <div className="flex flex-col p-2 gap-4">
-              {Object.entries(groupedPdfs).map(([folder, folderPdfs]) => (
-                <div key={folder} className="flex flex-col gap-1">
-                  <div className="px-2 py-1 flex items-center gap-2">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{folder}</span>
-                    <div className="h-px flex-1 bg-border/40" />
-                  </div>
-                  {folderPdfs.map(file => (
-                    <button 
-                      key={file.path}
-                      onClick={() => selectFile(file.path)}
-                      className={cn(
-                        "flex items-center gap-2 p-2 rounded-[4px] text-left transition-all mx-1",
-                        selectedPath === file.path 
-                          ? "bg-bento-item text-foreground font-medium" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-bento-item"
-                      )}
-                    >
-                      <FileText size={14} className={cn(
-                        "shrink-0",
-                        selectedPath === file.path ? "text-foreground" : "text-muted-foreground/50"
-                      )} />
-                      <span className="text-[12px] truncate">{file.name.replace('.pdf', '')}</span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-              {Object.keys(groupedPdfs).length === 0 && (
-                <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">No PDFs found</div>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
-    )}
-
     {/* Main Editor Panel */}
     {showGraphView ? (
       <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden panel-transition">
@@ -2114,7 +2127,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
       </div>
     ) : (
       <div className="flex-1 flex flex-row min-w-0 h-full gap-3 relative">
-        <main 
+        <main
           data-purpose="main-editor"
           className="bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar relative flex flex-col min-w-0 panel-transition"
           style={{ width: (isPanelOpen && artifacts.length > 0) ? `${100 - panelWidth}%` : '100%', flex: (isPanelOpen && artifacts.length > 0) ? 'none' : '1 1 0%' }}
@@ -2127,31 +2140,31 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         ) : (
           <div className={cn(
             "mx-auto w-full max-w-full relative flex-1 flex flex-col min-h-0",
-            (selectedIsHtml || selectedIsPdf) ? "p-0 overflow-hidden" : "py-4 px-6 h-full",
-            (selectedIsHtml || selectedIsPdf || viewMode === 'lesson') && "overflow-hidden"
+            selectedIsPdf ? "p-0 overflow-hidden" : "py-4 px-6 h-full"
           )}>
             {loadingNote && (
               <PanelLoader label="Loading Document" />
             )}
-            
+
             {/* Note details */}
-            {selectedIsHtml && !hasMatchingMd ? (
-              <div className="flex-1 min-h-0 h-full overflow-hidden p-3">
-                <HtmlLessonViewer
-                  title={(selectedPath.split(/[/\\]/).pop() || 'Interactive Lesson').replace(/\.html$/i, '').replace(/_/g, ' ')}
-                  content={noteContent}
-                  onNavigate={handleWikiLinkClick}
-                  activePath={selectedPath}
-                  files={files}
-                  tree={studyTree}
-                />
-              </div>
-            ) : !selectedIsPdf ? (
+            {!selectedIsPdf ? (
               <div className="editor-content w-full flex-1 flex flex-col min-h-0">
                 <div className="shrink-0">
-                  <h1 className="text-[32px] font-bold mb-4 text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
-                    {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
-                  </h1>
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <h1 className="min-w-0 text-[32px] font-bold text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
+                      {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
+                    </h1>
+                    {!isTemporaryLessonPath(selectedPath) && (
+                      <button
+                        type="button"
+                        onClick={() => void openSelectedInLessonRuntime()}
+                        className="h-9 shrink-0 rounded-[8px] border border-border bg-bento-item px-4 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-muted/50 transition-colors flex items-center gap-2"
+                      >
+                        <BookOpenCheck size={13} />
+                        Continue Lesson
+                      </button>
+                    )}
+                  </div>
 
                   {/* Metadata Pills */}
                   <div className="flex items-center gap-2 mb-6 border-b border-border pb-6">
@@ -2176,57 +2189,18 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                   </div>
 
                   {config?.showProperties && (
-                    <NoteProperties 
-                      metadata={noteMetadata} 
-                      onNavigate={handleWikiLinkClick} 
+                    <NoteProperties
+                      metadata={noteMetadata}
+                      onNavigate={handleWikiLinkClick}
                       onAddProperty={handleAddProperty}
                       onUpdateProperty={handleUpdateProperty}
                       onDeleteProperty={handleDeleteProperty}
                     />
                   )}
-
-                  {/* View Switcher Tabs (Only if companion HTML or Markdown exists) */}
-                  {(hasMatchingHtml || hasMatchingMd) && (
-                    <div className="flex border-b border-border/40 gap-6 mb-6">
-                      <button
-                        onClick={() => setViewMode('notes')}
-                        className={cn(
-                          "pb-3 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all",
-                          viewMode === 'notes'
-                            ? "border-foreground text-foreground"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        Markdown
-                      </button>
-                      <button
-                        onClick={() => setViewMode('lesson')}
-                        className={cn(
-                          "pb-3 text-[11px] font-black uppercase tracking-wider border-b-2 transition-all",
-                          viewMode === 'lesson'
-                            ? "border-foreground text-foreground"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        Interactive Lesson
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex-1 min-h-0">
-                  {viewMode === 'lesson' ? (
-                    <div className="h-full overflow-hidden p-1">
-                      <HtmlLessonViewer
-                        title={(selectedPath.split(/[/\\]/).pop() || 'Interactive Lesson').replace(/\.html$/i, '').replace(/\.md$/i, '').replace(/_/g, ' ')}
-                        content={selectedPath.endsWith('.html') ? noteContent : companionContent}
-                        onNavigate={handleWikiLinkClick}
-                        tree={studyTree}
-                        activePath={selectedPath}
-                        files={files}
-                      />
-                    </div>
-                  ) : isEditing ? (
+                  {isEditing ? (
                     <ObsidianEditor
                       value={editedContent}
                       onChange={setEditedContent}
@@ -2239,10 +2213,10 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
                       noteList={noteList}
                     />
                   ) : (
-                    <MarkdownViewer 
+                    <MarkdownViewer
                       key={selectedPath}
-                      content={selectedPath.endsWith('.md') ? noteContent : companionContent} 
-                      onNavigate={handleWikiLinkClick} 
+                      content={noteContent}
+                      onNavigate={handleWikiLinkClick}
                       path={selectedPath || undefined}
                       noteMode={String(noteMetadata?.mode || '')}
                       noteTitle={String(noteMetadata?.title || '')}
@@ -2255,21 +2229,21 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
             ) : (
               <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
                 <div className="flex-1 min-h-0">
-                  <PdfViewer 
+                  <PdfViewer
                     ref={pdfRef}
-                    path={selectedPath} 
-                    title={selectedPath.split(/[/\\]/).pop() || ''} 
-                    initialPage={selectedPage} 
+                    path={selectedPath}
+                    title={selectedPath.split(/[/\\]/).pop() || ''}
+                    initialPage={selectedPage}
                     filterPages={selectedFilteredPages}
                     onStateChange={handlePdfStateChange}
                   />
                 </div>
-                
+
                 {/* Knowledge Navigation Footer for PDF (when in context) */}
                 {studyTree.length > 0 && (
                   <div className="border-t border-border bg-bento-panel/50 px-16 py-8">
-                    <KnowledgeFooter 
-                      tree={studyTree} 
+                    <KnowledgeFooter
+                      tree={studyTree}
                       activePath={selectedPath}
                       onNavigate={handleWikiLinkClick}
                     />
@@ -2304,22 +2278,22 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
     )}
 
     {/* Map Checklist Sidebar (Right-Contextual) */}
-    {selectedPath && !selectedIsPdf && !selectedIsHtml && !isFullscreen && (
-      <aside 
+    {selectedPath && !selectedIsPdf && !isFullscreen && (
+      <aside
         data-purpose="map-checklist"
         onMouseEnter={() => window.focus()}
         className="relative border border-border/40 flex flex-col bg-bento-panel shadow-sm shrink-0 group/connections overflow-hidden rounded-[12px] panel-transition"
         style={{width: `${connectionsWidth}px`}}
       >
         {/* Resize Handle */}
-        <div 
+        <div
           className={cn(
             "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-foreground/20",
             isResizingConnections ? "bg-foreground w-1" : "bg-transparent"
           )}
           onMouseDown={startResizingConnections}
         />
-        
+
         <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase bg-transparent shrink-0">
@@ -2372,7 +2346,7 @@ const selectFile = async (path: string, page: number = 1, fromHistory: boolean =
         </div>
       </aside>
     )}
-    
+
     {(isResizing || isResizingConnections) && (
       <div className="fixed inset-0 z-[9999] cursor-col-resize select-none bg-transparent" />
     )}

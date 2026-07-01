@@ -188,6 +188,10 @@ async def explain_question(
 
         sys_prompt = f"""You are a world-class Socratic tutor and an elite educator. A student just answered a quiz question and requested a comprehensive explanation of the underlying concept.
 
+If a student's answer is provided, you MUST begin your response with a grading line:
+GRADED: [CORRECT or INCORRECT]
+Followed by a blank line, and then the rest of your response. Check if the student's answer matches the correct answer conceptually or exactly.
+
 {dynamic_style_instruction}
 
 Your lesson MUST follow this strict structure:
@@ -218,7 +222,18 @@ Correct Answer: {answer}
 Generate the mini-lesson now."""
 
         res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
-        lesson_content = res.content
+        lesson_content = res.content.strip()
+        
+        is_graded_correct = True
+        if "GRADED:" in lesson_content:
+            parts = lesson_content.split("\n", 1)
+            grade_line = parts[0]
+            if "INCORRECT" in grade_line.upper():
+                is_graded_correct = False
+            elif "CORRECT" in grade_line.upper():
+                is_graded_correct = True
+            if len(parts) > 1:
+                lesson_content = parts[1].strip()
         
         misconception = None
         if "---MISCONCEPTION---" in lesson_content:
@@ -235,7 +250,7 @@ Generate the mini-lesson now."""
             except Exception as ex:
                 logger.error(f"Failed to append misconception to note: {ex}")
 
-        return {"lesson": lesson_content}
+        return {"lesson": lesson_content, "is_correct": is_graded_correct}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

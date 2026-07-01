@@ -8,7 +8,18 @@ import { Question } from '../types/practice';
 vi.mock('../lib/sidecarApi', () => ({
   sidecarApi: {
     srsCards: vi.fn(),
+    explainQuestion: vi.fn(),
     recordPerformance: vi.fn().mockResolvedValue({ success: true }),
+    submitTutorAnswer: vi.fn().mockResolvedValue({
+      score: 5,
+      score_change: 5,
+      diagnosis: { is_misconception: false, misconception_text: '', hint: '', remediation_question: null },
+      session: null,
+    }),
+    practiceRemediate: vi.fn().mockResolvedValue({
+      detailed_lesson: 'Remediation lesson',
+      remediation_question: null,
+    }),
     logPracticeAttempt: vi.fn().mockResolvedValue({ success: true }),
     updatePracticeScore: vi.fn().mockResolvedValue({ success: true }),
     srsFeynmanValidate: vi.fn(),
@@ -52,8 +63,10 @@ const mockQuestions: Question[] = [
 describe('usePracticeSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.useRealTimers();
     (sidecarApi.srsCards as any).mockResolvedValue({ cards: [] });
+    (sidecarApi.explainQuestion as any).mockResolvedValue({ is_correct: true, explanation: 'AI said correct.' });
   });
 
   afterEach(() => {
@@ -94,8 +107,8 @@ describe('usePracticeSession', () => {
 
     expect(result.current.userAnswers[1]).toBe('B');
 
-    act(() => {
-      result.current.checkAnswer();
+    await act(async () => {
+      await result.current.checkAnswer();
     });
 
     expect(result.current.revealedStates[0]).toBe(true);
@@ -122,8 +135,8 @@ describe('usePracticeSession', () => {
     act(() => {
       result.current.selectAnswer('B');
     });
-    act(() => {
-      result.current.checkAnswer();
+    await act(async () => {
+      await result.current.checkAnswer();
     });
 
     // Go to Q2 (True/False)
@@ -138,12 +151,32 @@ describe('usePracticeSession', () => {
     act(() => {
       result.current.selectAnswer('True');
     });
-    act(() => {
-      result.current.checkAnswer();
+    await act(async () => {
+      await result.current.checkAnswer();
     });
 
     expect(result.current.scores[2]).toBe(false);
     expect(result.current.streak).toBe(0);
+  });
+
+  it('keeps objective answers locally wrong without waiting for AI explanation grading', async () => {
+    const { result } = renderHook(() => usePracticeSession());
+
+    await act(async () => {
+      await result.current.startSession(mockQuestions, {}, 'note_1.md');
+    });
+
+    act(() => {
+      result.current.selectAnswer('A');
+    });
+
+    await act(async () => {
+      await result.current.checkAnswer();
+    });
+
+    expect(result.current.scores[1]).toBe(false);
+    expect(result.current.questionHint[1]).toContain('Basic math');
+    expect(sidecarApi.explainQuestion).not.toHaveBeenCalled();
   });
 
   it('triggers Feynman lock if retrievability is low and lapses exist', async () => {
@@ -222,5 +255,42 @@ describe('usePracticeSession', () => {
     });
 
     expect(sidecarApi.logPracticeAttempt).not.toHaveBeenCalled();
+  });
+
+  it('calls submitTutorAnswer during selfGrade if tutor session exists', async () => {
+    localStorage.setItem('ater_active_session_id', 'test-session-selfgrade');
+    const { result } = renderHook(() => usePracticeSession());
+
+    // start session with a writing/open ended type question
+    const openEndedQ: Question[] = [{
+      id: 3,
+      note_id: 'note_3.md',
+      note_title: 'Note 3',
+      type: 'writing',
+      difficulty: 'L1',
+      question: 'Explain what Git tracks.',
+      explanation: 'Git tracks history.',
+      answer: 'History'
+    }];
+
+    await act(async () => {
+      await result.current.startSession(openEndedQ, {}, 'note_3.md');
+    });
+
+    act(() => {
+      result.current.selectAnswer('History and snaps');
+    });
+
+    await act(async () => {
+      result.current.selfGrade(true);
+    });
+
+    expect(sidecarApi.submitTutorAnswer).toHaveBeenCalledWith({
+      session_id: 'test-session-selfgrade',
+      question_id: '3',
+      is_correct: true,
+      wager: 'low',
+      user_answer: 'History and snaps',
+    });
   });
 });

@@ -49,6 +49,15 @@ class SynthesisNoteResponse(BaseModel):
     cross_concept_quiz: List[Dict[str, Any]] = Field(description="Exactly 3 advanced cross-concept questions. Must follow the standard MCQ or writing/trace question schema. Each question must have difficulty 'L3'.")
 
 
+class ChapterGroupingItem(BaseModel):
+    title: str = Field(..., description="A concise, high-level name for this chapter/theme (e.g. 'Intro to X', 'Advanced Y').")
+    atomic_notes: List[str] = Field(..., description="List of note titles that belong to this chapter (must match the input titles exactly).")
+
+
+class ChapterGroupingResponse(BaseModel):
+    chapters: List[ChapterGroupingItem] = Field(..., description="Ordered list of chapters grouping the concepts.")
+
+
 class AterService:
     """
     Main orchestrator for Ater.
@@ -1480,6 +1489,59 @@ class AterService:
             print(f"[Ater Service] AI Metadata detection failed: {e}")
             return {"course": "", "semester": "", "unit": "", "hub_title": "", "primary_language": "General"}
 
+    async def group_concepts_into_chapters(self, topic: str, concepts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if not concepts:
+            return []
+            
+        try:
+            structured_llm = self.planner_llm.with_structured_output(ChapterGroupingResponse)
+            
+            system_prompt = (
+                f"You are Ater's Curriculum Planner. Your task is to organize a set of extracted concepts for the topic '{topic}' "
+                "into 3 to 6 logical sequential chapters. Each chapter should have a clear theme and group 2 to 4 related atomic notes.\n"
+                "Constraints:\n"
+                "- Every note in the input list MUST be assigned to exactly one chapter. Do not omit any notes.\n"
+                "- Order the chapters in logical learning sequence (fundamentals first, then advanced/applications).\n"
+                "- Do not invent new notes not in the input list."
+            )
+            
+            concept_list_str = "\n".join([f"- {c['title']}: {c.get('description', '')}" for c in concepts])
+            user_msg = f"Extracted concepts:\n{concept_list_str}"
+            
+            response = await asyncio.wait_for(
+                structured_llm.ainvoke([
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_msg}
+                ]),
+                timeout=20
+            )
+            
+            res_chapters = []
+            for idx, ch in enumerate(response.chapters):
+                res_chapters.append({
+                    "title": ch.title,
+                    "order": idx + 1,
+                    "atomic_notes": ch.atomic_notes
+                })
+            return res_chapters
+            
+        except Exception as e:
+            print(f"[Ater Service] AI Chapter grouping failed: {e}. Falling back to heuristic grouping.")
+            
+        total = len(concepts)
+        notes_per_ch = max(2, min(4, total // 3))
+        chapters = []
+        for idx in range(0, total, notes_per_ch):
+            chunk = concepts[idx:idx + notes_per_ch]
+            ch_num = len(chapters) + 1
+            titles = [c["title"] for c in chunk]
+            chapters.append({
+                "title": f"Chapter {ch_num} - Overview of " + chunk[0]["title"].replace("_", " "),
+                "order": ch_num,
+                "atomic_notes": titles
+            })
+        return chapters
+
     # ── Phase 2: Planning ──────────────────────────────────────
     async def generate_plan(
         self, file_path: str, system_instruction_path: str, curriculum: Dict[str, Any], target_hub_id: Optional[str] = None
@@ -1753,6 +1815,9 @@ class AterService:
 
         all_atomic_notes = topo_sort_notes(all_atomic_notes)
         
+        self.set_status(session_id, "Grouping Concepts into Chapters...")
+        grouped_chapters = await self.group_concepts_into_chapters(hub_title, all_atomic_notes)
+        
         hub_note = {
             "title": canonical_hub_title,
             "description": f"Hub note for {course} - {hub_title}",
@@ -1775,7 +1840,8 @@ class AterService:
             "primary_language": primary_language,
             "hub_note": hub_note,
             "atomic_notes": all_atomic_notes,
-            "possible_questions": all_pq_notes
+            "possible_questions": all_pq_notes,
+            "chapters": grouped_chapters
         }
 
         # Build batches (Phase 1: Atomic Generation, Phase 2: Probe Enrichment, Phase 3: Hub)
@@ -1787,17 +1853,12 @@ class AterService:
         sniped_batches = []
         next_id = 1
         
-        # Group ALL atomic notes into a single parallel execution batch
+        # Progressive planning: Group only the first atomic note in Batch 1
         if all_atomic_titles:
-            sniped_batches.append({"id": next_id, "notes": all_atomic_titles, "type": "atomic"})
+            sniped_batches.append({"id": next_id, "notes": [all_atomic_titles[0]], "type": "atomic"})
             next_id += 1
         
-        all_pq_titles = [n["title"] for n in structured_plan["possible_questions"]]
-        if all_pq_titles:
-            sniped_batches.append({"id": next_id, "notes": all_pq_titles, "type": "pq"})
-            next_id += 1
-            
-        # PASS 3: HUB (Source of Truth)
+        # PASS 2: HUB (Source of Truth)
         sniped_batches.append({"id": next_id, "notes": [hub_title_final], "type": "hub"})
         
         structured_plan["batches"] = sniped_batches
@@ -2761,6 +2822,49 @@ generated: true"""
                         return True
                     elif b_type == "hub":
                         self.set_status(session_id, "Compiling Unit Mastery Hub...")
+                        
+                        # Write stubs for all non-Batch 1 atomic notes in the curriculum
+                        from src.domains.ater import learning_object as lo
+                        if "chapters" in session["metadata"]:
+                            for ch in session["metadata"]["chapters"]:
+                                ch_title = ch.get("title")
+                                ch_order = ch.get("order")
+                                for note_title in ch.get("atomic_notes") or []:
+                                    norm_note = self.vm.get_canonical_title(note_title)
+                                    
+                                    # Skip the first note since it was already generated in Batch 1
+                                    if all_atomic_titles and norm_note == self.vm.get_canonical_title(all_atomic_titles[0]):
+                                        continue
+                                        
+                                    note_rel_path = lo.get_note_path(
+                                        topic=plan_obj.hub_title,
+                                        chapter_title=ch_title,
+                                        order=ch_order,
+                                        note_title=norm_note,
+                                        semester=semester,
+                                        course=course,
+                                        unit=unit_num
+                                    )
+                                    note_abs_path = self.vm.vault_path / note_rel_path
+                                    note_abs_path.parent.mkdir(parents=True, exist_ok=True)
+                                    
+                                    art_pack_rel = lo.get_artifact_pack_path(note_rel_path)
+                                    art_pack_abs = self.vm.vault_path / art_pack_rel
+                                    art_pack_abs.parent.mkdir(parents=True, exist_ok=True)
+                                    
+                                    if not art_pack_abs.exists():
+                                        minimal_pack = lo.build_minimal_artifact_pack(norm_note, str(note_rel_path))
+                                        art_pack_abs.write_text(json.dumps(minimal_pack, indent=2), encoding="utf-8")
+                                        
+                                    note_content = lo.merge_atomic_note_metadata(
+                                        existing_content="",
+                                        chapter_title=f"Chapter_{ch_order:02d}_{lo.normalize_title(ch_title)}",
+                                        lesson_variants={},
+                                        artifact_pack_path=art_pack_rel,
+                                        hub_title=plan_obj.hub_note.title
+                                    )
+                                    note_abs_path.write_text(note_content, encoding="utf-8")
+                        
                         ai_output = self._compile_hub_note(plan_obj, session_path=session.get("path", ""))
                         
                         if self.hub_agent:
@@ -3035,6 +3139,30 @@ generated: true"""
         yaml_frontmatter = self.vm.dump_obsidian_yaml(metadata)
 
         # Build Markdown Body
+        plan_dict = plan.dict() if hasattr(plan, "dict") else plan
+        if "chapters" in plan_dict and plan_dict["chapters"]:
+            from src.domains.ater import learning_object as lo
+            all_chapter_links = []
+            chapter_notes_map = {}
+            for ch in plan_dict["chapters"]:
+                ch_title = ch.get("title", "")
+                ch_order = ch.get("order", 1)
+                norm_ch_title = lo.normalize_title(ch_title)
+                padded_order = f"{ch_order:02d}"
+                chapter_link = f"Chapter_{padded_order}_{norm_ch_title}"
+                all_chapter_links.append(chapter_link)
+                chapter_notes_map[chapter_link] = [lo.normalize_title(n) for n in ch.get("atomic_notes", [])]
+                
+            prompt = plan_dict.get("prompt") or plan_dict.get("hub_title") or plan_dict.get("topic") or "Learning Path"
+            hub_content = lo.build_hub_content(
+                topic=plan_dict.get("hub_title", "Hub"),
+                learning_mode=plan_dict.get("mode", "self-study"),
+                chapters=all_chapter_links,
+                chapter_notes=chapter_notes_map,
+                prompt=prompt
+            )
+            return hub_content
+
         body = "## Overview\n"
         body += f"{plan.hub_note.description}\n\n"
         

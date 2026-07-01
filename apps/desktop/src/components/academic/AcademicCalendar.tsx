@@ -7,6 +7,7 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Activity, Target, Calendar as CalendarIcon, Filter, Clock, X, ExternalLink, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSidebarContent } from '@/context/sidebar-content-context';
 
 type ViewMode = 'day' | 'week' | 'month' | 'year';
 
@@ -45,6 +46,156 @@ const safeParseDate = (dateStr: any): Date | null => {
   } catch {
     return null;
   }
+};
+
+const MAX_COLS = 4;
+
+interface PositionedEvent {
+  event: CalendarEvent;
+  top: number;
+  height: number;
+  left: number;
+  width: number;
+}
+
+const layoutDayEvents = (dayEvents: CalendarEvent[]): PositionedEvent[] => {
+  // Separate priority events from note visits
+  const priorityEvents = dayEvents.filter(e => e._type !== 'Note Visit');
+  const noteVisits = dayEvents.filter(e => e._type === 'Note Visit');
+
+  // Limit and bucket note visits: group into hourly buckets showing max 3 per bucket
+  const noteHourBuckets: Record<number, CalendarEvent[]> = {};
+  noteVisits.forEach(nv => {
+    const date = safeParseDate(nv._date);
+    if (!date) return;
+    const hour = date.getHours();
+    if (!noteHourBuckets[hour]) noteHourBuckets[hour] = [];
+    noteHourBuckets[hour].push(nv);
+  });
+
+  // Create representative note events per hour (up to 3 visible per hour, max 8 per day)
+  const representativeNotes: CalendarEvent[] = Object.entries(noteHourBuckets)
+    .flatMap(([, notes]) => notes.slice(0, 3))
+    .slice(0, 8);
+
+  const allEvents = [...priorityEvents, ...representativeNotes];
+
+  const positioned = allEvents.map(ev => {
+    const date = safeParseDate(ev._date) || new Date();
+    const top = (date.getHours() * 64) + (date.getMinutes() / 60 * 64);
+    const durationMins = ev.duration ? ev.duration / 60 : 30;
+    const height = Math.max(22, (durationMins / 60) * 64);
+    return {
+      event: ev,
+      top,
+      height,
+      end: top + height,
+      left: 0,
+      width: 100,
+      colIndex: 0
+    };
+  });
+
+  positioned.sort((a, b) => a.top - b.top || (b.end - b.top) - (a.end - a.top));
+
+  const clusters: typeof positioned[] = [];
+  let currentCluster: typeof positioned = [];
+  let clusterEnd = 0;
+
+  positioned.forEach(ev => {
+    if (ev.top >= clusterEnd) {
+      if (currentCluster.length > 0) {
+        clusters.push(currentCluster);
+      }
+      currentCluster = [ev];
+      clusterEnd = ev.end;
+    } else {
+      currentCluster.push(ev);
+      clusterEnd = Math.max(clusterEnd, ev.end);
+    }
+  });
+  if (currentCluster.length > 0) {
+    clusters.push(currentCluster);
+  }
+
+  const result: PositionedEvent[] = [];
+
+  clusters.forEach(cluster => {
+    const columns: number[] = [];
+
+    cluster.forEach(ev => {
+      let placed = false;
+      for (let c = 0; c < columns.length && c < MAX_COLS; c++) {
+        if (ev.top >= columns[c]) {
+          columns[c] = ev.end;
+          ev.colIndex = c;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        if (columns.length < MAX_COLS) {
+          columns.push(ev.end);
+          ev.colIndex = columns.length - 1;
+        } else {
+          ev.colIndex = MAX_COLS - 1;
+          columns[MAX_COLS - 1] = Math.max(columns[MAX_COLS - 1], ev.end);
+        }
+      }
+    });
+
+    const colCount = Math.min(columns.length, MAX_COLS);
+    cluster.forEach(ev => {
+      const colIdx = Math.min(ev.colIndex, MAX_COLS - 1);
+      const width = 100 / colCount;
+      const left = colIdx * width;
+      result.push({
+        event: ev.event,
+        top: ev.top,
+        height: ev.height,
+        left: left,
+        width: width
+      });
+    });
+  });
+
+  return result;
+};
+
+const groupNoteVisits = (events: CalendarEvent[]): CalendarEvent[] => {
+  const otherEvents = events.filter(e => e._type !== 'Note Visit');
+  const noteVisits = events.filter(e => e._type === 'Note Visit');
+
+  const groups: Record<string, typeof noteVisits> = {};
+
+  noteVisits.forEach(nv => {
+    const date = safeParseDate(nv._date);
+    if (!date) return;
+    const key = `${format(date, 'yyyy-MM-dd-HH')}`;
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(nv);
+  });
+
+  const groupedNotes: CalendarEvent[] = Object.entries(groups).map(([key, items]) => {
+    const firstItem = items[0];
+    const count = items.length;
+    const dateStr = firstItem._date;
+    
+    const uniqueTitles = Array.from(new Set(items.map(i => cleanTitle(i.title))));
+    const titleSummary = uniqueTitles.slice(0, 2).join(', ') + (uniqueTitles.length > 2 ? ` +${uniqueTitles.length - 2}` : '');
+    
+    return {
+      id: `group-note-${key}`,
+      title: `Read ${count} note${count > 1 ? 's' : ''}: ${titleSummary}`,
+      _type: 'Note Visit',
+      _date: dateStr,
+      duration: items.reduce((acc, item) => acc + (item.duration || 60), 0)
+    };
+  });
+
+  return [...otherEvents, ...groupedNotes];
 };
 
 // ─── Sub-Components ───────────────────────────────────────────────────────────
@@ -166,29 +317,22 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                 const d = safeParseDate(e._date);
                 return d ? isSameDay(d, day) : false;
               });
+
+              // Count total note visits before capping
+              const totalNoteVisits = dayEvents.filter(e => e._type === 'Note Visit').length;
+              
+              const positionedEvents = layoutDayEvents(dayEvents);
+              const shownNoteCount = positionedEvents.filter(pe => pe.event._type === 'Note Visit').length;
+              const hiddenNoteCount = Math.max(0, totalNoteVisits - shownNoteCount);
               
               return (
                 <div key={dayIdx} className="flex-1 relative border-l border-border/40 first:border-l-0 min-w-0">
-                  {dayEvents.map((ev, i) => {
+                  {positionedEvents.map((pe, i) => {
+                    const ev = pe.event;
                     const date = safeParseDate(ev._date) || new Date();
-                    const top = (date.getHours() * 64) + (date.getMinutes() / 60 * 64);
-                    const durationMins = ev.duration ? ev.duration / 60 : 30;
-                    const height = Math.max(22, (durationMins / 60) * 64);
                     const style = getEventColor(ev._type);
                     const isClickable = ev._type === 'Assignment' || ev._type === 'Exam' || ev._type === 'Note Visit';
-
-                    const overlapping = dayEvents.filter(e => {
-                      const d = safeParseDate(e._date);
-                      if (!d) return false;
-                      const t = (d.getHours() * 64) + (d.getMinutes() / 60 * 64);
-                      const dur = e.duration ? e.duration / 60 : 30;
-                      const h = Math.max(22, (dur / 60) * 64);
-                      return (t < top + height && t + h > top);
-                    });
-                    const overlapIdx = overlapping.indexOf(ev);
-                    const width = 100 / overlapping.length;
-                    const left = width * overlapIdx;
-
+                    
                     return (
                       <div
                         key={i}
@@ -198,31 +342,39 @@ function TimelineView({ days, events, currentDate, setCurrentDate, setView, onSe
                           if (ev._type === 'Note Visit' && ev.id) onSelectEvent(ev.id);
                         }}
                         className={cn(
-                          "absolute rounded-[8px] px-1.5 py-1 overflow-hidden border flex flex-col justify-start gap-1 transition-none",
+                          "absolute rounded-[6px] px-2 py-1.5 overflow-hidden border flex flex-col justify-start gap-1 transition-none",
                           style.bg, style.border,
-                          isClickable ? "cursor-pointer hover:brightness-125 [0.98]" : "cursor-default"
+                          isClickable ? "cursor-pointer hover:bg-muted/10 transition-colors" : "cursor-default"
                         )}
                         style={{ 
-                          top: `${top}px`, 
-                          height: `${height}px`,
-                          left: `${left}%`,
-                          width: `${width}%`
+                          top: `${pe.top}px`, 
+                          height: `${pe.height}px`,
+                          left: `${pe.left + 0.5}%`,
+                          width: `${pe.width - 1}%`
                         }}
                       >
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <div className={cn("w-1 h-2 rounded-[8px] shrink-0", style.dot)} />
-                          <div className={cn("font-black truncate tracking-tight leading-none", height < 30 ? "text-[8px]" : "text-[10px]", style.text)}>
+                          <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", style.dot)} />
+                          <div className={cn("font-bold truncate tracking-tight leading-none text-[10px]", style.text)}>
                             {cleanTitle(ev.title)}
                           </div>
                         </div>
-                        {height >= 45 && (
-                          <div className={cn("text-[8px] truncate font-black uppercase tracking-widest text-muted-foreground pl-2.5")}>
+                        {pe.height >= 40 && (
+                          <div className={cn("text-[8px] truncate font-bold uppercase tracking-widest text-muted-foreground/60 pl-3")}>
                             {format(date, 'h:mm a')}
                           </div>
                         )}
                       </div>
                     )
                   })}
+                  {/* Hidden note count chip */}
+                  {hiddenNoteCount > 0 && (
+                    <div 
+                      className="absolute right-1 bottom-2 text-[8px] font-black text-muted-foreground/40 bg-muted/20 border border-border/20 rounded-[4px] px-1.5 py-0.5 font-mono uppercase tracking-widest z-20 select-none pointer-events-none"
+                    >
+                      +{hiddenNoteCount} notes
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -242,15 +394,18 @@ function MonthView({ currentDate, setCurrentDate, events, setView, onOpenDayOver
   const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="grid grid-cols-7 border-b border-border">
+    <div className="flex-1 flex flex-col min-h-0 h-full">
+      <div className="grid grid-cols-7 border-b border-border/40 shrink-0">
         {weekDays.map(d => (
-          <div key={d} className="py-2.5 text-center text-[10px] font-black tracking-[0.2em] text-muted-foreground/30">
+          <div key={d} className="py-2.5 text-center text-[10px] font-black tracking-[0.2em] text-muted-foreground/30 font-mono">
             {d}
           </div>
         ))}
       </div>
-      <div className="flex-1 grid grid-cols-7 auto-rows-fr bg-muted/10">
+      <div 
+        className="flex-1 grid grid-cols-7 bg-muted/10 min-h-0"
+        style={{ gridTemplateRows: `repeat(${days.length / 7}, 1fr)` }}
+      >
         {days.map((day, i) => {
           const isCurrMonth = isSameMonth(day, currentDate);
           const dayEvents = events.filter(e => {
@@ -263,32 +418,32 @@ function MonthView({ currentDate, setCurrentDate, events, setView, onOpenDayOver
               key={i} 
               onClick={() => { setCurrentDate(day); setView('day'); }}
               className={cn(
-                "border-b border-l border-border/50 first:border-l-0 relative p-2 flex flex-col gap-1 transition-none group cursor-pointer",
+                "border-b border-l border-border/50 first:border-l-0 relative p-2 flex flex-col gap-1 transition-none group cursor-pointer min-h-0 w-full h-full",
                 !isCurrMonth ? "bg-muted/10 opacity-40" : "bg-background hover:bg-muted/10",
                 isToday(day) && "bg-muted/30"
               )}
             >
-              <div className="flex justify-end mb-1">
+              <div className="flex justify-end mb-1 shrink-0">
                 <span className={cn(
-                  "text-[11px] font-black w-7 h-7 flex items-center justify-center rounded-[8px] transition-none",
+                  "text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-[6px] transition-none",
                   isToday(day) ? "bg-foreground text-background" : !isCurrMonth ? "text-muted-foreground/20" : "text-foreground group-hover:text-foreground"
                 )}>
                   {format(day, 'd')}
                 </span>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar-mini flex flex-col gap-1">
-                {dayEvents.slice(0, 4).map((ev, idx) => {
+              <div className="flex-1 overflow-y-auto custom-scrollbar-mini flex flex-col gap-1 min-h-0">
+                {dayEvents.slice(0, 2).map((ev, idx) => {
                   const style = getEventColor(ev._type);
                   return (
-                    <div key={idx} className={cn("text-[8px] font-black truncate px-1.5 py-1 rounded-[8px] border flex items-center gap-1.5", style.bg, style.border, style.text)}>
-                      <div className={cn("w-1 h-2 rounded-[8px]", style.dot)} />
-                      {cleanTitle(ev.title)}
+                    <div key={idx} className={cn("text-[8px] font-black truncate px-1.5 py-0.5 rounded-[4px] border flex items-center gap-1.5 shrink-0", style.bg, style.border, style.text)}>
+                      <div className={cn("w-1 h-1.5 rounded-full shrink-0", style.dot)} />
+                      <span className="truncate">{cleanTitle(ev.title)}</span>
                     </div>
                   )
                 })}
-                {dayEvents.length > 4 && (
-                  <div className="text-[8px] font-black text-muted-foreground/40 pl-1 uppercase tracking-widest">
-                    + {dayEvents.length - 4}
+                {dayEvents.length > 2 && (
+                  <div className="text-[8px] font-black text-muted-foreground/45 pl-1.5 uppercase tracking-widest shrink-0 leading-none py-0.5 font-mono">
+                    + {dayEvents.length - 2} more
                   </div>
                 )}
               </div>
@@ -357,6 +512,7 @@ function YearView({ currentDate, setCurrentDate, events, setView }: { currentDat
 export default function AcademicCalendar({ events, onSelectEvent }: AcademicCalendarProps) {
   const [view, setView] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [sidebarTab, setSidebarTab] = useState<'calendar' | 'filters'>('calendar');
   
   const [activeFilters, setActiveFilters] = useState<Record<string, boolean>>({
     'Exams & Assignments': true,
@@ -365,10 +521,13 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
     'Notes': true
   });
 
+  const { setSidebarContent } = useSidebarContent();
+
   const toggleFilter = (filter: string) => setActiveFilters(p => ({ ...p, [filter]: !p[filter] }));
 
   const filteredEvents = useMemo(() => {
-    return events.filter(ev => {
+    const grouped = groupNoteVisits(events);
+    return grouped.filter(ev => {
       const isExamOrAssign = ev._type === 'Exam' || ev._type === 'Assignment';
       const isStudy = ev._type === 'Study Session' || ev._type === 'Study';
       const isPractice = ev._type === 'Practice';
@@ -399,40 +558,60 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
 
   const handleToday = () => setCurrentDate(new Date());
 
-  return (
-    <div className="flex h-full w-full gap-3 overflow-hidden font-sans">
-      {/* Left Sidebar Bento Box */}
-      <div className="w-64 bg-bento-panel rounded-[12px] border border-border/40 flex flex-col overflow-hidden shadow-sm shrink-0">
-        <div className="p-6 border-b border-border/20 bg-muted/5">
-          <div className="flex items-center gap-3 text-foreground mb-1">
-            <CalendarIcon size={16} strokeWidth={2.5} />
-            <h1 className="text-xs font-black uppercase tracking-[0.3em]">Calendar</h1>
-          </div>
+  useEffect(() => {
+    setSidebarContent(
+      <div className="flex flex-col w-full font-sans min-h-0 h-full">
+        {/* Tab Selector */}
+        <div className="flex border-b border-border/20 text-[9px] font-black tracking-widest mb-3 shrink-0 select-none px-1">
+          <button 
+            onClick={() => setSidebarTab('calendar')}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center cursor-pointer",
+              sidebarTab === 'calendar' 
+                ? "text-foreground border-foreground font-black" 
+                : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
+            )}
+          >
+            CALENDAR
+          </button>
+          <button 
+            onClick={() => setSidebarTab('filters')}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center cursor-pointer",
+              sidebarTab === 'filters' 
+                ? "text-foreground border-foreground font-black" 
+                : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
+            )}
+          >
+            FILTERS
+          </button>
         </div>
-        
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
-          <MiniCalendar 
-            currentDate={currentDate} 
-            setCurrentDate={setCurrentDate} 
-            view={view} 
-            setView={setView} 
-          />
-          
-          <div className="px-6 py-4 flex flex-col gap-2 border-t border-border/10 mt-2">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">Filters</span>
-              <Filter size={12} className="text-muted-foreground/40" />
+
+        {sidebarTab === 'calendar' ? (
+          <div className="flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+            <MiniCalendar 
+              currentDate={currentDate} 
+              setCurrentDate={setCurrentDate} 
+              view={view} 
+              setView={setView} 
+            />
+          </div>
+        ) : (
+          <div className="px-3 py-1 flex flex-col gap-2 min-h-0 overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-3 px-1 select-none">
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/60 leading-none font-mono">Filters</span>
+              <Filter size={12} className="text-muted-foreground/45" />
             </div>
             {Object.entries(activeFilters).map(([name, active]) => {
               return (
                 <button 
                   key={name}
                   onClick={() => toggleFilter(name)}
-                  className="flex items-center justify-between group py-1.5"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none text-muted-foreground hover:text-foreground hover:bg-bento-item/30 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn("w-3 h-3 rounded-[4px] transition-all", active ? "bg-foreground" : "bg-muted border border-border/40 group-hover:border-foreground/30")} />
-                    <span className={cn("text-[9px] font-black transition-all uppercase tracking-widest", active ? "text-foreground" : "text-muted-foreground/60 group-hover:text-foreground")}>
+                    <div className={cn("w-3 h-3 rounded-[4px] transition-all", active ? "bg-foreground" : "bg-muted border border-border/40")} />
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest", active ? "text-foreground" : "text-muted-foreground/60")}>
                       {name}
                     </span>
                   </div>
@@ -440,89 +619,94 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
               )
             })}
           </div>
+        )}
+      </div>,
+      'calendar'
+    );
+    return () => {
+      setSidebarContent(null, 'calendar');
+    }
+  }, [currentDate, view, activeFilters, sidebarTab, setSidebarContent]);
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden h-full">
+      <div className="h-16 border-b border-border/20 flex items-center justify-between px-8 shrink-0 bg-muted/5 z-30">
+        <div className="flex flex-col">
+          <h2 className="text-xl font-black tracking-tight uppercase text-foreground">
+            {view === 'day' ? format(currentDate, 'MMMM d, yyyy') :
+             view === 'week' ? `${format(startOfWeek(currentDate, {weekStartsOn:1}), 'MMM d')} - ${format(endOfWeek(currentDate, {weekStartsOn:1}), 'MMM d, yyyy')}` :
+             view === 'year' ? format(currentDate, 'yyyy') :
+             format(currentDate, 'MMMM yyyy')}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <div className="flex bg-muted/20 p-1 rounded-[8px] border border-border/40">
+            {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={cn(
+                  "px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all cursor-pointer",
+                  view === v ? "bg-bento-item text-foreground shadow-sm border border-border/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/30"
+                )}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <div className="flex items-center p-1 bg-muted/20 rounded-[8px] border border-border/40">
+              <button onClick={handlePrevious} className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all cursor-pointer"><ChevronLeft size={16}/></button>
+              <div className="w-px h-4 bg-border/40 mx-1" />
+              <button onClick={handleToday} className="px-4 h-8 text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all cursor-pointer">Today</button>
+              <div className="w-px h-4 bg-border/40 mx-1" />
+              <button onClick={handleNext} className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all cursor-pointer"><ChevronRight size={16}/></button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main Content Bento Box */}
-      <div className="flex-1 flex flex-col min-w-0 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
-        <div className="h-16 border-b border-border/20 flex items-center justify-between px-8 shrink-0 bg-muted/5 z-30">
-          <div className="flex flex-col">
-            <h2 className="text-xl font-black tracking-tight uppercase text-foreground">
-              {view === 'day' ? format(currentDate, 'MMMM d, yyyy') :
-               view === 'week' ? `${format(startOfWeek(currentDate, {weekStartsOn:1}), 'MMM d')} - ${format(endOfWeek(currentDate, {weekStartsOn:1}), 'MMM d, yyyy')}` :
-               view === 'year' ? format(currentDate, 'yyyy') :
-               format(currentDate, 'MMMM yyyy')}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="flex bg-muted/20 p-1 rounded-[8px] border border-border/40">
-              {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={cn(
-                    "px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all",
-                    view === v ? "bg-bento-item text-foreground shadow-sm border border-border/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/30"
-                  )}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <div className="flex items-center p-1 bg-muted/20 rounded-[8px] border border-border/40">
-                <button onClick={handlePrevious} className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all"><ChevronLeft size={16}/></button>
-                <div className="w-px h-4 bg-border/40 mx-1" />
-                <button onClick={handleToday} className="px-4 h-8 text-[9px] font-black uppercase tracking-widest rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all">Today</button>
-                <div className="w-px h-4 bg-border/40 mx-1" />
-                <button onClick={handleNext} className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-all"><ChevronRight size={16}/></button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-hidden flex flex-col relative">
-          <div className="absolute inset-0 flex flex-col">
-            {view === 'day' && (
-              <TimelineView 
-                days={[currentDate]} 
-                events={filteredEvents} 
-                currentDate={currentDate}
-                setCurrentDate={setCurrentDate}
-                setView={setView}
-                onSelectEvent={onSelectEvent}
-              />
-            )}
-            {view === 'week' && (
-              <TimelineView 
-                days={eachDayOfInterval({ start: startOfWeek(currentDate, {weekStartsOn: 1}), end: endOfWeek(currentDate, {weekStartsOn: 1}) })} 
-                events={filteredEvents}
-                currentDate={currentDate}
-                setCurrentDate={setCurrentDate}
-                setView={setView}
-                onSelectEvent={onSelectEvent}
-              />
-            )}
-            {view === 'month' && (
-              <MonthView 
-                currentDate={currentDate} 
-                setCurrentDate={setCurrentDate} 
-                events={filteredEvents} 
-                setView={setView} 
-                onOpenDayOverview={() => {}}
-              />
-            )}
-            {view === 'year' && (
-              <YearView 
-                currentDate={currentDate} 
-                setCurrentDate={setCurrentDate} 
-                events={filteredEvents} 
-                setView={setView} 
-              />
-            )}
-          </div>
+      <div className="flex-1 overflow-hidden flex flex-col relative">
+        <div className="absolute inset-0 flex flex-col">
+          {view === 'day' && (
+            <TimelineView 
+              days={[currentDate]} 
+              events={filteredEvents} 
+              currentDate={currentDate}
+              setCurrentDate={setCurrentDate}
+              setView={setView}
+              onSelectEvent={onSelectEvent}
+            />
+          )}
+          {view === 'week' && (
+            <TimelineView 
+              days={eachDayOfInterval({ start: startOfWeek(currentDate, {weekStartsOn: 1}), end: endOfWeek(currentDate, {weekStartsOn: 1}) })} 
+              events={filteredEvents}
+              currentDate={currentDate}
+              setCurrentDate={setCurrentDate}
+              setView={setView}
+              onSelectEvent={onSelectEvent}
+            />
+          )}
+          {view === 'month' && (
+            <MonthView 
+              currentDate={currentDate} 
+              setCurrentDate={setCurrentDate} 
+              events={filteredEvents} 
+              setView={setView} 
+              onOpenDayOverview={() => {}}
+            />
+          )}
+          {view === 'year' && (
+            <YearView 
+              currentDate={currentDate} 
+              setCurrentDate={setCurrentDate} 
+              events={filteredEvents} 
+              setView={setView} 
+            />
+          )}
         </div>
       </div>
     </div>

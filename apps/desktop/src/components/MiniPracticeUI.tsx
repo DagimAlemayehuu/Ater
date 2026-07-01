@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,8 @@ import { sidecarApi } from '@/lib/sidecarApi';
 export const MarkdownBlock = ({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
   if (variant === 'inline') {
     return (
-      <AterMarkdown 
-        content={content} 
+      <AterMarkdown
+        content={content}
         className="inline-block align-baseline text-[13px] text-foreground/90"
         components={{
           p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
@@ -26,8 +26,8 @@ export const MarkdownBlock = ({ content, variant = 'block' }: { content: string;
     );
   }
   return (
-    <AterMarkdown 
-      content={content} 
+    <AterMarkdown
+      content={content}
       className="block w-full text-[13px] text-foreground/90 whitespace-pre-wrap break-words"
     />
   );
@@ -36,10 +36,11 @@ export const MarkdownBlock = ({ content, variant = 'block' }: { content: string;
 interface MiniPracticeUIProps {
     question: Question | Question[];
     notePath?: string;
+    initialQuestionIndex?: number;
     onComplete?: (score: number, total: number) => void;
 }
 
-export default function MiniPracticeUI({ question, notePath, onComplete }: MiniPracticeUIProps) {
+export default function MiniPracticeUI({ question, notePath, initialQuestionIndex = 0, onComplete }: MiniPracticeUIProps) {
   const { currentHub } = usePomodoroStore();
   const questions = Array.isArray(question) ? question : [question];
 
@@ -52,10 +53,104 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const [diagnosticLoading, setDiagnosticLoading] = useState<boolean>(false);
   const [fetchedDiagnosticQId, setFetchedDiagnosticQId] = useState<string | null>(null);
 
+  const cleanUpTemporaryNote = useCallback(async () => {
+    try {
+      await sidecarApi.deleteObsidianItem('database/learning paths/remediation_temp.md');
+    } catch (err) {
+      // Silently ignore if file doesn't exist
+    }
+  }, []);
+
+
+  const showScore = session.showScore;
+
+  useEffect(() => {
+    if (showScore) {
+      void cleanUpTemporaryNote();
+    }
+  }, [showScore, cleanUpTemporaryNote]);
+
+  const handleOpenDetailedLesson = async () => {
+    if (!currentQ) return;
+
+    const existingResume = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('ater_pending_practice_resume') || 'null');
+      } catch {
+        return null;
+      }
+    })();
+
+    const originalPath = notePath && !notePath.includes('remediation_temp')
+      ? notePath
+      : existingResume?.originalPath || localStorage.getItem('ater_original_note_path') || notePath;
+
+    if (originalPath && !originalPath.includes('remediation_temp')) {
+      localStorage.setItem('ater_original_note_path', originalPath);
+    }
+
+    const resumePayload = existingResume || {
+      originalPath,
+      returnQuestionIndex: currentIdx + 1,
+      quizData: questions,
+      failedQuestionId: currentQ.id,
+    };
+
+    if (resumePayload?.originalPath) {
+      localStorage.setItem('ater_pending_practice_resume', JSON.stringify(resumePayload));
+    }
+
+    const lessonContent = session.misconceptionText[currentQ.id] || currentQ.explanation || '';
+    const subQ = session.remediationQuestion?.[currentQ.id];
+    const subQList = subQ ? (Array.isArray(subQ) ? subQ : [subQ]) : [];
+
+    // Build a proper lesson note — clean, educational, no meta references
+    const lessonBody = lessonContent.trim()
+      ? lessonContent.trim()
+      : `${currentQ.explanation || 'Review the core concept and its key relationships before attempting the follow-up question.'}`;
+
+    const markdownContent = [
+      `---`,
+      `type: Remediation Lesson`,
+      `chapter: "[[Chapter_Remediation]]"`,
+      `---`,
+      ``,
+      `# Concept Lesson`,
+      ``,
+      lessonBody,
+      ``,
+      `---`,
+      ``,
+      `## Practice Question`,
+      ``,
+      `Use what you have learned above to answer the question below. Click **Try Again** when you are ready.`,
+      ``,
+      '```interactive-quiz',
+      JSON.stringify(subQList, null, 2),
+      '```'
+    ].join('\n');
+
+    try {
+      await sidecarApi.createObsidianFile('database/learning paths/remediation_temp.md', markdownContent, true);
+    } catch (err) {
+      console.error('Failed to create temporary remediation lesson note:', err);
+    }
+
+    window.dispatchEvent(new CustomEvent('ater:open-remediation-lesson', {
+      detail: {
+        tempPath: 'database/learning paths/remediation_temp.md',
+        originalPath: resumePayload?.originalPath,
+        returnQuestionIndex: resumePayload?.returnQuestionIndex,
+        quizData: resumePayload?.quizData,
+        resumePractice: true,
+      }
+    }));
+  };
+
   // Initialize the session hook with the questions prop
   useEffect(() => {
-    session.startSession(questions, {}, notePath);
-  }, [question, notePath]);
+    session.startSession(questions, {}, notePath, null, initialQuestionIndex);
+  }, [question, notePath, initialQuestionIndex]);
 
   // Handle completion event callback
   useEffect(() => {
@@ -69,7 +164,9 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const currentQ = React.useMemo(() => {
     const q = rawQ as any;
     if (!q) return {} as Question;
-    const inferredType = (q.type || (
+    const rawType = String(q.type || '').toLowerCase();
+    const normalizedType = rawType === 'multiple-choice' || rawType === 'multiple_choice' ? 'mcq' : rawType === 'fill-in' ? 'fill_in' : rawType;
+    const inferredType = (normalizedType || (
       q.options || (q.choices && Object.keys(q.choices).length > 0)
         ? 'mcq'
         : q.pairs && q.pairs.length > 0
@@ -88,9 +185,11 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   const isRevealed = session.isRevealed;
   const userAnswers = session.userAnswers;
   const scores = session.scores;
-  const showScore = session.showScore;
   const keywordChecks = session.keywordChecks;
   const currentIdx = session.currentQuestionIdx;
+  const isSubmitting = session.isSubmitting;
+  const isRemediationNote = typeof notePath === 'string' && notePath.includes('remediation_temp');
+  const autoCompletedRemediationRef = React.useRef<Set<string>>(new Set());
 
   // Reset diagnostic feedback when active question changes
   useEffect(() => {
@@ -99,15 +198,27 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
     setFetchedDiagnosticQId(null);
   }, [currentQ?.id]);
 
+  useEffect(() => {
+    if (!isRemediationNote || !isRevealed || !currentQ?.id || scores[currentQ.id] !== true) return;
+    const key = String(currentQ.id);
+    if (autoCompletedRemediationRef.current.has(key)) return;
+    autoCompletedRemediationRef.current.add(key);
+    const timeout = setTimeout(() => {
+      session.nextQuestion();
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [currentQ?.id, isRemediationNote, isRevealed, scores, session.nextQuestion]);
+
   // Trigger active recall mistake diagnostics on incorrect answers
   useEffect(() => {
     if (isRevealed && currentQ && currentQ.id) {
       const isCorrect = scores[currentQ.id];
-      if (isCorrect === false && fetchedDiagnosticQId !== String(currentQ.id)) {
-        setFetchedDiagnosticQId(String(currentQ.id));
+      const currentQId = String(currentQ.id);
+      if (isCorrect === false && fetchedDiagnosticQId !== currentQId) {
+        setFetchedDiagnosticQId(currentQId);
         setDiagnosticLoading(true);
         setDiagnosticFeedback(null);
-        
+
         const rawAns = userAnswers[currentQ.id];
         const formattedUserAnswer = Array.isArray(rawAns)
           ? rawAns.join(', ')
@@ -118,8 +229,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
         sidecarApi.explainQuestion({
           question: currentQ.question,
           type: currentQ.type,
-          answer: Array.isArray(currentQ.answer) 
-            ? currentQ.answer.join(', ') 
+          answer: Array.isArray(currentQ.answer)
+            ? currentQ.answer.join(', ')
             : typeof currentQ.answer === 'object' && currentQ.answer !== null
               ? JSON.stringify(currentQ.answer)
               : String(currentQ.answer),
@@ -143,6 +254,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
       }
     }
   }, [isRevealed, currentQ, scores, fetchedDiagnosticQId, userAnswers, notePath]);
+
+
 
   const [localArtifacts, setLocalArtifacts] = useState<any[]>([]);
 
@@ -187,12 +300,14 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
   };
 
   const nextQuestion = () => {
+    void cleanUpTemporaryNote();
     session.nextQuestion();
   };
 
   const resetQuiz = () => {
+    void cleanUpTemporaryNote();
     session.reset();
-    session.startSession(questions, {}, notePath);
+    session.startSession(questions, {}, notePath, null, initialQuestionIndex);
   };
 
   const handleExplainMore = () => {
@@ -234,7 +349,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               placeholder=""
               className={cn(
                 "mx-0.5 px-2 py-0.5 border border-border bg-bento-item rounded-[8px] focus:outline-none focus:border-primary w-32 text-center font-bold tracking-widest text-[12px] inline-block",
-                isRevealed 
+                isRevealed
                   ? "border-muted-foreground/30 text-foreground/50 opacity-80"
                   : "border-primary/40 focus:border-primary text-foreground"
               )}
@@ -268,10 +383,10 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
 
   const retrievability = currentCard ? getRetrievability(currentCard) : 1.0;
   const lapses = currentCard ? (currentCard.lapses || 0) : 0;
-  const confidenceWager = currentQ ? (session.confidenceWagers[currentQ.id] || null) : null;
+  const currentScore = scores[currentQ.id];
 
   return (
-    <div data-tour="quiz-section" className="my-1 border border-border rounded-[12px] overflow-hidden bg-bento-panel shadow-sm not-prose relative">
+    <div data-tour="quiz-section" className="my-1 w-full border border-border rounded-[12px] bg-bento-panel shadow-sm not-prose relative flex flex-col">
       {/* ── Feynman Gate Locked Overlay ── */}
       {session.isFeynmanLocked && (
         <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -357,13 +472,13 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
         <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">
           <span>Recall Challenge</span>
         </div>
-        {questions.length > 1 && !showScore && (
+        {questions.length > 1 && (
           <div className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
-            <span className="text-foreground">{currentIdx + 1} / {questions.length}</span>
+            Progress: <span className="text-foreground">{currentIdx + 1} / {questions.length}</span>
           </div>
         )}
       </div>
-      
+
       {showScore ? (
         <div className="p-4 flex flex-col items-center justify-center space-y-3 text-center">
           <div className="w-12 h-12 rounded-[8px] bg-primary/10 flex items-center justify-center border-4 border-primary/20">
@@ -381,8 +496,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
           </Button>
         </div>
       ) : (
-        <div className={cn("flex flex-col md:flex-row gap-3 min-h-[120px]", localArtifacts.length > 0 && "p-1.5 bg-muted/5")}>
-          <div className={cn("flex-1 p-3 flex flex-col justify-center space-y-2", localArtifacts.length > 0 && "md:max-w-[50%]")}>
+        <div className={cn("flex flex-col md:flex-row gap-4", localArtifacts.length > 0 && "p-1.5 bg-muted/5")}>
+          <div className={cn("flex-1 p-5 md:p-7 flex flex-col space-y-4", localArtifacts.length > 0 && "md:max-w-[50%]")}>
             <div className="space-y-2" key={`header-${currentQ.id}`}>
             <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
               <Badge variant="outline" className="text-[7px] border-border bg-bento-item text-muted-foreground rounded-[8px] px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
@@ -400,29 +515,29 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
             {/* MCQ / True False */}
             {(currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
               <div className="grid grid-cols-1 gap-2">
-                {Object.entries(currentQ.options || (currentQ.type === 'true_false' ? {'True':'True', 'False':'False'} : {})).map(([key, val]) => { 
-                  const isSelected = userAnswers[currentQ.id] === key; 
+                {Object.entries(currentQ.options || (currentQ.type === 'true_false' ? {'True':'True', 'False':'False'} : {})).map(([key, val]) => {
+                  const isSelected = userAnswers[currentQ.id] === key;
                   const isCorrectAnswer = key === currentQ.answer || String(val).toLowerCase() === String(currentQ.answer).toLowerCase();
                   const isCorrectHighlight = isRevealed && isCorrectAnswer;
                   return (
-                    <button 
-                      key={key} 
-                      disabled={isRevealed} 
-                      onClick={() => handleSelectAnswer(key)} 
+                    <button
+                      key={key}
+                      disabled={isRevealed}
+                      onClick={() => handleSelectAnswer(key)}
                       className={cn(
-                        "group flex items-center gap-2 p-1.5 border rounded-[8px] text-left  ", 
-                        isCorrectHighlight 
-                          ? "border-primary bg-primary/5 shadow-sm" 
-                          : isSelected && !isRevealed 
-                            ? "border-foreground bg-bento-item shadow-md" 
-                            : "border-border bg-bento-panel hover:border-foreground/20 hover:bg-bento-item", 
+                        "group flex items-center gap-2 p-1.5 border rounded-[8px] text-left  ",
+                        isCorrectHighlight
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : isSelected && !isRevealed
+                            ? "border-foreground bg-bento-item shadow-md"
+                            : "border-border bg-bento-panel hover:border-foreground/20 hover:bg-bento-item",
                         isRevealed && !isCorrectHighlight ? "opacity-30 grayscale" : ""
                       )}
                     >
                       <div className={cn(
-                        "flex-shrink-0 w-5 h-5 rounded-[8px] flex items-center justify-center text-[9px] font-black border ", 
-                        isCorrectHighlight || (isSelected && !isRevealed) 
-                          ? "bg-primary text-primary-foreground border-primary" 
+                        "flex-shrink-0 w-5 h-5 rounded-[8px] flex items-center justify-center text-[9px] font-black border ",
+                        isCorrectHighlight || (isSelected && !isRevealed)
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "border-border bg-bento-item text-muted-foreground/40 group-hover:border-foreground/30"
                       )}>
                         {key}
@@ -447,8 +562,8 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                   return (
                     <div key={i} className={cn(
                       "group flex items-center gap-2 p-2 border rounded-[8px] ",
-                      isCorrect 
-                        ? "border-foreground bg-bento-item" 
+                      isCorrect
+                        ? "border-foreground bg-bento-item"
                         : "border-border bg-bento-panel hover:border-foreground/20"
                     )}>
                       <div className="flex flex-col gap-1 border-r border-border/10 pr-2">
@@ -476,10 +591,10 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                     )}>
                       <div className="flex-1 font-black uppercase tracking-widest text-[8px] text-muted-foreground/60">{pair.left}</div>
                       <div className="flex-1">
-                        <select 
-                          disabled={isRevealed} 
-                          value={selected} 
-                          onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})} 
+                        <select
+                          disabled={isRevealed}
+                          value={selected}
+                          onChange={(e) => handleSelectAnswer({...userAnswers[currentQ.id], [pair.left]: e.target.value})}
                           className="w-full px-3 py-2 bg-bento-item border border-border rounded-[8px] outline-none focus:border-foreground/50 text-[10px] font-black uppercase tracking-widest appearance-none cursor-pointer hover:border-border/40"
                         >
                           <option value="">Select Match...</option>
@@ -510,12 +625,12 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               <div className="space-y-3">
                 {(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode) && (
                   <div className="p-2 bg-bento-item border border-border rounded-[8px] shadow-inner">
-                    <MarkdownBlock 
+                    <MarkdownBlock
                       content={
-                        ((['debug', 'code', 'trace', 'find_error'].includes(currentQ.type)) && !(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "").includes('```')) 
+                        ((['debug', 'code', 'trace', 'find_error'].includes(currentQ.type)) && !(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "").includes('```'))
                           ? `\`\`\`${currentQ.language || 'text'}\n${currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || ""}\n\`\`\``
                           : (currentQ.content || currentQ.codeSnippet || currentQ.buggyCode || "")
-                      } 
+                      }
                     />
                   </div>
                 )}
@@ -529,60 +644,51 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
               </div>
             )}
 
-            {!isRevealed ? (
-              <div className="pt-2 space-y-3">
-                <div className="flex flex-col gap-2 p-3 border border-border rounded-[8px] bg-bento-panel">
-                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 text-center">Confidence Wager</div>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5].map(val => (
-                      <button
-                        key={val}
-                        onClick={() => session.setConfidenceWager(String(currentQ.id), val)}
-                        className={cn(
-                          "flex-1 py-1.5 rounded-[8px] text-[10px] font-bold border transition-none",
-                          confidenceWager === val ? "bg-primary text-primary-foreground border-primary" : "bg-bento-item border-border text-muted-foreground hover:border-foreground/30 hover:bg-bento-item/80"
-                        )}
-                      >
-                        {val}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Button 
-                  onClick={checkAnswer} 
-                  data-tour="srs-btn-good"
-                  disabled={userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0) || !confidenceWager}
-                  className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] "
-                >
-                  Verify Understanding
-                </Button>
-              </div>
-            ) : (
+            {isRevealed && (
               <div className="mt-2 space-y-2">
-                <div className="p-4 border border-border bg-bento-item rounded-[8px] space-y-3 shadow-xl shadow-foreground/5">
-                  <div className="flex items-center gap-2 text-foreground/80 font-black uppercase text-[10px] tracking-[0.2em]">
+                <div className={cn(
+                  "p-4 border rounded-[8px] space-y-3 shadow-xl shadow-foreground/5",
+                  currentScore === false ? "border-destructive/25 bg-destructive/5" : "border-border bg-bento-item"
+                )}>
+                  <div className={cn(
+                    "flex items-center gap-2 font-black uppercase text-[10px] tracking-[0.2em]",
+                    currentScore === false ? "text-destructive" : "text-foreground/80"
+                  )}>
                     <div className="w-4 h-4 rounded-[8px] bg-foreground/10 flex items-center justify-center">
                       <Check size={10} />
                     </div>
-                    <span>Correct Answer</span>
+                    <span>{currentScore === false ? 'Not Quite' : 'Correct'}</span>
                   </div>
                   <div className="space-y-1">
                     <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Definitive Answer</div>
                     <div className="text-xs font-bold text-foreground/90 leading-relaxed">
-                      {Array.isArray(currentQ.answer) 
-                        ? currentQ.answer.join(', ') 
+                      {Array.isArray(currentQ.answer)
+                        ? currentQ.answer.join(', ')
                         : typeof currentQ.answer === 'object' && currentQ.answer !== null
                           ? JSON.stringify(currentQ.answer)
                           : String(currentQ.answer)}
                     </div>
                   </div>
-  
-                  <div className="space-y-1 pt-2 border-t border-border">
-                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Explanation</div>
-                    <div className="text-xs font-medium leading-relaxed text-foreground/80">
-                      <MarkdownBlock content={currentQ.explanation || "No explanation provided."} />
-                    </div>
-                  </div>
+
+                  {currentScore !== false && (
+                    (session.questionHint[currentQ.id] || currentQ.explanation) ? (
+                      <div className="space-y-1 pt-2 border-t border-border">
+                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70">
+                          AI Tutor Explanation
+                        </div>
+                        <div className="text-xs font-medium leading-relaxed text-foreground/85">
+                          <MarkdownBlock content={session.questionHint[currentQ.id] || currentQ.explanation} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 pt-2 border-t border-border">
+                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Explanation</div>
+                        <div className="text-xs font-medium leading-relaxed text-foreground/80">
+                          <MarkdownBlock content="No explanation provided." />
+                        </div>
+                      </div>
+                    )
+                  )}
 
                   {(diagnosticLoading || diagnosticFeedback) && (
                     <div className="space-y-1 pt-3 border-t border-border/40 mt-3 animate-in fade-in duration-300">
@@ -616,7 +722,7 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                       </div>
                     </div>
                   )}
-                  
+
                   {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace'].includes(currentQ.type) && Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.length > 0 && (
                     <div className="space-y-3 pt-4 border-t border-border">
                       <div className="flex items-center justify-between">
@@ -625,22 +731,22 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                           {currentQ.required_keywords.filter((kw: string) => String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase())).length} / {currentQ.required_keywords.length} Found
                         </div>
                       </div>
-                      
+
                       {currentQ.required_keywords.filter((kw: string) => !String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase())).length > 0 && (
                         <div className="p-3 text-xs font-bold text-destructive/90 mb-4">
                           Warning: Your answer is missing core concepts. Are you sure you mastered this?
                         </div>
                       )}
-                      
+
                       <div className="grid grid-cols-1 gap-2">
                         {currentQ.required_keywords.map((kw: string, i: number) => {
                           const isFound = String(userAnswers[currentQ.id] || '').toLowerCase().includes(kw.toLowerCase());
                           return (
                             <label key={i} className={cn("flex items-center gap-3 p-3 border rounded-[8px] cursor-pointer ", isFound ? "border-primary/50 bg-primary/5" : "border-border hover:bg-bento-item")}>
-                              <input 
-                                type="checkbox" 
-                                checked={keywordChecks[kw] || false} 
-                                onChange={(e) => session.setKeywordCheck(kw, e.target.checked)} 
+                              <input
+                                type="checkbox"
+                                checked={keywordChecks[kw] || false}
+                                onChange={(e) => session.setKeywordCheck(kw, e.target.checked)}
                                 className="w-4 h-4 shrink-0 appearance-none border border-border bg-bento-card rounded-[8px] checked:bg-foreground/10 checked:border-border/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-border/20"
                               />
                               <span className={cn("text-xs font-bold", isFound ? "text-foreground" : "text-muted-foreground")}>{kw} {isFound && <span className="text-[9px] uppercase tracking-widest text-foreground opacity-40 ml-2">(Found in your answer)</span>}</span>
@@ -653,47 +759,53 @@ export default function MiniPracticeUI({ question, notePath, onComplete }: MiniP
                 </div>
               </div>
             )}
-            
-            <div className="flex gap-3">
-              {isRevealed && (
-                <Button 
-                  onClick={handleExplainMore}
-                  variant="outline"
-                  className="h-9 px-3 border border-border bg-bento-item hover:border-foreground/40 text-foreground/80 hover:text-foreground text-[10px] font-black uppercase tracking-wider rounded-[8px] flex items-center justify-center gap-1.5 transition-colors"
-                  title="Explain more about this question"
+
+            <div className="mt-auto border-t border-border pt-4 space-y-3">
+              {!isRevealed ? (
+                <Button
+                  onClick={checkAnswer}
+                  data-tour="srs-btn-good"
+                  disabled={isSubmitting || userAnswers[currentQ.id] === undefined || userAnswers[currentQ.id] === '' || (Array.isArray(userAnswers[currentQ.id]) && userAnswers[currentQ.id].length === 0)}
+                  className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px]"
                 >
-                  <BookOpen size={12} />
-                  <span>Explain</span>
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin" />
+                      Checking...
+                    </span>
+                  ) : "Check"}
                 </Button>
-              )}
-              {['writing', 'scenario', 'code', 'debug', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type || 'writing') ? (
-                <>
-                  <Button onClick={() => handleSelfGrade(false)} variant="outline" className="flex-1 font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]  border-destructive/20 text-destructive/60 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-none">
-                    Wrong
-                  </Button>
-                  <Button 
-                    onClick={() => handleSelfGrade(true)} 
-                    disabled={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.length > 0 && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw])}
-                    className="flex-1 bg-primary text-primary-foreground font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px] hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-none"
-                    title={Array.isArray(currentQ.required_keywords) && currentQ.required_keywords.some((kw: string) => !keywordChecks[kw]) ? "Check all mandatory concepts to mark as correct" : ""}
-                  >
-                    Correct
-                  </Button>
-                </>
+              ) : currentScore === false ? (
+                <Button
+                  onClick={handleOpenDetailedLesson}
+                  disabled={isSubmitting || !session.remediationQuestion?.[currentQ.id]}
+                  className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]"
+                >
+                  {(isSubmitting || !session.remediationQuestion?.[currentQ.id]) ? (
+                    <span className="flex items-center justify-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin" />
+                      Building Lesson...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-1.5">
+                      <span>Detailed Explanation</span>
+                      <ArrowRight size={14} />
+                    </span>
+                  )}
+                </Button>
               ) : (
                 currentIdx < questions.length - 1 ? (
-                  <Button 
+                  <Button
                     onClick={nextQuestion}
-                    variant="outline"
-                    className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px] border-border bg-bento-item hover:bg-bento-item/80"
+                    className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]"
                   >
                     <span>Next Question</span>
                     <ArrowRight size={14} className="ml-2" />
                   </Button>
                 ) : (
-                  <Button 
+                  <Button
                     onClick={nextQuestion}
-                    className="w-full font-black tracking-widest uppercase text-[10px] h-10 rounded-[8px] "
+                    className="w-full font-black tracking-widest uppercase text-[10px] h-9 rounded-[8px]"
                   >
                     <span>Finish & View Score</span>
                   </Button>

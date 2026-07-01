@@ -3,6 +3,7 @@ import { Loader2, ArrowRight, Download, Eye, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { fetchSidecarJson } from '@/lib/sidecarHttp'
+import { useSidebarContent } from '@/context/sidebar-content-context'
 import { invoke } from '@tauri-apps/api/core'
 import { sidecarApi } from '@/lib/sidecarApi'
 import ReactMarkdown from 'react-markdown'
@@ -49,6 +50,14 @@ interface ArtifactPreview {
 }
 
 export default function Notebooks() {
+  const { setSidebarContent } = useSidebarContent()
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
   const [sidecarPort, setSidecarPort] = useState<number>(8765)
   const [sidecarToken, setSidecarToken] = useState<string>('')
   
@@ -69,6 +78,84 @@ export default function Notebooks() {
   const [isCreatingInCard, setIsCreatingInCard] = useState(false)
   const [newNotebookTitle, setNewNotebookTitle] = useState('')
   const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    setSidebarContent(
+      <div className="flex flex-col w-full min-h-0 text-left">
+        <div className="px-2 pb-2 select-none shrink-0 border-b border-border/10 flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Notebooks</span>
+          {selectedNotebook && (
+            <button
+              onClick={() => setSelectedNotebook(null)}
+              className="text-[9px] font-black uppercase tracking-widest hover:text-foreground text-muted-foreground bg-muted/10 border border-border/40 px-2 py-0.5 rounded-[4px] transition-all"
+            >
+              Back
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 mt-2 space-y-0.5 text-xs pr-1">
+          {selectedNotebook ? (
+            <div className="flex flex-col gap-1.5 w-full">
+              <div className="px-2 py-1 select-none shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-wider text-foreground truncate block max-w-[180px]">
+                  {selectedNotebook.title}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {([
+                  { id: 'sources', label: 'Sources' },
+                  { id: 'chat', label: 'Chat' },
+                  { id: 'practice', label: 'Practice' },
+                  { id: 'studio', label: 'Studio' }
+                ] as const).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[6px] transition-all text-[11px] font-bold text-left select-none",
+                      activeTab === tab.id
+                        ? "bg-muted/80 text-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {notebooks.length === 0 ? (
+                <div className="py-6 text-center opacity-40 select-none text-[9px] font-black uppercase tracking-widest">
+                  No notebooks
+                </div>
+              ) : (
+                notebooks.map(nb => (
+                  <button
+                    key={nb.id}
+                    onClick={() => {
+                      setSelectedNotebook(nb);
+                      setActiveTab('sources');
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all text-left text-[11px] font-bold truncate select-none"
+                  >
+                    <span className="truncate max-w-[160px]">{nb.title}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    , 'notebooks');
+  }, [notebooks, selectedNotebook, activeTab, setSidebarContent]);
+
+  useEffect(() => {
+    return () => {
+      setSidebarContent(null, 'notebooks');
+    };
+  }, [setSidebarContent]);
 
   // Ingest / Upload state
   const [uploadType, setUploadType] = useState<'url' | 'text' | 'file' | 'drive' | null>(null)
@@ -614,71 +701,34 @@ export default function Notebooks() {
   }
 
   // ── Tab Rendering Helpers ──────────────────────────────────────────────────
-  const TabButton = ({ id, label }: { id: typeof activeTab; label: string }) => {
-    const active = activeTab === id
-    return (
-      <button
-        onClick={() => setActiveTab(id)}
-        className={cn(
-          'relative flex-none h-full flex items-center gap-1.5 px-4 text-[9px] font-black uppercase tracking-widest whitespace-nowrap focus-visible:ring-1 focus-visible:ring-primary outline-none transition-all',
-          active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/10'
-        )}
-      >
-        <span>{label}</span>
-        {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
-      </button>
-    )
-  }
 
   return (
     <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
-      {/* Top Bar (Workspace Details Only) */}
-      {selectedNotebook && (
-        <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center justify-between shadow-sm z-30 select-none">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide h-full">
-            <button
-              onClick={() => setSelectedNotebook(null)}
-              className="flex-none h-full flex items-center gap-1.5 px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all outline-none"
-            >
-              Back
-            </button>
-            <div className="h-4 w-px bg-border/40 mx-2" />
-            <TabButton id="sources" label="Sources" />
-            <TabButton id="chat" label="Oracle Chat" />
-            <TabButton id="practice" label="Revision Practice" />
-            <TabButton id="studio" label="Studio Generations" />
-          </div>
-          <div className="text-[9px] font-mono font-black uppercase tracking-wider text-muted-foreground/60">
-            Active: {selectedNotebook.title.toUpperCase()}
-          </div>
-        </div>
-      )}
-
       {/* Main Content Area */}
       <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden relative">
         
         {/* NOTEBOOKS GRID VIEW */}
         {!selectedNotebook ? (
           <div className="h-full flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar text-left">
-            <div className="flex items-center justify-between border-b border-border/20 pb-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-4">
               <div>
-                <h1 className="text-[14px] font-black uppercase tracking-widest text-foreground">Notebook Directory</h1>
-                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-1">Select or create a study notebook</p>
+                <h1 className="text-[14px] font-black uppercase tracking-widest text-foreground font-sans">Notebook Directory</h1>
+                <p className="text-[9px] text-muted-foreground/80 uppercase font-black tracking-widest mt-1 font-sans">Select or create a study notebook</p>
               </div>
             </div>
 
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="animate-spin text-muted-foreground size-6" />
+                <Loader2 className="animate-spin text-muted-foreground/60 size-5" />
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 
                 {/* Create Notebook Card */}
                 {isCreatingInCard ? (
-                  <div className="border border-dashed border-foreground/45 bg-muted/5 p-5 rounded-[8px] flex flex-col justify-between h-[130px] transition-all">
+                  <div className="border border-dashed border-border/60 bg-bento-card p-5 rounded-[8px] flex flex-col justify-between h-[130px] transition-all">
                     <div className="space-y-1.5">
-                      <span className="text-[8px] font-mono font-black uppercase tracking-widest text-muted-foreground">NEW NOTEBOOK</span>
+                      <span className="text-[8px] font-mono font-black uppercase tracking-widest text-muted-foreground/60">NEW NOTEBOOK</span>
                       <input
                         autoFocus
                         type="text"
@@ -693,7 +743,7 @@ export default function Notebooks() {
                           }
                         }}
                         placeholder="Type title..."
-                        className="w-full bg-transparent border-b border-border focus:border-foreground py-1 text-[12px] font-bold focus:outline-none"
+                        className="w-full bg-transparent border-b border-border/40 focus:border-foreground/30 py-1 text-[12px] font-bold focus:outline-none transition-colors"
                       />
                     </div>
                     <div className="flex justify-end gap-2 text-[9px] font-black uppercase tracking-widest">
@@ -702,14 +752,14 @@ export default function Notebooks() {
                           setIsCreatingInCard(false)
                           setNewNotebookTitle('')
                         }}
-                        className="hover:text-foreground text-muted-foreground"
+                        className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-muted-foreground hover:text-foreground transition-all"
                       >
                         Cancel
                       </button>
                       <button
                         disabled={creating || !newNotebookTitle.trim()}
                         onClick={handleCreateNotebookInCard}
-                        className="text-foreground hover:underline"
+                        className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-foreground transition-all"
                       >
                         Create
                       </button>
@@ -721,9 +771,9 @@ export default function Notebooks() {
                       setIsCreatingInCard(true)
                       setNewNotebookTitle('')
                     }}
-                    className="border border-dashed border-border/60 hover:border-foreground/30 bg-transparent hover:bg-muted/10 p-5 rounded-[8px] flex flex-col items-center justify-center h-[130px] transition-all text-center gap-2 group"
+                    className="border border-dashed border-border/40 hover:border-foreground/20 bg-transparent hover:bg-bento-card p-5 rounded-[8px] flex flex-col items-center justify-center h-[130px] transition-all text-center gap-2 group cursor-pointer"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground">Create Notebook</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">Create Notebook</span>
                   </button>
                 )}
 
@@ -740,13 +790,13 @@ export default function Notebooks() {
                         }
                       }}
                       className={cn(
-                        "border border-border/40 bg-muted/10 p-5 rounded-[8px] flex flex-col justify-between h-[130px] transition-all relative group",
-                        !isEditing && "cursor-pointer hover:bg-muted/20 hover:border-foreground/30"
+                        "border border-border/40 bg-bento-card p-5 rounded-[8px] flex flex-col justify-between h-[130px] transition-all relative group shadow-sm",
+                        !isEditing && "cursor-pointer hover:border-foreground/20"
                       )}
                     >
                       {isEditing ? (
                         <div className="space-y-1.5 w-full" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-[8px] font-mono font-black uppercase tracking-widest text-muted-foreground">RENAME</span>
+                          <span className="text-[8px] font-mono font-black uppercase tracking-widest text-muted-foreground/60">RENAME</span>
                           <input
                             autoFocus
                             type="text"
@@ -759,7 +809,7 @@ export default function Notebooks() {
                                 setEditingNotebookId(null)
                               }
                             }}
-                            className="w-full bg-transparent border-b border-border focus:border-foreground py-1 text-[12px] font-bold focus:outline-none"
+                            className="w-full bg-transparent border-b border-border/40 focus:border-foreground/30 py-1 text-[12px] font-bold focus:outline-none transition-colors"
                           />
                         </div>
                       ) : (
@@ -774,13 +824,13 @@ export default function Notebooks() {
                           <div className="flex justify-end gap-2 text-[9px] font-black uppercase tracking-widest w-full">
                             <button
                               onClick={() => setEditingNotebookId(null)}
-                              className="hover:text-foreground text-muted-foreground"
+                              className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-muted-foreground hover:text-foreground transition-all"
                             >
                               Cancel
                             </button>
                             <button
                               onClick={() => handleRenameNotebook(nb.id, renameTitle)}
-                              className="text-foreground hover:underline"
+                              className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-foreground transition-all"
                             >
                               Save
                             </button>
@@ -796,13 +846,13 @@ export default function Notebooks() {
                                   setEditingNotebookId(nb.id)
                                   setRenameTitle(nb.title)
                                 }}
-                                className="text-muted-foreground hover:text-foreground"
+                                className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-muted-foreground hover:text-foreground transition-all"
                               >
                                 Rename
                               </button>
                               <button
                                 onClick={() => handleDeleteNotebook(nb.id)}
-                                className="text-muted-foreground hover:text-foreground"
+                                className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-muted-foreground hover:text-foreground transition-all"
                               >
                                 Delete
                               </button>
@@ -822,9 +872,9 @@ export default function Notebooks() {
             {activeTab === 'sources' && (
               <div className="h-full flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
                 {/* Ingestion/Upload controls */}
-                <div className="border border-border/40 bg-muted/5 rounded-[8px] p-5 text-left">
+                <div className="border border-border/40 bg-transparent rounded-[8px] p-5 text-left">
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Upload Source:</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-foreground font-sans">Upload Source:</span>
                     <div className="flex gap-2">
                       {(['file', 'url', 'text', 'drive'] as const).map(type => (
                         <button
@@ -832,7 +882,7 @@ export default function Notebooks() {
                           onClick={() => setUploadType(type)}
                           className={cn(
                             "px-3 py-1 border text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all",
-                            uploadType === type ? "border-primary bg-primary text-primary-foreground" : "border-border/60 hover:bg-muted/10 text-muted-foreground"
+                            uploadType === type ? "border-foreground/20 bg-bento-item text-foreground font-black" : "border-border/40 hover:border-foreground/20 hover:bg-bento-item/30 text-muted-foreground"
                           )}
                         >
                           {type === 'file' ? 'File' : type === 'url' ? 'URL' : type === 'drive' ? 'Drive' : 'Text'}
@@ -842,12 +892,12 @@ export default function Notebooks() {
                   </div>
 
                   {uploadType === 'file' && (
-                    <div className="py-6 border border-dashed border-border/60 rounded-[6px] text-center bg-transparent">
+                    <div className="py-8 border border-dashed border-border/40 rounded-[6px] text-center bg-transparent">
                       <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".pdf,.txt,.epub,.docx,.json" />
                       <button 
                         disabled={uploadLoading}
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/25 rounded-[6px]"
+                        className="px-4 py-2 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] transition-all"
                       >
                         Select File
                       </button>
@@ -862,12 +912,12 @@ export default function Notebooks() {
                         value={uploadUrl}
                         onChange={(e) => setUploadUrl(e.target.value)}
                         placeholder="https://..."
-                        className="flex-1 bg-transparent border border-border px-3 py-2 text-[12px] focus:outline-none rounded-[6px]"
+                        className="flex-1 bg-transparent border border-border/40 focus:border-foreground/30 px-3 py-2 text-[12px] focus:outline-none rounded-[6px] transition-all"
                       />
                       <button
                         disabled={uploadLoading || !uploadUrl.trim()}
                         onClick={handleIngest}
-                        className="px-4 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/25 rounded-[6px]"
+                        className="px-4 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] transition-all"
                       >
                         Upload
                       </button>
@@ -881,20 +931,20 @@ export default function Notebooks() {
                         value={uploadTextTitle}
                         onChange={(e) => setUploadTextTitle(e.target.value)}
                         placeholder="Title"
-                        className="w-full bg-transparent border border-border px-3 py-2 text-[12px] focus:outline-none rounded-[6px]"
+                        className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-3 py-2 text-[12px] focus:outline-none rounded-[6px] transition-all"
                       />
                       <textarea
                         rows={4}
                         value={uploadText}
                         onChange={(e) => setUploadText(e.target.value)}
                         placeholder="Paste text contents..."
-                        className="w-full bg-transparent border border-border px-3 py-2 text-[12px] focus:outline-none rounded-[6px] custom-scrollbar"
+                        className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-3 py-2 text-[12px] focus:outline-none rounded-[6px] custom-scrollbar transition-all"
                       />
                       <div className="flex justify-end">
                         <button
                           disabled={uploadLoading || !uploadText.trim()}
                           onClick={handleIngest}
-                          className="px-4 py-2 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/25 rounded-[6px]"
+                          className="px-4 py-2 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] transition-all"
                         >
                           Upload
                         </button>
@@ -909,12 +959,12 @@ export default function Notebooks() {
                         value={uploadDriveId}
                         onChange={(e) => setUploadDriveId(e.target.value)}
                         placeholder="Google Drive document ID"
-                        className="flex-1 bg-transparent border border-border px-3 py-2 text-[12px] focus:outline-none rounded-[6px]"
+                        className="flex-1 bg-transparent border border-border/40 focus:border-foreground/30 px-3 py-2 text-[12px] focus:outline-none rounded-[6px] transition-all"
                       />
                       <select
                         value={uploadDriveType}
                         onChange={(e) => setUploadDriveType(e.target.value as typeof uploadDriveType)}
-                        className="bg-transparent border border-border px-3 py-2 text-[12px] font-bold focus:outline-none rounded-[6px]"
+                        className="bg-transparent border border-border/40 focus:border-foreground/30 px-3 py-2 text-[12px] font-bold focus:outline-none rounded-[6px] transition-all text-foreground"
                       >
                         <option value="doc">Doc</option>
                         <option value="slides">Slides</option>
@@ -924,7 +974,7 @@ export default function Notebooks() {
                       <button
                         disabled={uploadLoading || !uploadDriveId.trim()}
                         onClick={handleIngest}
-                        className="px-4 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/25 rounded-[6px]"
+                        className="px-4 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] transition-all"
                       >
                         Upload
                       </button>
@@ -934,22 +984,22 @@ export default function Notebooks() {
 
                 {/* Sources listings */}
                 <div className="flex-1 flex flex-col text-left">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground mb-4">Uploaded Sources ({sources.length})</h3>
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground mb-4 font-sans">Uploaded Sources ({sources.length})</h3>
                   {sources.length === 0 ? (
-                    <div className="py-16 text-center border border-border w-full bg-muted/5 rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <div className="py-16 text-center border border-border/40 w-full bg-transparent rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 select-none">
                       No sources uploaded
                     </div>
                   ) : (
-                    <div className="border border-border/40 rounded-[8px] overflow-hidden divide-y divide-border/30">
+                    <div className="space-y-2">
                       {sources.map(src => (
-                        <div key={src.id} className="flex items-center justify-between p-4 bg-muted/5">
+                        <div key={src.id} className="flex items-center justify-between p-4 bg-bento-card border border-border/40 rounded-[8px] hover:border-foreground/20 transition-all">
                           <div>
                             <h4 className="text-[11px] font-bold text-foreground leading-snug">{src.title}</h4>
                             <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest">{src.source_type} • words: {src.word_count || 'n/a'}</span>
                           </div>
                           <button 
                             onClick={() => handleDeleteSource(src.id)}
-                            className="px-3 py-1.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                            className="px-3 py-1.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                           >
                             Delete
                           </button>
@@ -967,8 +1017,8 @@ export default function Notebooks() {
                 <div className="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-4">
                   {chatMessages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground select-none">
-                      <span className="text-[9px] font-black uppercase tracking-widest">Notebook Chat Interface</span>
-                      <span className="text-[9px] font-bold text-muted-foreground/50 mt-1 uppercase text-center max-w-sm leading-normal">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Notebook Chat Interface</span>
+                      <span className="text-[9px] font-bold text-muted-foreground/40 mt-1 uppercase text-center max-w-sm leading-normal font-sans">
                         Submit questions regarding sources. Citation-backed queries will execute here.
                       </span>
                     </div>
@@ -977,17 +1027,17 @@ export default function Notebooks() {
                       <div 
                         key={idx} 
                         className={cn(
-                          "flex flex-col max-w-[85%] rounded-[8px] p-4 text-left border leading-normal text-[12px] font-sans",
+                          "flex flex-col max-w-[85%] rounded-[8px] p-4 text-left border leading-normal text-[12px] font-sans transition-all",
                           msg.role === 'user'
-                            ? "self-end bg-muted/10 border-border text-foreground"
-                            : "self-start bg-transparent border-border text-foreground"
+                            ? "self-end bg-bento-card border-border/60 text-foreground"
+                            : "self-start bg-transparent border-border/20 text-foreground"
                         )}
                       >
                         <span className="text-[8px] font-black uppercase tracking-widest mb-1.5 opacity-60">
                           {msg.role === 'user' ? 'Learner' : 'Assistant'}
                         </span>
                         {msg.role === 'assistant' ? (
-                          <div className="font-medium space-y-2 [&_p]:m-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_h1]:text-[13px] [&_h1]:font-black [&_h2]:text-[12px] [&_h2]:font-black [&_h3]:text-[11px] [&_h3]:font-black [&_code]:font-mono [&_code]:text-[11px] [&_pre]:overflow-auto [&_pre]:rounded-[6px] [&_pre]:border [&_pre]:border-border [&_pre]:p-3">
+                          <div className="font-medium space-y-2 [&_p]:m-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_h1]:text-[13px] [&_h1]:font-black [&_h2]:text-[12px] [&_h2]:font-black [&_h3]:text-[11px] [&_h3]:font-black [&_code]:font-mono [&_code]:text-[11px] [&_pre]:overflow-auto [&_pre]:rounded-[6px] [&_pre]:border [&_pre]:border-border/40 [&_pre]:p-3">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
                           </div>
                         ) : (
@@ -997,21 +1047,21 @@ export default function Notebooks() {
                     ))
                   )}
                   {chatLoading && (
-                    <div className="self-start border border-border rounded-[8px] p-4 flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                    <div className="self-start border border-border/40 rounded-[8px] p-4 flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/60">
                       <Loader2 className="animate-spin size-3" />
                       <span>Processing...</span>
                     </div>
                   )}
                 </div>
 
-                <div className="shrink-0 p-4 border-t border-border/20 bg-muted/5 flex items-center justify-between">
+                <div className="shrink-0 p-4 border-t border-border/40 bg-transparent flex items-center justify-between gap-3">
                   <button
                     disabled={chatMessages.length === 0}
                     onClick={() => {
                       setChatMessages([])
                       setConversationId(null)
                     }}
-                    className="px-3 py-1.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] disabled:opacity-30"
+                    className="px-3 py-1.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all disabled:opacity-30"
                   >
                     Clear Chat
                   </button>
@@ -1023,12 +1073,12 @@ export default function Notebooks() {
                       onKeyDown={(e) => e.key === 'Enter' && handleSendQuery()}
                       disabled={chatLoading}
                       placeholder="Query sources..."
-                      className="flex-1 bg-transparent border border-border px-3 py-2 text-[12px] focus:outline-none rounded-[6px]"
+                      className="flex-1 bg-transparent border border-border/40 focus:border-foreground/30 px-3 py-2 text-[12px] focus:outline-none rounded-[6px] transition-colors"
                     />
                     <button
                       disabled={chatLoading || !chatQuery.trim()}
                       onClick={handleSendQuery}
-                      className="px-4 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/25 rounded-[6px] disabled:opacity-30"
+                      className="px-4 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] transition-all disabled:opacity-30"
                     >
                       Send
                     </button>
@@ -1045,7 +1095,7 @@ export default function Notebooks() {
                     {/* Generate Practice Button */}
                     <button
                       onClick={() => setActiveTab('studio')}
-                      className="w-full py-3 border border-dashed border-border/60 hover:border-foreground/30 hover:bg-muted/10 text-[9px] font-black uppercase tracking-widest rounded-[8px] transition-all flex items-center justify-center gap-1 text-muted-foreground hover:text-foreground"
+                      className="w-full py-4 border border-dashed border-border/40 hover:border-foreground/20 hover:bg-bento-card text-[9px] font-black uppercase tracking-widest rounded-[8px] transition-all flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
                     >
                       Generate Quiz or Flashcards
                     </button>
@@ -1053,26 +1103,26 @@ export default function Notebooks() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                       {/* Quizzes */}
                       <div className="space-y-4">
-                        <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground">Interactive Quizzes</h3>
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground font-sans">Interactive Quizzes</h3>
                         {savedQuizzes.length === 0 ? (
-                          <div className="py-12 text-center border border-border/30 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                          <div className="py-12 text-center border border-border/40 rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 select-none bg-transparent">
                             No quizzes found
                           </div>
                         ) : (
-                          <div className="border border-border/40 rounded-[8px] overflow-hidden divide-y divide-border/30">
+                          <div className="space-y-2">
                             {savedQuizzes.map(quiz => (
-                              <div key={quiz.id} className="flex items-center justify-between p-4 bg-muted/5">
+                              <div key={quiz.id} className="flex items-center justify-between p-4 bg-bento-card border border-border/40 rounded-[8px] hover:border-foreground/20 transition-all">
                                 <span className="text-[11px] font-bold truncate pr-3">{quiz.title}</span>
                                 <div className="flex gap-2">
                                   <button 
                                     onClick={() => startQuiz(quiz)}
-                                    className="px-3 py-1.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                                    className="px-3 py-1.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                                   >
                                     Start
                                   </button>
                                   <button 
                                     onClick={() => handleDeleteQuiz(quiz.id)}
-                                    className="px-3 py-1.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                                    className="px-3 py-1.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                                   >
                                     Delete
                                   </button>
@@ -1085,26 +1135,26 @@ export default function Notebooks() {
 
                       {/* Flashcards */}
                       <div className="space-y-4">
-                        <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground">Recall Flashcards</h3>
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground font-sans">Recall Flashcards</h3>
                         {savedFlashcards.length === 0 ? (
-                          <div className="py-12 text-center border border-border/30 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                          <div className="py-12 text-center border border-border/40 rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 select-none bg-transparent">
                             No flashcards found
                           </div>
                         ) : (
-                          <div className="border border-border/40 rounded-[8px] overflow-hidden divide-y divide-border/30">
+                          <div className="space-y-2">
                             {savedFlashcards.map(fc => (
-                              <div key={fc.id} className="flex items-center justify-between p-4 bg-muted/5">
+                              <div key={fc.id} className="flex items-center justify-between p-4 bg-bento-card border border-border/40 rounded-[8px] hover:border-foreground/20 transition-all">
                                 <span className="text-[11px] font-bold truncate pr-3">{fc.title}</span>
                                 <div className="flex gap-2">
                                   <button 
                                     onClick={() => startFlashcards(fc)}
-                                    className="px-3 py-1.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                                    className="px-3 py-1.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                                   >
                                     Practice
                                   </button>
                                   <button 
                                     onClick={() => handleDeleteFlashcards(fc.id)}
-                                    className="px-3 py-1.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                                    className="px-3 py-1.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all"
                                   >
                                     Delete
                                   </button>
@@ -1119,18 +1169,18 @@ export default function Notebooks() {
                 ) : activeQuiz ? (
                   /* ACTIVE QUIZ SCREEN */
                   <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full gap-6 text-left">
-                    <div className="flex items-center justify-between border-b border-border/20 pb-3">
-                      <span className="text-[9px] font-mono font-black uppercase tracking-widest text-muted-foreground">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-widest text-muted-foreground/60">
                         Question {currentQuestionIdx + 1} / {activeQuiz.parsed?.questions?.length || 0}
                       </span>
-                      <button onClick={() => setActiveQuiz(null)} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">
+                      <button onClick={() => setActiveQuiz(null)} className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all">
                         Exit
                       </button>
                     </div>
 
                     {!quizFinished ? (
                       <>
-                        <div className="border border-border/40 bg-muted/5 rounded-[8px] p-5">
+                        <div className="border border-border/40 bg-transparent rounded-[8px] p-5">
                           <h2 className="text-[12px] font-black uppercase tracking-wider leading-relaxed">
                             {activeQuiz.parsed?.questions?.[currentQuestionIdx]?.question}
                           </h2>
@@ -1151,19 +1201,19 @@ export default function Notebooks() {
                                 className={cn(
                                   "w-full px-4 py-3 border text-left text-[11px] font-bold flex items-center justify-between transition-all rounded-[6px]",
                                   selectedAnswerIdx === null
-                                    ? "border-border/60 hover:bg-muted/10 text-muted-foreground"
+                                    ? "border-border/40 hover:bg-bento-card hover:border-foreground/20 text-muted-foreground hover:text-foreground"
                                     : correctSelected
-                                      ? "border-foreground bg-muted/10 text-foreground"
+                                      ? "border-foreground bg-bento-item text-foreground shadow-sm"
                                       : wrongSelected
-                                        ? "border-dashed border-border opacity-50 text-muted-foreground"
+                                        ? "border-dashed border-border/40 opacity-50 text-muted-foreground"
                                         : isCorrect
                                           ? "border-foreground text-foreground"
                                           : "border-border/20 opacity-30 text-muted-foreground"
                                 )}
                               >
                                 <span>{opt}</span>
-                                {selectedAnswerIdx !== null && isCorrect && <span className="text-[9px] font-mono font-black uppercase tracking-widest">CORRECT</span>}
-                                {selectedAnswerIdx !== null && isSelected && !isCorrect && <span className="text-[9px] font-mono font-black uppercase tracking-widest">WRONG</span>}
+                                {selectedAnswerIdx !== null && isCorrect && <span className="text-[9px] font-mono font-black uppercase tracking-widest text-foreground">CORRECT</span>}
+                                {selectedAnswerIdx !== null && isSelected && !isCorrect && <span className="text-[9px] font-mono font-black uppercase tracking-widest text-muted-foreground">WRONG</span>}
                               </button>
                             )
                           })}
@@ -1172,7 +1222,7 @@ export default function Notebooks() {
                         {selectedAnswerIdx !== null && (
                           <div className="space-y-4">
                             {activeQuiz.parsed?.questions?.[currentQuestionIdx]?.explanation && (
-                              <div className="border border-border/40 bg-muted/5 rounded-[6px] p-4 text-[10px] font-sans font-medium text-muted-foreground leading-relaxed">
+                              <div className="border border-border/40 bg-transparent rounded-[6px] p-4 text-[10px] font-sans font-medium text-muted-foreground/80 leading-relaxed">
                                 <span className="font-black text-foreground uppercase tracking-widest text-[8px] block mb-1">Explanation</span>
                                 {activeQuiz.parsed?.questions?.[currentQuestionIdx]?.explanation}
                               </div>
@@ -1180,7 +1230,7 @@ export default function Notebooks() {
                             <div className="flex justify-end">
                               <button
                                 onClick={nextQuestion}
-                                className="px-5 py-2 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/20 rounded-[6px] flex items-center gap-1.5 text-foreground"
+                                className="px-5 py-2 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] flex items-center gap-1.5 text-foreground transition-all"
                               >
                                 <span>Next</span>
                                 <ArrowRight size={10} />
@@ -1190,14 +1240,14 @@ export default function Notebooks() {
                         )}
                       </>
                     ) : (
-                      <div className="border border-border/40 bg-muted/5 rounded-[8px] p-8 text-center flex flex-col items-center gap-4">
-                        <h2 className="text-sm font-black uppercase tracking-widest">Quiz Completed</h2>
+                      <div className="border border-border/40 bg-transparent rounded-[8px] p-8 text-center flex flex-col items-center gap-4">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-foreground">Quiz Completed</h2>
                         <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                           Score: <span className="font-mono text-foreground font-black">{quizScore} / {activeQuiz.parsed?.questions?.length || 0}</span>
                         </p>
                         <button
                           onClick={() => setActiveQuiz(null)}
-                          className="px-5 py-2 border border-border text-[9px] font-black uppercase tracking-widest hover:bg-muted/20 rounded-[6px] mt-4"
+                          className="px-5 py-2 border border-border/40 text-[9px] font-black uppercase tracking-widest hover:border-foreground/20 hover:bg-bento-item rounded-[6px] mt-4 transition-all"
                         >
                           Finish
                         </button>
@@ -1207,26 +1257,26 @@ export default function Notebooks() {
                 ) : (
                   /* ACTIVE FLASHCARDS SCREEN */
                   <div className="flex-1 flex flex-col max-w-xl mx-auto w-full gap-6 text-left">
-                    <div className="w-full flex items-center justify-between border-b border-border/20 pb-3">
-                      <span className="text-[9px] font-mono font-black tracking-widest text-muted-foreground">
+                    <div className="w-full flex items-center justify-between border-b border-border/40 pb-3">
+                      <span className="text-[9px] font-mono font-black tracking-widest text-muted-foreground/60">
                         Card {currentCardIdx + 1} / {activeFlashcards.parsed?.flashcards?.length || 0}
                       </span>
-                      <button onClick={() => setActiveFlashcards(null)} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">
+                      <button onClick={() => setActiveFlashcards(null)} className="px-2 py-0.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[4px] text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all">
                         Exit
                       </button>
                     </div>
 
                     <button
                       onClick={() => setShowCardBack(prev => !prev)}
-                      className="w-full min-h-[180px] border border-border/40 bg-muted/5 rounded-[8px] p-6 flex flex-col items-center justify-center text-center hover:bg-muted/10 transition-all gap-2"
+                      className="w-full min-h-[180px] border border-border/40 bg-transparent rounded-[8px] p-6 flex flex-col items-center justify-center text-center hover:bg-bento-card hover:border-foreground/20 transition-all gap-2 cursor-pointer"
                     >
-                      <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">{!showCardBack ? 'Front' : 'Back'}</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">{!showCardBack ? 'Front' : 'Back'}</span>
                       <h2 className="text-[12px] font-black uppercase tracking-wide text-foreground">
                         {!showCardBack 
                           ? activeFlashcards.parsed?.flashcards?.[currentCardIdx]?.front 
                           : activeFlashcards.parsed?.flashcards?.[currentCardIdx]?.back}
                       </h2>
-                      <span className="text-[8px] font-sans font-bold text-muted-foreground/30 mt-4 uppercase tracking-widest">Click to flip</span>
+                      <span className="text-[8px] font-sans font-bold text-muted-foreground/20 mt-4 uppercase tracking-widest">Click to flip</span>
                     </button>
 
                     {showCardBack && (
@@ -1234,13 +1284,13 @@ export default function Notebooks() {
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             onClick={() => rateFlashcard(false)}
-                            className="py-2.5 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all text-muted-foreground hover:text-foreground"
+                            className="py-2.5 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all text-muted-foreground hover:text-foreground"
                           >
                             Forgot
                           </button>
                           <button
                             onClick={() => rateFlashcard(true)}
-                            className="py-2.5 border border-foreground bg-muted/10 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all text-foreground hover:bg-muted/20"
+                            className="py-2.5 border border-border/40 hover:border-foreground/20 bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all text-foreground"
                           >
                             Recalled
                           </button>
@@ -1254,18 +1304,18 @@ export default function Notebooks() {
 
             {/* STUDIO TAB */}
             {activeTab === 'studio' && (
-              <div className="h-full flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-border/20 overflow-hidden text-left bg-transparent">
+              <div className="h-full flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-border/40 overflow-hidden text-left bg-transparent">
                 {/* Generate controls */}
                 <div className="w-full md:w-[320px] p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 shrink-0 bg-transparent">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground">Studio Generator</h3>
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground font-sans">Studio Generator</h3>
                   
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Format Type</label>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Format Type</label>
                       <select 
                         value={artifactType} 
                         onChange={(e) => setArtifactType(e.target.value)}
-                        className="w-full bg-transparent border border-border px-2.5 py-2 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                        className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-2 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                       >
                         <option value="audio">Audio Overview (Podcast)</option>
                         <option value="video">Video Overview</option>
@@ -1280,36 +1330,36 @@ export default function Notebooks() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Source IDs</label>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Source IDs</label>
                       <input
                         type="text"
                         value={studioSourceIds}
                         onChange={(e) => setStudioSourceIds(e.target.value)}
                         placeholder="Optional comma-separated source IDs"
-                        className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-mono focus:outline-none rounded-[6px]"
+                        className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-mono focus:outline-none rounded-[6px] transition-colors"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Language</label>
+                      <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Language</label>
                       <input
                         type="text"
                         value={studioLanguage}
                         onChange={(e) => setStudioLanguage(e.target.value)}
                         placeholder="Default, en, en-US..."
-                        className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-mono focus:outline-none rounded-[6px]"
+                        className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-mono focus:outline-none rounded-[6px] transition-colors"
                       />
                     </div>
 
                     {artifactType !== 'mindmap' && (
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Focus</label>
+                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Focus</label>
                         <textarea
                           rows={2}
                           value={studioFocus}
                           onChange={(e) => setStudioFocus(e.target.value)}
                           placeholder="Optional topic, audience, or angle"
-                          className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar"
+                          className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar transition-colors"
                         />
                       </div>
                     )}
@@ -1317,11 +1367,11 @@ export default function Notebooks() {
                     {artifactType === 'audio' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Format</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Format</label>
                           <select 
                             value={audioFormat} 
                             onChange={(e) => setAudioFormat(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="deep_dive">Deep Dive Conversation</option>
                             <option value="brief">Quick Briefing Summary</option>
@@ -1330,11 +1380,11 @@ export default function Notebooks() {
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Length</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Length</label>
                           <select 
                             value={audioLength} 
                             onChange={(e) => setAudioLength(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="short">Short</option>
                             <option value="default">Default</option>
@@ -1347,11 +1397,11 @@ export default function Notebooks() {
                     {artifactType === 'report' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Report Format</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Report Format</label>
                           <select 
                             value={reportFormat} 
                             onChange={(e) => setReportFormat(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="Briefing Doc">Briefing Document</option>
                             <option value="Study Guide">Study Guide</option>
@@ -1360,13 +1410,13 @@ export default function Notebooks() {
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Prompt Focus</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Prompt Focus</label>
                           <textarea 
                             rows={2}
                             value={customPrompt}
                             onChange={(e) => setCustomPrompt(e.target.value)}
                             placeholder="Focus on..."
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar transition-colors"
                           />
                         </div>
                       </>
@@ -1375,22 +1425,22 @@ export default function Notebooks() {
                     {artifactType === 'quiz' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Question Count</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Question Count</label>
                           <input 
                             type="number"
                             min={1}
                             max={50}
                             value={questionCount}
                             onChange={(e) => setQuestionCount(parseInt(e.target.value) || 2)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-mono focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-mono focus:outline-none rounded-[6px] transition-colors"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Difficulty (1-5)</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Difficulty (1-5)</label>
                           <select 
                             value={quizDifficulty} 
                             onChange={(e) => setQuizDifficulty(parseInt(e.target.value) || 2)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="1">1 (Easy)</option>
                             <option value="2">2 (Default)</option>
@@ -1404,11 +1454,11 @@ export default function Notebooks() {
 
                     {artifactType === 'flashcards' && (
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Difficulty</label>
+                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Difficulty</label>
                         <select 
                           value={flashcardsDifficulty} 
                           onChange={(e) => setFlashcardsDifficulty(e.target.value)}
-                          className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                          className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                         >
                           <option value="easy">Easy</option>
                           <option value="medium">Medium</option>
@@ -1420,22 +1470,22 @@ export default function Notebooks() {
                     {artifactType === 'slides' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Slides Style</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Slides Style</label>
                           <select 
                             value={slidesFormat} 
                             onChange={(e) => setSlidesFormat(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="detailed_deck">Detailed Deck</option>
                             <option value="presenter_slides">Presenter Slides</option>
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Length</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Length</label>
                           <select 
                             value={slidesLength} 
                             onChange={(e) => setSlidesLength(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="short">Short</option>
                             <option value="default">Default</option>
@@ -1446,12 +1496,12 @@ export default function Notebooks() {
 
                     {artifactType === 'mindmap' && (
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Title</label>
+                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Title</label>
                         <input
                           type="text"
                           value={mindmapTitle}
                           onChange={(e) => setMindmapTitle(e.target.value)}
-                          className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                          className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors"
                         />
                       </div>
                     )}
@@ -1459,11 +1509,11 @@ export default function Notebooks() {
                     {artifactType === 'infographic' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Orientation</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Orientation</label>
                           <select
                             value={infographicOrientation}
                             onChange={(e) => setInfographicOrientation(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="landscape">Landscape</option>
                             <option value="portrait">Portrait</option>
@@ -1471,11 +1521,11 @@ export default function Notebooks() {
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Detail</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Detail</label>
                           <select
                             value={infographicDetail}
                             onChange={(e) => setInfographicDetail(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="concise">Concise</option>
                             <option value="standard">Standard</option>
@@ -1483,11 +1533,11 @@ export default function Notebooks() {
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Style</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Style</label>
                           <select
                             value={infographicStyle}
                             onChange={(e) => setInfographicStyle(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="auto_select">Auto Select</option>
                             <option value="sketch_note">Sketch Note</option>
@@ -1508,11 +1558,11 @@ export default function Notebooks() {
                     {artifactType === 'video' && (
                       <>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Format</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Format</label>
                           <select
                             value={videoFormat}
                             onChange={(e) => setVideoFormat(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="explainer">Explainer</option>
                             <option value="brief">Brief</option>
@@ -1520,11 +1570,11 @@ export default function Notebooks() {
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Visual Style</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Visual Style</label>
                           <select
                             value={videoStyle}
                             onChange={(e) => setVideoStyle(e.target.value)}
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px]"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-bold focus:outline-none rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                           >
                             <option value="auto_select">Auto Select</option>
                             <option value="custom">Custom</option>
@@ -1539,13 +1589,13 @@ export default function Notebooks() {
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Style Prompt</label>
+                          <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Style Prompt</label>
                           <textarea
                             rows={2}
                             value={videoStylePrompt}
                             onChange={(e) => setVideoStylePrompt(e.target.value)}
                             placeholder="Custom visual direction"
-                            className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar"
+                            className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar transition-colors"
                           />
                         </div>
                       </>
@@ -1553,13 +1603,13 @@ export default function Notebooks() {
 
                     {artifactType === 'data-table' && (
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Table Description</label>
+                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Table Description</label>
                         <textarea
                           rows={3}
                           value={dataTableDescription}
                           onChange={(e) => setDataTableDescription(e.target.value)}
                           placeholder="Describe the table to extract from sources"
-                          className="w-full bg-transparent border border-border px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar"
+                          className="w-full bg-transparent border border-border/40 focus:border-foreground/30 px-2.5 py-1.5 text-[11px] font-sans focus:outline-none rounded-[6px] custom-scrollbar transition-colors"
                         />
                       </div>
                     )}
@@ -1567,12 +1617,12 @@ export default function Notebooks() {
                     <button
                       disabled={generatingStudio || sources.length === 0 || (artifactType === 'data-table' && !dataTableDescription.trim())}
                       onClick={handleGenerateStudio}
-                      className="w-full py-2.5 mt-2 border border-primary bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all rounded-[6px] disabled:opacity-30 flex items-center justify-center gap-1"
+                      className="w-full py-2.5 mt-2 border border-foreground/20 bg-primary text-primary-foreground hover:bg-primary/90 text-[9px] font-black uppercase tracking-widest transition-all rounded-[6px] disabled:opacity-30 flex items-center justify-center gap-1"
                     >
                       <span>Generate Media</span>
                     </button>
                     {sources.length === 0 && (
-                      <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest text-center mt-2">
+                      <p className="text-[8px] text-muted-foreground/60 uppercase font-black tracking-widest text-center mt-2 font-mono">
                         Please add a source before generating.
                       </p>
                     )}
@@ -1581,14 +1631,14 @@ export default function Notebooks() {
 
                 {/* Artifact Registry */}
                 <div className="flex-1 p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-transparent">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground">Generated Artifacts</h3>
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground font-sans">Generated Artifacts</h3>
                   
                   {studioArtifacts.length === 0 ? (
-                    <div className="py-12 text-center border border-border/30 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                    <div className="py-12 text-center border border-border/40 rounded-[8px] text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 select-none bg-transparent">
                       No artifacts generated
                     </div>
                   ) : (
-                    <div className="border border-border/40 rounded-[8px] overflow-hidden divide-y divide-border/30">
+                    <div className="space-y-2">
                       {studioArtifacts.map((art, idx) => {
                         const normalizedType = getArtifactType(art)
                         const artifactId = getArtifactId(art)
@@ -1596,7 +1646,7 @@ export default function Notebooks() {
                         const canDownload = art.status === 'completed' && normalizedType !== 'unknown'
 
                         return (
-                          <div key={artifactId || idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/5 text-[11px] font-bold">
+                          <div key={artifactId || idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-bento-card border border-border/40 rounded-[8px] hover:border-foreground/20 transition-all text-[11px] font-bold">
                             <div className="min-w-0">
                               <h4 className="text-foreground">{getArtifactLabel(art)}</h4>
                               <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest">ID: {artifactId.slice(0,8) || 'pending'}</span>
@@ -1606,7 +1656,7 @@ export default function Notebooks() {
                                 <select
                                   value={getDownloadFormat(art)}
                                   onChange={(e) => setArtifactDownloadFormat(prev => ({ ...prev, [artifactId]: e.target.value }))}
-                                  className="h-8 bg-transparent border border-border px-2 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                                  className="h-8 bg-transparent border border-border/40 focus:border-foreground/30 px-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                                 >
                                   <option value="json">JSON</option>
                                   <option value="markdown">Markdown</option>
@@ -1617,19 +1667,19 @@ export default function Notebooks() {
                                 <select
                                   value={getDownloadFormat(art)}
                                   onChange={(e) => setArtifactDownloadFormat(prev => ({ ...prev, [artifactId]: e.target.value }))}
-                                  className="h-8 bg-transparent border border-border px-2 text-[9px] font-black uppercase tracking-widest rounded-[6px]"
+                                  className="h-8 bg-transparent border border-border/40 focus:border-foreground/30 px-2 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-colors text-foreground [&_option]:bg-bento-panel [&_option]:text-foreground"
                                 >
                                   <option value="pdf">PDF</option>
                                   <option value="pptx">PPTX</option>
                                 </select>
                               )}
-                              <span className="font-mono text-[9px] text-muted-foreground/80 uppercase px-2">
+                              <span className="font-mono text-[9px] text-muted-foreground/60 uppercase px-2">
                                 {art.status === 'completed' ? 'READY' : art.status === 'failed' ? 'FAILED' : 'BUILDING'}
                               </span>
                               <button
                                 disabled={!canDownload || artifactActionLoading === `open:${actionKey}`}
                                 onClick={() => handleOpenArtifact(art)}
-                                className="h-8 px-3 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] disabled:opacity-30 flex items-center gap-1.5"
+                                className="h-8 px-3 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] disabled:opacity-30 flex items-center gap-1.5 transition-all"
                               >
                                 <Eye size={12} />
                                 Open
@@ -1637,7 +1687,7 @@ export default function Notebooks() {
                               <button
                                 disabled={!canDownload || artifactActionLoading === `download:${actionKey}`}
                                 onClick={() => handleDownloadArtifact(art)}
-                                className="h-8 px-3 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] disabled:opacity-30 flex items-center gap-1.5"
+                                className="h-8 px-3 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] disabled:opacity-30 flex items-center gap-1.5 transition-all"
                               >
                                 <Download size={12} />
                                 Save
@@ -1657,24 +1707,24 @@ export default function Notebooks() {
 
       {artifactPreview && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-5xl h-[82vh] bg-bento-panel border border-border rounded-[10px] shadow-2xl flex flex-col overflow-hidden">
+          <div className="w-full max-w-5xl h-[82vh] bg-bento-panel border border-border/40 rounded-[10px] shadow-2xl flex flex-col overflow-hidden">
             <div className="h-12 shrink-0 border-b border-border/40 flex items-center justify-between px-4">
               <div className="min-w-0">
                 <h3 className="text-[11px] font-black uppercase tracking-widest truncate">{artifactPreview.filename}</h3>
-                <p className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground">{artifactPreview.mediaType}</p>
+                <p className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground/60">{artifactPreview.mediaType}</p>
               </div>
               <div className="flex items-center gap-2">
                 <a
                   href={artifactPreview.url}
                   download={artifactPreview.filename}
-                  className="h-8 px-3 border border-border hover:bg-muted/20 text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1.5"
+                  className="h-8 px-3 border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[9px] font-black uppercase tracking-widest rounded-[6px] flex items-center gap-1.5 transition-all"
                 >
                   <Download size={12} />
                   Save
                 </a>
                 <button
                   onClick={closeArtifactPreview}
-                  className="size-8 border border-border hover:bg-muted/20 rounded-[6px] flex items-center justify-center"
+                  className="size-8 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[6px] flex items-center justify-center transition-all"
                   aria-label="Close artifact preview"
                 >
                   <X size={14} />

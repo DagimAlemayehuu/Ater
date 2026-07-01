@@ -8,6 +8,9 @@ import { PracticeVault } from '@/components/practice/PracticeVault'
 import { PracticeConfigurator } from '@/components/practice/PracticeConfigurator'
 import { PracticeSession } from '@/components/practice/PracticeSession'
 import { PracticeResults } from '@/components/practice/PracticeResults'
+import { useSidebarContent } from '@/context/sidebar-content-context'
+import { LayoutDashboard, Clock, BookOpen, Sliders } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean }) {
@@ -54,6 +57,64 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
     handleDeletePractice,
     handleReviewDueCards,
   } = usePracticeConfig()
+
+  const { setSidebarContent } = useSidebarContent()
+
+  React.useEffect(() => {
+    if (view === 'dashboard' || view === 'history' || view === 'vault' || view === 'configuring') {
+      setSidebarContent(
+        <div className="flex flex-col gap-1 w-full font-sans">
+          <div className="px-3 mb-2 flex items-center gap-2 select-none">
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Practice Hub</span>
+            <div className="h-px flex-1 bg-border/20" />
+          </div>
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={11} />, dataTour: 'tab-practice-dashboard' },
+            { id: 'history', label: 'History', icon: <Clock size={11} />, dataTour: 'tab-practice-history' },
+            { id: 'vault', label: 'Reference Vault', icon: <BookOpen size={11} />, dataTour: 'tab-practice-vault' },
+            { id: 'configuring', label: 'Custom', icon: <Sliders size={11} />, dataTour: 'tab-practice-custom' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setView(t.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                view === t.id
+                  ? "bg-bento-item text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+              )}
+              data-tour={t.dataTour}
+            >
+              <span className="shrink-0 text-muted-foreground">{t.icon}</span>
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>,
+        'practice'
+      )
+    } else if (view === 'session') {
+      setSidebarContent(
+        <div className="flex flex-col gap-1 w-full font-sans">
+          <div className="px-3 mb-2 flex items-center gap-2 select-none">
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Session Active</span>
+            <div className="h-px flex-1 bg-border/20" />
+          </div>
+          <button
+            onClick={() => setView('dashboard')}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+          >
+            <span>Exit Practice</span>
+          </button>
+        </div>,
+        'practice'
+      )
+    } else {
+      setSidebarContent(null, 'practice')
+    }
+    return () => {
+      setSidebarContent(null, 'practice')
+    }
+  }, [view, setSidebarContent, setView])
 
   if (view === 'dashboard') {
     return (

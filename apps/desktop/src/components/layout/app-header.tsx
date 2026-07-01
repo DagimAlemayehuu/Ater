@@ -1,18 +1,46 @@
-import React from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { PanelLeftOpen } from 'lucide-react'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
 import { cn } from '@/lib/utils'
-import { usePomodoroStore } from '@/lib/pomodoroStore'
-import { Timer } from 'lucide-react'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useSecurityStore } from '@/context/securityStore'
 
 export function AppHeader() {
-  const { goBack, goForward, canGoBack, canGoForward, history, currentIndex } = useNavigation()
+  const { history, currentIndex } = useNavigation()
   const { centerContent, rightContent } = useHeader()
-  const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore()
   const creditBalance = useSecurityStore(state => state.creditBalance)
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ater_sidebar_collapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem('ater_sidebar_collapsed');
+        setIsSidebarCollapsed(saved ? JSON.parse(saved) : false);
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('ater-sidebar-toggle', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ater-sidebar-toggle', handleStorageChange);
+    };
+  }, []);
+
+  const toggleSidebar = () => {
+    const next = !isSidebarCollapsed;
+    localStorage.setItem('ater_sidebar_collapsed', JSON.stringify(next));
+    setIsSidebarCollapsed(next);
+    window.dispatchEvent(new Event('ater-sidebar-toggle'));
+  };
 
   // Dynamic Breadcrumb Logic
   const renderBreadcrumbs = () => {
@@ -75,50 +103,15 @@ export function AppHeader() {
     >
       {/* Left: Navigation */}
       <div className="flex items-center gap-3 shrink-0 z-10">
-        <div className="flex items-center">
-          <button 
-            onClick={goBack}
-            disabled={!canGoBack}
-            title="Back (Cmd+[)"
-            data-tour="header-back"
-            className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
-              canGoBack 
-                ? "text-muted-foreground hover:text-foreground hover:bg-bento-item" 
-                : "text-muted-foreground/20 cursor-not-allowed"
-            )}
+        {isSidebarCollapsed && (
+          <button
+            onClick={toggleSidebar}
+            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors"
+            title="Expand Sidebar"
           >
-            <ChevronLeft size={18} strokeWidth={1.5} />
+            <PanelLeftOpen size={18} />
           </button>
-
-          <button 
-            onClick={() => goForward()}
-            disabled={!canGoForward}
-            title="Forward (Cmd+])"
-            data-tour="header-forward"
-            className={cn(
-              "w-8 h-8 flex items-center justify-center rounded-[8px] transition-colors",
-              canGoForward 
-                ? "text-muted-foreground hover:text-foreground hover:bg-bento-item" 
-                : "text-muted-foreground/20 cursor-not-allowed"
-            )}
-          >
-            <ChevronRight size={18} strokeWidth={1.5} />
-          </button>
-        </div>
-        
-        {/* Timer Display (Academic Style) */}
-        <button 
-          onClick={() => setShowOverlay(true)}
-          data-tour="header-timer"
-          className={cn(
-            "flex items-center gap-1.5 rounded-[8px] border border-border/40 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item transition-all h-8 font-sans",
-            pomodoroActive && "border-foreground/20 text-foreground bg-bento-item"
-          )}
-        >
-          <Timer size={16} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground")} />
-          <span className="tabular-nums">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
-        </button>
+        )}
       </div>
 
       {/* Center: Breadcrumbs & Meta - Absolute Centered relative to window */}

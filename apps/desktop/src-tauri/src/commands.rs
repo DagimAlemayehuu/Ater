@@ -3095,6 +3095,37 @@ pub async fn rag_sync_vault(
 }
 
 #[tauri::command]
+pub async fn ater_inbox_upload(
+    file_path: String,
+    file_name: String,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    let config = load_app_config(&app_handle)?;
+    
+    let inbox_dir = if let Some(ref path) = config.inbox_path {
+        std::path::PathBuf::from(path)
+    } else if let Some(ref path) = config.obsidian_vault_path {
+        std::path::PathBuf::from(path).join("Inbox")
+    } else {
+        return Err("Vault Path and Inbox Path not configured. Please open settings and configure folder paths first.".to_string());
+    };
+    
+    std::fs::create_dir_all(&inbox_dir)
+        .map_err(|e| format!("Failed to create Inbox folder: {}", e))?;
+        
+    let destination = inbox_dir.join(&file_name);
+    
+    std::fs::copy(&file_path, &destination)
+        .map_err(|e| format!("Failed to copy file to Inbox: {}", e))?;
+        
+    Ok(serde_json::json!({
+        "status": "success",
+        "file_name": file_name,
+        "path": destination.to_string_lossy().to_string()
+    }))
+}
+
+#[tauri::command]
 pub async fn vault_upload_file(
     hub_id: String,
     file_path: String,

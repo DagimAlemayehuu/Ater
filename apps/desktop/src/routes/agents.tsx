@@ -1,8 +1,8 @@
 import React, {useState, useEffect, useRef, lazy, Suspense, useMemo, useCallback} from 'react'
 import { useTelemetryStore } from '@/lib/telemetryStore'
 import {
- ShieldCheck, RefreshCw, 
- FileText, Activity, 
+ ShieldCheck, RefreshCw,
+ FileText, Activity,
  Zap, Search, GraduationCap,
  User, BookOpen, BookOpenCheck, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen, BrainCircuit
 } from 'lucide-react'
@@ -32,6 +32,7 @@ import { NoteCanvas } from '@/components/intelligence/NoteCanvas'
 import { LearningWorkspace } from '@/components/intelligence/LearningWorkspace'
 import { useConfig} from '@/lib/ConfigContext'
 import {useHeader} from '@/context/header-context'
+import {useSidebarContent} from '@/context/sidebar-content-context'
 import {useNavigate} from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -40,14 +41,25 @@ import { ArtifactViewer } from '@/components/obsidian/ArtifactViewer'
 import { extractArtifacts } from '@/lib/artifacts/parser'
 import { useArtifactStore } from '@/lib/artifacts/store'
 import { shouldShowArtifactReopenButton } from '@/lib/artifacts/panel'
-import { Send, Trash2, Bookmark } from 'lucide-react'
+import { Send, Trash2, Bookmark, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
 import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
+import { open } from '@tauri-apps/plugin-dialog'
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  customAction?: {
+    label: string
+    hubPath: string
+    semesterName: string
+    courseName: string
+    unitNum: string
+    hubTitle: string
+    sessionId: string
+    results: string[]
+  }
 }
 
 /* ─── Utilities ─── */
@@ -56,9 +68,18 @@ const cleanTitle = (val: any): string => {
   return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
 }
 
+const isTemporaryLessonPath = (path?: string | null) => {
+  return typeof path === 'string' && path.includes('remediation_temp')
+}
+
+const firstRealLessonPath = (...paths: Array<string | null | undefined>) => {
+  return paths.find(path => path && !isTemporaryLessonPath(path)) || null
+}
+
 interface OracleViewProps {
   isHistoryOpen: boolean;
   setIsHistoryOpen: (open: boolean) => void;
+  activeNotePath?: string | null;
   onStateChange?: (state: {
     hasMessages: boolean;
     hasPreview: boolean;
@@ -69,10 +90,28 @@ interface OracleViewProps {
 }
 
 /* ─── Oracle Chat View ─── */
-function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSelect }: OracleViewProps) {
+function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateChange, onNoteSelect }: OracleViewProps) {
   const navigate = useNavigate();
+  const { setSidebarContent } = useSidebarContent();
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   const { currentHub, history: studyHistory } = usePomodoroStore();
   const { config, saveConfig } = useConfig();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') === 'pipeline' ? 'pipeline' : 'ater';
+  const fetchInbox = useTelemetryStore(state => state.fetchInbox);
+  const fetchStatus = useTelemetryStore(state => state.fetchStatus);
+
+  const toggleAutoDeploy = async () => {
+    await saveConfig({ autoDeploy: !config?.autoDeploy });
+    await sidecarApi.aterWatcherToggle();
+    fetchStatus();
+  };
 
   // Load conversation list
   const [conversations, setConversations] = useState<SavedConversation[]>(() => {
@@ -112,6 +151,18 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const generatedSpecRef = useRef<Set<string>>(new Set());
   const artifactState = useArtifactStore();
+  const [pendingPdfSession, setPendingPdfSession] = useState<{
+    sessionId: string
+    hubPath: string
+    semesterName: string
+    courseName: string
+    unitNum: string
+    hubTitle: string
+    results: string[]
+  } | null>(null);
+
+  const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
+  const [generatingStatus, setGeneratingStatus] = useState<string | null>(null);
 
   const [preview, setPreview] = useState<LessonPreview | null>(() => {
     if (activeConv) return activeConv.preview;
@@ -133,16 +184,231 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     }
   });
 
+  const activeLessonPath = firstRealLessonPath(
+    preview?.notePath,
+    activeNotePath,
+    localStorage.getItem('ater_study_active_note_path'),
+    localStorage.getItem('ater_canonical_lesson_path'),
+    localStorage.getItem('ater_original_note_path'),
+  ) || '';
+  const activeLessonTitle = (!isTemporaryLessonPath(preview?.notePath) && preview?.title)
+    ? preview.title
+    : cleanTitle(activeLessonPath.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || '');
+
+  const openCurrentLesson = useCallback(async () => {
+    let nextPreview = preview;
+    const savedPreview = localStorage.getItem('ater_lesson_preview');
+    if (!nextPreview && savedPreview) {
+      try {
+        nextPreview = JSON.parse(savedPreview);
+      } catch {
+        nextPreview = null;
+      }
+    }
+
+    const path = firstRealLessonPath(
+      nextPreview?.notePath,
+      activeNotePath,
+      localStorage.getItem('ater_study_active_note_path'),
+      localStorage.getItem('ater_canonical_lesson_path'),
+      localStorage.getItem('ater_original_note_path'),
+    ) || '';
+
+    if (nextPreview && path && nextPreview.notePath !== path) {
+      nextPreview = {
+        ...nextPreview,
+        title: cleanTitle(path.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || nextPreview.title || 'Lesson'),
+        lessonPath: path,
+        notePath: path,
+      };
+    }
+
+    if (!nextPreview && path) {
+      nextPreview = {
+        title: cleanTitle(path.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson'),
+        lessonPath: path,
+        notePath: path,
+        hubPath: '',
+        previewUrl: '',
+      };
+    }
+
+    if (!nextPreview) {
+      toast.error('No active lesson found to continue.');
+      return;
+    }
+
+    setPreview(nextPreview);
+    if (nextPreview.notePath) {
+      onNoteSelect?.(nextPreview.notePath);
+      localStorage.setItem('ater_study_active_note_path', nextPreview.notePath);
+      localStorage.setItem('ater_canonical_lesson_path', nextPreview.notePath);
+      localStorage.setItem('ater_original_note_path', nextPreview.notePath);
+    }
+
+    const activeSessionId = localStorage.getItem('ater_active_session_id');
+    if (activeSessionId && !tutorSession) {
+      try {
+        const session = await sidecarApi.getTutorStatus(activeSessionId);
+        if (session) setTutorSession(session);
+      } catch (err) {
+        console.error('[Oracle] Failed to restore tutor session:', err);
+      }
+    } else if (nextPreview.hubPath && !tutorSession) {
+      try {
+        const session = await sidecarApi.getTutorSessionByHub(nextPreview.hubPath);
+        if (session) setTutorSession(session);
+      } catch (err) {
+        console.error('[Oracle] Failed to restore tutor session by hub:', err);
+      }
+    }
+
+    setPanelOpen(true);
+    localStorage.setItem('ater_lesson_panel_open', JSON.stringify(true));
+  }, [activeNotePath, onNoteSelect, preview, tutorSession]);
+
+  const handleAttachFile = async () => {
+    let assistantIndex = messages.length + 1
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'Document', extensions: ['pdf', 'txt', 'md'] }]
+      })
+
+      if (!selected || typeof selected !== 'string') return
+
+      const parts = selected.split(/[/\\]/)
+      const fileName = parts[parts.length - 1] || 'document.pdf'
+
+      setIsLoading(true);
+      setActiveStatus('Saving to Inbox...');
+
+      const userMsg = { role: 'user' as const, content: `Please process the source document: ${fileName}` }
+      setMessages(prev => [...prev, userMsg])
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Source Document: ${fileName}\n\nStarting background deployment...`
+      }])
+
+      // 1. Upload/Copy file natively to Inbox
+      const uploadRes = await sidecarApi.aterInboxUpload(selected, fileName)
+      const inboxFilePath = uploadRes.path
+
+      // 2. Pure detection
+      setActiveStatus('Detecting curriculum...')
+      setMessages(prev => {
+        const next = [...prev]
+        next[assistantIndex] = {
+          role: 'assistant',
+          content: `Source Document: ${fileName}\n\n- Saved to Inbox\n- Detecting semester and course curriculum structure...`
+        }
+        return next
+      })
+
+      const detectRes = await sidecarApi.aterProcess({ file_path: inboxFilePath })
+      const curriculum = detectRes.detected_curriculum || {}
+      const semesterName = curriculum.semester || 'General'
+      const courseName = curriculum.course || 'General_Knowledge'
+      const unitNum = curriculum.unit || ''
+      const hubTitle = curriculum.hub_title || 'General'
+
+      // 3. Plan Generation
+      setActiveStatus('Generating learning plan...')
+      setMessages(prev => {
+        const next = [...prev]
+        next[assistantIndex] = {
+          role: 'assistant',
+          content: `Source Document: ${fileName}\n\n- Saved to Inbox\n- Detected curriculum: ${semesterName} / ${courseName}\n- Planning learning roadmap...`
+        }
+        return next
+      })
+
+      const planRes = await sidecarApi.aterGeneratePlan({
+        file_path: inboxFilePath,
+        curriculum: curriculum
+      })
+
+      const planStructured = planRes.plan_structured || {}
+      const sessionId = planRes.session_id
+
+      // Extract titles and chapters
+      const atomicNotes: any[] = planStructured.atomic_notes || []
+      const allResults = atomicNotes.map(n => typeof n === 'string' ? n : n.title)
+      const chapters: any[] = planStructured.chapters || []
+
+      const cleanCourseTitle = courseName.replace(/[^a-zA-Z0-9]/g, '_')
+      const cleanHubTitle = hubTitle.replace(/[^a-zA-Z0-9]/g, '_')
+      const canonicalHubPath = `Inbox/Generated/${semesterName}/${cleanCourseTitle}/${unitNum ? `${unitNum}_` : ''}${cleanHubTitle}_Hub.md`
+
+      // Compile roadmap markdown exactly matching the from-scratch design:
+      const lessonTitle = `${courseName} — ${hubTitle.replace(/[_-]/g, ' ')}`
+      let roadmapMarkdown = `## ${lessonTitle} — Learning Roadmap\n\n`
+      roadmapMarkdown += `${chapters.length || allResults.length} chapters · ${allResults.length} lessons planned for: *${fileName}*\n\n`
+      roadmapMarkdown += `---\n\n`
+
+      if (chapters.length > 0) {
+        const chapterCards = chapters.map((ch, chIdx) => {
+          const chTitle = ch.title || 'Chapter'
+          const notes = ch.atomic_notes || []
+          const notesLines = notes.map((note: string) => `- [ ] ${note.replace(/[_-]/g, ' ')}`).join('\n')
+          return `**Chapter ${chIdx + 1} — ${chTitle}**  \n*(${notes.length} Atomic Notes)*\n\nAtomic Notes:\n\n${notesLines}`
+        })
+        roadmapMarkdown += chapterCards.join('\n\n---\n\n')
+      } else {
+        allResults.forEach((note, idx) => {
+          roadmapMarkdown += `${idx + 1}. **${note.replace(/[_-]/g, ' ')}**\n`
+        })
+      }
+      roadmapMarkdown += `\n\n---\n\nClick **Start Lesson** to generate the full lesson workspace.`
+
+      setPendingPdfSession({
+        sessionId,
+        hubPath: canonicalHubPath,
+        semesterName,
+        courseName,
+        unitNum,
+        hubTitle,
+        results: allResults
+      })
+
+      setMessages(prev => {
+        const next = [...prev]
+        next[assistantIndex] = {
+          role: 'assistant',
+          content: roadmapMarkdown
+        }
+        return next
+      })
+
+    } catch (err: any) {
+      const errMsg = err.message || 'Processing failed'
+      console.error(err)
+      setMessages(prev => {
+        const next = [...prev]
+        next[assistantIndex] = {
+          role: 'assistant',
+          content: `Processing Failed\n\nError: ${errMsg}`
+        }
+        return next
+      })
+      toast.error(errMsg)
+    } finally {
+      setIsLoading(false)
+      setActiveStatus(null)
+    }
+  }
+
   // If activeConversationId is null and we have messages, initialize activeConversationId
   useEffect(() => {
     if (!activeConversationId && messages.length > 0) {
       const newId = `ater-conv-${Date.now()}`;
       setActiveConversationId(newId);
       localStorage.setItem('ater_oracle_active_conversation_id', newId);
-      
+
       const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
       const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
-      
+
       const newConv: SavedConversation = {
         id: newId,
         title,
@@ -151,7 +417,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
         panelOpen,
         timestamp: Date.now()
       };
-      
+
       setConversations(prev => {
         const updated = [newConv, ...prev];
         localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
@@ -163,12 +429,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
   // Sync active conversation changes to the list
   useEffect(() => {
     if (!activeConversationId) return;
-    
+
     setConversations(prev => {
       const index = prev.findIndex(c => c.id === activeConversationId);
       const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
       const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
-      
+
       if (index > -1) {
         const existing = prev[index];
         if (
@@ -178,7 +444,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
         ) {
           return prev;
         }
-        
+
         const updated = [...prev];
         updated[index] = {
           ...existing,
@@ -208,7 +474,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
 
   useEffect(() => {
     if (preview) {
-      localStorage.setItem('ater_lesson_preview', JSON.stringify(preview));
+      if (!isTemporaryLessonPath(preview.notePath)) {
+        localStorage.setItem('ater_lesson_preview', JSON.stringify(preview));
+      }
     } else {
       localStorage.removeItem('ater_lesson_preview');
     }
@@ -246,15 +514,15 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     setPanelOpen(false);
     useArtifactStore.getState().resetArtifacts();
     generatedSpecRef.current.clear();
-    
+
     if (onNoteSelect) {
       onNoteSelect(null);
     }
-    
+
     if (activeConversationId) {
       setConversations(prev => {
-        const updated = prev.map(c => 
-          c.id === activeConversationId 
+        const updated = prev.map(c =>
+          c.id === activeConversationId
             ? { ...c, title: 'New Chat', messages: [], preview: null, panelOpen: false, timestamp: Date.now() }
             : c
         );
@@ -278,12 +546,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     }
     const conv = conversations.find(c => c.id === convId);
     if (!conv) return;
-    
+
     setActiveConversationId(convId);
     localStorage.setItem('ater_oracle_active_conversation_id', convId);
-    
+
     useArtifactStore.getState().resetArtifacts();
-    
+
     setMessages(conv.messages);
     setPreview(conv.preview);
     setPanelOpen(conv.panelOpen);
@@ -300,7 +568,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     const newId = `ater-conv-${Date.now()}`;
     setActiveConversationId(newId);
     localStorage.setItem('ater_oracle_active_conversation_id', newId);
-    
+
     setMessages([]);
     setPreview(null);
     setPanelOpen(false);
@@ -317,13 +585,13 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
       toast.warning("Please wait until response is complete.");
       return;
     }
-    
+
     setConversations(prev => {
       const updated = prev.filter(c => c.id !== convId);
       localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
       return updated;
     });
-    
+
     if (activeConversationId === convId) {
       // Find what's left
       const saved = localStorage.getItem('ater_oracle_conversations');
@@ -353,6 +621,129 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     }
     toast.success('Conversation deleted.');
   }, [activeConversationId, isLoading, onNoteSelect]);
+
+  useEffect(() => {
+    setSidebarContent(
+      <div className="flex flex-col w-full min-h-0 text-left">
+        {/* Tab Selector */}
+        <div className="flex border-b border-border/20 text-[9px] font-black tracking-widest mb-3 shrink-0 select-none">
+          <button
+            onClick={() => setSearchParams({ tab: 'ater' })}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center",
+              activeTab === 'ater'
+                ? "text-foreground border-foreground font-black"
+                : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
+            )}
+          >
+            ATER
+          </button>
+          <button
+            onClick={() => setSearchParams({ tab: 'pipeline' })}
+            className={cn(
+              "flex-1 py-1.5 border-b-2 outline-none text-center",
+              activeTab === 'pipeline'
+                ? "text-foreground border-foreground font-black"
+                : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
+            )}
+          >
+            PIPELINE
+          </button>
+        </div>
+
+        {activeTab === 'ater' ? (
+          <div className="flex flex-col w-full min-h-0">
+            <div className="px-2 pb-2 flex items-center justify-between shrink-0 select-none">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conversations</span>
+              <div className="flex items-center gap-1.5">
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => window.dispatchEvent(new Event('ater-clear-chat'))}
+                    className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
+                    title="Clear Active Chat"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+                <button
+                  onClick={handleNewChat}
+                  className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
+                  title="New Chat"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 space-y-0.5 pr-1">
+              {conversations.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground/30 text-[9px] font-black uppercase tracking-widest select-none">
+                  No past chats
+                </div>
+              ) : (
+                conversations.map((conv) => {
+                  const isActive = conv.id === activeConversationId;
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => handleSelectConversation(conv.id)}
+                      className={cn(
+                        "group relative flex items-center justify-between px-3 py-1.5 rounded-[6px] cursor-pointer transition-all text-left text-[11px]",
+                        isActive
+                          ? "bg-muted/80 text-foreground font-semibold"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                      )}
+                    >
+                      <span className="truncate max-w-[150px] select-none">
+                        {conv.title || 'Untitled Chat'}
+                      </span>
+                      <button
+                        onClick={(e) => handleDeleteConversation(e, conv.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded-[4px] transition-all ml-1 shrink-0"
+                        title="Delete Chat"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 px-1 py-2 text-xs">
+            <div className="flex items-center justify-between bg-muted/20 border border-border/30 px-3 py-2 rounded-[8px]">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auto-Ingest</span>
+              <button
+                onClick={toggleAutoDeploy}
+                className={cn(
+                  "relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border border-transparent focus:outline-none transition-colors",
+                  config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
+                )}
+              >
+                <span className={cn(
+                  "pointer-events-none inline-block h-3 w-3 mt-0.5 transform rounded-full bg-bento-bg shadow ring-0 transition-transform",
+                  config?.autoDeploy ? 'translate-x-4' : 'translate-x-0.5'
+                )} />
+              </button>
+            </div>
+            <button
+              onClick={() => { fetchInbox(); fetchStatus(); }}
+              className="w-full flex items-center justify-center gap-2 h-9 bg-muted/20 border border-border/30 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30 rounded-[8px] transition-all"
+            >
+              <RefreshCw size={12} />
+              Refresh Queue
+            </button>
+          </div>
+        )}
+      </div>
+    , 'agents');
+  }, [conversations, activeConversationId, activeTab, config?.autoDeploy, messages.length, setSidebarContent, handleNewChat, handleSelectConversation, handleDeleteConversation]);
+
+  useEffect(() => {
+    return () => {
+      setSidebarContent(null, 'agents');
+    };
+  }, [setSidebarContent]);
 
   const handleClearHistory = () => {
     setConversations([]);
@@ -437,8 +828,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
               }
 
               try {
-                const result = await sidecarApi.generateArtifactCode({ 
-                  prompt: chapter.sandboxSpec!, 
+                const result = await sidecarApi.generateArtifactCode({
+                  prompt: chapter.sandboxSpec!,
                   context: msg.content,
                   previous_code: previousCode
                 });
@@ -605,6 +996,104 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
     const text = (textToSend || input).trim();
     if (!text) return;
 
+    const isStartLesson = text.toLowerCase() === 'start lesson' || text.toLowerCase() === 'start';
+
+    if (isStartLesson && pendingPdfSession) {
+      try {
+        const customAction = pendingPdfSession;
+        setIsLoading(true);
+        setActiveStatus('Deploying workspace...');
+
+        let currentHasMore = true;
+        let tempBatch = 0;
+        const deployedNotePaths: string[] = [];
+        let deployedHubPath = '';
+
+        while (currentHasMore) {
+          const res = await sidecarApi.aterConfirm({ session_id: customAction.sessionId });
+          if (res.status === 'error') {
+            throw new Error(res.message || res.detail || "Deployment failed.");
+          }
+          if (res.results) {
+            res.results.forEach((r: any) => {
+              if (r.path) {
+                if (r.title.toLowerCase().endsWith('_hub') || r.path.toLowerCase().includes('_hub.md')) {
+                  deployedHubPath = r.path;
+                } else {
+                  deployedNotePaths.push(r.path);
+                }
+              }
+            });
+          }
+          tempBatch = res.current_batch || (tempBatch + 1);
+          currentHasMore = res.has_more;
+        }
+
+        const finalHubPath = deployedHubPath || customAction.hubPath;
+
+        let curriculumPaths = deployedNotePaths;
+        if (curriculumPaths.length === 0) {
+          curriculumPaths = customAction.results.map((note: string) => {
+            const cleanCourseTitle = customAction.courseName.replace(/[^a-zA-Z0-9]/g, '_');
+            const noteFilename = `${note}.md`;
+            return `Inbox/Generated/${customAction.semesterName}/${cleanCourseTitle}/${noteFilename}`;
+          });
+        }
+
+        const firstLessonPath = curriculumPaths[0] || finalHubPath;
+        localStorage.setItem('ater_original_note_path', firstLessonPath);
+
+        setPreview({
+          title: customAction.hubTitle.replace(/[_-]/g, ' '),
+          lessonPath: finalHubPath,
+          notePath: firstLessonPath,
+          hubPath: finalHubPath,
+          previewUrl: '',
+        });
+        localStorage.setItem('ater_study_active_note_path', firstLessonPath);
+        localStorage.setItem('ater_canonical_lesson_path', firstLessonPath);
+        onNoteSelect?.(firstLessonPath);
+
+        setTutorSession({
+          session_id: customAction.sessionId,
+          hub_path: finalHubPath,
+          current_note_path: firstLessonPath,
+          completed_notes: [],
+          wagers: {},
+          score: 0,
+          status: 'active',
+          updated_at: new Date().toISOString(),
+          active_note_unlocks: [firstLessonPath],
+          curriculum: curriculumPaths,
+        });
+
+        setPendingPdfSession(null);
+        setPanelOpen(true);
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to start lesson');
+      } finally {
+        setIsLoading(false);
+        setActiveStatus(null);
+      }
+      return;
+    }
+
+    if (isStartLesson) {
+      setIsGeneratingLesson(true);
+      setGeneratingStatus('Initiating lesson creation...');
+      setPreview({
+        title: 'Generating Lesson...',
+        lessonPath: '',
+        notePath: '',
+        hubPath: '',
+        previewUrl: '',
+      });
+      setPanelOpen(true);
+    } else {
+      setIsGeneratingLesson(false);
+      setGeneratingStatus(null);
+    }
+
     let currentId = activeConversationId;
     if (!currentId) {
       currentId = `ater-conv-${Date.now()}`;
@@ -723,6 +1212,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
             const parsed = JSON.parse(trimmed.slice(6));
             if (parsed.type === 'status') {
               setActiveStatus(parsed.message);
+              setGeneratingStatus(parsed.message);
             } else if (parsed.type === 'chunk') {
               setActiveStatus(null);
               assistantContent += parsed.content;
@@ -735,16 +1225,44 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                 return next;
               });
             } else if (parsed.type === 'lesson_created') {
+              setIsGeneratingLesson(false);
+              setGeneratingStatus(null);
               if (onNoteSelect) {
-                onNoteSelect(parsed.note_path || parsed.lesson_path || null);
+                onNoteSelect(null);
+              }
+              const notePath = parsed.note_path || parsed.lesson_path || '';
+              const hubPath = parsed.hub_path || '';
+              if (notePath) {
+                localStorage.setItem('ater_study_active_note_path', notePath);
+                if (!isTemporaryLessonPath(notePath)) {
+                  localStorage.setItem('ater_canonical_lesson_path', notePath);
+                  localStorage.setItem('ater_original_note_path', notePath);
+                }
               }
               setPreview({
                 title: parsed.title || 'Teacher Lesson',
-                lessonPath: parsed.note_path || parsed.lesson_path || '',
-                notePath: parsed.note_path || '',
-                hubPath: parsed.hub_path || '',
+                lessonPath: parsed.lesson_path || '',
+                notePath,
+                hubPath,
                 previewUrl: '',
               });
+              if (Array.isArray(parsed.curriculum) && parsed.curriculum.length > 0) {
+                setTutorSession({
+                  session_id: `teacher_${parsed.workspace || Date.now()}`,
+                  hub_path: hubPath,
+                  current_note_path: notePath,
+                  completed_notes: [],
+                  wagers: {},
+                  score: 0,
+                  status: 'active',
+                  updated_at: new Date().toISOString(),
+                  active_note_unlocks: [notePath],
+                  curriculum: parsed.curriculum,
+                });
+              }
+              if (notePath && onNoteSelect) {
+                onNoteSelect(notePath);
+              }
               setPanelOpen(true);
             } else if (parsed.type === 'action') {
               if (parsed.action === 'navigate' && parsed.route) {
@@ -827,6 +1345,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
       }
     } catch (err: any) {
       toast.error(`Error: ${err?.message || 'Connection failed'}`);
+      setIsGeneratingLesson(false);
+      setGeneratingStatus(null);
+      setPanelOpen(false);
     } finally {
       setIsLoading(false);
       setActiveStatus(null);
@@ -884,67 +1405,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
 
   return (
     <div className="flex-1 flex min-h-0 relative">
-      {/* History Sidebar */}
-      {isHistoryOpen && (
-        <div className="w-[240px] shrink-0 border-r border-border/40 bg-bento-bg flex flex-col min-h-0">
-          <div className="h-14 border-b border-border/40 px-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setIsHistoryOpen(false);
-                  localStorage.setItem('ater_oracle_history_sidebar_open', JSON.stringify(false));
-                }}
-                className="p-1.5 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
-                title="Hide History"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conversations</span>
-            </div>
-            <button
-              onClick={handleNewChat}
-              className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
-              title="New Chat"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {conversations.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground/30 text-[10px] font-black uppercase tracking-widest">
-                No past chats
-              </div>
-            ) : (
-              conversations.map((conv) => {
-                const isActive = conv.id === activeConversationId;
-                return (
-                  <div
-                    key={conv.id}
-                    onClick={() => handleSelectConversation(conv.id)}
-                    className={cn(
-                      "group relative flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer transition-all text-left",
-                      isActive 
-                        ? "bg-muted/80 text-foreground font-semibold" 
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                    )}
-                  >
-                    <span className="text-[11px] truncate max-w-[170px] select-none">
-                      {conv.title || 'Untitled Chat'}
-                    </span>
-                    <button
-                      onClick={(e) => handleDeleteConversation(e, conv.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded-[4px] transition-all ml-1 shrink-0"
-                      title="Delete Chat"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+      {/* History Sidebar is now rendered in the outer sidebar */}
 
       {preview && panelOpen ? (
         <LearningWorkspace
@@ -953,6 +1414,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
           onTutorSessionChange={setTutorSession}
           onPreviewChange={setPreview}
           onClose={() => setPanelOpen(false)}
+          isGenerating={isGeneratingLesson}
+          generatingStatus={generatingStatus}
         />
       ) : (
       <div className="flex-1 flex min-h-0 relative">
@@ -984,6 +1447,60 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
                             const isLastMessage = index === messages.length - 1;
                             const hasRoadmap = msg.content.includes('Start Lesson');
                             const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap && !isLoading;
+
+                            if (msg.customAction) {
+                              const customAction = msg.customAction;
+                              return (
+                                <div className="mt-2 pt-4 border-t border-border/40 flex items-center justify-between gap-3">
+                                  <p className="text-[10px] text-muted-foreground font-medium">
+                                    Ready to begin? Load the generated learning path in your workspace.
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const curriculumPaths = customAction.results.map((note: string) => {
+                                        const cleanCourseTitle = customAction.courseName.replace(/[^a-zA-Z0-9]/g, '_')
+                                        const noteFilename = `${note}.md`
+                                        return `Inbox/Generated/${customAction.semesterName}/${cleanCourseTitle}/${noteFilename}`
+                                      })
+                                      const firstLessonPath = curriculumPaths[0] || customAction.hubPath;
+                                      localStorage.setItem('ater_original_note_path', firstLessonPath);
+
+                                      setPreview({
+                                        title: customAction.hubTitle.replace(/_/g, ' '),
+                                        lessonPath: customAction.hubPath,
+                                        notePath: firstLessonPath,
+                                        hubPath: customAction.hubPath,
+                                        previewUrl: '',
+                                      })
+                                      localStorage.setItem('ater_study_active_note_path', firstLessonPath);
+                                      localStorage.setItem('ater_canonical_lesson_path', firstLessonPath);
+                                      onNoteSelect?.(firstLessonPath);
+
+                                      setTutorSession({
+                                        session_id: customAction.sessionId,
+                                        hub_path: customAction.hubPath,
+                                        current_note_path: firstLessonPath,
+                                        completed_notes: [],
+                                        wagers: {},
+                                        score: 0,
+                                        status: 'active',
+                                        updated_at: new Date().toISOString(),
+                                        active_note_unlocks: [firstLessonPath],
+                                        curriculum: curriculumPaths,
+                                      })
+
+                                      setPanelOpen(true)
+                                    }}
+                                    className="shrink-0 h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 transition-all flex items-center gap-2"
+                                  >
+                                    <BookOpenCheck size={12} />
+                                    Open Learning Path
+                                  </button>
+                                </div>
+                              )
+                            }
+
                             if (showStartButton) {
                               return (
                                 <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
@@ -1025,26 +1542,56 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
         </div>
 
         <div className="p-6 border-t border-border/40 bg-muted/10 shrink-0">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto space-y-3">
+            {!panelOpen && activeLessonPath && (
+              <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/60 bg-bento-card px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/60">
+                    Active Lesson
+                  </div>
+                  <div className="truncate text-xs font-black text-foreground">
+                    {activeLessonTitle || 'Current Lesson'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void openCurrentLesson()}
+                  disabled={isLoading}
+                  className="h-9 shrink-0 rounded-[8px] border border-border bg-bento-item px-4 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
+                >
+                  <BookOpenCheck size={13} />
+                  Continue Lesson
+                </button>
+              </div>
+            )}
             <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
-              <textarea 
-                ref={textareaRef} 
+              <button
+                type="button"
+                onClick={handleAttachFile}
+                disabled={isLoading}
+                className="h-9 w-9 ml-1.5 flex items-center justify-center rounded-[8px] hover:bg-bento-item text-muted-foreground hover:text-foreground transition-all duration-150 shrink-0"
+                title="Attach Source Document (PDF, TXT, MD)"
+              >
+                <Paperclip size={15} />
+              </button>
+              <textarea
+                ref={textareaRef}
                 data-tour="oracle-input"
-                value={input} 
-                onChange={(e) => setInput(e.target.value)} 
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
-                placeholder="Ask Ater..." 
-                className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground" 
-                rows={1} 
-                disabled={isLoading} 
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                placeholder="Ask Ater..."
+                className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground"
+                rows={1}
+                disabled={isLoading}
               />
-              <button 
-                onClick={() => handleSendMessage()} 
-                disabled={isLoading || !input.trim()} 
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={isLoading || !input.trim()}
                 className={cn(
-                  "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150", 
-                  input.trim() && !isLoading 
-                    ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40" 
+                  "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150",
+                  input.trim() && !isLoading
+                    ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40"
                     : "text-muted-foreground/30 cursor-not-allowed"
                 )}
               >
@@ -1086,19 +1633,19 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onStateChange, onNoteSele
 
 /* ─── Optimized UI Components ─── */
 function CurriculumPill({
- label, 
- value, 
- onChange, 
- icon: Icon, 
+ label,
+ value,
+ onChange,
+ icon: Icon,
  isEditable = true,
  isDropdown = false,
  onClick,
  options = []
 }: {
- label: string, 
- value: string, 
- onChange?: (v: string) => void, 
- icon: any, 
+ label: string,
+ value: string,
+ onChange?: (v: string) => void,
+ icon: any,
  isEditable?: boolean,
  isDropdown?: boolean,
  onClick?: () => void,
@@ -1108,7 +1655,7 @@ function CurriculumPill({
 
  return (
  <div className="relative">
- <div 
+ <div
  onClick={() => {
  if (isDropdown) onClick?.();
  else if (options.length > 0) setIsMenuOpen(!isMenuOpen);
@@ -1122,7 +1669,7 @@ function CurriculumPill({
  <div className="flex items-center gap-1.5">
  <span className="text-muted-foreground">{label}:</span>
  {isEditable && options.length === 0 ? (
- <input 
+ <input
  className="bg-transparent border-none focus:outline-none text-foreground font-medium min-w-[20px] placeholder:text-muted-foreground/40 border-b border-transparent focus:border-border "
  value={value}
  onChange={(e) => onChange?.(e.target.value)}
@@ -1144,7 +1691,7 @@ function CurriculumPill({
  <div className="px-2 py-1 text-xs font-semibold uppercase text-muted-foreground tracking-tight mb-1">{label} Options</div>
  <div className="max-h-40 overflow-y-auto custom-scrollbar">
  {options.map(opt => (
- <button 
+ <button
  key={opt}
  onClick={() => {
  onChange?.(opt);
@@ -1269,10 +1816,10 @@ function PlanCardView({planRaw}: {planRaw: string}) {
 
  const parseAtomicTree = (text: string) => {
  // Strategy 1: Bulleted/numbered list lines (standard AI output)
- const listLines = text.split('\n').filter(l => 
+ const listLines = text.split('\n').filter(l =>
  l.trim().match(/^\d+\./) || l.trim().startsWith('-') || l.trim().startsWith('*')
  )
- 
+
  // Strategy 2: Comma-separated [[links]] inline (also common AI output)
  const inlineLinks: string[] = []
  if (listLines.length === 0) {
@@ -1291,7 +1838,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  description: ''
 }))
 }
- 
+
  return listLines.map(line => {
  // Determine level from indentation
  const indentMatch = line.match(/^(\s*)/)
@@ -1300,7 +1847,7 @@ function PlanCardView({planRaw}: {planRaw: string}) {
 
  // Extract content
  const rawContent = line.replace(/^\s*(\d+\.|-|\*)\s*/, '').trim()
- 
+
  // Extract bits
  const titleMatch = rawContent.match(/\[\[(.*?)\]\]/)
  const modeMatch = rawContent.match(/\(Mode\s+([A-Z]+)\)/i)
@@ -1365,11 +1912,11 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <Layers size={16} className="text-muted-foreground" />
  <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Notes</h4>
  </div>
- 
+
  <div className="flex flex-col gap-2">
  {atomicTree.map((node, i) => (
- <div 
- key={i} 
+ <div
+ key={i}
  style={{marginLeft: `${node.level * 24}px`}}
  className={cn(
  "p-3 border bg-bento-bg hover:border-muted-foreground/30 hover:bg-bento-card0  relative overflow-hidden group min-w-0 w-full",
@@ -1444,13 +1991,13 @@ function AiPressureBar() {
         <span>{Math.round(pressure * 100)}%</span>
       </div>
       <div className="h-1 w-full bg-bento-bg border border-border">
-        <div 
+        <div
           className={cn(
             "h-full transition-all duration-500",
-            pressure > 0.8 ? "bg-destructive" : 
+            pressure > 0.8 ? "bg-destructive" :
             pressure > 0.5 ? "bg-amber-500" : "bg-foreground"
           )}
-          style={{width: `${Math.min(100, pressure * 100)}%`}} 
+          style={{width: `${Math.min(100, pressure * 100)}%`}}
         />
       </div>
       {throttleEvent && (
@@ -1468,7 +2015,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  const navigate = useNavigate()
  const [searchParams, setSearchParams] = useSearchParams()
  const activeTab = searchParams.get('tab') === 'pipeline' ? 'pipeline' : 'ater'
- 
+
  // Use Zustand for global telemetry
  const queueStatus = useTelemetryStore(state => state.queueStatus)
  const inboxFiles = useTelemetryStore(state => state.inboxFiles)
@@ -1533,38 +2080,49 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     }
   });
 
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('ater_study_split_left_collapsed');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
-
-  const [isRightCollapsed, setIsRightCollapsed] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('ater_study_split_right_collapsed');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState<boolean>(false);
+  const [isRightCollapsed, setIsRightCollapsed] = useState<boolean>(false);
 
   const [isDragging, setIsDragging] = useState(false);
   const [activeNotePath, setActiveNotePath] = useState<string | null>(() => {
-    return localStorage.getItem('ater_study_active_note_path') || null;
+    return firstRealLessonPath(
+      localStorage.getItem('ater_study_active_note_path'),
+      localStorage.getItem('ater_canonical_lesson_path'),
+      localStorage.getItem('ater_original_note_path'),
+    );
   });
   const [hasNewNoteAlert, setHasNewNoteAlert] = useState(false);
 
   const studyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!oracleState.isLessonOpen) return;
-    setIsLeftCollapsed(false);
-    setIsRightCollapsed(true);
-    localStorage.setItem('ater_study_split_left_collapsed', 'false');
-    localStorage.setItem('ater_study_split_right_collapsed', 'true');
+    const handleToggleHistory = () => {
+      setIsHistoryOpen(prev => {
+        const next = !prev;
+        localStorage.setItem('ater_oracle_history_sidebar_open', JSON.stringify(next));
+        return next;
+      });
+    };
+    const handleOpenHistory = () => {
+      setIsHistoryOpen(true);
+      localStorage.setItem('ater_oracle_history_sidebar_open', JSON.stringify(true));
+    };
+    window.addEventListener('ater-toggle-history', handleToggleHistory);
+    window.addEventListener('ater-open-history', handleOpenHistory);
+    return () => {
+      window.removeEventListener('ater-toggle-history', handleToggleHistory);
+      window.removeEventListener('ater-open-history', handleOpenHistory);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (oracleState.isLessonOpen) {
+      setIsLeftCollapsed(false);
+      setIsRightCollapsed(true);
+    } else {
+      setIsLeftCollapsed(false);
+      setIsRightCollapsed(false);
+    }
   }, [oracleState.isLessonOpen]);
 
   useEffect(() => {
@@ -1575,30 +2133,18 @@ function AterDashboard({onBack}: {onBack: () => void}) {
       const rect = studyContainerRef.current.getBoundingClientRect();
       const widthPx = rect.width;
       if (widthPx <= 0) return;
-      
+
       const relativeX = e.clientX - rect.left;
-      let pct = (relativeX / widthPx) * 100;
-      
-      if (pct < 20) {
-        setIsLeftCollapsed(true);
-        setIsRightCollapsed(false);
-        localStorage.setItem('ater_study_split_left_collapsed', 'true');
-        localStorage.setItem('ater_study_split_right_collapsed', 'false');
-      } else if (pct > 80) {
-        setIsLeftCollapsed(false);
-        setIsRightCollapsed(true);
-        localStorage.setItem('ater_study_split_left_collapsed', 'false');
-        localStorage.setItem('ater_study_split_right_collapsed', 'true');
-      } else {
-        setIsLeftCollapsed(false);
-        setIsRightCollapsed(false);
-        setLeftPaneWidth(pct);
-        setLastUnsnappedWidth(pct);
-        localStorage.setItem('ater_study_split_left_collapsed', 'false');
-        localStorage.setItem('ater_study_split_right_collapsed', 'false');
-        localStorage.setItem('ater_study_split_width', JSON.stringify(pct));
-        localStorage.setItem('ater_study_split_last_width', JSON.stringify(pct));
-      }
+      const pct = Math.max(15, Math.min(85, (relativeX / widthPx) * 100));
+
+      setIsLeftCollapsed(false);
+      setIsRightCollapsed(false);
+      setLeftPaneWidth(pct);
+      setLastUnsnappedWidth(pct);
+      localStorage.setItem('ater_study_split_left_collapsed', 'false');
+      localStorage.setItem('ater_study_split_right_collapsed', 'false');
+      localStorage.setItem('ater_study_split_width', JSON.stringify(pct));
+      localStorage.setItem('ater_study_split_last_width', JSON.stringify(pct));
     };
 
     const handleMouseUp = () => {
@@ -1623,7 +2169,10 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           if (path && typeof path === 'string') {
             setActiveNotePath(path);
             localStorage.setItem('ater_study_active_note_path', path);
-            
+            if (!isTemporaryLessonPath(path)) {
+              localStorage.setItem('ater_canonical_lesson_path', path);
+            }
+
             // Trigger a pulse alert to notify user without expanding
             setHasNewNoteAlert(true);
           }
@@ -1640,11 +2189,12 @@ function AterDashboard({onBack}: {onBack: () => void}) {
   }, []);
 
   const {setCenterContent, setRightContent} = useHeader()
+
   const parentRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
    count: batchFeed.length,
    getScrollElement: () => parentRef.current,
-   estimateSize: () => 300, 
+   estimateSize: () => 300,
    overscan: 5,
   })
 
@@ -1655,21 +2205,21 @@ function AterDashboard({onBack}: {onBack: () => void}) {
      <div className="flex items-center gap-2">
       <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-2.5 py-1 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground">
        <span>Auto-Ingest</span>
-       <button 
+       <button
         onClick={toggleAutoDeploy}
         className={cn(
-         "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent focus:outline-none transition-colors", 
+         "relative inline-flex h-3.5 w-7 shrink-0 cursor-pointer rounded-full border border-transparent focus:outline-none transition-colors",
          config?.autoDeploy ? 'bg-foreground' : 'bg-muted-foreground/30'
         )}
        >
         <span className={cn(
-         "pointer-events-none inline-block h-2.5 w-2.5 mt-0.5 transform rounded-full bg-bento-bg shadow ring-0 transition-transform", 
+         "pointer-events-none inline-block h-2.5 w-2.5 mt-0.5 transform rounded-full bg-bento-bg shadow ring-0 transition-transform",
          config?.autoDeploy ? 'translate-x-3.5' : 'translate-x-0.5'
         )} />
        </button>
       </div>
-      <button 
-       onClick={() => {fetchInbox(); fetchStatus();}} 
+      <button
+       onClick={() => {fetchInbox(); fetchStatus();}}
        className="flex items-center justify-center w-8 h-8 bg-muted/30 border border-border/40 text-muted-foreground rounded-[8px] hover:text-foreground hover:border-foreground/30 transition-all"
       >
        <RefreshCw size={12} />
@@ -1718,7 +2268,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  setStructuredPlan(null)
  setIsCurriculumReady(false)
  setIsAwaitingConfirmation(false)
- 
+
  try {
  const res = await sidecarApi.aterProcess({
  file_path: selectedInboxFile.path,
@@ -1734,10 +2284,10 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  setAnchoredHub(res.anchored_hub)
  setAvailableHubs(res.available_hubs || [])
  setAvailableOptions(res.available_options || {courses: [], semesters: [], units: []})
- 
+
  const anchor = res.anchored_hub
  const detected = res.detected_curriculum
- 
+
  setCurriculum({
  course: anchor?.course || detected?.course || '',
  unit: String(anchor?.unit || detected?.unit || ''),
@@ -1783,18 +2333,18 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  setProcessing(true)
  setIsAwaitingConfirmation(false)
  setIsAwaitingNextBatch(false)
- 
+
  try {
  let currentHasMore = true;
  let currentLocalBatch = currentBatch;
- 
+
  while (currentHasMore) {
- const command = isStrict ? "Proceed Batch (Auto)" : (currentLocalBatch === 0 
- ? "Confirm Final Plan & Proceed Batch 1" 
+ const command = isStrict ? "Proceed Batch (Auto)" : (currentLocalBatch === 0
+ ? "Confirm Final Plan & Proceed Batch 1"
  : `Proceed Batch ${currentLocalBatch + 1}`);
 
  const res = await sidecarApi.aterConfirm({
- session_id: sessionId, 
+ session_id: sessionId,
  command,
  curriculum_override: currentLocalBatch === 0 ? {
  course: String(curriculum.course || ""),
@@ -1804,21 +2354,21 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 } : undefined,
  anchored_hub_id: anchoredHub?.id ? String(anchoredHub.id) : undefined
 })
- 
+
  if (res.status === 'error') throw new Error((res as any).message || "Workflow failed.");
- 
+
  const tempBatch = res.current_batch || (currentLocalBatch + 1)
  currentLocalBatch = tempBatch
  setCurrentBatch(tempBatch)
  setBatchFeed(prev => [...prev, { batch: tempBatch, results: res.results || [], ai_output: res.ai_output || "" }])
  currentHasMore = res.has_more;
- 
+
  if (currentHasMore) {
  if (isStrict) await new Promise(r => setTimeout(r, 500));
  else { setIsAwaitingNextBatch(true); break; }
 } else {
   setIsCompleted(true);
-  
+
   // Resolve first atomic note and expand right panel
   const firstNote = structuredPlan?.atomic_notes?.[0];
   const firstNoteTitle = typeof firstNote === 'string' ? firstNote : (firstNote?.title || firstNote?.note);
@@ -1828,6 +2378,9 @@ function AterDashboard({onBack}: {onBack: () => void}) {
       if (findRes.found && findRes.path) {
         setActiveNotePath(findRes.path);
         localStorage.setItem('ater_study_active_note_path', findRes.path);
+        if (!isTemporaryLessonPath(findRes.path)) {
+          localStorage.setItem('ater_canonical_lesson_path', findRes.path);
+        }
         setIsRightCollapsed(false);
         localStorage.setItem('ater_study_split_right_collapsed', 'false');
       }
@@ -1846,110 +2399,16 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
  return (
  <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
-    {/* Tab Navigation Bento Box */}
-    <div className="shrink-0 px-6 bg-bento-panel border border-border/40 rounded-[12px] h-12 flex items-center justify-between gap-1 shadow-sm z-30">
-      {/* Left Slot: History Toggle */}
-      <div className="w-[150px] flex justify-start">
-        {activeTab === 'ater' && (
-          <button
-            onClick={() => {
-              setIsHistoryOpen(!isHistoryOpen);
-              localStorage.setItem('ater_oracle_history_sidebar_open', JSON.stringify(!isHistoryOpen));
-            }}
-            className={cn(
-              "h-8 px-3 border border-border/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]",
-              isHistoryOpen 
-                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                : "bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground"
-            )}
-            title={isHistoryOpen ? "Hide History" : "Show History"}
-          >
-            <Layers size={12} />
-            History
-          </button>
+
+
+    <div className="flex-1 overflow-hidden relative">
+      <div
+        ref={studyContainerRef}
+        className={cn(
+          "h-full w-full flex overflow-hidden relative bg-bento-panel rounded-[12px] border border-border/40 shadow-sm",
+          activeTab !== 'ater' && "hidden"
         )}
-      </div>
-
-      {/* Center Slot: Tabs */}
-      <div className="flex items-center gap-1">
-        <button 
-          data-tour="tab-oracle-chat"
-          onClick={() => setSearchParams({ tab: 'ater' })}
-          className={cn(
-            "relative h-12 px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
-            activeTab === 'ater' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
-          )}
-        >
-          Ater
-          {activeTab === 'ater' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
-        </button>
-        <button 
-          data-tour="tab-pipeline"
-          onClick={() => setSearchParams({ tab: 'pipeline' })}
-          className={cn(
-            "relative h-12 px-4 text-[10px] font-black uppercase tracking-widest outline-none transition-all flex items-center",
-            activeTab === 'pipeline' ? "text-foreground" : "text-muted-foreground/40 hover:text-foreground hover:bg-muted/10"
-          )}
-        >
-          Pipeline
-          {activeTab === 'pipeline' && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />}
-        </button>
-      </div>
-
-      {/* Right Slot: Actions */}
-      <div className="w-[300px] flex justify-end items-center gap-2">
-        {activeTab === 'ater' && (
-          <>
-            {oracleState.hasMessages && (
-              <>
-                <button
-                  onClick={() => window.dispatchEvent(new Event('ater-clear-chat'))}
-                  className="h-8 px-3 border border-border/40 bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]"
-                  title="Clear Active Chat"
-                >
-                  <Trash2 size={12} /> Clear
-                </button>
-                <button
-                  onClick={() => window.dispatchEvent(new Event('ater-new-chat'))}
-                  className="h-8 px-3 border border-border/40 bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]"
-                  title="Start New Chat"
-                >
-                  <Plus size={12} /> New Chat
-                </button>
-              </>
-            )}
-
-            {/* Artifact Panel Toggle */}
-            {(() => {
-              const hasArtifact = artifactState.artifacts.length > 0 || oracleState.hasPreview;
-              if (!hasArtifact) return null;
-              
-              const label = oracleState.hasPreview ? "Lesson" : "Artifact";
-              return (
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new Event('ater-toggle-panel'))}
-                  className={cn(
-                    "h-8 px-3 border border-border/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 rounded-[8px]",
-                    oracleState.isPanelOpen 
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                      : "bg-muted/30 hover:bg-bento-card0 text-muted-foreground hover:text-foreground"
-                  )}
-                  title={`Toggle ${label.toLowerCase()} panel`}
-                >
-                  <PanelRightOpen size={12} />
-                  {label}
-                </button>
-              );
-            })()}
-          </>
-        )}
-      </div>
-    </div>
-
-    <div className="flex-1 overflow-hidden">
-      {activeTab === 'ater' ? (
-        <div ref={studyContainerRef} className="h-full w-full flex overflow-hidden relative bg-bento-panel rounded-[12px] border border-border/40 shadow-sm">
+      >
           <style>{`
             @keyframes grayPulse {
               0%, 100% { background-color: rgba(120, 120, 120, 0.15); }
@@ -1966,7 +2425,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
               onClick={() => {
                 setIsLeftCollapsed(false);
                 setLeftPaneWidth(lastUnsnappedWidth);
-                setHasNewNoteAlert(false); // clear alert when opening
+                setHasNewNoteAlert(false);
                 localStorage.setItem('ater_study_split_left_collapsed', 'false');
                 localStorage.setItem('ater_study_split_width', JSON.stringify(lastUnsnappedWidth));
               }}
@@ -1985,16 +2444,20 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           {/* Left Pane (Oracle View) */}
           <div
             className={cn("h-full overflow-hidden flex flex-col relative", isLeftCollapsed && "hidden")}
-            style={{ width: isRightCollapsed ? '100%' : `${leftPaneWidth}%` }}
+            style={{ width: (!activeNotePath || isRightCollapsed || oracleState.isLessonOpen) ? '100%' : `${leftPaneWidth}%` }}
           >
-            <OracleView 
+            <OracleView
               isHistoryOpen={isHistoryOpen}
               setIsHistoryOpen={setIsHistoryOpen}
+              activeNotePath={activeNotePath}
               onStateChange={setOracleState}
               onNoteSelect={(path) => {
                 setActiveNotePath(path);
                 if (path) {
                   localStorage.setItem('ater_study_active_note_path', path);
+                  if (!isTemporaryLessonPath(path)) {
+                    localStorage.setItem('ater_canonical_lesson_path', path);
+                  }
                 } else {
                   localStorage.removeItem('ater_study_active_note_path');
                 }
@@ -2003,7 +2466,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           </div>
 
           {/* Vertical Divider / Drag Handle */}
-          {!isLeftCollapsed && !isRightCollapsed && (
+          {activeNotePath && !oracleState.isLessonOpen && !isLeftCollapsed && !isRightCollapsed && (
             <div className="w-1.5 shrink-0 flex flex-col relative bg-muted/50 border-x border-border/40 group/divider">
               {/* Invisible touch target for drag handle */}
               <div
@@ -2013,7 +2476,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
                   setIsDragging(true);
                 }}
               />
-              {/* Control Buttons Container at the very top of the handle */}
+              {/* Control Buttons Container at the top of the handle */}
               <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex flex-col gap-1 items-center bg-bento-card border border-border/40 p-1 rounded-full shadow-md">
                 <button
                   onClick={() => {
@@ -2022,7 +2485,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
                     localStorage.setItem('ater_study_split_left_collapsed', 'true');
                     localStorage.setItem('ater_study_split_right_collapsed', 'false');
                   }}
-                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   title="Collapse Left (Chat)"
                 >
                   <ChevronLeft size={10} />
@@ -2038,7 +2501,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
                     localStorage.setItem('ater_study_split_width', '50');
                     localStorage.setItem('ater_study_split_last_width', '50');
                   }}
-                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   title="Reset to 50/50"
                 >
                   <div className="size-1.5 rounded-full bg-foreground" />
@@ -2050,7 +2513,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
                     localStorage.setItem('ater_study_split_left_collapsed', 'false');
                     localStorage.setItem('ater_study_split_right_collapsed', 'true');
                   }}
-                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   title="Collapse Right (Note Canvas)"
                 >
                   <ChevronRight size={10} />
@@ -2061,14 +2524,14 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
           {/* Right Pane (Note Canvas) */}
           <div
-            className={cn("h-full overflow-hidden flex flex-col relative", isRightCollapsed && "hidden")}
+            className={cn("h-full overflow-hidden flex flex-col relative", (!activeNotePath || isRightCollapsed || oracleState.isLessonOpen) && "hidden")}
             style={{ width: isLeftCollapsed ? '100%' : `${100 - leftPaneWidth}%` }}
           >
             <NoteCanvas
               notePath={activeNotePath}
               onClose={() => {
-                setIsRightCollapsed(true);
-                localStorage.setItem('ater_study_split_right_collapsed', 'true');
+                setActiveNotePath(null);
+                localStorage.removeItem('ater_study_active_note_path');
               }}
               onNavigate={async (pageName) => {
                 try {
@@ -2076,26 +2539,35 @@ function AterDashboard({onBack}: {onBack: () => void}) {
                   if (res.found && res.path) {
                     setActiveNotePath(res.path);
                     localStorage.setItem('ater_study_active_note_path', res.path);
+                    if (!isTemporaryLessonPath(res.path)) {
+                      localStorage.setItem('ater_canonical_lesson_path', res.path);
+                    }
                   } else {
                     setActiveNotePath(pageName);
                     localStorage.setItem('ater_study_active_note_path', pageName);
+                    if (!isTemporaryLessonPath(pageName)) {
+                      localStorage.setItem('ater_canonical_lesson_path', pageName);
+                    }
                   }
                 } catch (err) {
                   console.error('Failed to resolve page name in NoteCanvas onNavigate:', err);
                   setActiveNotePath(pageName);
                   localStorage.setItem('ater_study_active_note_path', pageName);
+                  if (!isTemporaryLessonPath(pageName)) {
+                    localStorage.setItem('ater_canonical_lesson_path', pageName);
+                  }
                 }
               }}
             />
           </div>
 
           {/* Right Margin Tab (shows when right pane is collapsed) */}
-          {isRightCollapsed && (
+          {isRightCollapsed && activeNotePath && !oracleState.isLessonOpen && (
             <button
               onClick={() => {
                 setIsRightCollapsed(false);
                 setLeftPaneWidth(lastUnsnappedWidth);
-                setHasNewNoteAlert(false); // clear alert when opening
+                setHasNewNoteAlert(false);
                 localStorage.setItem('ater_study_split_right_collapsed', 'false');
                 localStorage.setItem('ater_study_split_width', JSON.stringify(lastUnsnappedWidth));
               }}
@@ -2110,9 +2582,14 @@ function AterDashboard({onBack}: {onBack: () => void}) {
               </div>
             </button>
           )}
-        </div>
-      ) : (
-        <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar p-6">
+      </div>
+
+      <div
+        className={cn(
+          "h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-y-auto custom-scrollbar p-6",
+          activeTab !== 'pipeline' && "hidden"
+        )}
+      >
           <div className="max-w-3xl mx-auto w-full h-full flex flex-col overflow-hidden">
         {/* Pipeline Content (Already exists in AterDashboard return) */}
         {queueStatus?.status !== 'idle' && (
@@ -2135,7 +2612,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           <p className="text-xl font-black tracking-tight text-foreground">{queueStatus?.current_batch} / {queueStatus?.total_batches}</p>
           </div>
           </div>
-          
+
           <div className="space-y-4 shrink-0">
           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
           <span>Completion</span>
@@ -2148,9 +2625,9 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           <AiPressureBar />
           </div>
 
-          <div className={cn("p-4 border border-border rounded-[8px] shrink-0", 
+          <div className={cn("p-4 border border-border rounded-[8px] shrink-0",
           queueStatus?.last_action?.toLowerCase().includes("rate limit") || queueStatus?.last_action?.toLowerCase().includes("fail") || queueStatus?.status === 'error'
-          ? "bg-destructive/10 border-destructive/20 text-destructive" 
+          ? "bg-destructive/10 border-destructive/20 text-destructive"
           : "bg-accent/50 text-muted-foreground"
           )}>
           <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Last Action</p>
@@ -2173,7 +2650,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
            <h2 className="text-4xl font-black uppercase tracking-tighter text-foreground mb-4 mt-8">Everything done</h2>
            <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">Drop a PDF in the inbox folder</p>
            </div>
-           
+
            {!config?.autoDeploy && (
              <div className="flex-1 w-full overflow-y-auto custom-scrollbar min-h-0 pb-12">
              <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
@@ -2183,8 +2660,8 @@ function AterDashboard({onBack}: {onBack: () => void}) {
              ))
              ) : inboxFiles.length > 0 ? (
              inboxFiles.map(f => (
-             <div 
-             key={f.path} 
+             <div
+             key={f.path}
              data-tour="inbox-file-item"
              onClick={() => {setSelectedInboxFile(f); setAterError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
              className="p-8 rounded-[12px] border border-border bg-bento-card hover:bg-accent/50 hover:border-foreground/30 cursor-pointer group flex flex-col justify-between transition-all shadow-sm"
@@ -2352,7 +2829,6 @@ function AterDashboard({onBack}: {onBack: () => void}) {
         )}
         </div>
       </div>
-      )}
     </div>
   </div>
  )

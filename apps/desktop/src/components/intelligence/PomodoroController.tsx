@@ -212,16 +212,16 @@ export default function PomodoroController() {
           <div className="flex items-center gap-3 mt-24">
             <button
               onClick={() => setIsActive(!isActive)}
-              className="flex items-center gap-3 px-10 py-4 rounded-none bg-muted/20 hover:bg-muted/40 border border-border transition-none  text-[10px] font-black uppercase tracking-[0.2em] text-foreground"
+              className="flex items-center gap-2.5 px-8 py-3 rounded-[6px] bg-bento-card border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[10px] font-black uppercase tracking-wider text-foreground cursor-pointer transition-all"
             >
-              {isActive ? <Pause size={14} /> : <Play size={14} />}
+              {isActive ? <Pause size={12} /> : <Play size={12} />}
               {isActive ? 'PAUSE' : 'RESUME'}
             </button>
             <button
               onClick={() => setTimeLeft(0)}
-              className="flex items-center gap-3 px-10 py-4 rounded-none bg-muted/10 hover:bg-muted/30 border border-border transition-none  text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2.5 px-8 py-3 rounded-[6px] bg-bento-card border border-border/40 hover:border-foreground/20 hover:bg-bento-item text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground cursor-pointer transition-all"
             >
-              <SkipForward size={14} />
+              <SkipForward size={12} />
               SKIP
             </button>
           </div>

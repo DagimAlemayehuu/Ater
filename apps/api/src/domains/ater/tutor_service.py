@@ -38,7 +38,10 @@ class TutorSessionManager:
                 updated_at TEXT,
                 active_note_unlocks TEXT DEFAULT '[]',
                 consecutive_failures TEXT DEFAULT '{}',
-                active_question_overrides TEXT DEFAULT '{}'
+                active_question_overrides TEXT DEFAULT '{}',
+                generated_ahead_paths TEXT DEFAULT '[]',
+                transfer_gate_outcomes TEXT DEFAULT '{}',
+                offline_readiness TEXT DEFAULT '{}'
             )
         """)
         self.conn.execute("""
@@ -51,7 +54,10 @@ class TutorSessionManager:
             )
         """)
         # Run safety schema migrations on DB connection initialization
-        for col_name in ["active_note_unlocks", "consecutive_failures", "active_question_overrides"]:
+        for col_name in [
+            "active_note_unlocks", "consecutive_failures", "active_question_overrides",
+            "generated_ahead_paths", "transfer_gate_outcomes", "offline_readiness"
+        ]:
             try:
                 self.conn.execute(f"ALTER TABLE tutor_sessions ADD COLUMN {col_name} TEXT")
             except sqlite3.OperationalError as e:
@@ -78,63 +84,54 @@ class TutorSessionManager:
 
     def _extract_wikilinks(self, content: str) -> List[str]:
         links = re.findall(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", content)
-        return [l.strip() for l in links]
+        return [l.strip() for l in links if l.strip()]
 
     def _get_curriculum(self, hub_path: Path) -> List[str]:
         if not hub_path.exists():
             return []
-            
         content = hub_path.read_text(encoding="utf-8")
+        links = self._extract_wikilinks(content)
         
-        frontmatter = {}
-        yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL | re.MULTILINE)
-        if yaml_match:
-            try:
-                import yaml
-                frontmatter = yaml.safe_load(yaml_match.group(1)) or {}
-            except Exception:
-                pass
-                
-        chapters_list = frontmatter.get("chapters", [])
-        if not chapters_list:
-            chapters_list = self._extract_wikilinks(content)
-        else:
-            cleaned = []
-            for c in chapters_list:
-                m = re.search(r"\[\[([^\]]+)\]\]", str(c))
-                cleaned.append(m.group(1) if m else str(c))
-            chapters_list = cleaned
-
         all_notes = []
-        for chap_name in chapters_list:
-            chap_path = self._resolve_vault_path(chap_name)
-            if not chap_path or not chap_path.exists():
-                continue
-            
-            chap_content = chap_path.read_text(encoding="utf-8")
-            chap_fm = {}
-            chap_yaml_match = re.search(r"^---\s*\n(.*?)\n---\s*\n", chap_content, re.DOTALL | re.MULTILINE)
-            if chap_yaml_match:
-                try:
-                    import yaml
-                    chap_fm = yaml.safe_load(chap_yaml_match.group(1)) or {}
-                except Exception:
-                    pass
-            
-            notes_list = chap_fm.get("notes", [])
-            if not notes_list:
-                notes_list = self._extract_wikilinks(chap_content)
-            else:
-                cleaned = []
-                for n in notes_list:
-                    m = re.search(r"\[\[([^\]]+)\]\]", str(n))
-                    cleaned.append(m.group(1) if m else str(n))
-                notes_list = cleaned
+        seen_notes = set()
+        seen_chapters = set()
+        
+        for l in links:
+            ch_name = l.split("|")[0].strip()
+            if "chapter" in ch_name.lower() or ch_name.startswith("Chapter_"):
+                if ch_name in seen_chapters:
+                    continue
+                seen_chapters.add(ch_name)
                 
-            for note_name in notes_list:
-                note_path = self._resolve_vault_path(note_name)
-                if note_path:
-                    all_notes.append(note_path.relative_to(self.vault_path).as_posix())
+                ch_path = self._resolve_vault_path(ch_name)
+                if not ch_path:
+                    continue
+                ch_content = ch_path.read_text(encoding="utf-8")
+                notes_list = self._extract_wikilinks(ch_content)
+                
+                for n in notes_list:
+                    note_name = n.split("|")[0].strip()
+                    if "chapter" in note_name.lower() or note_name.startswith("Chapter_"):
+                        continue
+                    if note_name == hub_path.stem:
+                        continue
+                    
+                    resolved = self._resolve_vault_path(note_name)
+                    if resolved:
+                        if resolved.resolve() == hub_path.resolve():
+                            continue
+                        note_file_path = resolved
+                    else:
+                        note_file_path = ch_path.parent / f"{note_name}.md"
+                    
+                    try:
+                        rel_path = note_file_path.relative_to(self.vault_path).as_posix()
+                    except ValueError:
+                        rel_path = note_file_path.as_posix()
+                        
+                    if rel_path not in seen_notes:
+                        seen_notes.add(rel_path)
+                        all_notes.append(rel_path)
                     
         return all_notes
 
@@ -156,8 +153,8 @@ class TutorSessionManager:
             
         self.conn.execute("""
             INSERT OR REPLACE INTO tutor_sessions 
-            (session_id, hub_path, current_note_path, completed_notes, wagers, score, status, updated_at, active_note_unlocks, consecutive_failures, active_question_overrides)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (session_id, hub_path, current_note_path, completed_notes, wagers, score, status, updated_at, active_note_unlocks, consecutive_failures, active_question_overrides, generated_ahead_paths, transfer_gate_outcomes, offline_readiness)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id,
             hub_relative_path,
@@ -168,6 +165,9 @@ class TutorSessionManager:
             "active",
             datetime.now().isoformat(),
             json.dumps(active_note_unlocks),
+            json.dumps({}),
+            json.dumps({}),
+            json.dumps([]),
             json.dumps({}),
             json.dumps({})
         ))
@@ -184,20 +184,127 @@ class TutorSessionManager:
             
         hub_path = self.vault_path / row["hub_path"]
         curriculum = self._get_curriculum(hub_path)
+        keys = row.keys()
         
-        return {
+        completed = json.loads(row["completed_notes"])
+        active_unlocks = json.loads(row["active_note_unlocks"]) if row["active_note_unlocks"] else []
+        generated_ahead = json.loads(row["generated_ahead_paths"]) if ("generated_ahead_paths" in keys and row["generated_ahead_paths"]) else []
+        
+        # Reconciliation: Treat existing note files as generated
+        reconciled = False
+        for path_rel in curriculum:
+            if path_rel not in completed and path_rel not in active_unlocks:
+                if (self.vault_path / path_rel).exists() and path_rel not in generated_ahead:
+                    generated_ahead.append(path_rel)
+                    reconciled = True
+                    
+        if reconciled:
+            self.conn.execute(
+                "UPDATE tutor_sessions SET generated_ahead_paths = ? WHERE session_id = ?",
+                (json.dumps(generated_ahead), session_id)
+            )
+            self.conn.commit()
+            
+        # Build roadmap list of dicts
+        roadmap = []
+        for path_rel in curriculum:
+            status = "locked"
+            if path_rel in completed:
+                status = "completed"
+            elif path_rel == row["current_note_path"]:
+                status = "current"
+            elif path_rel in active_unlocks:
+                status = "unlocked"
+            elif path_rel in generated_ahead:
+                status = "generated"
+                
+            # Check offline readiness
+            offline_ready = (self.vault_path / path_rel).exists()
+            
+            note_stem = Path(path_rel).stem
+            roadmap.append({
+                "path": path_rel,
+                "title": note_stem.replace("_", " "),
+                "status": status,
+                "offline_ready": offline_ready,
+                "source_pages": []
+            })
+            
+        session_data = {
             "session_id": row["session_id"],
             "hub_path": row["hub_path"],
             "current_note_path": row["current_note_path"],
-            "completed_notes": json.loads(row["completed_notes"]),
+            "completed_notes": completed,
             "wagers": json.loads(row["wagers"]),
             "score": row["score"],
             "status": row["status"],
             "updated_at": row["updated_at"],
             "curriculum": curriculum,
-            "active_note_unlocks": json.loads(row["active_note_unlocks"]) if row["active_note_unlocks"] else [],
+            "active_note_unlocks": active_unlocks,
             "consecutive_failures": json.loads(row["consecutive_failures"]) if row["consecutive_failures"] else {},
-            "active_question_overrides": json.loads(row["active_question_overrides"]) if row["active_question_overrides"] else {}
+            "active_question_overrides": json.loads(row["active_question_overrides"]) if row["active_question_overrides"] else {},
+            "generated_ahead_paths": generated_ahead,
+            "transfer_gate_outcomes": json.loads(row["transfer_gate_outcomes"]) if ("transfer_gate_outcomes" in keys and row["transfer_gate_outcomes"]) else {},
+            "offline_readiness": json.loads(row["offline_readiness"]) if ("offline_readiness" in keys and row["offline_readiness"]) else {},
+            "roadmap": roadmap
+        }
+        session_data["current_note_mastery"] = self.get_note_mastery_state(session_data, session_data["current_note_path"])
+        return session_data
+
+    def _read_note_frontmatter(self, note_path: str) -> Dict[str, Any]:
+        if not note_path:
+            return {}
+        note_file = self.vault_path / note_path
+        if not note_file.exists():
+            resolved = self._resolve_vault_path(note_path)
+            note_file = resolved if resolved else note_file
+        if not note_file.exists():
+            return {}
+        try:
+            import frontmatter
+            post = frontmatter.loads(note_file.read_text(encoding="utf-8"))
+            return dict(post.metadata or {})
+        except Exception:
+            return {}
+
+    def get_note_mastery_state(self, session: Dict[str, Any], note_path: str) -> Dict[str, Any]:
+        if not note_path:
+            return {
+                "note_path": note_path,
+                "recall_passed": True,
+                "transfer_passed": True,
+                "has_transfer": False,
+                "transfer_task": None,
+            }
+
+        questions = self._extract_note_questions(note_path)
+        wagers = session.get("wagers", {})
+        missing_questions = []
+        recall_passed = True
+        for q in questions:
+            q_id = str(q.get("id"))
+            if q_id not in wagers or not wagers[q_id].get("correct"):
+                recall_passed = False
+                missing_questions.append(q_id)
+
+        metadata = self._read_note_frontmatter(note_path)
+        transfer_task = metadata.get("transfer_task")
+        has_transfer = bool(transfer_task)
+        transfer_gate_outcomes = session.get("transfer_gate_outcomes", {})
+        transfer_passed = (
+            transfer_gate_outcomes.get(note_path, {}).get("status") == "passed"
+            if has_transfer
+            else True
+        )
+
+        return {
+            "note_path": note_path,
+            "recall_passed": recall_passed,
+            "transfer_passed": transfer_passed,
+            "has_transfer": has_transfer,
+            "transfer_task": transfer_task,
+            "missing_questions": missing_questions,
+            "outcome": transfer_gate_outcomes.get(note_path),
         }
 
     async def submit_answer(self, session_id: str, question_id: str, is_correct: bool, wager: str, user_answer: str = "") -> Dict[str, Any]:
@@ -239,28 +346,46 @@ class TutorSessionManager:
             failures = consecutive_failures.get(question_id, 0) + 1
             consecutive_failures[question_id] = failures
             
+            # Fetch note questions to find the original question details
+            questions = self._extract_note_questions(session["current_note_path"])
+            question_data = None
+            for q in questions:
+                if str(q.get("id")) == question_id:
+                    question_data = q
+                    break
+            if not question_data:
+                question_data = active_question_overrides.get(question_id)
+            if not question_data:
+                question_data = {"id": question_id, "question": f"Question {question_id}", "type": "mcq"}
+
             if failures == 1:
-                diagnosis = await self._diagnose_mistake(session["current_note_path"], question_id, user_answer)
-                diagnosis["is_misconception"] = False
-                diagnosis["remediation_question"] = None
-            elif failures >= 2:
-                diagnosis = await self._diagnose_mistake(session["current_note_path"], question_id, user_answer)
-                diagnosis["is_misconception"] = True
-                
+                # First failure: get mistake diagnosis lesson but no remediation question
+                lesson = await self.generate_detailed_remediation_lesson(session["current_note_path"], question_data, user_answer)
+                diagnosis = {
+                    "is_misconception": False,
+                    "misconception_text": lesson,
+                    "hint": "Focus on the core definitions and try again.",
+                    "remediation_question": None
+                }
+            else:
+                # Consecutive failures: get detailed lesson & clean remediation question
+                lesson = await self.generate_detailed_remediation_lesson(session["current_note_path"], question_data, user_answer)
+                remediation_q = await self.generate_clean_remediation_question(session["current_note_path"], question_data, user_answer, lesson)
+
+                diagnosis = {
+                    "is_misconception": True,
+                    "misconception_text": lesson,
+                    "hint": "Analyze the lesson and attempt the follow-up question.",
+                    "remediation_question": remediation_q
+                }
+
                 self.log_misconception(
                     topic=session["hub_path"], 
                     note_title=Path(session["current_note_path"]).stem,
-                    misconception_text=diagnosis["misconception_text"]
+                    misconception_text=lesson
                 )
                 
-                remediation_q = await self.get_remediation_question(
-                    note_path=session["current_note_path"],
-                    question_id=question_id,
-                    user_answer=user_answer,
-                    misconception_text=diagnosis["misconception_text"]
-                )
                 if remediation_q:
-                    diagnosis["remediation_question"] = remediation_q
                     active_question_overrides[question_id] = remediation_q
                 
         self.conn.execute("""
@@ -283,6 +408,430 @@ class TutorSessionManager:
             "diagnosis": diagnosis,
             "session": self.get_session(session_id)
         }
+
+    async def generate_detailed_remediation_lesson(self, note_path: str, question: Dict[str, Any], user_answer: str, attempt_number: int = 0, seen_summaries=None) -> str:
+        if self.ai_service and getattr(self.ai_service, "llm", None):
+            try:
+                note_file = self.vault_path / note_path
+                if not note_file.exists():
+                    resolved = self._resolve_vault_path(note_path)
+                    note_file = resolved if resolved else note_file
+                note_content = note_file.read_text(encoding="utf-8") if (note_file and note_file.exists()) else ""
+                note_content = re.sub(r"^---\s*\n.*?\n---\s*\n?", "", note_content, flags=re.DOTALL)
+                note_content = re.sub(r"```interactive-quiz\s*\n?.*?\n?```", "", note_content, flags=re.DOTALL)
+
+                prompt = f"""You are Ater's expert system design and academic tutor. A student got a practice question wrong.
+Your task is to generate a detailed educational lesson explaining the concept they got wrong and what the correct concept is.
+
+Strict Rules for the Lesson:
+- It must be written as 2-3 paragraphs of continuous prose.
+- Do NOT use bullet points, numbered lists, checklists, or emojis.
+- Do NOT use meta-phrases like "Not quite", "Incorrect", "You chose X", or refer directly to the student's past attempt or option letters.
+- Focus on explaining the core technical mechanics, relationships, and invariants of the concept from first principles.
+
+Note Path: {note_path}
+Note Content:
+{note_content[:6000]}
+
+Failed Question:
+{json.dumps(question, ensure_ascii=False)}
+
+Student's Incorrect Answer:
+{user_answer}
+
+Attempt Number: {attempt_number + 1}
+Avoid repeating these previously taught lessons (summaries): {json.dumps(seen_summaries or [])}
+
+If this is a later attempt (attempt_number > 0), go deeper — explain underlying mechanisms, edge cases, or related concepts rather than restating the same basics.
+
+Detailed Lesson:"""
+                
+                messages = [
+                    SystemMessage(content="You are a helpful, expert academic tutor. You write continuous, detailed educational lessons to clarify misconceptions."),
+                    HumanMessage(content=prompt)
+                ]
+                import asyncio
+                response = await asyncio.wait_for(
+                    self.ai_service.llm.ainvoke(messages),
+                    timeout=20,
+                )
+                return response.content if hasattr(response, "content") else str(response)
+            except Exception as e:
+                logger.warning(f"[TutorSessionManager] Failed to generate detailed remediation lesson: {e}")
+
+        correct_val = question.get("answer") or "the correct answer"
+        return f"The central mechanic of this concept governs how inputs are transformed into outputs. When reviewing this topic, ensure you connect the inputs directly to the mechanism and output. The expected correct definition is {correct_val}."
+
+    _SUPPORTED_PROVING_GROUND_TYPES = {
+        "mcq", "true_false", "writing", "fill_in", "matching", "order", "debug",
+        "synthesis", "trace", "scenario", "code", "calculation", "data_analysis", "find_error"
+    }
+
+    _QUESTION_TYPE_ALIASES = {
+        "multiple-choice": "mcq",
+        "multiple_choice": "mcq",
+        "multiple choice": "mcq",
+        "true-false": "true_false",
+        "true false": "true_false",
+        "true/false": "true_false",
+        "boolean": "true_false",
+        "fill-in": "fill_in",
+        "fill in": "fill_in",
+        "fill_blank": "fill_in",
+        "fill in the blank": "fill_in",
+        "fill-in-the-blank": "fill_in",
+        "find-error": "find_error",
+        "find error": "find_error",
+    }
+
+    def _normalize_question_type(self, q_type: Any) -> str:
+        raw = str(q_type or "writing").strip().lower()
+        normalized = self._QUESTION_TYPE_ALIASES.get(raw, raw)
+        return normalized if normalized in self._SUPPORTED_PROVING_GROUND_TYPES else "writing"
+
+    def _question_context_text(self, question: Dict[str, Any], lesson: str = "", note_content: str = "") -> str:
+        return " ".join([
+            str(question.get("question") or ""),
+            str(question.get("content") or ""),
+            str(question.get("codeSnippet") or ""),
+            str(question.get("buggyCode") or ""),
+            str(question.get("explanation") or ""),
+            str(lesson or ""),
+            str(note_content or "")[:2000],
+        ]).lower()
+
+    def _choose_proving_ground_type(
+        self,
+        question: Dict[str, Any],
+        lesson: str = "",
+        note_content: str = "",
+        seen_question_types: Optional[List[str]] = None,
+        attempt_number: int = 0,
+    ) -> str:
+        seen = {self._normalize_question_type(t) for t in (seen_question_types or [])}
+        context = self._question_context_text(question, lesson, note_content)
+        original_type = self._normalize_question_type(question.get("type"))
+
+        ranked: List[str] = []
+        if any(token in context for token in ["```", "def ", "class ", "function", "bug", "debug", "exception", "compile", "runtime"]):
+            ranked.extend(["debug", "trace", "code", "find_error", "scenario"])
+        if any(token in context for token in ["calculate", "equation", "formula", "solve", "number", "ratio", "probability", "derivative", "integral"]):
+            ranked.extend(["calculation", "trace", "data_analysis", "fill_in"])
+        if any(token in context for token in ["table", "dataset", "chart", "graph", "trend", "correlation", "row", "column"]):
+            ranked.extend(["data_analysis", "calculation", "scenario"])
+        if any(token in context for token in ["sequence", "order", "step", "workflow", "pipeline", "process", "first", "then"]):
+            ranked.extend(["order", "trace", "scenario"])
+        if any(token in context for token in ["compare", "contrast", "mapping", "pair", "relationship", "matches", "term"]):
+            ranked.extend(["matching", "synthesis", "mcq"])
+
+        ranked.extend([original_type, "scenario", "synthesis", "fill_in", "matching", "mcq", "writing", "true_false"])
+        if attempt_number >= 1:
+            ranked = ["scenario", "trace", "synthesis"] + ranked
+
+        for q_type in ranked:
+            normalized = self._normalize_question_type(q_type)
+            if normalized not in seen:
+                return normalized
+        return self._normalize_question_type(ranked[attempt_number % len(ranked)] if ranked else "scenario")
+
+    def _as_list(self, value: Any) -> List[Any]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, tuple):
+            return list(value)
+        if isinstance(value, str) and "," in value:
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return [value]
+
+    def _fallback_proving_ground_question(
+        self,
+        note_path: str,
+        original_question: Dict[str, Any],
+        lesson: str = "",
+        attempt_number: int = 0,
+        seen_question_types: Optional[List[str]] = None,
+        preferred_type: Optional[str] = None,
+        note_content: str = "",
+        adaptive: bool = False,
+    ) -> Dict[str, Any]:
+        q_type = self._normalize_question_type(preferred_type) if preferred_type else self._choose_proving_ground_type(
+            original_question, lesson, note_content, seen_question_types, attempt_number
+        )
+        orig_id = str(original_question.get("id") or f"q_{Path(note_path).stem}")
+        concept = str(original_question.get("question") or Path(note_path).stem.replace("_", " "))
+        answer = original_question.get("answer") or "A correct answer explains the core mechanism and applies it to the case."
+        answer_text = ", ".join(map(str, answer)) if isinstance(answer, list) else str(answer)
+        base = {
+            "id": f"{orig_id}_{'adaptive' if adaptive else 'remediation'}_{attempt_number + 1}",
+            "type": q_type,
+            "difficulty": f"L{min(4, max(2, attempt_number + 2))}",
+            "question": f"Apply the same concept in a new case: {concept}",
+            "answer": answer,
+            "explanation": lesson or original_question.get("explanation") or "The answer must connect the concept's mechanism to the result.",
+            "required_keywords": original_question.get("required_keywords") or [],
+            "note_id": note_path,
+            "is_remediation": not adaptive,
+            "is_adaptive": adaptive,
+        }
+
+        if q_type == "mcq":
+            base.update({
+                "question": f"Which option best applies the concept tested here: {concept}",
+                "options": {
+                    "A": answer_text[:180] or "The explanation that preserves the core mechanism.",
+                    "B": "A surface-level description that ignores the mechanism.",
+                    "C": "A related but irrelevant fact from the topic.",
+                    "D": "The inverse of the concept's actual relationship.",
+                },
+                "answer": "A",
+            })
+        elif q_type == "true_false":
+            base.update({"question": f"True or False: {answer_text}", "answer": "True"})
+        elif q_type == "fill_in":
+            base.update({
+                "question": f"Complete the key claim about this concept: {concept}",
+                "textWithBlanks": f"The core mechanism is [[{answer_text[:80] or 'the correct relationship'}]].",
+                "text_with_blanks": f"The core mechanism is [[{answer_text[:80] or 'the correct relationship'}]].",
+                "answer": [answer_text[:80] or "the correct relationship"],
+            })
+        elif q_type == "matching":
+            base.update({
+                "question": "Match each concept role to the correct function.",
+                "pairs": [
+                    {"left": "Core mechanism", "right": "Transforms inputs into the expected result"},
+                    {"left": "Misleading cue", "right": "Looks relevant but does not explain causality"},
+                    {"left": "Application check", "right": "Uses the concept in a new case"},
+                ],
+                "answer": "See pairs for correct matching.",
+            })
+        elif q_type == "order":
+            steps = ["Identify the relevant condition", "Apply the concept's mechanism", "Check the resulting implication"]
+            base.update({"question": "Put the reasoning steps in the correct order.", "steps": list(reversed(steps)), "answer": steps})
+        elif q_type in {"debug", "find_error"}:
+            base.update({
+                "question": "Find the conceptual flaw in this reasoning and correct it.",
+                "buggyCode": "Claim: the answer is valid because a related keyword appears, even if the mechanism is not applied.",
+                "content": "Claim: the answer is valid because a related keyword appears, even if the mechanism is not applied.",
+                "answer": "The flaw is substituting keyword recognition for applying the concept's mechanism.",
+            })
+        elif q_type == "code":
+            base.update({
+                "question": "Write a small function or pseudocode sketch that applies this concept.",
+                "codeSnippet": "# Implement the concept's input -> mechanism -> output flow here",
+                "language": "text",
+                "answer": answer_text,
+            })
+        elif q_type == "calculation":
+            base.update({"question": "Solve the applied calculation implied by the concept.", "content": concept, "answer": answer_text})
+        elif q_type == "data_analysis":
+            base.update({"question": "Interpret the evidence and state what the concept predicts.", "content": concept, "answer": answer_text})
+        elif q_type == "trace":
+            base.update({
+                "question": "Trace how the concept moves from condition to result.",
+                "content": concept,
+                "steps": ["Start from the condition", "Apply the mechanism", "State the consequence"],
+                "answer": answer_text,
+            })
+        elif q_type in {"scenario", "synthesis", "writing"}:
+            base.update({
+                "question": f"{'Synthesize' if q_type == 'synthesis' else 'Explain'} how the concept applies in a new situation: {concept}",
+                "answer": answer_text,
+            })
+        return base
+
+    def _normalize_proving_ground_question(
+        self,
+        raw_question: Dict[str, Any],
+        note_path: str,
+        original_question: Optional[Dict[str, Any]] = None,
+        lesson: str = "",
+        attempt_number: int = 0,
+        seen_question_types: Optional[List[str]] = None,
+        preferred_type: Optional[str] = None,
+        adaptive: bool = False,
+        note_content: str = "",
+    ) -> Dict[str, Any]:
+        original_question = original_question or {}
+        q = dict(raw_question or {})
+        q_type = self._normalize_question_type(q.get("type") or preferred_type)
+        if preferred_type and q_type != self._normalize_question_type(preferred_type):
+            q_type = self._normalize_question_type(preferred_type)
+        if not str(q.get("question") or "").strip():
+            return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, q_type, note_content, adaptive)
+
+        q["type"] = q_type
+        q["id"] = str(q.get("id") or f"{original_question.get('id') or Path(note_path).stem}_{'adaptive' if adaptive else 'remediation'}_{attempt_number + 1}")
+        q.setdefault("difficulty", f"L{min(4, max(2, attempt_number + 2))}")
+        q.setdefault("explanation", lesson or original_question.get("explanation") or "Review the concept's mechanism and apply it directly.")
+        q.setdefault("required_keywords", original_question.get("required_keywords") or [])
+        q["note_id"] = note_path
+        if adaptive:
+            q["is_adaptive"] = True
+        else:
+            q["is_remediation"] = True
+
+        if q_type == "mcq":
+            options = q.get("options") or {}
+            if isinstance(options, list):
+                options = {chr(65 + idx): str(opt) for idx, opt in enumerate(options[:6])}
+            if not isinstance(options, dict) or len(options) < 2:
+                return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, "mcq", note_content, adaptive)
+            q["options"] = {str(k): str(v) for k, v in options.items()}
+            if str(q.get("answer") or "") not in q["options"]:
+                q["answer"] = next(iter(q["options"].keys()))
+        elif q_type == "true_false":
+            ans = str(q.get("answer", "True")).strip().lower()
+            q["answer"] = "False" if ans in {"false", "f", "no", "0"} else "True"
+            q["options"] = {"True": "True", "False": "False"}
+        elif q_type == "fill_in":
+            answers = [str(item) for item in self._as_list(q.get("answer")) if str(item).strip()]
+            if not answers:
+                answers = [str(original_question.get("answer") or "the correct concept")]
+            text = q.get("textWithBlanks") or q.get("text_with_blanks") or q.get("question") or ""
+            if "[[" not in str(text):
+                text = f"{str(text).rstrip('.?')} [[{answers[0]}]]."
+            q["textWithBlanks"] = str(text)
+            q["text_with_blanks"] = str(text)
+            q["answer"] = answers
+        elif q_type == "matching":
+            pairs = q.get("pairs")
+            if not isinstance(pairs, list) or len(pairs) < 2 or any(not isinstance(pair, dict) or "left" not in pair or "right" not in pair for pair in pairs):
+                return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, "matching", note_content, adaptive)
+            q["pairs"] = [{"left": str(pair["left"]), "right": str(pair["right"])} for pair in pairs]
+            q.setdefault("answer", "See pairs for correct matching.")
+        elif q_type == "order":
+            answer_steps = [str(item) for item in self._as_list(q.get("answer")) if str(item).strip()]
+            steps = [str(item) for item in self._as_list(q.get("steps")) if str(item).strip()]
+            if len(answer_steps) < 2 and len(steps) >= 2:
+                answer_steps = steps
+            if len(steps) < 2 and len(answer_steps) >= 2:
+                steps = list(reversed(answer_steps))
+            if len(steps) < 2:
+                return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, "order", note_content, adaptive)
+            q["steps"] = steps
+            q["answer"] = answer_steps or steps
+        elif q_type in {"debug", "find_error"}:
+            snippet = q.get("buggyCode") or q.get("content") or q.get("codeSnippet")
+            if not snippet:
+                return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, q_type, note_content, adaptive)
+            q["buggyCode"] = str(snippet)
+            q.setdefault("content", str(snippet))
+            q.setdefault("answer", original_question.get("answer") or "Identify and correct the flawed reasoning.")
+        elif q_type == "code":
+            q.setdefault("codeSnippet", q.get("content") or "# Write your solution here")
+            q.setdefault("language", "text")
+            q.setdefault("answer", original_question.get("answer") or "A correct implementation applies the concept.")
+        elif q_type in {"calculation", "data_analysis", "trace"}:
+            q.setdefault("content", original_question.get("content") or original_question.get("question") or "")
+            q.setdefault("answer", original_question.get("answer") or "See explanation.")
+            if q_type == "trace":
+                q.setdefault("steps", ["Identify the condition", "Apply the rule", "State the result"])
+        else:
+            q.setdefault("answer", original_question.get("answer") or "A complete answer explains and applies the concept.")
+        return q
+
+    async def generate_clean_remediation_question(self, note_path: str, question: Dict[str, Any], user_answer: str, lesson: str, attempt_number: int = 0, seen_question_types=None) -> Optional[Dict[str, Any]]:
+        if self.ai_service and getattr(self.ai_service, "llm", None):
+            try:
+                note_file = self.vault_path / note_path
+                if not note_file.exists():
+                    resolved = self._resolve_vault_path(note_path)
+                    note_file = resolved if resolved else note_file
+                note_content = note_file.read_text(encoding="utf-8") if (note_file and note_file.exists()) else ""
+                
+                from langchain_core.output_parsers import PydanticOutputParser
+                from pydantic import BaseModel, Field
+                
+                class RemediationQuestionSchema(BaseModel):
+                    type: str = Field(description="One supported UI type: mcq, true_false, writing, fill_in, matching, order, debug, synthesis, trace, scenario, code, calculation, data_analysis, find_error.")
+                    question: str = Field(description="Clean standalone question. Do not reference a prior attempt.")
+                    options: Any = Field(default_factory=dict, description="MCQ options as {'A':'...', 'B':'...'} or a list; empty for non-MCQ.")
+                    answer: Any = Field(default="", description="Correct answer. MCQ uses option key. order uses ordered list. fill_in uses string or list.")
+                    explanation: str = Field(description="Explanation of the correct answer. Do NOT reference the student's past attempt.")
+                    required_keywords: List[str] = Field(default_factory=list)
+                    textWithBlanks: str = ""
+                    text_with_blanks: str = ""
+                    pairs: List[Dict[str, str]] = Field(default_factory=list)
+                    steps: List[str] = Field(default_factory=list)
+                    content: str = ""
+                    codeSnippet: str = ""
+                    buggyCode: str = ""
+                    language: str = "text"
+
+                _seen = [self._normalize_question_type(t) for t in (seen_question_types or [])]
+                preferred_type = self._choose_proving_ground_type(question, lesson, note_content, _seen, attempt_number)
+
+                parser = PydanticOutputParser(pydantic_object=RemediationQuestionSchema)
+                prompt = f"""You are Ater's expert tutor. A student made an error on a question in the note below.
+Your task is to generate a new related follow-up practice question that tests the same concept but is different, helping verify that they have understood the concept now.
+
+Strict Rules:
+- The question must be a clean, standalone question.
+- Do NOT include any meta-references to the previous attempt, previous answer, or say 'Original question', 'previous answer', 'retry', 'error', or 'mistake'. Banned words: 'Original', 'previous', 'retry'. Banned phrases: 'Try the same idea another way', 'What mistake did the wrong answer make'.
+- It must be a standard question that stands on its own.
+- First choose the most effective supported UI question type for this concept, then write one question in that exact schema.
+- Prefer transfer/application over definition recall.
+- Use the preferred type unless the note content clearly demands a better supported type.
+- For mcq, specify at least 4 options and put the correct option key in answer.
+- For fill_in, include textWithBlanks with [[blank]] markers and answer as a list.
+- For matching, include pairs with left and right keys.
+- For order, include shuffled steps and answer as the correct ordered list.
+- For code/debug/find_error, include codeSnippet, buggyCode, or content as appropriate.
+
+Attempt number: {attempt_number + 1}
+Previously used question types: {_seen}
+Preferred question type: {preferred_type}
+Supported types: {sorted(self._SUPPORTED_PROVING_GROUND_TYPES)}
+
+Rules:
+- Make this question harder than a basic recall. Test application of the concept, not just definition.
+- NEVER use these banned words or phrases: 'original question', 'previous answer', 'retry', 'mistake', 'error', 'what went wrong'.
+
+Note content:
+{note_content[:6000]}
+
+Misconception lesson:
+{lesson}
+
+Failed question ID: {question.get("id")}
+Original question type: {question.get("type")}
+
+{parser.get_format_instructions()}
+"""
+                messages = [
+                    SystemMessage(content="You are an expert tutor generating a clean, standalone remediation question."),
+                    HumanMessage(content=prompt)
+                ]
+                import asyncio
+                response = await asyncio.wait_for(
+                    self.ai_service.llm.ainvoke(messages),
+                    timeout=20,
+                )
+                parsed = parser.parse(response.content)
+                raw = parsed.model_dump()
+                raw["id"] = f"{question.get('id')}_remediation_{attempt_number + 1}"
+                return self._normalize_proving_ground_question(
+                    raw,
+                    note_path,
+                    original_question=question,
+                    lesson=lesson,
+                    attempt_number=attempt_number,
+                    seen_question_types=_seen,
+                    preferred_type=preferred_type,
+                    note_content=note_content,
+                )
+            except Exception as e:
+                logger.warning(f"[TutorSessionManager] Failed to generate clean remediation question: {e}")
+
+        return self._fallback_proving_ground_question(
+            note_path,
+            question,
+            lesson,
+            attempt_number,
+            seen_question_types,
+        )
 
     def _extract_note_questions(self, note_path: str) -> List[Dict[str, Any]]:
         note_file = self.vault_path / note_path
@@ -331,34 +880,20 @@ class TutorSessionManager:
     def _fallback_question(self, note_path: str, session_id: str = "", attempt_count: int = 0) -> Dict[str, Any]:
         content = self._clean_note_content(note_path)
         title = Path(note_path).stem.replace("_", " ").replace("-", " ")
-        q_type = "writing" if attempt_count <= 0 else ("mcq" if attempt_count % 2 else "fill_in")
-        question_text = f"Explain the most important idea from {title} in your own words."
-        if q_type == "mcq":
-            question_text = f"Which statement best captures the core point of {title}?"
-        elif q_type == "fill_in":
-            question_text = f"The key idea in {title} is best summarized as ____."
-
-        question = {
-            "id": f"adaptive_{Path(note_path).stem}_{session_id or 'session'}_{attempt_count + 1}",
-            "type": q_type,
-            "difficulty": "L1" if attempt_count <= 1 else "L2",
-            "question": question_text,
-            "answer": "A correct answer should accurately use the lesson's core terms and explain the relationship between them.",
-            "explanation": "This checks whether you can restate the lesson's central concept without copying the note.",
-            "required_keywords": [],
-            "note_id": note_path,
-            "is_adaptive": True,
-        }
-        if q_type == "mcq":
-            excerpt = content[:180].replace("\n", " ") or "the lesson's main concept"
-            question["options"] = {
-                "A": f"It explains {excerpt}",
-                "B": "It is only a list of unrelated facts.",
-                "C": "It says the topic can be skipped safely.",
-                "D": "It focuses only on memorizing filenames.",
-            }
-            question["answer"] = "A"
-        return question
+        return self._fallback_proving_ground_question(
+            note_path,
+            {
+                "id": f"adaptive_{Path(note_path).stem}_{session_id or 'session'}",
+                "type": "writing",
+                "question": f"Explain the most important idea from {title} in your own words.",
+                "answer": "A correct answer should accurately use the lesson's core terms and explain the relationship between them.",
+                "explanation": "This checks whether you can restate the lesson's central concept without copying the note.",
+            },
+            note_content=content,
+            attempt_number=attempt_count,
+            preferred_type=self._choose_proving_ground_type({}, "", content, [], attempt_count),
+            adaptive=True,
+        )
 
     async def get_adaptive_question(
         self,
@@ -442,18 +977,39 @@ class TutorSessionManager:
             from pydantic import BaseModel, Field
 
             class AdaptiveQuestionSchema(BaseModel):
-                type: str = Field(description="One of mcq, true_false, fill_in, writing, matching, order, scenario, synthesis, trace, debug.")
+                type: str = Field(description="One supported UI type: mcq, true_false, writing, fill_in, matching, order, debug, synthesis, trace, scenario, code, calculation, data_analysis, find_error.")
                 question: str
-                options: Dict[str, str] = Field(default_factory=dict)
+                options: Any = Field(default_factory=dict)
                 answer: Any = ""
                 explanation: str
                 required_keywords: List[str] = Field(default_factory=list)
+                textWithBlanks: str = ""
+                text_with_blanks: str = ""
+                pairs: List[Dict[str, str]] = Field(default_factory=list)
+                steps: List[str] = Field(default_factory=list)
+                content: str = ""
+                codeSnippet: str = ""
+                buggyCode: str = ""
+                language: str = "text"
 
             parser = PydanticOutputParser(pydantic_object=AdaptiveQuestionSchema)
+            clean_content = self._clean_note_content(note_path)
+            source_question = {}
+            if history:
+                last_history = history[-1]
+                if isinstance(last_history, dict):
+                    source_question = last_history.get("question") if isinstance(last_history.get("question"), dict) else {}
+            preferred_type = self._choose_proving_ground_type(
+                source_question,
+                json.dumps(last_result or {}, ensure_ascii=False),
+                clean_content,
+                [item.get("type") for item in history if isinstance(item, dict) and item.get("type")],
+                len(history),
+            )
             prompt = f"""Generate exactly one next Proving Grounds question for this Atomic Note.
 
 Atomic Note:
-{self._clean_note_content(note_path)[:6000]}
+{clean_content[:6000]}
 
 Recent learner history:
 {json.dumps(history[-6:], ensure_ascii=False)}
@@ -461,7 +1017,18 @@ Recent learner history:
 Last grading result:
 {json.dumps(last_result or {}, ensure_ascii=False)}
 
-Pick the best question type for the learner's performance. If they were wrong, target the misconception with a concrete follow-up. If they were correct, increase transfer/application slightly. Do not generate a batch.
+Pick the best supported UI question type for the learner's performance. If they were wrong, target the misconception with a concrete follow-up. If they were correct, increase transfer/application slightly. Do not generate a batch.
+Preferred type from Ater's selector: {preferred_type}
+Supported types: {sorted(self._SUPPORTED_PROVING_GROUND_TYPES)}
+
+Schema rules:
+- mcq: options as option-key map and answer as option key.
+- true_false: answer is True or False.
+- fill_in: textWithBlanks must include [[blank]] markers and answer should be a list.
+- matching: pairs must be a list of left/right objects.
+- order: steps are displayed order; answer is the correct ordered list.
+- code/debug/find_error: include codeSnippet, buggyCode, or content.
+- calculation/data_analysis/trace/scenario/synthesis/writing: include enough content/context for the UI prompt to stand alone.
 
 {parser.get_format_instructions()}
 """
@@ -472,22 +1039,50 @@ Pick the best question type for the learner's performance. If they were wrong, t
             question = parser.parse(response.content).model_dump()
             question["id"] = f"adaptive_{Path(note_path).stem}_{abs(hash(response.content)) % 100000}"
             question["difficulty"] = "L2"
-            return question
+            return self._normalize_proving_ground_question(
+                question,
+                note_path,
+                original_question=source_question,
+                lesson=json.dumps(last_result or {}, ensure_ascii=False),
+                attempt_number=len(history),
+                preferred_type=preferred_type,
+                adaptive=True,
+                note_content=clean_content,
+            )
         except Exception as e:
             logger.warning(f"[TutorSessionManager] Failed to generate adaptive follow-up: {e}")
             return None
 
     async def _grade_adaptive_answer(self, note_path: str, question: Dict[str, Any], user_answer: Any) -> Dict[str, Any]:
         expected = question.get("answer")
-        q_type = str(question.get("type") or "writing").lower()
+        q_type = self._normalize_question_type(question.get("type"))
         answer_text = str(user_answer).strip()
 
-        if q_type in {"mcq", "multiple-choice", "true_false", "true-false", "fill_in", "fill-in"}:
-            is_correct = str(expected).strip().lower() == answer_text.lower()
+        if q_type in {"mcq", "true_false", "fill_in"}:
+            expected_values = self._as_list(expected)
+            is_correct = any(str(item).strip().lower() == answer_text.lower() for item in expected_values)
             return {
                 "is_correct": is_correct,
                 "feedback": "Correct." if is_correct else "Not quite. Compare your answer against the lesson's exact claim.",
                 "hint": "" if is_correct else (question.get("hints") or ["Look for the core definition in the note."])[0],
+                "lesson": "" if is_correct else question.get("explanation", ""),
+            }
+
+        if q_type == "matching" and isinstance(question.get("pairs"), list) and isinstance(user_answer, dict):
+            is_correct = all(str(user_answer.get(pair.get("left"))) == str(pair.get("right")) for pair in question.get("pairs", []))
+            return {
+                "is_correct": is_correct,
+                "feedback": "Correct." if is_correct else "Not quite. Review the relationship each pair is testing.",
+                "hint": "" if is_correct else "Match by function, not by surface wording.",
+                "lesson": "" if is_correct else question.get("explanation", ""),
+            }
+
+        if q_type == "order" and isinstance(expected, list) and isinstance(user_answer, list):
+            is_correct = [str(item).strip().lower() for item in expected] == [str(item).strip().lower() for item in user_answer]
+            return {
+                "is_correct": is_correct,
+                "feedback": "Correct." if is_correct else "Not quite. The order should follow the concept's causal sequence.",
+                "hint": "" if is_correct else "Start from the condition, then apply the mechanism, then state the result.",
                 "lesson": "" if is_correct else question.get("explanation", ""),
             }
 
@@ -641,11 +1236,22 @@ Use the exact same format and question type as the original if possible.
                 return topic, order, chapter_title, note_title
         return None
 
-    async def unlock_and_generate_note(self, session_id: str, note_path_rel: str):
+    async def generate_note_files(self, session_id: str, note_path_rel: str):
         session = self.get_session(session_id)
         if not session:
             return
             
+        note_abs_path = self.vault_path / note_path_rel
+        if note_abs_path.exists():
+            try:
+                content = note_abs_path.read_text(encoding="utf-8")
+                parts = content.strip().split("---")
+                if len(parts) >= 3 and len(parts[2].strip()) > 50:
+                    logger.info(f"[Tutor] Note {note_path_rel} already exists and is generated. Skipping generation.")
+                    return
+            except Exception:
+                pass
+
         info = self._find_note_chapter_info(self.vault_path / session["hub_path"], note_path_rel)
         if not info:
             return
@@ -690,7 +1296,6 @@ Use the exact same format and question type as the original if possible.
             )
             ch_abs_path.write_text(ch_content, encoding="utf-8")
             
-        note_abs_path = self.vault_path / note_path_rel
         note_abs_path.parent.mkdir(parents=True, exist_ok=True)
         
         art_pack_rel = lo.get_artifact_pack_path(note_path_rel)
@@ -712,6 +1317,14 @@ Use the exact same format and question type as the original if possible.
         all_note_titles = self._get_curriculum(hub_path)
         all_note_titles = [Path(n).stem for n in all_note_titles]
         
+        pdf_context = None
+        pdf_note_schema = None
+        if session.get("metadata") and isinstance(session["metadata"], dict):
+            pdf_notes = session["metadata"].get("atomic_notes", [])
+            pdf_note_schema = next((n for n in pdf_notes if n.get("title") == note_title), None)
+            if pdf_note_schema:
+                pdf_context = pdf_note_schema.get("source_context")
+        
         from src.domains.ater.assistant import _generate_learning_runtime_note_markdown, ensure_teaching_markdown_quality, TeachingConceptSpec
         from src.domains.ater.compiler_service import AterLessonCompiler
         from src.domains.ater.artifact_service import ArtifactService
@@ -723,7 +1336,8 @@ Use the exact same format and question type as the original if possible.
             chapter_title=chapter_title,
             note_title=note_title,
             prompt=prompt,
-            all_note_titles=all_note_titles
+            all_note_titles=all_note_titles,
+            source_context=pdf_context
         )
         
         if generated_body:
@@ -755,6 +1369,20 @@ Use the exact same format and question type as the original if possible.
         from src.domains.ater.vault_manager import VaultManager
         post = frontmatter.loads(note_abs_path.read_text(encoding="utf-8"))
         post.content = final_body
+        
+        if pdf_note_schema:
+            post.metadata["course"] = session["metadata"].get("course")
+            post.metadata["unit"] = str(session["metadata"].get("unit"))
+            post.metadata["semester"] = session["metadata"].get("semester")
+            post.metadata["mode"] = pdf_note_schema.get("mode")
+            post.metadata["prerequisites"] = pdf_note_schema.get("prerequisites", [])
+            post.metadata["source_pages"] = pdf_note_schema.get("source_pages", [])
+            
+        # Generate transfer task
+        transfer_task = await self.generate_transfer_task(topic, note_title, final_body)
+        post.metadata["transfer_task"] = transfer_task
+        post.metadata["offline_ready"] = True
+
         vm = self.ai_service.vm if self.ai_service else VaultManager(".")
         yaml_part = vm.dump_obsidian_yaml(post.metadata)
         body = post.content if post.content.startswith("\n") else f"\n{post.content}"
@@ -769,9 +1397,33 @@ Use the exact same format and question type as the original if possible.
             note_title=note_title,
             note_path_rel=note_path_rel,
             frontmatter=post.metadata,
-            force=True
+            content=final_body,
+            force_regenerate=True
         )
+
+    async def unlock_and_generate_note(self, session_id: str, note_path_rel: str):
+        session = self.get_session(session_id)
+        if not session:
+            return
+            
+        await self.generate_note_files(session_id, note_path_rel)
         
+        # Remove from generated ahead if present
+        generated_ahead = session["generated_ahead_paths"]
+        if note_path_rel in generated_ahead:
+            generated_ahead.remove(note_path_rel)
+            self.conn.execute(
+                "UPDATE tutor_sessions SET generated_ahead_paths = ? WHERE session_id = ?",
+                (json.dumps(generated_ahead), session_id)
+            )
+            self.conn.commit()
+            
+        info = self._find_note_chapter_info(self.vault_path / session["hub_path"], note_path_rel)
+        if not info:
+            return
+        topic, order, chapter_title, note_title = info
+        
+        hub_path = self.vault_path / session["hub_path"]
         if hub_path.exists():
             hub_content = hub_path.read_text(encoding="utf-8")
             locked_pattern = f"[[{note_title}|🔒 {note_title.replace('_', ' ')}]]"
@@ -779,6 +1431,193 @@ Use the exact same format and question type as the original if possible.
             if locked_pattern in hub_content:
                 hub_content = hub_content.replace(locked_pattern, active_pattern)
                 hub_path.write_text(hub_content, encoding="utf-8")
+
+    async def generate_ahead_buffer(self, session_id: str, count: int = 3):
+        session = self.get_session(session_id)
+        if not session:
+            return
+            
+        curriculum = session["curriculum"]
+        completed = session["completed_notes"]
+        active_unlocks = session["active_note_unlocks"]
+        generated_ahead = session["generated_ahead_paths"]
+        
+        # Next locked notes
+        next_locked = [n for n in curriculum if n not in active_unlocks and n not in completed]
+        
+        changed = False
+        for note_path_rel in next_locked[:count]:
+            if note_path_rel not in generated_ahead:
+                try:
+                    await self.generate_note_files(session_id, note_path_rel)
+                    generated_ahead.append(note_path_rel)
+                    changed = True
+                except Exception as e:
+                    logger.warning(f"[Tutor] Failed background generation for {note_path_rel}: {e}")
+                    
+        if changed:
+            self.conn.execute(
+                "UPDATE tutor_sessions SET generated_ahead_paths = ? WHERE session_id = ?",
+                (json.dumps(generated_ahead), session_id)
+            )
+            self.conn.commit()
+
+    async def generate_transfer_task(self, topic: str, note_title: str, content: str) -> Dict[str, Any]:
+        if not (self.ai_service and getattr(self.ai_service, "llm", None)):
+            return {
+                "type": "scenario",
+                "prompt": f"Apply the concept of {note_title} in a real-world scenario.",
+                "domain": "ACADEMIC-GENERAL",
+                "grading_criteria": "Student shows conceptual application."
+            }
+        try:
+            from pydantic import BaseModel, Field
+            from langchain_core.output_parsers import PydanticOutputParser
+            
+            class TransferTaskSchema(BaseModel):
+                type: str = Field(description="One of code, debug, calculation, trace, writing, checklist, scenario.")
+                prompt: str = Field(description="The question or task prompt. Must ask to apply the concept in a new scenario, not just define it. For physical/external skills, generate a socratic checklist or reflection.")
+                domain: str = Field(description="The domain key representing this concept's field (e.g. CS-SOFTWARE, MATH-PURE, HIST-CATALYST, etc.)")
+                grading_criteria: str = Field(description="Brief guidelines for grading the user's attempt.")
+                
+            parser = PydanticOutputParser(pydantic_object=TransferTaskSchema)
+            
+            sys_prompt = """You are Ater's master educational task architect. Your job is to create a high-quality transfer or application task that tests whether a student can APPLY a concept in a new scenario (depth of understanding, rather than rote recall).
+Use the concept content and title to determine the domain and generate an appropriate task.
+Return ONLY valid JSON matching the schema format. No formatting, no markdown wrappers, just the JSON."""
+            
+            user_prompt = f"Note Title: {note_title}\nTopic: {topic}\n\nNote Content Excerpt:\n{content[:4000]}\n\n{parser.get_format_instructions()}"
+            
+            response = await self.ai_service.llm.ainvoke([
+                ("system", sys_prompt),
+                ("human", user_prompt)
+            ])
+            text = response.content.strip()
+            if text.startswith("```"):
+                lines = text.splitlines()
+                if lines[0].startswith("```json") or lines[0].startswith("```"):
+                    text = "\n".join(lines[1:-1]).strip()
+            import json as _json
+            return _json.loads(text)
+        except Exception as e:
+            logger.warning(f"[Tutor] Failed to generate transfer task: {e}")
+            return {
+                "type": "scenario",
+                "prompt": f"Apply the concept of {note_title} in a real-world scenario.",
+                "domain": "ACADEMIC-GENERAL",
+                "grading_criteria": "Student shows conceptual application."
+            }
+
+    async def submit_transfer_answer(self, session_id: str, note_path: str, user_answer: str) -> Dict[str, Any]:
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError(f"Session {session_id} not found")
+            
+        note_file = self.vault_path / note_path
+        if not note_file.exists():
+            resolved = self._resolve_vault_path(note_path)
+            note_file = resolved if resolved else note_file
+            
+        if not note_file.exists():
+            raise ValueError(f"Note file {note_path} not found")
+            
+        import frontmatter
+        post = frontmatter.loads(note_file.read_text(encoding="utf-8"))
+        transfer_task = post.metadata.get("transfer_task")
+        if not transfer_task:
+            transfer_task = await self.generate_transfer_task(session["hub_path"], Path(note_path).stem, post.content)
+            post.metadata["transfer_task"] = transfer_task
+            post.metadata["offline_ready"] = True
+            
+            vm = self.ai_service.vm if self.ai_service else VaultManager(".")
+            yaml_part = vm.dump_obsidian_yaml(post.metadata)
+            body = post.content if post.content.startswith("\n") else f"\n{post.content}"
+            note_file.write_text(f"---\n{yaml_part}---\n{body}", encoding="utf-8")
+            
+        is_correct = False
+        feedback = ""
+        remediation = ""
+        
+        task_type = str(transfer_task.get("type", "scenario")).lower()
+        
+        if task_type in ["checklist", "reflection"]:
+            is_correct = True
+            feedback = "Reflection checklist completed. Prerequisite met."
+        else:
+            if self.ai_service and getattr(self.ai_service, "llm", None):
+                try:
+                    sys_prompt = """You are Ater's academic evaluator. Grade the user's attempt at the transfer task.
+Analyze whether the user demonstrates clear conceptual application according to the grading criteria.
+Output JSON format:
+{
+  "is_correct": true/false,
+  "feedback": "...",
+  "remediation": "..."
+}"""
+                    user_prompt = f"""Note: {Path(note_path).stem}
+Transfer Task Prompt: {transfer_task.get("prompt")}
+Grading Criteria: {transfer_task.get("grading_criteria")}
+User Answer: {user_answer}"""
+                    
+                    response = await self.ai_service.llm.ainvoke([
+                        ("system", sys_prompt),
+                        ("human", user_prompt)
+                    ])
+                    text = response.content.strip()
+                    if text.startswith("```"):
+                        lines = text.splitlines()
+                        if lines[0].startswith("```json") or lines[0].startswith("```"):
+                            text = "\n".join(lines[1:-1]).strip()
+                    import json as _json
+                    graded_json = _json.loads(text)
+                    is_correct = bool(graded_json.get("is_correct"))
+                    feedback = str(graded_json.get("feedback"))
+                    remediation = str(graded_json.get("remediation", ""))
+                except Exception as e:
+                    logger.warning(f"[Tutor] Failed LLM transfer grading: {e}")
+                    is_correct = True
+                    feedback = "System grading failed, defaulting to pass."
+            else:
+                is_correct = True
+                feedback = "Offline / AI service unavailable. Auto-pass."
+                
+        transfer_gate_outcomes = session["transfer_gate_outcomes"]
+        transfer_gate_outcomes[note_path] = {
+            "status": "passed" if is_correct else "failed",
+            "feedback": feedback,
+            "remediation": remediation,
+            "answer": user_answer,
+            "updated_at": datetime.now().isoformat()
+        }
+        
+        if not is_correct:
+            self.log_misconception(
+                topic=session["hub_path"],
+                note_title=Path(note_path).stem,
+                misconception_text=f"Failed Transfer Gate: {feedback}. Remediation: {remediation}"
+            )
+            
+        self.conn.execute(
+            "UPDATE tutor_sessions SET transfer_gate_outcomes = ? WHERE session_id = ?",
+            (json.dumps(transfer_gate_outcomes), session_id)
+        )
+        self.conn.commit()
+        
+        return {
+            "is_correct": is_correct,
+            "feedback": feedback,
+            "remediation": remediation,
+            "session": self.get_session(session_id)
+        }
+
+    def is_note_mastered(self, session: Dict[str, Any], note_path: str) -> Tuple[bool, bool, bool]:
+        if not note_path:
+            return True, True, True
+            
+        mastery = self.get_note_mastery_state(session, note_path)
+        recall_passed = mastery["recall_passed"]
+        transfer_passed = mastery["transfer_passed"]
+        return (recall_passed and transfer_passed), recall_passed, transfer_passed
 
     def advance_note(self, session_id: str) -> Dict[str, Any]:
         session = self.get_session(session_id)
@@ -790,8 +1629,28 @@ Use the exact same format and question type as the original if possible.
         completed = session["completed_notes"]
         active_note_unlocks = session["active_note_unlocks"]
         
+        # Enforce recall and transfer gates
+        is_mastered, recall_passed, transfer_passed = self.is_note_mastered(session, curr_note)
+        if not is_mastered:
+            res = session.copy()
+            res.update({
+                "can_advance": False,
+                "recall_passed": recall_passed,
+                "transfer_passed": transfer_passed,
+                "message": "Mastery gates (Recall and Transfer) must be cleared before advancing."
+            })
+            return res
+        
         if curr_note and curr_note not in completed:
             completed.append(curr_note)
+            
+            # Create or update local FSRS card
+            try:
+                from src.domains.ater.srs import SRSEngine
+                srs = SRSEngine(self.db_path)
+                srs.review(curr_note, 3) # good
+            except Exception as e:
+                logger.warning(f"[Tutor] Failed to record FSRS card for {curr_note}: {e}")
             
         next_note = ""
         status = "active"
@@ -811,7 +1670,6 @@ Use the exact same format and question type as the original if possible.
         else:
             status = "completed"
             
-        # Paced progressive unlocking check
         if next_note:
             curr_chapter = Path(curr_note).parts[-2] if len(Path(curr_note).parts) >= 2 else ""
             next_chapter = Path(next_note).parts[-2] if len(Path(next_note).parts) >= 2 else ""
@@ -824,11 +1682,14 @@ Use the exact same format and question type as the original if possible.
                         loop = asyncio.get_event_loop()
                         if loop.is_running():
                             loop.create_task(self.unlock_and_generate_note(session_id, next_note))
+                            loop.create_task(self.generate_ahead_buffer(session_id, 3))
                         else:
                             loop.run_until_complete(self.unlock_and_generate_note(session_id, next_note))
+                            loop.run_until_complete(self.generate_ahead_buffer(session_id, 3))
                     except Exception:
                         try:
                             asyncio.run(self.unlock_and_generate_note(session_id, next_note))
+                            asyncio.run(self.generate_ahead_buffer(session_id, 3))
                         except Exception as e:
                             print(f"[TutorSessionManager] Failed to unlock note: {e}")
             else:
@@ -851,7 +1712,14 @@ Use the exact same format and question type as the original if possible.
         ))
         self.conn.commit()
         
-        return self.get_session(session_id)
+        updated_session = self.get_session(session_id)
+        res = updated_session.copy()
+        res.update({
+            "can_advance": True,
+            "recall_passed": recall_passed,
+            "transfer_passed": transfer_passed
+        })
+        return res
 
     def start_consolidation_quiz(self, session_id: str) -> Dict[str, Any]:
         session = self.get_session(session_id)
