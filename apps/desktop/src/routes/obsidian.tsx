@@ -1410,6 +1410,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         .replace(/\]+$/, '')
         .split('|')[0]
         .trim()
+        .replace(/\.md$/i, '')
 
       if (hubName) {
         try {

@@ -190,9 +190,14 @@ describe('Obsidian Notes Explorer', () => {
       content: '# Data Structures\n\n```interactive-quiz\n{\"id\":\"q1\",\"type\":\"writing\",\"question\":\"Explain it\",\"answer\":\"A\",\"explanation\":\"Because.\"}\n```',
       metadata: { title: 'Data Structures', type: 'lesson', hub: '[[Computer_Science_Hub]]' },
     });
-    (sidecarApi.findVaultPage as any).mockResolvedValue({
-      found: true,
-      path: 'database/learning paths/Computer_Science_Hub.md',
+    (sidecarApi.findVaultPage as any).mockImplementation((name: string) => {
+      if (name.includes('Computer_Science_Hub')) {
+        return Promise.resolve({
+          found: true,
+          path: 'database/learning paths/Computer_Science_Hub.md',
+        });
+      }
+      return Promise.resolve({ found: false });
     });
 
     render(
