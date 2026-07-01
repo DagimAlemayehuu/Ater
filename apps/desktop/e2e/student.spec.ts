@@ -138,11 +138,11 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
 
     // Verify explorer renders our mock structure (folder/notes)
-    const folderNode = page.getByText(/Computer_Science/i);
+    const folderNode = page.getByText(/Computer_Science/i).first();
     await expect(folderNode).toBeVisible();
     await folderNode.click();
 
-    const noteNode = page.getByText(/Data_Structures_And_Algorithms/i);
+    const noteNode = page.getByText(/Data_Structures_And_Algorithms/i).first();
     await expect(noteNode).toBeVisible();
     await noteNode.click();
 
@@ -158,7 +158,7 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
     
     // Click on the AI & Keys tab trigger
-    await page.getByRole('tab', { name: /AI & Keys/i }).click();
+    await page.getByRole('tab', { name: /AI & Keys/i }).first().click();
     await expect(page.getByText(/AI Provider & Keys/i)).toBeVisible();
 
     // Click Check if Key Works (testAiConnection command returns success in expanded mock)
