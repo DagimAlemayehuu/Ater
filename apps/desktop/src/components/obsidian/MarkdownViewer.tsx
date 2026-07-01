@@ -141,7 +141,7 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
       }
     });
 
-    mermaid.render(`mermaid-${Math.random().toString(36).substring(7)}`, chart).then((result) => {
+    mermaid.render(`mermaid-${crypto.randomUUID()}`, chart).then((result) => {
       if (activeChartRef.current === chart) {
         setSvg(result.svg);
         setError(false);
