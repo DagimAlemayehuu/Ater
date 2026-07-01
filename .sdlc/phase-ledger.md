@@ -28,18 +28,18 @@ Completion report:
 - Successfully implemented ChatStorage class in sqlite3, providing durable schemas for conversations, messages, branches, attachments, summaries, memories, tool calls, context snapshots, and stream runs. Verified via test_chat_storage.py passing 3 unit tests in 0.04s.
 
 ## Phase 2: Context Packing & Memory Runtime
-Status: pending
+Status: completed
 OpenSpec source:
 - Main change: openspec/changes/full-chatbot-runtime/
 - Phase spec/change: none
 OpenSpec tasks:
-- [ ] 2.1 Implement context packing that composes system prompt, current request, rolling summary, recent messages, relevant prior messages, memories, vault RAG, attachments, active artifact context, user context, and recent tool state.
-- [ ] 2.2 Persist context snapshots with included source IDs, approximate token counts, included sections, and exclusion reasons.
-- [ ] 2.3 Implement rolling conversation summary creation/update with mocked model tests and deterministic fallback behavior.
-- [ ] 2.4 Implement durable memory CRUD with enabled/disabled state, confidence, source message ID, and deletion.
-- [ ] 2.5 Implement session memory CRUD scoped to a conversation and excluded from unrelated conversations.
-- [ ] 2.6 Implement conservative memory extraction after assistant turns with safe pending/accepted states.
-- [ ] 2.7 Add backend tests for context ordering, budget clipping, memory retrieval, memory deletion, and session-memory isolation.
+- [x] 2.1 Implement context packing that composes system prompt, current request, rolling summary, recent messages, relevant prior messages, memories, vault RAG, attachments, active artifact context, user context, and recent tool state.
+- [x] 2.2 Persist context snapshots with included source IDs, approximate token counts, included sections, and exclusion reasons.
+- [x] 2.3 Implement rolling conversation summary creation/update with mocked model tests and deterministic fallback behavior.
+- [x] 2.4 Implement durable memory CRUD with enabled/disabled state, confidence, source message ID, and deletion.
+- [x] 2.5 Implement session memory CRUD scoped to a conversation and excluded from unrelated conversations.
+- [x] 2.6 Implement conservative memory extraction after assistant turns with safe pending/accepted states.
+- [x] 2.7 Add backend tests for context ordering, budget clipping, memory retrieval, memory deletion, and session-memory isolation.
 OpenSpec requirements/scenarios:
 - `Context packing`: The system SHALL assemble model context from prioritized sources instead of sending unbounded raw chat history.
 - `Two-use memory`: The system SHALL support durable user memory and session-scoped memory with user-visible controls.
@@ -48,10 +48,11 @@ Allowed files/areas:
 - `apps/api/tests/`
 Forbidden scope:
 - unrelated refactors
+- frontend client UI changes
 Verification:
 - Run: `cd apps/api && uv run python -m pytest tests/`
 Completion report:
-- pending
+- Implemented ContextPacker for priority prompt composition and token budget management, writing context snapshot JSON to sqlite. Implemented MemoryManager supporting durable and session scopes with heuristic turn extraction. Verified all 4 tests in test_context_memory.py passing in 0.16s.
 
 ## Phase 3: Attachments & Source Context
 Status: pending

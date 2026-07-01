@@ -8,13 +8,13 @@
 
 ## 2. Context And Memory Runtime
 
-- [ ] 2.1 Implement context packing that composes system prompt, current request, rolling summary, recent messages, relevant prior messages, memories, vault RAG, attachments, active artifact context, user context, and recent tool state.
-- [ ] 2.2 Persist context snapshots with included source IDs, approximate token counts, included sections, and exclusion reasons.
-- [ ] 2.3 Implement rolling conversation summary creation/update with mocked model tests and deterministic fallback behavior.
-- [ ] 2.4 Implement durable memory CRUD with enabled/disabled state, confidence, source message ID, and deletion.
-- [ ] 2.5 Implement session memory CRUD scoped to a conversation and excluded from unrelated conversations.
-- [ ] 2.6 Implement conservative memory extraction after assistant turns with safe pending/accepted states.
-- [ ] 2.7 Add backend tests for context ordering, budget clipping, memory retrieval, memory deletion, and session-memory isolation.
+- [x] 2.1 Implement context packing that composes system prompt, current request, rolling summary, recent messages, relevant prior messages, memories, vault RAG, attachments, active artifact context, user context, and recent tool state.
+- [x] 2.2 Persist context snapshots with included source IDs, approximate token counts, included sections, and exclusion reasons.
+- [x] 2.3 Implement rolling conversation summary creation/update with mocked model tests and deterministic fallback behavior.
+- [x] 2.4 Implement durable memory CRUD with enabled/disabled state, confidence, source message ID, and deletion.
+- [x] 2.5 Implement session memory CRUD scoped to a conversation and excluded from unrelated conversations.
+- [x] 2.6 Implement conservative memory extraction after assistant turns with safe pending/accepted states.
+- [x] 2.7 Add backend tests for context ordering, budget clipping, memory retrieval, memory deletion, and session-memory isolation.
 
 ## 3. Attachments And Source Context
 

@@ -91,6 +91,7 @@ class ChatStorage:
                         confidence REAL DEFAULT 1.0,
                         source_message_id TEXT,
                         enabled INTEGER DEFAULT 1,
+                        status TEXT DEFAULT 'accepted', -- 'pending' or 'accepted'
                         created_at TEXT NOT NULL,
                         FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
                     )
@@ -425,15 +426,15 @@ class ChatStorage:
             conn.close()
 
     # --- Memory Storage ---
-    def create_memory(self, scope: str, content: str, confidence: float = 1.0, conversation_id: Optional[str] = None, source_message_id: Optional[str] = None) -> Dict[str, Any]:
+    def create_memory(self, scope: str, content: str, confidence: float = 1.0, conversation_id: Optional[str] = None, source_message_id: Optional[str] = None, status: str = "accepted") -> Dict[str, Any]:
         conn = self._get_connection()
         try:
             now = datetime.now().isoformat()
             mid = str(uuid.uuid4())
             with conn:
                 conn.execute(
-                    "INSERT INTO chat_memories (id, conversation_id, scope, content, confidence, source_message_id, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
-                    (mid, conversation_id, scope, content, confidence, source_message_id, now)
+                    "INSERT INTO chat_memories (id, conversation_id, scope, content, confidence, source_message_id, enabled, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
+                    (mid, conversation_id, scope, content, confidence, source_message_id, status, now)
                 )
             return {
                 "id": mid,
@@ -443,6 +444,7 @@ class ChatStorage:
                 "confidence": confidence,
                 "source_message_id": source_message_id,
                 "enabled": 1,
+                "status": status,
                 "created_at": now
             }
         finally:
@@ -468,6 +470,15 @@ class ChatStorage:
             val = 1 if enabled else 0
             with conn:
                 cur = conn.execute("UPDATE chat_memories SET enabled = ? WHERE id = ?", (val, memory_id))
+                return cur.rowcount > 0
+        finally:
+            conn.close()
+
+    def update_memory_approval(self, memory_id: str, status: str) -> bool:
+        conn = self._get_connection()
+        try:
+            with conn:
+                cur = conn.execute("UPDATE chat_memories SET status = ? WHERE id = ?", (status, memory_id))
                 return cur.rowcount > 0
         finally:
             conn.close()
