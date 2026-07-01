@@ -12,6 +12,7 @@ import { WikiLink, renderWikiLinks } from './WikiLink'
 import mermaid from 'mermaid'
 import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight, Info, AlertTriangle, ShieldAlert, CheckCircle2, HelpCircle, Calendar, Play, X, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import DOMPurify from 'dompurify'
 import MiniPracticeUI from '../MiniPracticeUI'
 import type { Question } from '@/types/practice'
 import RubiksCubeWidget from './RubiksCubeWidget'
@@ -101,10 +102,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 }
 
 const sanitizeSvg = (rawSvg: string): string => {
-  return rawSvg
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+\s*=\s*(['"])(.*?)\1/gi, '')
-    .replace(/href\s*=\s*(['"])javascript:(.*?)\1/gi, '');
+  return DOMPurify.sanitize(rawSvg);
 };
 
 export const MermaidWrapper = ({ chart }: { chart: string }) => {

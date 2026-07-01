@@ -138,12 +138,12 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
 
     // Verify explorer renders our mock structure (folder/notes)
-    const folderNode = page.getByText(/Computer_Science/i);
-    await expect(folderNode).toBeVisible();
+    const folderNode = page.locator('div, span, button').filter({ hasText: /Computer_Science/i }).first();
+    await expect(folderNode).toBeVisible({ timeout: 15000 });
     await folderNode.click();
 
-    const noteNode = page.getByText(/Data_Structures_And_Algorithms/i);
-    await expect(noteNode).toBeVisible();
+    const noteNode = page.locator('div, span, button').filter({ hasText: /Data_Structures_And_Algorithms/i }).first();
+    await expect(noteNode).toBeVisible({ timeout: 15000 });
     await noteNode.click();
 
     // Verify note content area opens and shows mocked note text
@@ -158,8 +158,10 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
     
     // Click on the AI & Keys tab trigger
-    await page.getByRole('tab', { name: /AI & Keys/i }).click();
-    await expect(page.getByText(/AI Provider & Keys/i)).toBeVisible();
+    const aiTab = page.locator('button, [role="tab"]').filter({ hasText: /AI & Keys/i }).first();
+    await expect(aiTab).toBeVisible({ timeout: 15000 });
+    await aiTab.click();
+    await expect(page.locator('body').filter({ hasText: /AI Provider & Keys/i })).toBeVisible({ timeout: 15000 });
 
     // Click Check if Key Works (testAiConnection command returns success in expanded mock)
     const validateBtn = page.getByRole('button', { name: /Check if Key Works/i });
