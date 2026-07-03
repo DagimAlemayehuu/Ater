@@ -74,18 +74,22 @@ export const HubConnectionsNav = React.memo(({
     const baseTree = parseHubTree(content);
     if (!searchQuery) return baseTree;
     
+    const lowerQuery = searchQuery.toLowerCase();
     const filterNodes = (nodes: NavNode[]): NavNode[] => {
-      return nodes.filter(node => {
-        const matches = typeof node.label === 'string' && node.label.toLowerCase().includes((searchQuery || '').toLowerCase());
+      const result: NavNode[] = [];
+      for (const node of nodes) {
+        const matches = typeof node.label === 'string' && node.label.toLowerCase().includes(lowerQuery);
         const childrenMatches = node.children.length > 0 ? filterNodes(node.children) : [];
         if (matches || childrenMatches.length > 0) {
-          node.children = childrenMatches;
-          return true;
+          result.push({
+            ...node,
+            children: childrenMatches
+          });
         }
-        return false;
-      });
+      }
+      return result;
     };
-    return filterNodes(JSON.parse(JSON.stringify(baseTree)));
+    return filterNodes(baseTree);
   }, [content, searchQuery]);
 
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
