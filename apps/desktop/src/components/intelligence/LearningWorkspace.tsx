@@ -36,8 +36,6 @@ const isTemporaryLessonPath = (path?: string | null) => {
   return typeof path === 'string' && path.includes('remediation_temp')
 }
 
-const normalizeNoteTitle = (title: string) => title.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
-
 export function LearningWorkspace({
   preview,
   tutorSession,
@@ -140,7 +138,6 @@ export function LearningWorkspace({
 
   const tree = useMemo(() => {
     const sourceJob = tutorSession?.source_job
-    const sourceJobId = tutorSession?.source_job_id || sourceJob?.job_id
     const roadmapItems = Array.isArray(tutorSession?.roadmap) ? tutorSession.roadmap : []
     const sourceNodes = Array.isArray(sourceJob?.concept_graph?.nodes) ? sourceJob.concept_graph.nodes : []
 
@@ -149,7 +146,7 @@ export function LearningWorkspace({
       : sourceNodes.map((node: any) => ({
         id: node.id,
         title: node.title,
-        path: sourceJobId ? `SourceJobs/${sourceJobId}/${normalizeNoteTitle(node.title)}.md` : undefined,
+        path: node.path,
         status: node.id === tutorSession?.current_concept_node_id ? 'current' : 'locked',
       }))
 

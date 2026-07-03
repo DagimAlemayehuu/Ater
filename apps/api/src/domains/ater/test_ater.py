@@ -629,3 +629,246 @@ def test_search_web_and_schemas(tmp_path):
         assert "Prime Video" not in res
         assert ddgs.text.call_count == 2
 
+
+def test_source_job_deploys_academic_pdf_to_study_planner_and_notes(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_4_Production_Cost.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+
+    docs = [
+        SimpleNamespace(
+            page_content=(
+                "Chapter 4 Production And Cost\n"
+                "Objectives\n"
+                "Define production function\n"
+                "Describe short run production"
+            ),
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content="Production function shows the relationship between inputs and output.",
+            metadata={"page": 1},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Microeconomics",
+        unit="04_Production_And_Cost",
+    )
+    deployed = service.deploy_to_vault(job["job_id"], str(tmp_path))
+
+    hub_path = tmp_path / "database" / "study planner" / "Winter2026" / "Microeconomics" / "04_Production_And_Cost" / "Production_And_Cost_Hub.md"
+    note_path = tmp_path / "Notes" / "academic" / "Winter2026" / "Microeconomics" / "04_Production_And_Cost" / "01_Source_Roadmap" / "Production_Function.md"
+    processed_pdf = tmp_path / "Inbox" / "generated" / "academic" / "Chapter_4_Production_Cost.pdf"
+
+    assert hub_path.exists()
+    assert note_path.exists()
+    assert processed_pdf.exists()
+    assert not pdf_path.exists()
+    assert "SourceJobs" not in "\n".join(deployed["written_files"])
+
+
+def test_source_job_attaches_to_existing_academic_chapter_hub(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import frontmatter
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    parent_hub = "database/study planner/Winter2026/Microeconomics/Elasticity/Elasticity_Hub.md"
+    hub_path = tmp_path / parent_hub
+    hub_path.parent.mkdir(parents=True)
+    hub_path.write_text("---\ntype: \"Hub\"\nstatus: \"Not Started\"\n---\n\n# Elasticity\n", encoding="utf-8")
+    pdf_path = tmp_path / "Inbox" / "academic" / "Elasticity.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic chapter")
+
+    docs = [
+        SimpleNamespace(
+            page_content="Elasticity\nObjectives\nDefine price elasticity\nDescribe income elasticity",
+            metadata={"page": 0},
+        )
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Microeconomics",
+        unit="Elasticity",
+        chapter_title="Elasticity",
+        parent_hub_path=parent_hub,
+    )
+    deployed = service.deploy_to_vault(job["job_id"], str(tmp_path))
+
+    note_path = tmp_path / "Notes" / "academic" / "Winter2026" / "Microeconomics" / "Elasticity" / "01_Source_Roadmap" / "Price_Elasticity.md"
+    assert hub_path.exists()
+    assert note_path.exists()
+    assert parent_hub in deployed["written_files"]
+    hub_post = frontmatter.loads(hub_path.read_text(encoding="utf-8"))
+    note_post = frontmatter.loads(note_path.read_text(encoding="utf-8"))
+    assert hub_post.metadata["source_job_id"] == job["job_id"]
+    assert hub_post.metadata["status"] == "In Progress"
+    assert note_post.metadata["hub"] == "[[Elasticity_Hub]]"
+    assert deployed["processed_source_path"] == "Inbox/generated/academic/Elasticity.pdf"
+
+
+def test_source_job_roadmap_title_edits_deploy_updated_note_paths(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    parent_hub = "database/study planner/Winter2026/Microeconomics/Elasticity/Elasticity_Hub.md"
+    hub_path = tmp_path / parent_hub
+    hub_path.parent.mkdir(parents=True)
+    hub_path.write_text("---\ntype: \"Hub\"\n---\n\n# Elasticity\n", encoding="utf-8")
+    pdf_path = tmp_path / "Inbox" / "academic" / "Elasticity.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic chapter")
+
+    docs = [
+        SimpleNamespace(
+            page_content="Elasticity\nObjectives\nDefine price elasticity\nDescribe income elasticity",
+            metadata={"page": 0},
+        )
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Microeconomics",
+        unit="Elasticity",
+        chapter_title="Elasticity",
+        parent_hub_path=parent_hub,
+    )
+    updated = service.update_roadmap_titles(job["job_id"], ["Price Elasticity of Demand", "Income Elasticity"])
+    assert updated["roadmap"][0]["title"] == "Price Elasticity of Demand"
+
+    service.deploy_to_vault(job["job_id"], str(tmp_path))
+    assert (
+        tmp_path
+        / "Notes"
+        / "academic"
+        / "Winter2026"
+        / "Microeconomics"
+        / "Elasticity"
+        / "01_Source_Roadmap"
+        / "Price_Elasticity_Of_Demand.md"
+    ).exists()
+
+
+def test_start_source_learning_restores_existing_session_progress(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import json
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Elasticity.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic chapter")
+    docs = [
+        SimpleNamespace(
+            page_content="Elasticity\nObjectives\nDefine price elasticity\nDescribe income elasticity",
+            metadata={"page": 0},
+        )
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Microeconomics",
+        unit="Elasticity",
+        chapter_title="Elasticity",
+    )
+    service.update_roadmap_titles(job["job_id"], ["Price Elasticity", "Income Elasticity"])
+    first_start = service.start_learning(job["job_id"])
+    session_id = first_start["tutor_session"]["session_id"]
+    second_path = "Notes/academic/Winter2026/Microeconomics/Elasticity/01_Source_Roadmap/Income_Elasticity.md"
+
+    conn = service._connect()
+    try:
+        with conn:
+            second_node_id = conn.execute(
+                "SELECT id FROM concept_graph_nodes WHERE job_id = ? ORDER BY teaching_order LIMIT 1 OFFSET 1",
+                (job["job_id"],),
+            ).fetchone()["id"]
+            conn.execute(
+                "UPDATE tutor_sessions SET current_note_path = ?, current_concept_node_id = ?, active_note_unlocks = ? WHERE session_id = ?",
+                (second_path, second_node_id, json.dumps([second_path]), session_id),
+            )
+    finally:
+        conn.close()
+
+    resumed = service.start_learning(job["job_id"])
+    assert resumed["tutor_session"]["current_note_path"] == second_path
+    assert resumed["tutor_session"]["active_note_unlocks"] == [second_path]
+
+
+def test_source_job_deploys_external_pdf_to_external_database_and_notes(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "external" / "System_Design_Primer.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF external source")
+
+    docs = [
+        SimpleNamespace(
+            page_content=(
+                "System Design\n"
+                "Objectives\n"
+                "Define load balancing\n"
+                "Describe reliability"
+            ),
+            metadata={"page": 0},
+        )
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(str(pdf_path), learning_scope="external", external_domain="Computer_Science")
+    deployed = service.deploy_to_vault(job["job_id"], str(tmp_path))
+
+    hub_path = tmp_path / "database" / "external" / "Computer_Science" / "System_Design" / "System_Design_Hub.md"
+    note_path = tmp_path / "Notes" / "external" / "Computer_Science" / "System_Design" / "01_Source_Roadmap" / "Load_Balancing.md"
+    processed_pdf = tmp_path / "Inbox" / "generated" / "external" / "System_Design_Primer.pdf"
+
+    assert hub_path.exists()
+    assert note_path.exists()
+    assert processed_pdf.exists()
+    assert not pdf_path.exists()
+    assert "SourceJobs" not in "\n".join(deployed["written_files"])
+
+
+def test_learning_object_paths_separate_academic_and_external_vault_roots():
+    from src.domains.ater import learning_object as lo
+
+    assert lo.get_hub_path(
+        "Production And Cost",
+        semester="Winter2026",
+        course="Microeconomics",
+        unit="04_Production_And_Cost",
+    ) == "database/study planner/Winter2026/Microeconomics/04_Production_And_Cost/Production_And_Cost_Hub.md"
+    assert lo.get_note_path(
+        "Production And Cost",
+        "Foundations",
+        1,
+        "Production Function",
+        semester="Winter2026",
+        course="Microeconomics",
+        unit="04_Production_And_Cost",
+    ) == "Notes/academic/Winter2026/Microeconomics/04_Production_And_Cost/01_Foundations/Production_Function.md"
+    assert lo.get_hub_path("System Design") == "database/external/General/System_Design/System_Design_Hub.md"
+    assert lo.get_note_path("System Design", "Foundations", 1, "Load Balancing") == "Notes/external/General/System_Design/01_Foundations/Load_Balancing.md"

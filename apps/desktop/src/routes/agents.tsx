@@ -287,6 +287,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
     hubTitle: string
     results: string[]
   } | null>(null);
+  const handledRouteSourceJobRef = useRef<string | null>(null);
 
   const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
   const [generatingStatus, setGeneratingStatus] = useState<string | null>(null);
@@ -428,7 +429,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       setMessages(currentMsgs)
 
       // 1. Upload/Copy file natively to Inbox
-      const uploadRes = await sidecarApi.aterInboxUpload(selected, fileName)
+      const learningScope = 'external' as const
+      const uploadRes = await sidecarApi.aterInboxUpload(selected, fileName, learningScope)
       const inboxFilePath = uploadRes.path
       await sidecarApi.appendMessage(attachmentConversationId!, userMsg.role, userMsg.content);
 
@@ -452,7 +454,8 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
 
       const sourceJob = await sidecarApi.createSourceLearningJob({
         file_path: inboxFilePath,
-        conversation_id: attachmentConversationId || undefined
+        conversation_id: attachmentConversationId || undefined,
+        learning_scope: learningScope,
       })
 
       const semesterName = 'Source'
@@ -467,7 +470,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
         title: sourceJob.title || 'Source Roadmap',
         atomic_notes: allResults
       }] : []
-      const canonicalHubPath = `SourceJobs/${sourceJob.job_id}/${(hubTitle || 'Source').replace(/[^a-zA-Z0-9]/g, '_')}_Hub.md`
+      const canonicalHubPath = sourceJob.hub_path || sourceJob.roadmap?.[0]?.hub_path || ''
 
       // Compile roadmap markdown exactly matching the from-scratch design:
       const lessonTitle = `${courseName} — ${hubTitle.replace(/[_-]/g, ' ')}`
@@ -1178,6 +1181,77 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
     return true;
   }, [onNoteSelect, setPreview]);
 
+  useEffect(() => {
+    const routeSourceJobId = searchParams.get('sourceJobId');
+    if (!routeSourceJobId || handledRouteSourceJobRef.current === routeSourceJobId) return;
+    handledRouteSourceJobRef.current = routeSourceJobId;
+
+    const loadAcademicSourceJob = async () => {
+      try {
+        setIsLoading(true);
+        setActiveStatus('Loading academic roadmap...');
+        const sourceJob = await sidecarApi.getSourceLearningJob(routeSourceJobId);
+        const placement = sourceJob.placement || {};
+        const semesterName = placement.semester || 'General';
+        const courseName = placement.course || sourceJob.domain || 'Academic';
+        const unitNum = placement.unit || placement.chapter_title || '';
+        const hubTitle = placement.chapter_title || sourceJob.topic || sourceJob.title || 'Academic Chapter';
+        const sessionId = `source:${sourceJob.job_id}`;
+        const allResults: string[] = (sourceJob.roadmap || [])
+          .map((item: any) => item.title)
+          .filter(Boolean);
+        const canonicalHubPath = sourceJob.hub_path || placement.parent_hub_path || '';
+
+        let roadmapMarkdown = `## ${courseName} — ${hubTitle.replace(/[_-]/g, ' ')} — Learning Roadmap\n\n`;
+        roadmapMarkdown += `${sourceJob.audit?.page_count || 0} pages · ${allResults.length} source-grounded concepts planned.\n\n`;
+        if (sourceJob.warnings?.length) {
+          roadmapMarkdown += `Warnings:\n\n${sourceJob.warnings.map((w: any) => `- ${w.severity}: ${w.description}`).join('\n')}\n\n`;
+        }
+        roadmapMarkdown += `---\n\n`;
+        if (allResults.length > 0) {
+          roadmapMarkdown += `**Chapter — ${hubTitle.replace(/[_-]/g, ' ')}**  \n*(${allResults.length} Atomic Notes)*\n\nAtomic Notes:\n\n`;
+          roadmapMarkdown += allResults.map((note: string) => `- [ ] ${note.replace(/[_-]/g, ' ')}`).join('\n');
+        } else {
+          roadmapMarkdown += `No teachable concepts were returned for this source yet.`;
+        }
+        const actionLabel = searchParams.get('fromAcademic') === '1' ? 'Confirm Roadmap' : 'Start Lesson';
+        roadmapMarkdown += `\n\n---\n\nClick **${actionLabel}** to open the source-grounded teacher workspace.`;
+
+        const sourceTeacherAction = {
+          label: searchParams.get('start') === '1' ? 'Continue Lesson' : actionLabel,
+          sourceJobId: sourceJob.job_id,
+          sourceJobState: sourceJob,
+          hubPath: canonicalHubPath,
+          semesterName,
+          courseName,
+          unitNum,
+          hubTitle,
+          sessionId,
+          results: allResults,
+        };
+        const routeMessage: Message = {
+          role: 'assistant',
+          content: roadmapMarkdown,
+          metadata: { sourceTeacherAction },
+          customAction: sourceTeacherAction,
+        };
+        setActiveConversationId(null);
+        setMessages([routeMessage]);
+        setPendingPdfSession(sourceTeacherAction);
+        if (searchParams.get('start') === '1') {
+          await startTeacherJobAction(sourceTeacherAction);
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load academic roadmap.');
+      } finally {
+        setIsLoading(false);
+        setActiveStatus(null);
+      }
+    };
+
+    void loadAcademicSourceJob();
+  }, [searchParams, setMessages, startTeacherJobAction]);
+
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
     if (!text) return;
@@ -1245,9 +1319,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
         let curriculumPaths = deployedNotePaths;
         if (curriculumPaths.length === 0) {
           curriculumPaths = customAction.results.map((note: string) => {
+            const cleanSemester = customAction.semesterName.replace(/[^a-zA-Z0-9]/g, '_');
             const cleanCourseTitle = customAction.courseName.replace(/[^a-zA-Z0-9]/g, '_');
+            const cleanUnit = (customAction.unitNum || customAction.hubTitle || 'General').replace(/[^a-zA-Z0-9]/g, '_');
+            const cleanHub = (customAction.hubTitle || 'Learning_Path').replace(/[^a-zA-Z0-9]/g, '_');
             const noteFilename = `${note}.md`;
-            return `Inbox/Generated/${customAction.semesterName}/${cleanCourseTitle}/${noteFilename}`;
+            return `Notes/academic/${cleanSemester}/${cleanCourseTitle}/${cleanUnit}/01_${cleanHub}/${noteFilename}`;
           });
         }
 
@@ -1478,7 +1555,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
               if (promptJobId && parsed.next_action === 'start_learning') {
                 const roadmap = Array.isArray(parsed.roadmap) ? parsed.roadmap : [];
                 const topic = parsed.topic || roadmap[0]?.title || 'Prompt Teacher';
-                const hubPath = parsed.hub_path || `SourceJobs/${promptJobId}/Prompt_Teacher_Hub.md`;
+              const hubPath = parsed.hub_path || '';
                 setPendingPdfSession({
                   sessionId: `prompt:${promptJobId}`,
                   promptJobId,
@@ -1502,7 +1579,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
               if (sourceJobId && parsed.next_action === 'start_learning') {
                 const roadmap = Array.isArray(parsed.roadmap) ? parsed.roadmap : [];
                 const topic = parsed.topic || roadmap[0]?.title || 'Source Learning';
-                const hubPath = parsed.hub_path || `SourceJobs/${sourceJobId}/Source_Hub.md`;
+                const hubPath = parsed.hub_path || '';
                 setPendingPdfSession({
                   sessionId: `source:${sourceJobId}`,
                   sourceJobId,
@@ -1823,7 +1900,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                             )}
                             {(() => {
                               const isLastMessage = index === activeThread.length - 1;
-                              const hasRoadmap = msg.content.includes('Start Lesson');
+                              const hasRoadmap = msg.content.includes('Start Lesson') || msg.content.includes('Confirm Roadmap') || Boolean(msg.customAction);
                               const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap && !isLoading;
 
                               if (msg.customAction) {
@@ -1849,7 +1926,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                                         className="h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                                       >
                                         <BookOpenCheck size={12} />
-                                        Start Lesson
+                                        {customAction.label || 'Start Lesson'}
                                       </button>
                                     </div>
                                   );
@@ -1863,9 +1940,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                                       type="button"
                                       onClick={() => {
                                         const curriculumPaths = customAction.results.map((note: string) => {
+                                          const cleanSemester = customAction.semesterName.replace(/[^a-zA-Z0-9]/g, '_')
                                           const cleanCourseTitle = customAction.courseName.replace(/[^a-zA-Z0-9]/g, '_')
+                                          const cleanUnit = (customAction.unitNum || customAction.hubTitle || 'General').replace(/[^a-zA-Z0-9]/g, '_')
+                                          const cleanHub = (customAction.hubTitle || 'Learning_Path').replace(/[^a-zA-Z0-9]/g, '_')
                                           const noteFilename = `${note}.md`
-                                          return `Inbox/Generated/${customAction.semesterName}/${cleanCourseTitle}/${noteFilename}`
+                                          return `Notes/academic/${cleanSemester}/${cleanCourseTitle}/${cleanUnit}/01_${cleanHub}/${noteFilename}`
                                         })
                                         const firstLessonPath = curriculumPaths[0] || customAction.hubPath;
                                         localStorage.setItem('ater_original_note_path', firstLessonPath);

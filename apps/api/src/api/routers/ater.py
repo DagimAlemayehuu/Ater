@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.ater.service import AterService
 from src.domains.ater.watcher import AterQueueManager
+from src.domains.ater.learning_object import normalize_title
 import src.api.state as state
 
 logger = logging.getLogger("Ater")
@@ -40,6 +41,12 @@ def _prompt_teacher_service(secrets: AppSecrets):
 
 def _update_rag_status(status_state: Dict[str, Any]):
     state.rag_sync_status.update(status_state)
+
+def _academic_chapter_hub_path(semester: str, course: str, chapter_title: str) -> str:
+    sem = normalize_title(semester or "General")
+    crs = normalize_title(course or "General")
+    chapter = normalize_title(chapter_title or "New_Chapter")
+    return f"database/study planner/{sem}/{crs}/{chapter}/{chapter}_Hub.md"
 
 async def _ensure_watcher_path(vault_path: str):
     """Internal helper to ensure watcher is on the right path."""
@@ -101,11 +108,75 @@ async def create_source_learning_job(
             finally:
                 conn.close()
         service = _source_job_service(secrets)
-        return service.create_or_resume_from_path(str(file_path), conversation_id=conversation_id, attachment_id=attachment_id)
+        return service.create_or_resume_from_path(
+            str(file_path),
+            conversation_id=conversation_id,
+            attachment_id=attachment_id,
+            learning_scope=payload.get("learning_scope"),
+            semester=payload.get("semester"),
+            course=payload.get("course"),
+            unit=payload.get("unit"),
+            external_domain=payload.get("external_domain"),
+            parent_hub_path=payload.get("parent_hub_path"),
+            chapter_title=payload.get("chapter_title"),
+        )
     except HTTPException:
         raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/academic/chapter-hubs")
+async def create_academic_chapter_hub(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+    chapter_title = str(payload.get("chapter_title") or payload.get("title") or "").strip()
+    course = str(payload.get("course") or "").strip()
+    semester = str(payload.get("semester") or "General").strip()
+    if not chapter_title or not course:
+        raise HTTPException(status_code=400, detail="chapter_title and course are required")
+    try:
+        rel_path = _academic_chapter_hub_path(semester, course, chapter_title)
+        path = Path(secrets.vault_path) / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        title = normalize_title(chapter_title)
+        if not path.exists():
+            metadata = {
+                "title": f"{title}_Hub",
+                "type": "Hub",
+                "learning_scope": "academic",
+                "semester": normalize_title(semester),
+                "course": normalize_title(course),
+                "unit": title,
+                "chapter_title": title,
+                "status": "Not Started",
+                "source_job_id": "",
+                "current_lesson_path": "",
+                "chapters": [],
+            }
+            yaml_lines = ["---"] + [f"{key}: {json.dumps(value)}" for key, value in metadata.items()] + ["---", ""]
+            body = [
+                f"# {chapter_title}",
+                "",
+                "## Roadmap",
+                "",
+                "Upload a PDF from Ater to generate the source-grounded roadmap.",
+                "",
+            ]
+            path.write_text("\n".join(yaml_lines + body), encoding="utf-8")
+        return {
+            "status": "created",
+            "path": rel_path,
+            "title": f"{title}_Hub",
+            "semester": normalize_title(semester),
+            "course": normalize_title(course),
+            "unit": title,
+            "chapter_title": title,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -148,6 +219,22 @@ async def deploy_source_learning_job(
         return _source_job_service(secrets).deploy_to_vault(job_id, secrets.vault_path)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/ater/source/jobs/{job_id}/roadmap")
+async def update_source_learning_job_roadmap(
+    job_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    titles = payload.get("titles") or payload.get("roadmap_titles") or []
+    if not isinstance(titles, list):
+        raise HTTPException(status_code=400, detail="titles must be a list")
+    try:
+        return _source_job_service(secrets).update_roadmap_titles(job_id, titles)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

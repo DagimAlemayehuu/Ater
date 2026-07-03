@@ -3027,9 +3027,7 @@ generated: true"""
         """Determines the canonical PDF source link for a note."""
         if session_path:
             clean_filename = Path(session_path).name.replace(" ", "_")
-            _sem = (plan.semester or "General").strip()
-            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            return f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
+            return f"[[Inbox/generated/academic/{clean_filename}]]"
         return f"[[{plan.hub_note.title}]]"
 
     def _compile_pq_note(self, plan: SovereignPlan, note_schema: NoteSchema, note_content: NoteContent, all_note_probes: Dict[str, ProbeEnrichment], session_path: str = "") -> str:
@@ -3040,14 +3038,7 @@ generated: true"""
         # Build Absolute Archive Source Link
         if session_path:
             clean_filename = Path(session_path).name.replace(" ", "_")
-            _sem = (plan.semester or "General").strip()
-            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            
-            try:
-                Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
-                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
-            except Exception:
-                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
+            source_link = f"[[Inbox/generated/academic/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 
@@ -3091,14 +3082,7 @@ generated: true"""
         # Build Absolute Archive Source Link
         if session_path:
             clean_filename = Path(session_path).name.replace(" ", "_")
-            _sem = (plan.semester or "General").strip()
-            _crs = self.vm.get_canonical_title(plan.course or "General_Knowledge")
-            
-            try:
-                Path(self.secrets.inbox_path).relative_to(self.secrets.vault_path).as_posix()
-                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
-            except Exception:
-                source_link = f"[[Inbox/Generated/{_sem}/{_crs}/{clean_filename}]]"
+            source_link = f"[[Inbox/generated/academic/{clean_filename}]]"
         else:
             source_link = f"[[{plan.hub_note.title}]]"
 

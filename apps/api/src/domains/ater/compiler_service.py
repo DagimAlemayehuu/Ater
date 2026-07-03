@@ -260,8 +260,8 @@ class AterLessonCompiler:
 
         # 1. Resolve Hub Path
         if hub_name:
-            # Look in standard directories
-            for search_dir in ["database/learning paths", "database/study planner"]:
+            # Look in current directories first, then legacy learning paths for existing vaults.
+            for search_dir in ["database/study planner", "database/external", "database/learning paths"]:
                 hub_file = self.vault_path / search_dir / f"{hub_name}.md"
                 if hub_file.exists():
                     # Calculate relative path from compiled HTML lesson folder (lessons/) to the hub file

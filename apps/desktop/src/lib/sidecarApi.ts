@@ -1239,9 +1239,9 @@ export const sidecarApi = {
         }
     },
 
-    aterInboxUpload: async (filePath: string, fileName: string) => {
+    aterInboxUpload: async (filePath: string, fileName: string, learningScope: 'academic' | 'external' = 'external') => {
         try {
-            return await invoke<any>('ater_inbox_upload', { filePath, fileName })
+            return await invoke<any>('ater_inbox_upload', { filePath, fileName, learningScope })
         } catch (err) {
             console.error('[Upload] Failed to upload to inbox:', err);
             throw err;
@@ -2413,7 +2413,19 @@ export const sidecarApi = {
             throw err;
         }
     },
-    createSourceLearningJob: async (payload: { file_path?: string; inbox_file?: string; attachment_id?: string; conversation_id?: string }) => {
+    createSourceLearningJob: async (payload: {
+        file_path?: string;
+        inbox_file?: string;
+        attachment_id?: string;
+        conversation_id?: string;
+        learning_scope?: 'academic' | 'external';
+        semester?: string;
+        course?: string;
+        unit?: string;
+        external_domain?: string;
+        parent_hub_path?: string;
+        chapter_title?: string;
+    }) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
@@ -2485,6 +2497,44 @@ export const sidecarApi = {
             return await res.json();
         } catch (err: any) {
             console.error('[Tauri Native RAG] deploySourceLearningJob failed:', err);
+            throw err;
+        }
+    },
+    updateSourceLearningJobRoadmap: async (jobId: string, titles: string[]) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}/roadmap`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ titles })
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to update source roadmap (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] updateSourceLearningJobRoadmap failed:', err);
+            throw err;
+        }
+    },
+    createAcademicChapterHub: async (payload: { chapter_title: string; semester: string; course: string }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/academic/chapter-hubs`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to create academic chapter hub (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] createAcademicChapterHub failed:', err);
             throw err;
         }
     },

@@ -1,0 +1,785 @@
+# Ater Desktop Problems Audit
+
+Audit scope: desktop app only, including `apps/desktop`, `apps/desktop/src-tauri`, and the FastAPI sidecar used by the desktop app in `apps/api`.
+
+Ignored scope: website and admin app.
+
+Status: incomplete but deep audit in progress. This document records confirmed problems found so far and gives a checklist-style path to fix them.
+
+## How To Use This File
+
+- `[ ]` means the issue is not fixed.
+- Each issue includes the observed problem, why it matters, likely files involved, and a concrete fix checklist.
+- Some issues are grouped because they share the same root cause.
+- After fixing an item, run the verification listed for that item and then mark it complete.
+
+## Current Verification State
+
+- [ ] Desktop lint is failing.
+  - Problem: `pnpm --filter @ater/desktop lint` reports hard errors.
+  - Confirmed errors:
+    - `benchmark_config_context.js`: console usage, `setTimeout`, and empty block lint failures.
+    - `HubConnectionsNav.tsx`: unicode regex issue because the regex is missing the `u` flag.
+  - Impact: lint gate cannot pass.
+  - Fix checklist:
+    - [ ] Remove or gate benchmark debug code.
+    - [ ] Replace empty blocks with explicit comments or real handling.
+    - [ ] Add the unicode `u` regex flag in `HubConnectionsNav.tsx`.
+    - [ ] Re-run desktop lint.
+
+- [ ] Desktop unit tests are failing.
+  - Problem: `Obsidian.test.tsx` expects PDF/sidebar behavior that no longer matches the current UI/data.
+  - Impact: test suite is red and may hide real regressions.
+  - Fix checklist:
+    - [ ] Update the mocked vault data or UI expectation around `Algorithms_Syllabus`.
+    - [ ] Verify whether the product should still show that PDF item.
+    - [ ] Re-run `pnpm --filter @ater/desktop test`.
+
+- [ ] Desktop e2e tests are failing.
+  - Problem: `/obsidian` crashes with `TypeError: h.title.toLowerCase()` when mocked hub data uses `name`.
+  - Impact: Obsidian route is not shape-safe and can crash with realistic API drift.
+  - Fix checklist:
+    - [ ] Normalize hub records before filtering/rendering.
+    - [ ] Accept `title`, `name`, or fallback display strings safely.
+    - [ ] Add a regression test using hub records with only `name`.
+    - [ ] Re-run e2e tests.
+
+- [ ] API tests are failing.
+  - Problem: API tests show route contract drift and PDF/topic inference failures.
+  - Impact: backend behavior does not match current tests or desktop expectations.
+  - Fix checklist:
+    - [ ] Review each failed API test.
+    - [ ] Separate stale tests from real route bugs.
+    - [ ] Fix route payload/response contracts.
+    - [ ] Re-run API tests.
+
+- [ ] Tauri Clippy fails with warnings treated as errors.
+  - Problem: `cargo clippy --all-targets -- -D warnings` reports many Rust errors.
+  - Impact: native shell cannot pass strict quality gates.
+  - Fix checklist:
+    - [ ] Clean up unused imports/variables/dead code in `apps/desktop/src-tauri`.
+    - [ ] Resolve private command and handler warnings.
+    - [ ] Re-run Cargo check and Clippy.
+
+## Critical Route And Contract Bugs
+
+- [ ] Desktop calls the wrong lesson preview registration endpoint.
+  - Problem: `sidecarApi.registerAterLessonPreview()` posts to `/api/ater/lesson/preview/register`, but the backend exposes `/api/ater/lesson/register`.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: lesson preview registration fails from the desktop app.
+  - Fix checklist:
+    - [ ] Change the frontend URL to `/api/ater/lesson/register` or add a backend alias.
+    - [ ] Add a frontend/API contract test.
+    - [ ] Verify lesson preview opens end to end.
+
+- [ ] Duplicate `/api/ater/artifact/generate` routes are mounted in the wrong order.
+  - Problem: both `ai.py` and `ater.py` define `/ater/artifact/generate`; `ai_router` is included first, so it wins.
+  - Files:
+    - `apps/api/src/api/main.py`
+    - `apps/api/src/api/routers/ai.py`
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: desktop persisted artifact generation hits the wrong handler and can return 400.
+  - Additional bug: the shadowed `ater.py` handler references `secrets.ai_api_key`, which does not match the current secrets model.
+  - Fix checklist:
+    - [ ] Remove one route or rename one route.
+    - [ ] Ensure desktop calls the intended artifact service.
+    - [ ] Replace `secrets.ai_api_key` with the correct key field.
+    - [ ] Add a route collision test or route inventory check.
+
+- [ ] Desktop/Rust proxies call missing `/api/ater/interactive-quiz`.
+  - Problem: Rust has a proxy for `/api/ater/interactive-quiz`, but the backend route is missing.
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: interactive quiz generation/proxy paths fail at runtime.
+  - Fix checklist:
+    - [ ] Either implement the backend route or remove the proxy and callers.
+    - [ ] Add an integration test around the actual quiz route.
+
+- [ ] Stale IPC test references nonexistent `get_vault_status`.
+  - Problem: `apps/desktop/src/tests/ipc.test.ts` calls `invoke('get_vault_status')`, but no command exists.
+  - Impact: test suite includes a fake command contract.
+  - Fix checklist:
+    - [ ] Delete the stale test or add the real command if product still needs it.
+    - [ ] Re-run desktop tests.
+
+- [ ] Academic route/test naming is stale.
+  - Problem: the actual route is `/academic`; some tests or expectations refer to stale naming/title behavior.
+  - Impact: route coverage is confusing and can hide actual page regressions.
+  - Fix checklist:
+    - [ ] Normalize route naming in tests and navigation.
+    - [ ] Verify `/academic` loads under real and simulation modes.
+
+## Security And Path Traversal Bugs
+
+- [ ] New vault file/folder/item APIs allow path traversal.
+  - Problem: routes such as `/api/vault/files`, `/api/vault/folders`, and `/api/vault/items` build paths with `Path(secrets.vault_path) / req.path` without containment checks.
+  - Files:
+    - `apps/api/src/domains/obsidian/router.py`
+  - Impact: a caller can write, move, or delete files outside the configured vault using `../`.
+  - Fix checklist:
+    - [ ] Add a shared `resolve_vault_relative_path()` helper.
+    - [ ] Reject absolute paths.
+    - [ ] Resolve and verify every target is inside the vault root.
+    - [ ] Add tests for `../escaped.md`, encoded traversal, and absolute paths.
+
+- [ ] Legacy Obsidian file/item APIs also allow path traversal.
+  - Problem: `/api/obsidian/file` and `/api/obsidian/item` accept paths that can escape the vault.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: legacy desktop/API paths can still read/write/delete outside the vault.
+  - Fix checklist:
+    - [ ] Use the same containment helper as the new vault APIs.
+    - [ ] Add regression tests for legacy endpoints.
+
+- [ ] PDF helper accepts absolute paths and paths outside the vault.
+  - Problem: PDF resolution accepts absolute/local paths outside the vault.
+  - Files:
+    - `apps/api/src/domains/obsidian/router.py`
+  - Impact: PDF metadata/view/serve can expose arbitrary local PDFs if reachable.
+  - Fix checklist:
+    - [ ] Reject absolute paths unless explicitly whitelisted and inside vault.
+    - [ ] Resolve all PDF paths relative to the vault.
+    - [ ] Add tests for outside-vault PDF attempts.
+
+- [ ] Practice get/score endpoints can read or mutate outside the vault.
+  - Problem: `/api/practice/get` and `/api/practice/score` accept absolute paths and traversal. `/practice/delete` has a containment check, so behavior is inconsistent.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: practice APIs can access or modify files outside the vault.
+  - Fix checklist:
+    - [ ] Apply the same containment logic to get, score, and delete.
+    - [ ] Add tests for outside paths.
+
+- [ ] Vault option APIs can operate outside the vault.
+  - Problem: `/api/vault/options` create/rename/delete accepts `source="../..."`.
+  - Files:
+    - `apps/api/src/domains/obsidian/router.py`
+  - Impact: property option management can create/delete files outside the intended option folder.
+  - Fix checklist:
+    - [ ] Validate `source` against known option directories or vault-contained paths.
+    - [ ] Reject traversal and absolute paths.
+    - [ ] Add tests for `../option_escape`.
+
+- [ ] Rust vault path resolver allows absolute and existing outside-vault paths.
+  - Problem: `resolve_path_robust` returns an absolute or existing path directly without vault containment.
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Affected commands:
+    - `read_obsidian_note`
+    - `update_obsidian_note`
+    - `delete_obsidian_item`
+    - `create_obsidian_file`
+    - `create_obsidian_folder`
+    - `move_obsidian_item`
+  - Impact: native command surface can access files outside the vault.
+  - Fix checklist:
+    - [ ] Replace `resolve_path_robust` with a strict vault resolver.
+    - [ ] Reject absolute paths outside configured vault.
+    - [ ] Add Rust tests for traversal and absolute outside paths.
+
+- [ ] Rust database fallback commands join user-controlled path segments.
+  - Problem: Rust fallback logic joins `db_name`, `id`, `old_id`, `new_id`, `source`, and `name` directly into paths.
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: database row/option commands can escape expected folders.
+  - Fix checklist:
+    - [ ] Sanitize path components.
+    - [ ] Use allowlisted database roots.
+    - [ ] Verify resolved paths remain inside vault/database.
+
+- [ ] NotebookLM file upload has filename traversal.
+  - Problem: uploaded `file.filename` is joined directly into a temp path.
+  - Files:
+    - `apps/api/src/api/routers/notebooklm.py`
+  - Confirmed behavior: filename `../escaped_upload.txt` can overwrite/delete a sibling file outside the temp dir.
+  - Impact: upload can write or delete unintended local files.
+  - Fix checklist:
+    - [ ] Use `Path(file.filename).name`.
+    - [ ] Generate a server-side unique filename.
+    - [ ] Verify temp path remains inside temp dir.
+    - [ ] Add regression tests.
+
+- [ ] Ater inbox upload has filename traversal.
+  - Problem: `/api/ater/inbox/upload` uses `inbox_dir / file.filename`.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: upload can write outside the inbox, including vault root.
+  - Fix checklist:
+    - [ ] Strip directory components from upload names.
+    - [ ] Generate collision-safe names.
+    - [ ] Add traversal tests.
+
+- [ ] Native `ater_inbox_upload` trusts caller-provided `file_name`.
+  - Problem: normal UI sends a basename, but the command surface directly joins the supplied name.
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: direct native invocation can write outside inbox.
+  - Fix checklist:
+    - [ ] Sanitize `file_name` in Rust.
+    - [ ] Reject slashes and traversal components.
+
+- [ ] `/api/ai/upload` leaks local files for non-Google providers.
+  - Problem: upload leaves files in the working directory and returns absolute local paths for providers such as OpenAI.
+  - Files:
+    - `apps/api/src/api/routers/ai.py`
+  - Confirmed behavior: `temp_sample.txt` remained after upload.
+  - Impact: local temp leakage and path disclosure.
+  - Fix checklist:
+    - [ ] Store uploads in a controlled temp dir.
+    - [ ] Clean up after provider upload or request completion.
+    - [ ] Do not return absolute local paths to the client.
+
+- [ ] Chat attachment promotion can read arbitrary outside files.
+  - Problem: `AttachmentManager.attach_file` skips path validation when `content` is provided, but stores arbitrary `file_path`; promotion later reopens that path.
+  - Files:
+    - `apps/api/src/domains/ater/chat_runtime/*`
+    - `apps/api/src/api/routers/ai.py`
+  - Impact: a crafted attachment can promote/read a local file outside the vault.
+  - Fix checklist:
+    - [ ] Validate stored file paths even when content is provided.
+    - [ ] Avoid reopening arbitrary stored paths during promotion.
+    - [ ] Store copied attachment content under a controlled attachment directory.
+    - [ ] Add promotion regression tests.
+
+- [ ] Note version restore accepts encoded traversal.
+  - Problem: `/api/ater/notes/{note_path:path}/restore` writes version content to `Path(vault) / note_path`; encoded `..` can escape.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: restore can overwrite files outside the vault.
+  - Fix checklist:
+    - [ ] Decode and normalize route path.
+    - [ ] Enforce vault containment.
+    - [ ] Add encoded traversal tests.
+
+- [ ] Oracle tutor route can read outside-vault notes.
+  - Problem: `/api/oracle/tutor/{note_path:path}` reads `vault_path / note_path` without strict containment.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: tutor prompt can include outside local file content.
+  - Fix checklist:
+    - [ ] Enforce vault-contained note paths.
+    - [ ] Reject encoded traversal.
+    - [ ] Add tests with `%2E%2E%2F`.
+
+- [ ] Reference vault practice APIs can read arbitrary local files.
+  - Problem: `/practice/vault/questions` accepts `vault_path`; `/practice/vault/generate` accepts `vault_paths[]`; `VaultWriter.load_questions()` reads the given path directly.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+    - `apps/api/src/domains/ater/reference_vault.py`
+  - Impact: practice generation can ingest outside local files.
+  - Fix checklist:
+    - [ ] Store reference vault IDs instead of arbitrary paths.
+    - [ ] Resolve all selected files through a vault-contained index.
+    - [ ] Add outside-path tests.
+
+- [ ] Artifact pack path can escape the vault.
+  - Problem: `get_artifact_pack_path(note_path)` preserves `../` through `Path(note_path).parent / "artifacts"`.
+  - Files:
+    - `apps/api/src/domains/ater/artifact_service.py`
+    - `apps/api/src/domains/ater/learning_object.py`
+  - Affected routes:
+    - `/ater/artifact/generate`
+    - `/ater/artifact/rollback`
+    - `/ater/artifact/pin`
+  - Impact: artifact pack JSON can be read/written outside the vault.
+  - Fix checklist:
+    - [ ] Resolve note paths through the strict vault resolver.
+    - [ ] Build artifact paths from the resolved vault-relative path only.
+    - [ ] Add traversal tests.
+
+- [ ] Lesson compile can write outside the vault.
+  - Problem: `/ater/lesson/compile` accepts `note_path`; compiler writes to `note_path.parent / "lessons"` and rewrites frontmatter without containment.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+    - `apps/api/src/domains/ater/compiler_service.py`
+  - Impact: lesson compilation can write HTML and modify files outside the vault.
+  - Fix checklist:
+    - [ ] Reject absolute/outside paths.
+    - [ ] Use vault-relative note IDs.
+    - [ ] Add tests for outside note compile attempts.
+
+- [ ] Tutor service accepts outside absolute paths.
+  - Problem: `_resolve_vault_path()` returns existing absolute paths directly.
+  - Files:
+    - `apps/api/src/domains/ater/tutor_service.py`
+  - Affected routes:
+    - `/ater/tutor/start`
+    - `/ater/practice/remediate`
+    - `/ater/tutor/adaptive_question`
+    - `/ater/tutor/adaptive_check`
+    - `/ater/tutor/transfer/submit`
+  - Impact: tutor flows can read or modify outside files.
+  - Fix checklist:
+    - [ ] Remove absolute-path acceptance.
+    - [ ] Resolve note IDs relative to vault root.
+    - [ ] Add containment tests for every tutor endpoint that accepts `note_path`.
+
+- [ ] Source learning jobs can ingest arbitrary local files.
+  - Problem: `/ater/source/jobs` accepts `file_path` or attachment file path; service only checks that the path exists.
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+    - `apps/api/src/domains/ater/source_service.py`
+  - Impact: source learning can ingest arbitrary local files, especially combined with the chat attachment path bug.
+  - Fix checklist:
+    - [ ] Only accept files from controlled upload/inbox/attachment stores.
+    - [ ] Convert file paths to server-issued IDs.
+    - [ ] Add tests for arbitrary outside paths.
+
+## Auth, Feature Locking, And Destructive Action Bugs
+
+- [ ] NotebookLM routes mostly ignore the sidecar token.
+  - Problem: the NotebookLM router is mounted without router-level auth, and many endpoints do not depend on `get_app_secrets`.
+  - Files:
+    - `apps/api/src/api/routers/notebooklm.py`
+    - `apps/api/src/api/main.py`
+  - Affected endpoints include:
+    - auth status/login
+    - notebook CRUD/list
+    - source list/add/delete/file
+    - studio status/download
+    - query
+  - Impact: when `ATER_SIDECAR_TOKEN` is set, these routes still accept unauthenticated local requests.
+  - Fix checklist:
+    - [ ] Add router-level dependency or per-route dependency.
+    - [ ] Decide whether login/status should be public locally.
+    - [ ] Add auth tests with and without `X-Ater-Token`.
+
+- [ ] PDF iframe cannot authenticate to protected backend routes.
+  - Problem: Obsidian router is protected by `validate_vault_path`, which requires `X-Ater-Token` when token auth is enabled. Browser iframe navigation and PDF.js fetches cannot attach that header.
+  - Files:
+    - `apps/desktop/src/components/obsidian/PdfViewer.tsx`
+    - `apps/api/src/domains/obsidian/router.py`
+    - `apps/api/src/api/main.py`
+  - Impact: PDF viewer/serve routes can 401 inside the desktop UI.
+  - Fix checklist:
+    - [ ] Serve PDFs through an authenticated fetch/blob flow, not raw iframe navigation.
+    - [ ] Or issue short-lived signed viewer URLs.
+    - [ ] Verify viewer, metadata, and PDF.js worker fetches under token auth.
+
+- [ ] Academic write protection is incomplete.
+  - Problem: some academic UI guards are CSS/UI-only and sidecar/Rust mutation paths are not consistently feature-locked.
+  - Files:
+    - `apps/desktop/src/routes/academic.tsx`
+    - `apps/desktop/src/lib/sidecarApi.ts`
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: locked users can still reach write paths through lower-level APIs.
+  - Fix checklist:
+    - [ ] Enforce feature locks in every sidecar API mutation.
+    - [ ] Enforce lock-sensitive commands in Rust where applicable.
+    - [ ] Add tests that call the lower-level API directly while locked.
+
+- [ ] Source learning job frontend calls miss feature-lock checks.
+  - Problem: source job creation/start/deploy paths are not consistently protected by frontend feature locks.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+    - Source learning route/components
+  - Impact: locked users may trigger source learning workflows.
+  - Fix checklist:
+    - [ ] Add `enforceFeatureLock()` checks to source learning actions.
+    - [ ] Add tests for locked and unlocked states.
+
+- [ ] `generatePractice` deducts credits but skips the practice feature lock.
+  - Problem: `generatePractice` calls `deductCredits('generate-practice')` but does not call `enforceFeatureLock('practice-recall')`.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+  - Impact: billing and lock semantics are inconsistent.
+  - Fix checklist:
+    - [ ] Add the expected feature lock before credit deduction.
+    - [ ] Add a test that locked practice generation is blocked.
+
+- [ ] Assistant action handler can trigger destructive actions without Settings confirmation.
+  - Problem: assistant actions can call `factory_reset` and `clear_study_history` outside the Settings confirmation flow.
+  - Files:
+    - `apps/desktop/src/routes/agents.tsx`
+    - `apps/desktop/src/lib/sidecarApi.ts`
+  - Impact: high-risk data deletion can be triggered from chat/action flow.
+  - Fix checklist:
+    - [ ] Remove destructive tools from assistant action surface or require a dedicated confirmation modal.
+    - [ ] Require explicit typed confirmation for factory reset.
+    - [ ] Add tests ensuring assistant cannot execute destructive actions silently.
+
+- [ ] Auth provider and security store use different Supabase clients.
+  - Problem: `AuthProvider` uses `realSupabase`; `securityStore` uses hybrid `supabase`.
+  - Files:
+    - `apps/desktop/src/context/auth-context.tsx`
+    - `apps/desktop/src/context/securityStore.ts`
+    - `apps/desktop/src/lib/supabase.ts`
+  - Impact: online/offline auth, entitlement, and lease behavior can diverge.
+  - Fix checklist:
+    - [ ] Decide one source of truth for authenticated cloud calls.
+    - [ ] Make auth and security store use the same client policy.
+    - [ ] Add tests for offline fallback and online Supabase behavior.
+
+- [ ] `securityStore.initializeSecurity` registers duplicate online listeners.
+  - Problem: each call adds a browser online listener without cleanup/de-dupe.
+  - Files:
+    - `apps/desktop/src/context/securityStore.ts`
+  - Impact: repeated initialization can cause duplicate lease refresh attempts and memory leaks.
+  - Fix checklist:
+    - [ ] Track whether listeners are already installed.
+    - [ ] Provide cleanup when the store is reset.
+    - [ ] Add a test around repeated initialization.
+
+## Frontend Runtime Bugs
+
+- [ ] `/obsidian` dashboard has unsafe data-shape assumptions.
+  - Problem: code assumes fields such as `h.title`, `file.name`, and `f.name` always exist.
+  - Files:
+    - `apps/desktop/src/routes/obsidian.tsx`
+    - Related Obsidian components
+  - Impact: route crashes when backend or simulation data uses slightly different shapes.
+  - Fix checklist:
+    - [ ] Normalize API data at the boundary.
+    - [ ] Use safe fallback display fields.
+    - [ ] Add tests with missing `title` and `name`.
+
+- [ ] Agent deployment result handling assumes `title` exists.
+  - Problem: code checks only `r.path` but later calls `r.title.toLowerCase()`.
+  - Files:
+    - `apps/desktop/src/routes/agents.tsx`
+  - Impact: deployment result rendering can crash.
+  - Fix checklist:
+    - [ ] Normalize deployment results.
+    - [ ] Use optional chaining/fallbacks for `title`.
+    - [ ] Add a test with path-only results.
+
+- [ ] Chat runtime direct fetches do not consistently check `res.ok`.
+  - Problem: most create/list/get/update/delete/archive/restore/message/memory/attachment/promote/tool calls return `res.json()` blindly.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+  - Impact: HTTP errors can be treated as valid JSON, causing confusing UI state and swallowed backend failures.
+  - Fix checklist:
+    - [ ] Route all non-stream fetches through a shared checked JSON helper.
+    - [ ] Include backend error text in thrown errors.
+    - [ ] Add tests for 400/401/500 responses.
+
+- [ ] Chat runtime URL path params are not encoded.
+  - Problem: IDs such as `convId`, `memoryId`, `attachmentId`, and `messageId` are interpolated directly into URLs.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+  - Impact: special characters in IDs can break routes or alter paths.
+  - Fix checklist:
+    - [ ] Use `encodeURIComponent()` for all URL path params.
+    - [ ] Add tests with IDs containing `/`, `?`, and spaces.
+
+- [ ] Sandbox iframe message handlers do not verify `event.source`.
+  - Problem: `UnifiedSandboxViewer` and `PdfViewer` handle `postMessage` events without checking the source frame.
+  - Files:
+    - `apps/desktop/src/components/obsidian/UnifiedSandboxViewer.tsx`
+    - `apps/desktop/src/components/obsidian/PdfViewer.tsx`
+  - Impact: unrelated frames/windows can send messages that affect UI state.
+  - Fix checklist:
+    - [ ] Store iframe refs and verify `event.source === iframe.contentWindow`.
+    - [ ] Keep strict origin/data validation.
+    - [ ] Add message-handler tests.
+
+- [ ] Sandbox generated HTML CSP conflicts with Tauri CSP.
+  - Problem: generated sandbox content expects `cdn.tailwindcss.com`, but Tauri CSP allows only `script-src 'self'`.
+  - Files:
+    - `apps/desktop/src-tauri/tauri.conf.json`
+    - Sandbox generation/rendering code
+  - Impact: generated artifacts may render blank or without expected styling/scripts.
+  - Fix checklist:
+    - [ ] Remove CDN runtime dependency from sandbox HTML.
+    - [ ] Bundle required CSS locally or inline a safe subset.
+    - [ ] Add a rendering test for generated sandbox artifacts.
+
+- [ ] Tauri CSP allows only fixed sidecar ports.
+  - Problem: CSP allows `127.0.0.1:8765` and `8766`, but the launcher may choose `8767+`.
+  - Files:
+    - `apps/desktop/src-tauri/tauri.conf.json`
+    - Sidecar launcher code
+  - Impact: desktop fetches can fail when the sidecar falls back to a higher port.
+  - Fix checklist:
+    - [ ] Align launcher port range with CSP.
+    - [ ] Prefer one reserved port or generate CSP for the range.
+    - [ ] Add a fallback-port smoke test.
+
+- [ ] Stale chat sidebar localStorage state remains.
+  - Problem: sidebar polls legacy `ater_oracle_conversations`.
+  - Files:
+    - `apps/desktop/src/components/layout/app-sidebar.tsx`
+    - `apps/desktop/src/routes/agents.tsx`
+  - Impact: legacy localStorage can diverge from backend chat state.
+  - Fix checklist:
+    - [ ] Remove polling of legacy state after migration.
+    - [ ] Read current conversations from the chat API/store.
+    - [ ] Add migration cleanup behavior.
+
+- [ ] Settings vault-change flow saves stale inbox path.
+  - Problem: changing vault path updates `vaultEdit.vaultPath`, calls `updateVaultPath`, then saves `vaultEdit.inboxPath`, which may still point to the old vault.
+  - Files:
+    - `apps/desktop/src/routes/settings.tsx`
+    - `apps/desktop/src/routes/onboarding.tsx`
+  - Impact: after changing vaults, inbox can remain configured to the previous vault.
+  - Fix checklist:
+    - [ ] When vault path changes, recompute default inbox path unless user explicitly selected one.
+    - [ ] Add a test for vault path change in Settings.
+
+## Backend Runtime Bugs And Inconsistencies
+
+- [ ] Obsidian database routes crash because `ruamel` is not imported.
+  - Problem: `router.py` calls `ruamel.yaml.YAML(...)` but imports only `yaml`.
+  - Files:
+    - `apps/api/src/domains/obsidian/router.py`
+  - Affected endpoints:
+    - `/api/vault/databases`
+    - `/api/vault/databases/{db_name}`
+    - `/api/vault/databases/{db_name}/schema`
+  - Impact: direct API/proxy database calls raise `NameError`.
+  - Fix checklist:
+    - [ ] Import `ruamel.yaml` correctly or use the imported `yaml` API consistently.
+    - [ ] Add route tests for list/query/schema.
+
+- [ ] Obsidian option sanitization computes `safe_name` but does not use it.
+  - Problem: create option computes a sanitized name, then writes `f"{req.name}.md"` anyway.
+  - Files:
+    - `apps/api/src/domains/obsidian/router.py`
+  - Impact: unsafe option names with slashes/traversal are still used.
+  - Fix checklist:
+    - [ ] Use `safe_name` for filenames.
+    - [ ] Store original display title separately if needed.
+    - [ ] Add tests for slash-containing option names.
+
+- [ ] Database delete archives to `Database` instead of `database`.
+  - Problem: deleted database archive path uses uppercase `Database/12 - Archive`, while the rest of the app uses lowercase `database`.
+  - Files:
+    - `apps/api/src/domains/obsidian/router.py`
+  - Impact: creates parallel roots and inconsistent vault layout.
+  - Fix checklist:
+    - [ ] Change archive path to lowercase `database`.
+    - [ ] Add migration/cleanup guidance for existing uppercase archive folders.
+
+- [ ] Chat soft-delete does not hide conversation messages.
+  - Problem: soft-delete makes `GET /chat/conversations/{id}` return 404, but `GET /chat/conversations/{id}/messages` still returns messages.
+  - Files:
+    - `apps/api/src/api/routers/ai.py`
+    - Chat runtime persistence files
+  - Impact: deleted conversations can still expose their messages.
+  - Fix checklist:
+    - [ ] Make message listing respect conversation deleted state.
+    - [ ] Add tests for soft-deleted conversation messages.
+
+- [ ] Chat branch endpoint allows cross-conversation parent links.
+  - Problem: `/chat/conversations/{convB}/branch` accepts `message_id` from `convA`.
+  - Files:
+    - `apps/api/src/api/routers/ai.py`
+    - Chat runtime context/branching code
+  - Impact: creates invalid message trees across conversations.
+  - Fix checklist:
+    - [ ] Verify the message belongs to the target conversation before branching.
+    - [ ] Add cross-conversation branch rejection tests.
+
+- [ ] NotebookLM saved practice JSON is not normalized before storage.
+  - Problem: backend stores raw NotebookLM artifact JSON; frontend expects exact quiz/flashcard shapes.
+  - Files:
+    - `apps/api/src/api/routers/notebooklm.py`
+    - `apps/desktop/src/routes/notebooks.tsx`
+  - Impact: saved quizzes can render with zero cards/questions or missing answer options.
+  - Fix checklist:
+    - [ ] Define canonical saved quiz and flashcard schemas.
+    - [ ] Normalize CLI output before SQLite insert.
+    - [ ] Validate and reject unsupported artifact shapes.
+    - [ ] Add fixture tests with realistic NotebookLM outputs.
+
+- [ ] NotebookLM artifact downloads leak files under `~/.ater/notebooklm-artifacts`.
+  - Problem: studio downloads are saved to a persistent local artifact directory and never cleaned up.
+  - Files:
+    - `apps/api/src/api/routers/notebooklm.py`
+    - `apps/api/src/domains/notebooklm/runner.py`
+    - `apps/desktop/src/lib/notebooklmArtifacts.ts`
+  - Impact: disk usage grows and sensitive generated files can remain after preview/download.
+  - Fix checklist:
+    - [ ] Add retention cleanup.
+    - [ ] Delete temp artifacts after response where safe.
+    - [ ] Add user-visible cleanup or cache management.
+
+## Tauri And Native Shell Bugs
+
+- [ ] Native database commands are stubs that return success without doing work.
+  - Problem: these Rust commands do not create/delete/update actual vault database state:
+    - `create_vault_database`
+    - `delete_vault_database`
+    - `update_vault_database_schema`
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+    - `apps/desktop/src/lib/sidecarApi.ts`
+  - Impact: UI can report success while vault files remain unchanged.
+  - Fix checklist:
+    - [ ] Implement real native behavior or route to backend APIs.
+    - [ ] Return errors for unsupported commands instead of fake success.
+    - [ ] Add end-to-end database mutation tests.
+
+- [ ] `get_vault_backlinks` command/API is stale.
+  - Problem: frontend calls `invoke('get_vault_backlinks', { pageName })`, but Rust command takes no `pageName` and returns `backlinks: []`.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: backlinks feature is dead or misleading.
+  - Fix checklist:
+    - [ ] Implement real backlinks lookup with page parameter, or remove the frontend API.
+    - [ ] Add tests for a note with known backlinks.
+
+- [ ] Sidecar launcher can kill an arbitrary process on port 8765.
+  - Problem: launcher kills whatever is listening on the default sidecar port without verifying it is Ater.
+  - Files:
+    - Sidecar launcher code under `apps/desktop/src-tauri`
+  - Impact: app startup can terminate an unrelated local process.
+  - Fix checklist:
+    - [ ] Probe process identity before killing.
+    - [ ] Prefer another free port when occupied by a non-Ater process.
+    - [ ] Add startup tests/mocks for occupied port behavior.
+
+- [ ] Sidecar binary packaging and verification are misaligned.
+  - Problem: bundle config targets all external binary variants, but verifier checks only the current target; only the darwin-arm64 binary appears present.
+  - Files:
+    - `apps/desktop/src-tauri/tauri.conf.json`
+    - `apps/desktop/scripts/verify-sidecar-binaries.mjs`
+  - Impact: release builds for other targets can miss required sidecar binaries.
+  - Fix checklist:
+    - [ ] Align bundle targets with shipped binaries.
+    - [ ] Make verifier check all release targets in CI.
+    - [ ] Document supported desktop platforms.
+
+- [ ] `walk_for_graph` has a stale Tauri command annotation.
+  - Problem: private helper still carries `#[tauri::command]`.
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: dead/stale command metadata and Clippy noise.
+  - Fix checklist:
+    - [ ] Remove command annotation from private helper.
+    - [ ] Re-run Clippy.
+
+## Stale Paths, Legacy Flows, And Product Misalignments
+
+- [ ] Remediation flow uses hardcoded legacy path.
+  - Problem: multiple UI flows use `database/learning paths/remediation_temp.md`.
+  - Files:
+    - `apps/desktop/src/components/MiniPracticeUI.tsx`
+    - `apps/desktop/src/components/intelligence/LearningWorkspace.tsx`
+    - `apps/desktop/src/routes/obsidian.tsx`
+    - `apps/desktop/src/hooks/usePracticeSession.ts`
+    - `apps/desktop/src/components/obsidian/MarkdownViewer.tsx`
+  - Impact: current jobs emit content under newer paths such as `Notes/external`, `Notes/academic`, and `database/study planner`; remediation cleanup and note detection are stale.
+  - Fix checklist:
+    - [ ] Replace hardcoded path with a generated temp note service.
+    - [ ] Store remediation temp note path in session state.
+    - [ ] Clean up by stored path, not by global legacy filename.
+
+- [ ] Academic fallback writes swallow errors.
+  - Problem: Rust academic fallback paths can silently ignore write failures.
+  - Files:
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: UI may report success while academic files were not written.
+  - Fix checklist:
+    - [ ] Return write errors to the frontend.
+    - [ ] Show actionable UI errors.
+    - [ ] Add tests for unwritable vault/database paths.
+
+- [ ] `validate_vault_path` verifies vault existence but not child route paths.
+  - Problem: backend dependency validates the configured vault but does not constrain route-specific paths.
+  - Files:
+    - `apps/api/src/api/deps.py`
+  - Impact: gives a false sense of safety while child endpoints still accept traversal.
+  - Fix checklist:
+    - [ ] Keep vault validation separate from path containment.
+    - [ ] Add a required containment helper for every path-taking endpoint.
+
+## Dead Code And Unused Dependencies
+
+- [ ] Remove unused dependency group: `@dnd-kit/*`.
+  - Problem: `@dnd-kit/core`, `@dnd-kit/sortable`, and `@dnd-kit/utilities` are in `apps/desktop/package.json` but have no source imports.
+  - Fix checklist:
+    - [ ] Confirm no planned drag/drop feature depends on them.
+    - [ ] Remove from `package.json`.
+    - [ ] Run install/build.
+
+- [ ] Remove unused dependency: `@monaco-editor/react`.
+  - Problem: package is installed but no source imports it.
+  - Fix checklist:
+    - [ ] Confirm CodeMirror is the chosen editor.
+    - [ ] Remove dependency.
+
+- [ ] Remove unused dependency: `@tanstack/react-table`.
+  - Problem: package is installed but no source imports it.
+  - Fix checklist:
+    - [ ] Remove dependency or migrate actual tables to it intentionally.
+
+- [ ] Remove unused dependency: `react-hook-form`.
+  - Problem: package is installed but no source imports it.
+  - Fix checklist:
+    - [ ] Remove dependency unless upcoming forms will use it.
+
+- [ ] Remove unused UI wrappers.
+  - Confirmed unused files:
+    - `apps/desktop/src/components/ui/alert-dialog.tsx`
+    - `apps/desktop/src/components/ui/scroll-area.tsx`
+    - `apps/desktop/src/components/ui/skeleton.tsx`
+    - `apps/desktop/src/components/ui/calendar.tsx`
+  - Impact: extra code and dependencies remain without product use.
+  - Fix checklist:
+    - [ ] Delete unused wrappers.
+    - [ ] Remove corresponding Radix/date dependencies if no longer used.
+    - [ ] Re-run build/typecheck.
+
+- [ ] Remove old duplicate theme context.
+  - Problem: `apps/desktop/src/lib/ThemeContext.tsx` is unused; app uses `apps/desktop/src/context/theme-provider.tsx`.
+  - Impact: duplicate theme implementations can confuse future changes.
+  - Fix checklist:
+    - [ ] Delete old file.
+    - [ ] Verify all imports use `@/context/theme-provider`.
+
+- [ ] Remove unused layout header.
+  - Problem: `apps/desktop/src/components/layout/app-header.tsx` exports `AppHeader` but no app code imports it.
+  - Fix checklist:
+    - [ ] Delete the file or wire it intentionally.
+
+- [ ] Remove unused sandbox iframe component.
+  - Problem: `apps/desktop/src/components/obsidian/SandboxIFrame.tsx` is orphaned; current viewer uses `UnifiedSandboxViewer`.
+  - Fix checklist:
+    - [ ] Delete old component or document why both viewers exist.
+
+- [ ] Decide whether `NoteCanvas` is dead product code or test-only code.
+  - Problem: `NoteCanvas` is only imported by tests.
+  - Fix checklist:
+    - [ ] If obsolete, delete component and tests.
+    - [ ] If intended, wire it into the app.
+
+## Not Yet Completed In This Audit
+
+The audit is not finished. These are the remaining areas that should be continued:
+
+- [ ] Finish full backend route-by-route review for every `apps/api` endpoint used by desktop.
+- [ ] Finish dead-code scan across all desktop routes, hooks, stores, and backend services.
+- [ ] Finish dependency cleanup verification after removing confirmed unused packages.
+- [ ] Run a fresh complete check matrix after fixes:
+  - [ ] `pnpm --filter @ater/desktop lint`
+  - [ ] `pnpm --filter @ater/desktop typecheck`
+  - [ ] `pnpm --filter @ater/desktop test`
+  - [ ] `pnpm --filter @ater/desktop build`
+  - [ ] `pnpm --filter @ater/desktop test:e2e`
+  - [ ] API pytest suite
+  - [ ] Cargo check
+  - [ ] Cargo Clippy with warnings denied
+- [ ] Manually smoke test desktop flows:
+  - [ ] onboarding
+  - [ ] vault selection/change
+  - [ ] Obsidian note browsing/editing
+  - [ ] PDF viewing
+  - [ ] academic dashboard
+  - [ ] agents/chat
+  - [ ] source learning jobs
+  - [ ] practice generation/session/scoring
+  - [ ] NotebookLM notebook/source/studio/practice flows
+  - [ ] artifact generation and rollback
+  - [ ] lesson preview/compile
+  - [ ] tutor/remediation/adaptive flows
+- [ ] Add a central vault path containment library for Python and Rust before fixing individual traversal bugs.
+- [ ] Add a sidecar API contract test suite so frontend paths cannot drift from backend routes again.
+- [ ] Add an endpoint collision check to prevent duplicate FastAPI routes like `/api/ater/artifact/generate`.
+- [ ] Review whether simulation/demo mode should be isolated from real file mutations more strictly.
+- [ ] Review current release packaging for every supported OS/architecture.
+

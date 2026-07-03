@@ -183,16 +183,14 @@ class StreamingManager:
                     f"Roadmap:\n\n{roadmap_lines}\n\n"
                     "Click **Start Lesson** to open the source-grounded teacher workspace."
                 )
+                from src.domains.ater.source_service import _source_hub_rel_path
                 source_event = {
                     "type": "source_learning_job",
                     "job_id": job["job_id"],
                     "source_job_id": job["job_id"],
                     "status": job.get("status"),
                     "topic": job.get("topic") or job.get("title"),
-                    "hub_path": (
-                        f"SourceJobs/{job['job_id']}/"
-                        f"{lo.normalize_title(job.get('topic') or job.get('title') or 'Source')}_Hub.md"
-                    ),
+                    "hub_path": _source_hub_rel_path(job),
                     "roadmap": roadmap,
                     "coverage": job.get("coverage"),
                     "warnings": warnings,

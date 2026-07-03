@@ -198,12 +198,12 @@ class TutorSessionManager:
         if source_job_id:
             try:
                 from src.domains.ater.source_service import SourceLearningJobService
-                from src.domains.ater import learning_object as lo
+                from src.domains.ater.source_service import _source_note_rel_path
                 source_job_state = SourceLearningJobService(self.db_path).get_job(source_job_id)
                 source_nodes = (source_job_state.get("concept_graph") or {}).get("nodes") or []
                 if source_nodes:
                     curriculum = [
-                        f"SourceJobs/{source_job_id}/{lo.normalize_title(node['title'])}.md"
+                        _source_note_rel_path(source_job_state, node["title"])
                         for node in source_nodes
                     ]
                 elif row["current_note_path"]:
@@ -219,9 +219,9 @@ class TutorSessionManager:
         source_nodes_by_path = {}
         if source_job_state:
             try:
-                from src.domains.ater import learning_object as lo
+                from src.domains.ater.source_service import _source_note_rel_path
                 source_nodes_by_path = {
-                    f"SourceJobs/{source_job_id}/{lo.normalize_title(node['title'])}.md": node
+                    _source_note_rel_path(source_job_state, node["title"]): node
                     for node in ((source_job_state.get("concept_graph") or {}).get("nodes") or [])
                 }
             except Exception:

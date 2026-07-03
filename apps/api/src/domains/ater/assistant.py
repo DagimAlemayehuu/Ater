@@ -511,6 +511,7 @@ async def _stream_learning_runtime_lesson(
     try:
         import asyncio
         from src.domains.ater.prompt_teacher_service import PromptTeacherJobService
+        from src.domains.ater.source_service import _source_hub_rel_path
         from src.domains.ater import learning_object as lo
 
         vault_root = Path(secrets.vault_path)
@@ -536,7 +537,7 @@ async def _stream_learning_runtime_lesson(
                 current_note = tutor.get("current_note") or {}
                 note_path = tutor.get("current_note_path") or ""
                 link = source_job.get("current_tutor_link") or {}
-                hub_path = tutor.get("hub_path") or link.get("hub_path") or f"SourceJobs/{job['job_id']}/{lo.normalize_title(source_job.get('topic') or 'Prompt_Learning')}_Hub.md"
+                hub_path = tutor.get("hub_path") or link.get("hub_path") or _source_hub_rel_path(source_job)
                 yield {
                     "type": "chunk",
                     "content": (
@@ -596,7 +597,7 @@ async def _stream_learning_runtime_lesson(
                 "prompt_job_id": job["job_id"],
                 "status": job.get("status"),
                 "topic": job.get("topic"),
-                "hub_path": f"SourceJobs/{job['job_id']}/{lo.normalize_title(job.get('topic') or 'Prompt_Learning')}_Hub.md",
+                    "hub_path": _source_hub_rel_path(job),
                 "roadmap": roadmap,
                 "coverage": job.get("coverage"),
                 "warnings": warnings,

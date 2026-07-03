@@ -177,7 +177,7 @@ class PromptTeacherJobService:
             return matches
         for path in self.vault_path.rglob("*.md"):
             rel = path.relative_to(self.vault_path).as_posix()
-            if rel.startswith(("Inbox/", "SourceJobs/")):
+            if rel.startswith("Inbox/"):
                 continue
             try:
                 content = path.read_text(encoding="utf-8", errors="ignore")

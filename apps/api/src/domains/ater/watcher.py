@@ -104,11 +104,10 @@ class InboxHandler(FileSystemEventHandler):
         
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         
-        # Absolute check to prevent re-processing generated files
-        # Standardized to Inbox/Generated per user request
+        # Absolute check to prevent re-processing archived source files.
         try:
             vault_root = Path(self.manager.service.secrets.vault_path).resolve()
-            generated_dir = (vault_root / "Inbox" / "Generated").resolve()
+            generated_dir = (vault_root / "Inbox" / "generated").resolve()
             abs_src = src_path.resolve()
             
             # Platform-agnostic check if the file is inside the Generated folder

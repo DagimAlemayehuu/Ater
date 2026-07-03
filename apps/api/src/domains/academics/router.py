@@ -57,7 +57,8 @@ async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)
     for folder_name, key in mapping.items():
         folder_path = vault_root / DB_DIR_PREFIX / folder_name
         if folder_path.exists() and folder_path.is_dir():
-            for f in folder_path.glob("*.md"):
+            files = folder_path.rglob("*.md") if folder_name == "study planner" else folder_path.glob("*.md")
+            for f in files:
                 if f.name.startswith("."): continue
                 data[key].append(get_note_data(f, vault_root))
             

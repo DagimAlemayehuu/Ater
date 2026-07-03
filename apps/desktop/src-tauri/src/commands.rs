@@ -1958,9 +1958,15 @@ pub async fn academics_dashboard(
         let folder_path = vault_root.join("database").join(folder_name);
         if folder_path.exists() && folder_path.is_dir() {
             let mut items = Vec::new();
-            if let Ok(entries) = std::fs::read_dir(&folder_path) {
-                for entry in entries.filter_map(Result::ok) {
-                    let path = entry.path();
+            let mut pending_dirs = vec![folder_path.clone()];
+            while let Some(current_dir) = pending_dirs.pop() {
+                if let Ok(entries) = std::fs::read_dir(&current_dir) {
+                    for entry in entries.filter_map(Result::ok) {
+                        let path = entry.path();
+                        if folder_name == "study planner" && path.is_dir() {
+                            pending_dirs.push(path);
+                            continue;
+                        }
                     let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
                     if path.is_file()
                         && path.extension().and_then(|s| s.to_str()) == Some("md")
@@ -1994,6 +2000,7 @@ pub async fn academics_dashboard(
                         }
                     }
                 }
+            }
             }
             data.insert(key.to_string(), serde_json::Value::Array(items));
         }
@@ -3098,6 +3105,7 @@ pub async fn rag_sync_vault(
 pub async fn ater_inbox_upload(
     file_path: String,
     file_name: String,
+    learning_scope: Option<String>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
     let config = load_app_config(&app_handle)?;
@@ -3110,10 +3118,17 @@ pub async fn ater_inbox_upload(
         return Err("Vault Path and Inbox Path not configured. Please open settings and configure folder paths first.".to_string());
     };
     
-    std::fs::create_dir_all(&inbox_dir)
+    let scope = learning_scope
+        .as_deref()
+        .map(|s| s.to_ascii_lowercase())
+        .filter(|s| s == "academic" || s == "external")
+        .unwrap_or_else(|| "external".to_string());
+    let scoped_inbox_dir = inbox_dir.join(&scope);
+
+    std::fs::create_dir_all(&scoped_inbox_dir)
         .map_err(|e| format!("Failed to create Inbox folder: {}", e))?;
         
-    let destination = inbox_dir.join(&file_name);
+    let destination = scoped_inbox_dir.join(&file_name);
     
     std::fs::copy(&file_path, &destination)
         .map_err(|e| format!("Failed to copy file to Inbox: {}", e))?;
@@ -3121,6 +3136,7 @@ pub async fn ater_inbox_upload(
     Ok(serde_json::json!({
         "status": "success",
         "file_name": file_name,
+        "learning_scope": scope,
         "path": destination.to_string_lossy().to_string()
     }))
 }

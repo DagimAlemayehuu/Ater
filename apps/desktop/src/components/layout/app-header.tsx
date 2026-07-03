@@ -3,13 +3,10 @@ import { PanelLeftOpen } from 'lucide-react'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
 import { cn } from '@/lib/utils'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { useSecurityStore } from '@/context/securityStore'
 
 export function AppHeader() {
   const { history, currentIndex } = useNavigation()
   const { centerContent, rightContent } = useHeader()
-  const creditBalance = useSecurityStore(state => state.creditBalance)
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try {
@@ -128,15 +125,6 @@ export function AppHeader() {
       {/* Right: Actions */}
       <div className="flex items-center justify-end gap-2 shrink-0 z-10">
         {rightContent}
-        <div data-tour="header-credit" className="border border-border/40 px-3 py-1 text-[9px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 h-8 bg-bento-item/50 rounded-[8px]">
-          <span>CR:</span>
-          <span className="font-bold text-foreground">
-            {creditBalance >= 99999999 ? 'UNLIMITED' : creditBalance}
-          </span>
-        </div>
-        <div data-tour="header-theme">
-          <ThemeSwitch />
-        </div>
       </div>
     </header>
   )

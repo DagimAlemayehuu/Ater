@@ -331,7 +331,7 @@ export default function AcademicDashboard() {
   onUpdate,
   onCreate,
   onDelete,
-  onOpenNote: (path) => nav(`/obsidian?path=${encodeURIComponent(path)}&fullscreen=true`),
+  onOpenNote: (path) => nav(`/obsidian?path=${encodeURIComponent(path)}`),
   navigateTo: (tab, id) => {
     setSearchParams(prev => {
       prev.set('tab', tab.toUpperCase())

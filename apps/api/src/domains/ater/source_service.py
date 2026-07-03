@@ -5,6 +5,7 @@ import json
 import uuid
 import sqlite3
 import hashlib
+import shutil
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Literal, Tuple, Callable
 from pydantic import BaseModel
@@ -192,7 +193,9 @@ def _parse_chapter_heading(text: str) -> Tuple[Optional[str], Optional[str]]:
 
 def infer_topic(pages: List[Dict[str, Any]], file_name: str = "") -> str:
     for page in pages[:4]:
-        content = re.sub(r"\s+", " ", page.get("content", "") or "").strip()
+        raw_content = page.get("content", "") or ""
+        first_line = next((line.strip() for line in re.split(r"[\n\r]+", raw_content) if line.strip()), "")
+        content = re.sub(r"\s+", " ", first_line or raw_content).strip()
         if not content:
             continue
         _chapter_title, chapter_topic = _parse_chapter_heading(content)
@@ -206,7 +209,8 @@ def infer_topic(pages: List[Dict[str, Any]], file_name: str = "") -> str:
 
 
 def extract_title(pages: List[Dict[str, Any]], file_name: str = "") -> str:
-    first = (pages[0].get("content", "") if pages else "") or Path(file_name).stem
+    first_raw = (pages[0].get("content", "") if pages else "") or Path(file_name).stem
+    first = next((line.strip() for line in re.split(r"[\n\r]+", first_raw) if line.strip()), first_raw)
     chapter_title, _chapter_topic = _parse_chapter_heading(first)
     if chapter_title:
         return chapter_title
@@ -265,6 +269,109 @@ def build_source_map_sections(file_name: str, pages: List[Dict[str, Any]], id_pr
             "citations": [{"file": file_name, "page": page_number}],
         })
     return sections
+
+
+def _normalize_path_part(value: Any, fallback: str = "General") -> str:
+    normalized = lo.normalize_title(str(value or "").strip())
+    return normalized or lo.normalize_title(fallback)
+
+
+def _infer_learning_scope(path: Path, explicit_scope: Optional[str] = None) -> str:
+    scope = str(explicit_scope or "").strip().lower()
+    if scope in {"academic", "external"}:
+        return scope
+    parts = {part.lower() for part in path.parts}
+    if "academic" in parts:
+        return "academic"
+    if "external" in parts:
+        return "external"
+    return "external"
+
+
+def _build_placement(
+    path: Path,
+    topic: str,
+    domain: str,
+    learning_scope: Optional[str] = None,
+    semester: Optional[str] = None,
+    course: Optional[str] = None,
+    unit: Optional[str] = None,
+    external_domain: Optional[str] = None,
+    parent_hub_path: Optional[str] = None,
+    chapter_title: Optional[str] = None,
+) -> Dict[str, Any]:
+    scope = _infer_learning_scope(path, learning_scope)
+    topic_part = _normalize_path_part(topic, path.stem)
+    if scope == "academic":
+        unit_part = _normalize_path_part(unit or chapter_title, topic_part)
+        return {
+            "learning_scope": "academic",
+            "semester": _normalize_path_part(semester, "General"),
+            "course": _normalize_path_part(course or domain, "General"),
+            "unit": unit_part,
+            "chapter_title": _normalize_path_part(chapter_title or unit_part, unit_part),
+            "parent_hub_path": str(parent_hub_path or "").strip(),
+            "chapter": "01_Source_Roadmap",
+        }
+    return {
+        "learning_scope": "external",
+        "external_domain": _normalize_path_part(external_domain or domain, "General"),
+        "learning_path": topic_part,
+        "chapter": "01_Source_Roadmap",
+    }
+
+
+def _placement_from_job(job: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(job.get("placement"), dict) and job["placement"]:
+        return job["placement"]
+    metadata = job.get("metadata") or {}
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata or "{}")
+        except Exception:
+            metadata = {}
+    placement = metadata.get("placement") or {}
+    if placement:
+        return placement
+    return _build_placement(
+        Path(job.get("file_path") or job.get("file_name") or ""),
+        job.get("topic") or job.get("title") or "Source",
+        job.get("domain") or "General",
+    )
+
+
+def _source_note_rel_path(job: Dict[str, Any], note_title: str) -> str:
+    placement = _placement_from_job(job)
+    note_file = f"{lo.normalize_title(note_title)}.md"
+    chapter = _normalize_path_part(placement.get("chapter"), "01_Source_Roadmap")
+    if placement.get("learning_scope") == "academic":
+        return (
+            f"Notes/academic/{placement.get('semester')}/{placement.get('course')}/"
+            f"{placement.get('unit')}/{chapter}/{note_file}"
+        )
+    return (
+        f"Notes/external/{placement.get('external_domain')}/{placement.get('learning_path')}/"
+        f"{chapter}/{note_file}"
+    )
+
+
+def _source_hub_rel_path(job: Dict[str, Any]) -> str:
+    placement = _placement_from_job(job)
+    parent_hub_path = str(placement.get("parent_hub_path") or "").strip().strip("/")
+    if parent_hub_path:
+        return parent_hub_path
+    hub_title = f"{lo.normalize_title(job.get('topic') or job.get('title') or 'Source')}_Hub.md"
+    if placement.get("learning_scope") == "academic":
+        return (
+            f"database/study planner/{placement.get('semester')}/{placement.get('course')}/"
+            f"{placement.get('unit')}/{hub_title}"
+        )
+    return f"database/external/{placement.get('external_domain')}/{placement.get('learning_path')}/{hub_title}"
+
+
+def _source_chapter_rel_path(job: Dict[str, Any]) -> str:
+    hub_path = Path(_source_hub_rel_path(job))
+    return (hub_path.parent / "Chapter_01_Source_Roadmap.md").as_posix()
 
 
 def scope_concept_graph_ids(job_id: str, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -801,6 +908,7 @@ class SourceAtomicNoteCompiler:
         body = build_skeleton_note(note_schema, note_schema.source_context, profile, all_titles=[node.get("title", "")])
         frontmatter = {
             "title": note_schema.title,
+            "hub": f"[[{Path(_source_hub_rel_path(job)).stem}]]",
             "source": f"[[{job.get('file_name', '')}]]",
             "source_file": job.get("file_name"),
             "source_pages": source_pages,
@@ -986,7 +1094,19 @@ class SourceLearningJobService:
             conn.execute(f"DELETE FROM {table} WHERE job_id = ?", (job_id,))
         conn.execute("DELETE FROM source_learning_jobs WHERE job_id = ?", (job_id,))
 
-    def create_or_resume_from_path(self, file_path: str, conversation_id: Optional[str] = None, attachment_id: Optional[str] = None) -> Dict[str, Any]:
+    def create_or_resume_from_path(
+        self,
+        file_path: str,
+        conversation_id: Optional[str] = None,
+        attachment_id: Optional[str] = None,
+        learning_scope: Optional[str] = None,
+        semester: Optional[str] = None,
+        course: Optional[str] = None,
+        unit: Optional[str] = None,
+        external_domain: Optional[str] = None,
+        parent_hub_path: Optional[str] = None,
+        chapter_title: Optional[str] = None,
+    ) -> Dict[str, Any]:
         path = Path(file_path)
         if not path.exists():
             raise FileNotFoundError(f"Source file not found: {file_path}")
@@ -1013,6 +1133,18 @@ class SourceLearningJobService:
             topic = infer_topic(pages, path.name)
             full_text = "\n".join(p.get("content", "") for p in pages)
             domain = domain_router.route(full_text, course=topic)
+            placement = _build_placement(
+                path,
+                topic,
+                domain,
+                learning_scope=learning_scope,
+                semester=semester,
+                course=course,
+                unit=unit,
+                external_domain=external_domain,
+                parent_hub_path=parent_hub_path,
+                chapter_title=chapter_title,
+            )
             objectives = extract_source_objectives(pages)
             job_id = f"srcjob_{uuid.uuid4().hex[:16]}"
             sections = build_source_map_sections(path.name, pages, id_prefix=job_id)
@@ -1032,7 +1164,11 @@ class SourceLearningJobService:
                 conn.execute("""
                     INSERT INTO source_learning_jobs (job_id, source_identity, file_path, file_name, file_size, content_hash, title, topic, domain, source_type, page_count, status, conversation_id, attachment_id, created_at, updated_at, metadata)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (job_id, identity, str(path), path.name, file_size, digest, title, topic, domain, ingestion.get("source_type"), len(pages), "roadmap_ready", conversation_id, attachment_id, now, now, json.dumps(self._metadata_for_new_job())))
+                """, (
+                    job_id, identity, str(path), path.name, file_size, digest, title, topic, domain,
+                    ingestion.get("source_type"), len(pages), "roadmap_ready", conversation_id, attachment_id,
+                    now, now, json.dumps({**self._metadata_for_new_job(), "placement": placement}),
+                ))
                 for page in pages:
                     conn.execute("INSERT OR REPLACE INTO source_pages VALUES (?, ?, ?, ?)", (job_id, page["page_number"], page.get("content", ""), page.get("text_length", len(page.get("content", "")))))
                 for warning in warnings:
@@ -1064,6 +1200,10 @@ class SourceLearningJobService:
             if not row:
                 raise ValueError(f"Source learning job not found: {job_id}")
             job = dict(row)
+            try:
+                job["metadata"] = json.loads(job.get("metadata") or "{}")
+            except Exception:
+                job["metadata"] = {}
             warnings = self._rows(conn, "SELECT concept, dimension, severity, description, resolved FROM source_audit_warnings WHERE job_id = ?", (job_id,))
             objectives = self._rows(conn, "SELECT objective_id, text, page_number, required, mapped FROM source_objectives WHERE job_id = ? ORDER BY page_number, objective_id", (job_id,))
             nodes = self._rows(conn, "SELECT * FROM concept_graph_nodes WHERE job_id = ? ORDER BY teaching_order", (job_id,))
@@ -1097,6 +1237,8 @@ class SourceLearningJobService:
                 "topic": job["topic"],
                 "domain": job["domain"],
                 "source_type": job["source_type"],
+                "hub_path": _source_hub_rel_path(job),
+                "chapter_path": _source_chapter_rel_path(job),
                 "audit": {
                     "page_count": job["page_count"],
                     "title": job["title"],
@@ -1108,7 +1250,7 @@ class SourceLearningJobService:
                 "roadmap": [{
                     "id": n["id"],
                     "title": n["title"],
-                    "path": f"SourceJobs/{job_id}/{lo.normalize_title(n['title'])}.md",
+                    "path": _source_note_rel_path(job, n["title"]),
                     "domain": n["domain"],
                     "modality": n["modality"],
                     "source_pages": n["source_pages"],
@@ -1117,8 +1259,37 @@ class SourceLearningJobService:
                 "concept_graph": {"nodes": nodes, "edges": self._rows(conn, "SELECT from_node_id, to_node_id, edge_type FROM concept_graph_edges WHERE job_id = ?", (job_id,))},
                 "coverage": {"rows": coverage, "remaining": remaining},
                 "warnings": warnings,
+                "placement": _placement_from_job(job),
                 "current_tutor_link": dict(tutor_link) if tutor_link else None,
             }
+        finally:
+            conn.close()
+
+    def update_roadmap_titles(self, job_id: str, titles: List[str]) -> Dict[str, Any]:
+        cleaned_titles = [str(title or "").strip() for title in titles if str(title or "").strip()]
+        if not cleaned_titles:
+            raise ValueError("At least one roadmap title is required.")
+        conn = self._connect()
+        try:
+            with conn:
+                rows = conn.execute(
+                    "SELECT id FROM concept_graph_nodes WHERE job_id = ? ORDER BY teaching_order",
+                    (job_id,),
+                ).fetchall()
+                if not rows:
+                    raise ValueError(f"Source learning job not found or has no roadmap: {job_id}")
+                for idx, row in enumerate(rows):
+                    if idx >= len(cleaned_titles):
+                        break
+                    conn.execute(
+                        "UPDATE concept_graph_nodes SET title = ? WHERE id = ?",
+                        (cleaned_titles[idx], row["id"]),
+                    )
+                conn.execute(
+                    "UPDATE source_learning_jobs SET updated_at = ? WHERE job_id = ?",
+                    (datetime.now().isoformat(), job_id),
+                )
+            return self.get_job(job_id)
         finally:
             conn.close()
 
@@ -1127,30 +1298,68 @@ class SourceLearningJobService:
         nodes = job["concept_graph"]["nodes"]
         if not nodes:
             raise ValueError("Source job has no teachable concept graph nodes.")
-        first = nodes[0]
-        profile = first.get("teaching_profile") or build_teaching_profile(first["domain"], first["modality"])
-        note = SourceAtomicNoteCompiler().compile_fallback_note(job, first, profile)
         session_id = f"source_tutor_{job_id}"
-        now = datetime.now().isoformat()
-        current_note_path = f"SourceJobs/{job_id}/{note['note_title']}.md"
-        hub_path = f"SourceJobs/{job_id}/{lo.normalize_title(job.get('topic') or job.get('title') or 'Source')}_Hub.md"
+        hub_path = _source_hub_rel_path(job)
         curriculum = [
-            f"SourceJobs/{job_id}/{lo.normalize_title(node['title'])}.md"
+            _source_note_rel_path(job, node["title"])
             for node in nodes
         ]
-        roadmap = [
-            {
-                "id": node["id"],
-                "title": node["title"],
-                "path": path,
-                "status": "current" if node["id"] == first["id"] else "locked",
-                "offline_ready": True,
-                "source_pages": node.get("source_pages", []),
-            }
-            for node, path in zip(nodes, curriculum)
-        ]
+        node_by_id = {node["id"]: node for node in nodes}
         conn = self._connect()
         try:
+            existing = conn.execute("SELECT * FROM tutor_sessions WHERE session_id = ?", (session_id,)).fetchone()
+            if existing:
+                existing_dict = dict(existing)
+                current_node_id = existing_dict.get("current_concept_node_id") or nodes[0]["id"]
+                completed_notes = json.loads(existing_dict.get("completed_notes") or "[]")
+                active_unlocks = json.loads(existing_dict.get("active_note_unlocks") or "[]")
+                current_note_path = existing_dict.get("current_note_path") or (active_unlocks[0] if active_unlocks else curriculum[0])
+                roadmap = [
+                    {
+                        "id": node["id"],
+                        "title": node["title"],
+                        "path": path,
+                        "status": "completed" if path in completed_notes else ("current" if node["id"] == current_node_id else ("ready" if path in active_unlocks else "locked")),
+                        "offline_ready": True,
+                        "source_pages": node.get("source_pages", []),
+                    }
+                    for node, path in zip(nodes, curriculum)
+                ]
+                current_node = node_by_id.get(current_node_id, nodes[0])
+                profile = current_node.get("teaching_profile") or build_teaching_profile(current_node["domain"], current_node["modality"])
+                note = SourceAtomicNoteCompiler().compile_fallback_note(job, current_node, profile)
+                return {
+                    "source_job": self.get_job(job_id),
+                    "tutor_session": {
+                        "session_id": session_id,
+                        "source_job_id": job_id,
+                        "current_concept_node_id": current_node_id,
+                        "current_note_path": current_note_path,
+                        "current_note": note,
+                        "hub_path": existing_dict.get("hub_path") or hub_path,
+                        "curriculum": curriculum,
+                        "roadmap": roadmap,
+                        "active_note_unlocks": active_unlocks or [current_note_path],
+                        "completed_notes": completed_notes,
+                    }
+                }
+
+            first = nodes[0]
+            profile = first.get("teaching_profile") or build_teaching_profile(first["domain"], first["modality"])
+            note = SourceAtomicNoteCompiler().compile_fallback_note(job, first, profile)
+            now = datetime.now().isoformat()
+            current_note_path = _source_note_rel_path(job, note["note_title"])
+            roadmap = [
+                {
+                    "id": node["id"],
+                    "title": node["title"],
+                    "path": path,
+                    "status": "current" if node["id"] == first["id"] else "locked",
+                    "offline_ready": True,
+                    "source_pages": node.get("source_pages", []),
+                }
+                for node, path in zip(nodes, curriculum)
+            ]
             with conn:
                 conn.execute("INSERT OR REPLACE INTO source_job_tutor_links VALUES (?, ?, ?, ?, ?)", (job_id, session_id, first["id"], current_note_path, now))
                 conn.execute("""
@@ -1221,28 +1430,22 @@ class SourceLearningJobService:
     def deploy_to_vault(self, job_id: str, vault_path: str) -> Dict[str, Any]:
         vault = Path(vault_path)
         job = self.get_job(job_id)
-        root = vault / "SourceJobs" / job_id
-        root.mkdir(parents=True, exist_ok=True)
         compiler = SourceAtomicNoteCompiler()
         written: List[str] = []
         collisions: List[Dict[str, str]] = []
 
-        metadata_path = root / "source_metadata.json"
-        metadata_path.write_text(json.dumps({
-            "job_id": job_id,
-            "file_name": job["file_name"],
-            "title": job["title"],
-            "topic": job["topic"],
-            "domain": job["domain"],
-            "audit": job["audit"],
-        }, indent=2), encoding="utf-8")
-        written.append(metadata_path.relative_to(vault).as_posix())
+        hub_rel_path = _source_hub_rel_path(job)
+        hub_path = vault / hub_rel_path
+        root = hub_path.parent
+        root.mkdir(parents=True, exist_ok=True)
 
         note_links: List[str] = []
         for node in job["concept_graph"]["nodes"]:
             note = compiler.compile_fallback_note(job, node, node.get("teaching_profile") or {})
             note_title = note["note_title"]
-            note_path = root / f"{note_title}.md"
+            note_rel = _source_note_rel_path(job, note_title)
+            note_path = vault / note_rel
+            note_path.parent.mkdir(parents=True, exist_ok=True)
             rel_path = note_path.relative_to(vault).as_posix()
             yaml_lines = ["---"] + [f"{key}: {json.dumps(value)}" for key, value in note["frontmatter"].items()] + ["---", ""]
             full_content = "\n".join(yaml_lines) + note["content"].strip() + "\n"
@@ -1271,13 +1474,74 @@ class SourceLearningJobService:
             note_links.append(f"[[{note_title}]]")
             self.record_deployment(job_id, node["id"], rel_path, True)
 
-        chapter_path = root / "Chapter_01_Source_Roadmap.md"
+        chapter_path = vault / _source_chapter_rel_path(job)
+        chapter_path.parent.mkdir(parents=True, exist_ok=True)
         chapter_path.write_text("---\ntype: \"Chapter\"\ngenerated_by: \"ater_source_job\"\nsource_job_id: " + json.dumps(job_id) + "\n---\n\n# Source Roadmap\n\n" + "\n".join(f"- {link}" for link in note_links) + "\n", encoding="utf-8")
-        hub_title = f"{lo.normalize_title(job.get('topic') or job.get('title') or 'Source')}_Hub"
-        hub_path = root / f"{hub_title}.md"
-        hub_path.write_text("---\ntype: \"Hub\"\ngenerated_by: \"ater_source_job\"\nsource_job_id: " + json.dumps(job_id) + "\nchapters:\n  - \"[[Chapter_01_Source_Roadmap]]\"\n---\n\n# " + (job.get("topic") or job.get("title") or "Source") + "\n\n[[Chapter_01_Source_Roadmap]]\n", encoding="utf-8")
+        hub_title = Path(hub_rel_path).stem
+        hub_path.write_text(self._build_hub_file(job, job_id, hub_title, note_links), encoding="utf-8")
         written.extend([chapter_path.relative_to(vault).as_posix(), hub_path.relative_to(vault).as_posix()])
-        return {"job_id": job_id, "written_files": written, "collisions": collisions, "status": "review_required" if collisions else "deployed"}
+        moved_source = self._move_processed_pdf(job, vault) if not collisions else None
+        return {
+            "job_id": job_id,
+            "written_files": written,
+            "collisions": collisions,
+            "status": "review_required" if collisions else "deployed",
+            "processed_source_path": moved_source,
+        }
+
+    def _move_processed_pdf(self, job: Dict[str, Any], vault: Path) -> Optional[str]:
+        if str(job.get("source_type") or "").lower() == "synthetic_source_pack":
+            return None
+        source_path = Path(job.get("file_path") or "")
+        if not source_path.exists() or source_path.suffix.lower() != ".pdf":
+            return None
+        try:
+            source_path.resolve().relative_to((vault / "Inbox").resolve())
+        except Exception:
+            return None
+        placement = job.get("placement") or _placement_from_job(job)
+        scope = "academic" if placement.get("learning_scope") == "academic" else "external"
+        destination_dir = vault / "Inbox" / "generated" / scope
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        destination = destination_dir / source_path.name
+        if destination.exists():
+            destination = destination_dir / f"{source_path.stem}_{job['job_id']}{source_path.suffix}"
+        shutil.move(str(source_path), str(destination))
+        return destination.relative_to(vault).as_posix()
+
+    def _build_hub_file(self, job: Dict[str, Any], job_id: str, hub_title: str, note_links: List[str]) -> str:
+        placement = job.get("placement") or _placement_from_job(job)
+        topic = job.get("topic") or job.get("title") or hub_title
+        metadata = {
+            "title": hub_title,
+            "type": "Hub",
+            "generated_by": "ater_source_job",
+            "source_job_id": job_id,
+            "learning_scope": placement.get("learning_scope") or "external",
+            "semester": placement.get("semester"),
+            "course": placement.get("course"),
+            "unit": placement.get("unit") or placement.get("learning_path"),
+            "chapter_title": placement.get("chapter_title") or placement.get("unit") or placement.get("learning_path"),
+            "status": "In Progress",
+            "current_lesson_path": _source_note_rel_path(job, job["roadmap"][0]["title"]) if job.get("roadmap") else "",
+            "chapters": ["[[Chapter_01_Source_Roadmap]]"],
+        }
+        yaml_lines = ["---"]
+        for key, value in metadata.items():
+            if value is None:
+                continue
+            yaml_lines.append(f"{key}: {json.dumps(value)}")
+        yaml_lines.append("---")
+        body = [
+            f"# {str(topic).replace('_', ' ')}",
+            "",
+            "[[Chapter_01_Source_Roadmap]]",
+            "",
+            "## Atomic Notes",
+            *[f"- {link}" for link in note_links],
+            "",
+        ]
+        return "\n".join(yaml_lines + [""] + body)
 
 class SourceGroundedPlanner(AterPlanner):
     async def generate_grounded_curriculum(

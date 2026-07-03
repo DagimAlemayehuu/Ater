@@ -6,11 +6,11 @@ import {
   X, Zap,
  Database, Search, Archive,
  ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
-  Plus, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
+  Plus, ArrowLeft, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
   Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
   Activity, Play, SkipForward, MapPin, BookOpenCheck
 } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useConfig } from '@/lib/ConfigContext'
 import { cn } from '@/lib/utils'
@@ -239,6 +239,7 @@ const FileTreeItem = React.memo(({
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
+  const [, setSearchParams] = useSearchParams()
   const isMountedRef = useRef(true)
   useEffect(() => {
     isMountedRef.current = true
@@ -284,6 +285,50 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     resetArtifacts
   } = useArtifactStore()
   const [isDraggingSplit, setIsDraggingSplit] = useState(false)
+
+  // --- Card Dashboard States ---
+  const [dashboardTab, setDashboardTab] = useState<'hubs' | 'inbox' | 'pdfs'>('hubs')
+  const [dashboardSearchQuery, setDashboardSearchQuery] = useState('')
+  
+  const [workspaceHub, setWorkspaceHub] = useState<string | null>(null)
+  const [workspaceHubNotes, setWorkspaceHubNotes] = useState<string[]>([])
+  const [loadingHubNotes, setLoadingHubNotes] = useState(false)
+  
+  // Load notes inside a hub when workspaceHub changes
+  useEffect(() => {
+    if (!workspaceHub) {
+      setWorkspaceHubNotes([])
+      return
+    }
+    let active = true
+    const loadNotesFromHub = async () => {
+      setLoadingHubNotes(true)
+      try {
+        const res = await sidecarApi.readObsidianNote(workspaceHub)
+        if (!active) return
+        const content = res.content || ''
+        const regex = /\[\[(.*?)\]\]/g
+        const links: string[] = []
+        let match
+        while ((match = regex.exec(content)) !== null) {
+          const rawLink = match[1]
+          const cleanLink = rawLink.split('|')[0].trim().replace(/ /g, '_')
+          if (cleanLink && !links.includes(cleanLink)) {
+            links.push(cleanLink)
+          }
+        }
+        setWorkspaceHubNotes(links)
+      } catch (err) {
+        console.error('Failed to read hub notes:', err)
+      } finally {
+        if (active) setLoadingHubNotes(false)
+      }
+    }
+    loadNotesFromHub()
+    return () => {
+      active = false
+    }
+  }, [workspaceHub])
   // Listen for remediation lesson navigation in Knowledge Base
   useEffect(() => {
     const handleOpenRemediation = (event: Event) => {
@@ -2079,6 +2124,531 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
     setSidebarContent, fetchFiles, selectFile, renderTree, handleDrop, setCreatingInPath, setCreatingType, setNewItemName
   ]);
 
+  // --- Card Dashboard CRUD Handlers ---
+  const onCreateHub = async () => {
+    const name = window.prompt("Enter new Hub title:");
+    if (!name) return;
+    const cleanName = name.replace(/ /g, '_');
+    const targetPath = `hubs/${cleanName}.md`;
+    try {
+      await sidecarApi.createObsidianFile(targetPath, `---\ntitle: ${name}\ntype: hub\n---\n\n# ${name}\n\n`);
+      await fetchFiles();
+      await fetchHubs();
+      toast.success("Hub created successfully");
+    } catch (err: any) {
+      toast.error(`Failed to create Hub: ${err.message}`);
+    }
+  };
+
+  const onCreateNoteInHub = async () => {
+    const name = window.prompt("Enter note title:");
+    if (!name) return;
+    const cleanName = name.replace(/ /g, '_');
+    const targetPath = `${cleanName}.md`;
+    try {
+      await sidecarApi.createObsidianFile(targetPath, `---\ntitle: ${name}\n---\n\n# ${name}\n\n`);
+      if (workspaceHub) {
+        const hubRes = await sidecarApi.readObsidianNote(workspaceHub);
+        const currentContent = hubRes.content || '';
+        const updatedContent = `${currentContent}\n\n- [[${cleanName}]]`;
+        await sidecarApi.updateObsidianNote(workspaceHub, updatedContent);
+      }
+      await fetchFiles();
+      setWorkspaceHubNotes(prev => [...prev, cleanName]);
+      toast.success("Note created and linked successfully");
+    } catch (err: any) {
+      toast.error(`Failed to create Note: ${err.message}`);
+    }
+  };
+
+  const onDeleteCard = async (path: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirm = window.confirm(`Are you sure you want to delete ${path.split(/[/\\]/).pop()}?`);
+    if (!confirm) return;
+    try {
+      await sidecarApi.deleteObsidianItem(path);
+      await fetchFiles();
+      await fetchHubs();
+      if (workspaceHub === path) {
+        setWorkspaceHub(null);
+      }
+      toast.success("Item deleted successfully");
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    }
+  };
+
+  const onRenameCard = async (path: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const oldName = path.split(/[/\\]/).pop() || '';
+    const newName = window.prompt("Rename item to:", oldName);
+    if (!newName || newName === oldName) return;
+    
+    const pathParts = path.split(/[/\\]/);
+    pathParts[pathParts.length - 1] = newName;
+    const newPath = pathParts.join('/');
+    
+    try {
+      await sidecarApi.moveObsidianItem(path, newPath);
+      await fetchFiles();
+      await fetchHubs();
+      if (workspaceHub === path) {
+        setWorkspaceHub(newPath);
+      }
+      toast.success("Item renamed successfully");
+    } catch (err: any) {
+      toast.error(`Rename failed: ${err.message}`);
+    }
+  };
+
+  const onMoveNote = async (notePath: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const noteName = notePath.split(/[/\\]/).pop()?.replace('.md', '') || '';
+    const cleanNoteName = noteName.replace(/ /g, '_');
+    
+    const otherHubs = hubs.filter(h => h.path !== workspaceHub);
+    if (otherHubs.length === 0) {
+      toast.error("No other Hubs available to move to");
+      return;
+    }
+    
+    const hubTitles = otherHubs.map((h, i) => `${i + 1}. ${h.title}`).join('\n');
+    const choice = window.prompt(`Select destination Hub (enter number 1-${otherHubs.length}):\n\n${hubTitles}`);
+    if (!choice) return;
+    const index = parseInt(choice) - 1;
+    if (isNaN(index) || index < 0 || index >= otherHubs.length) {
+      toast.error("Invalid choice");
+      return;
+    }
+    
+    const targetHub = otherHubs[index];
+    try {
+      if (workspaceHub) {
+        const currentHubRes = await sidecarApi.readObsidianNote(workspaceHub);
+        const content = currentHubRes.content || '';
+        const regex = new RegExp(`-?\\s*\\[\\[${cleanNoteName.replace(/_/g, '[_ ]')}(\\|.*?)?\\]\\]\\s*\\n?`, 'g');
+        const updatedContent = content.replace(regex, '');
+        await sidecarApi.updateObsidianNote(workspaceHub, updatedContent);
+      }
+      
+      const targetHubRes = await sidecarApi.readObsidianNote(targetHub.path);
+      const targetContent = targetHubRes.content || '';
+      const updatedTargetContent = `${targetContent}\n\n- [[${cleanNoteName}]]`;
+      await sidecarApi.updateObsidianNote(targetHub.path, updatedTargetContent);
+      
+      if (workspaceHub) {
+        setWorkspaceHubNotes(prev => prev.filter(n => n !== cleanNoteName));
+      }
+      await fetchFiles();
+      toast.success(`Note moved to ${targetHub.title}`);
+    } catch (err: any) {
+      toast.error(`Move failed: ${err.message}`);
+    }
+  };
+
+  const renderDashboardBreadcrumbs = () => {
+    return (
+      <div className="flex items-center gap-2 mb-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground select-none">
+        <button 
+          onClick={() => {
+            setWorkspaceHub(null);
+          }}
+          className="hover:text-foreground transition-colors"
+        >
+          Hubs
+        </button>
+        {workspaceHub && (
+          <>
+            <ChevronRight size={10} className="opacity-40" />
+            <span className="text-foreground">
+              {workspaceHub.split(/[/\\]/).pop()?.replace('.md', '').replace(/_/g, ' ')}
+            </span>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  const resolveNotesForHub = () => {
+    if (loadingHubNotes) return [];
+    return files.filter(f => {
+      if (f.is_dir || !f.name.endsWith('.md')) return false;
+      const nameWithoutExt = f.name.slice(0, -3).replace(/ /g, '_');
+      return workspaceHubNotes.some(link => {
+        return link.replace(/ /g, '_') === nameWithoutExt || f.path.replace(/\\/g, '/').includes(link);
+      });
+    });
+  }
+
+  const renderDashboard = () => {
+    // Search filtering logic
+    const filteredHubs = hubs.filter(h => 
+      h.title.toLowerCase().includes(dashboardSearchQuery.toLowerCase()) || 
+      (h.course && h.course.toLowerCase().includes(dashboardSearchQuery.toLowerCase()))
+    );
+
+    const filteredNotes = resolveNotesForHub().filter(file => 
+      file.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+    );
+
+    const filteredInbox = inboxFiles.filter(file => 
+      file.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+    );
+
+    const filteredPdfs = files.filter(f => !f.is_dir && f.name.endsWith('.pdf')).filter(file => 
+      file.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+    );
+
+    return (
+      <div className="flex flex-col h-full w-full p-6 text-foreground overflow-y-auto custom-scrollbar font-sans select-none">
+        {/* Dashboard Tabs Switcher */}
+        <div className="flex items-center gap-1.5 border-b border-border/10 pb-4 mb-4 shrink-0 select-none">
+          {([
+            { id: 'hubs', label: 'Hubs', icon: <Network size={12} /> },
+            { id: 'inbox', label: 'Inbox', icon: <Archive size={12} /> },
+            { id: 'pdfs', label: 'PDFs', icon: <FileText size={12} /> }
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setDashboardTab(tab.id);
+                setWorkspaceHub(null);
+                setDashboardSearchQuery('');
+              }}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border",
+                dashboardTab === tab.id
+                  ? "bg-foreground text-background border-foreground font-extrabold"
+                  : "bg-muted/10 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/20"
+              )}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Toolbar: Search & Graph View Toggle */}
+        <div className="flex items-center gap-3 mb-6 select-none shrink-0">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground/50" />
+            <input
+              type="text"
+              placeholder={
+                dashboardTab === 'hubs'
+                  ? (workspaceHub ? "Search note stubs..." : "Search hubs...")
+                  : dashboardTab === 'inbox'
+                    ? "Search inbox files..."
+                    : "Search PDFs..."
+              }
+              value={dashboardSearchQuery}
+              onChange={(e) => setDashboardSearchQuery(e.target.value)}
+              className="w-full bg-muted/10 border border-border/40 rounded-[8px] pl-9 pr-4 py-2 text-xs text-foreground placeholder-muted-foreground/40 focus:outline-none focus:border-foreground/30 transition-all font-sans"
+            />
+            {dashboardSearchQuery && (
+              <button
+                onClick={() => setDashboardSearchQuery('')}
+                className="absolute right-3 top-2.5 text-muted-foreground/40 hover:text-foreground"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          
+          <button
+            onClick={() => setShowGraphView(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-[8px] text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border border-border/40 bg-muted/10 text-muted-foreground hover:text-foreground hover:bg-muted/20"
+          >
+            <Network size={12} />
+            <span>Graph View</span>
+          </button>
+        </div>
+
+        {/* Tab contents */}
+        {dashboardTab === 'hubs' && (
+          <div className="flex-1 flex flex-col min-h-0">
+            {workspaceHub && renderDashboardBreadcrumbs()}
+
+            {/* Level 1: Hubs list */}
+            {!workspaceHub && (
+              <div className="space-y-4">
+                <div className="px-1 flex items-center justify-between select-none">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Curriculum Hub Nodes</span>
+                  <button
+                    onClick={onCreateHub}
+                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer hover:underline"
+                  >
+                    <Plus size={10} /> Add Hub
+                  </button>
+                </div>
+                <div className="h-px bg-border/20 mb-2" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredHubs.length > 0 ? (
+                    filteredHubs.map(hub => {
+                      return (
+                        <div
+                          key={hub.id}
+                          onClick={() => setWorkspaceHub(hub.path)}
+                          className="bg-bento-card hover:bg-bento-item border border-border/40 hover:border-foreground/30 rounded-[8px] p-4 cursor-pointer transition-all duration-100 flex flex-col justify-between min-h-[110px] group"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 border border-border/30 px-1.5 py-0.5 rounded-[4px] font-mono">
+                                UNIT {hub.unit || '0'}
+                              </span>
+                            </div>
+                            <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate mt-1">
+                              {hub.title}
+                            </h3>
+                            <p className="text-[9px] text-muted-foreground/50 mt-1 truncate font-mono">
+                              {hub.course || 'Uncategorized'}
+                            </p>
+                          </div>
+                          
+                          {/* Card CRUD Controls */}
+                          <div className="flex items-center justify-end gap-3 mt-3 border-t border-border/10 pt-2 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+                            <button
+                              onClick={(e) => onRenameCard(hub.path, e)}
+                              className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:underline cursor-pointer"
+                            >
+                              Rename
+                            </button>
+                            <button
+                              onClick={(e) => onDeleteCard(hub.path, e)}
+                              className="text-[8px] font-black uppercase tracking-widest text-red-400/80 hover:text-red-400 hover:underline cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="col-span-3 py-12 border border-dashed border-border/40 rounded-[8px] text-center text-muted-foreground/30 text-xs uppercase font-black tracking-widest">
+                      {dashboardSearchQuery ? "No matching Hubs found" : "No Hub Notes Found In Vault"}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Level 2: Note Stubs inside active Hub */}
+            {workspaceHub && (
+              <div className="space-y-4">
+                <div className="px-1 flex items-center justify-between select-none">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Atomic Note Stubs</span>
+                  <button
+                    onClick={onCreateNoteInHub}
+                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer hover:underline"
+                  >
+                    <Plus size={10} /> Add Note
+                  </button>
+                </div>
+                <div className="h-px bg-border/20 mb-2" />
+                
+                {loadingHubNotes ? (
+                  <div className="py-12 flex justify-center"><RefreshCw size={24} className="animate-spin text-muted-foreground/30" /></div>
+                ) : filteredNotes.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredNotes.map(file => {
+                      const cleanNoteName = file.name.slice(0, -3).replace(/_/g, ' ');
+                      return (
+                        <div
+                          key={file.path}
+                          onClick={() => selectFile(file.path)}
+                          className="bg-bento-card hover:bg-bento-item border border-border/40 hover:border-foreground/30 rounded-[8px] p-4 cursor-pointer transition-all duration-100 flex flex-col justify-between min-h-[96px] group"
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5 text-muted-foreground/50 mb-1.5">
+                              <FileText size={12} className="shrink-0" />
+                              <span className="text-[8px] font-black uppercase tracking-widest font-mono truncate">
+                                ATOMIC NOTE
+                              </span>
+                            </div>
+                            <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors mt-1.5 leading-snug line-clamp-2">
+                              {cleanNoteName}
+                            </h3>
+                          </div>
+                          
+                          {/* Note Card Actions */}
+                          <div className="flex items-center justify-end gap-3 mt-3 border-t border-border/10 pt-2 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+                            <button
+                              onClick={(e) => onRenameCard(file.path, e)}
+                              className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:underline cursor-pointer"
+                            >
+                              Rename
+                            </button>
+                            <button
+                              onClick={(e) => onMoveNote(file.path, e)}
+                              className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:underline cursor-pointer"
+                            >
+                              Move
+                            </button>
+                            <button
+                              onClick={(e) => onDeleteCard(file.path, e)}
+                              className="text-[8px] font-black uppercase tracking-widest text-red-400/80 hover:text-red-400 hover:underline cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-12 border border-dashed border-border/40 rounded-[8px] text-center text-muted-foreground/30 text-xs uppercase font-black tracking-widest">
+                    {dashboardSearchQuery ? "No matching Notes found" : "No Atomic Notes Linked In This Hub Yet"}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {dashboardTab === 'inbox' && (
+          <div className="space-y-4">
+            <div className="px-1 flex items-center justify-between select-none">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Inbox files</span>
+              <button
+                onClick={async () => {
+                  const name = window.prompt("Enter new inbox item title:");
+                  if (!name) return;
+                  const cleanName = name.replace(/ /g, '_');
+                  try {
+                    await sidecarApi.createObsidianFile(`inbox/${cleanName}.md`, `---\ntitle: ${name}\n---\n\n`);
+                    await fetchInbox();
+                    toast.success("Inbox item created");
+                  } catch (err: any) {
+                    toast.error(`Creation failed: ${err.message}`);
+                  }
+                }}
+                className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer hover:underline"
+              >
+                <Plus size={10} /> Add Item
+              </button>
+            </div>
+            <div className="h-px bg-border/20 mb-2" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredInbox.length > 0 ? (
+                filteredInbox.map(file => {
+                  return (
+                    <div
+                      key={file.path}
+                      onClick={() => selectFile(file.path)}
+                      className="bg-bento-card hover:bg-bento-item border border-border/40 hover:border-foreground/30 rounded-[8px] p-4 cursor-pointer transition-all duration-100 flex flex-col justify-between min-h-[96px] group"
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground/50 mb-1.5">
+                          <Archive size={12} className="shrink-0" />
+                          <span className="text-[8px] font-black uppercase tracking-widest font-mono">Inbox file</span>
+                        </div>
+                        <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">
+                          {file.name.replace('.pdf', '')}
+                        </h3>
+                      </div>
+                      
+                      {/* Inbox Card Actions */}
+                      <div className="flex items-center justify-end gap-3 mt-3 border-t border-border/10 pt-2 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+                        <button
+                          onClick={(e) => onRenameCard(file.path, e)}
+                          className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:underline cursor-pointer"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          onClick={(e) => onDeleteCard(file.path, e)}
+                          className="text-[8px] font-black uppercase tracking-widest text-red-400/80 hover:text-red-400 hover:underline cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="col-span-3 py-12 border border-dashed border-border/40 rounded-[8px] text-center text-muted-foreground/30 text-xs uppercase font-black tracking-widest">
+                  {dashboardSearchQuery ? "No matching Inbox files found" : "Inbox is empty"}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {dashboardTab === 'pdfs' && (
+          <div className="space-y-4">
+            <div className="px-1 flex items-center justify-between select-none">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Reference PDF Documents</span>
+              <button
+                onClick={async () => {
+                  const name = window.prompt("Enter new reference note title:");
+                  if (!name) return;
+                  const cleanName = name.replace(/ /g, '_');
+                  try {
+                    await sidecarApi.createObsidianFile(`${cleanName}.md`, `---\ntitle: ${name}\ntags: [reference]\n---\n\n`);
+                    await fetchFiles();
+                    toast.success("Reference note created");
+                  } catch (err: any) {
+                    toast.error(`Creation failed: ${err.message}`);
+                  }
+                }}
+                className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer hover:underline"
+              >
+                <Plus size={10} /> Add Reference
+              </button>
+            </div>
+            <div className="h-px bg-border/20 mb-2" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredPdfs.length > 0 ? (
+                filteredPdfs.map(file => {
+                  return (
+                    <div
+                      key={file.path}
+                      onClick={() => selectFile(file.path)}
+                      className="bg-bento-card hover:bg-bento-item border border-border/40 hover:border-foreground/30 rounded-[8px] p-4 cursor-pointer transition-all duration-100 flex flex-col justify-between min-h-[96px] group"
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground/50 mb-1.5">
+                          <FileText size={12} className="shrink-0" />
+                          <span className="text-[8px] font-black uppercase tracking-widest font-mono">PDF reference</span>
+                        </div>
+                        <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">
+                          {file.name.replace('.pdf', '')}
+                        </h3>
+                      </div>
+                      
+                      {/* PDF Card Actions */}
+                      <div className="flex items-center justify-end gap-3 mt-3 border-t border-border/10 pt-2 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+                        <button
+                          onClick={(e) => onRenameCard(file.path, e)}
+                          className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:underline cursor-pointer"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          onClick={(e) => onDeleteCard(file.path, e)}
+                          className="text-[8px] font-black uppercase tracking-widest text-red-400/80 hover:text-red-400 hover:underline cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="col-span-3 py-12 border border-dashed border-border/40 rounded-[8px] text-center text-muted-foreground/30 text-xs uppercase font-black tracking-widest">
+                  {dashboardSearchQuery ? "No matching PDFs found" : "No Reference PDFs In Vault"}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   useEffect(() => {
     return () => {
       setSidebarContent(null, 'obsidian');
@@ -2120,11 +2690,25 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
 
     {/* Main Editor Panel */}
     {showGraphView ? (
-      <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden panel-transition">
-        <ObsidianGraphView onNodeClick={(path) => {
-          selectFile(path);
-          setShowGraphView(false);
-        }} />
+      <div className="flex-1 bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden panel-transition flex flex-col">
+        {/* Graph Header Bar */}
+        <div className="p-4 border-b border-border/10 flex items-center justify-between shrink-0 select-none">
+          <button
+            onClick={() => setShowGraphView(false)}
+            className="text-[9px] font-black uppercase tracking-widest hover:text-foreground text-muted-foreground bg-muted/10 border border-border/40 px-2.5 py-1 rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <ArrowLeft size={10} /> Back to Dashboard
+          </button>
+          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 font-mono">
+            Vault Graph Relations
+          </span>
+        </div>
+        <div className="flex-1 min-h-0 relative">
+          <ObsidianGraphView onNodeClick={(path) => {
+            selectFile(path);
+            setShowGraphView(false);
+          }} />
+        </div>
       </div>
     ) : (
       <div className="flex-1 flex flex-row min-w-0 h-full gap-3 relative">
@@ -2134,18 +2718,42 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
           style={{ width: (isPanelOpen && artifacts.length > 0) ? `${100 - panelWidth}%` : '100%', flex: (isPanelOpen && artifacts.length > 0) ? 'none' : '1 1 0%' }}
         >
         {!selectedPath ? (
-          <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-muted-foreground/20 gap-4 mt-32">
-            <FileText size={64} strokeWidth={1} />
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">Select an asset to visualize</p>
-          </div>
+          renderDashboard()
         ) : (
           <div className={cn(
             "mx-auto w-full max-w-full relative flex-1 flex flex-col min-h-0",
-            selectedIsPdf ? "p-0 overflow-hidden" : "py-4 px-6 h-full"
+            selectedIsPdf ? "px-4 pt-3 pb-0 overflow-hidden" : "py-4 px-6 h-full"
           )}>
             {loadingNote && (
               <PanelLoader label="Loading Document" />
             )}
+
+            {/* Back to Dashboard Button Bar */}
+            <div className="mb-3 shrink-0 select-none flex items-center justify-between border-b border-border/10 pb-2">
+              <button
+                onClick={() => {
+                  setSelectedPath(null);
+                  setLoadedPath(null);
+                  setNoteMetadata({});
+                  setNoteContent('');
+                  setEditedContent('');
+                  // Also clear selection in search query
+                  setSearchParams((prev: URLSearchParams) => {
+                    prev.delete('path');
+                    return prev;
+                  });
+                }}
+                className="text-[9px] font-black uppercase tracking-widest hover:text-foreground text-muted-foreground bg-muted/10 border border-border/40 px-2.5 py-1 rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft size={10} /> Back to Dashboard
+              </button>
+              
+              {selectedIsPdf && (
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 font-mono truncate max-w-[300px]">
+                  PDF: {selectedPath.split(/[/\\]/).pop()?.replace('.pdf', '')}
+                </span>
+              )}
+            </div>
 
             {/* Note details */}
             {!selectedIsPdf ? (
