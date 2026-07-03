@@ -1,9 +1,9 @@
 # SDLC State
 
-Status: implementing
-Active Change: source-grounded-teacher-runtime
+Status: idle
+Active Change:
 GitHub Issue:
-Branch: feature/source-grounded-teacher-runtime
+Branch: main
 Worktree:
 Base Branch: main
 Run File: .sdlc/run.json

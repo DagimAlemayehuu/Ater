@@ -1,12 +1,12 @@
 {
-  "status": "implementing",
-  "activeChange": "source-grounded-teacher-runtime",
+  "status": "idle",
+  "activeChange": null,
   "githubIssue": null,
   "pr": null,
   "baseBranch": "main",
-  "branch": "feature/source-grounded-teacher-runtime",
+  "branch": "main",
   "worktree": null,
-  "currentPhase": 1,
+  "currentPhase": 0,
   "retryBudget": 3,
   "phases": [
     {
