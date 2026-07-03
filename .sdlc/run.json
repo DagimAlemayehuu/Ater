@@ -1,12 +1,12 @@
 {
   "status": "implementing",
-  "activeChange": "full-chatbot-runtime",
+  "activeChange": "source-grounded-teacher-runtime",
   "githubIssue": null,
   "pr": null,
   "baseBranch": "main",
-  "branch": "feature/full-chatbot-runtime",
+  "branch": "feature/source-grounded-teacher-runtime",
   "worktree": null,
-  "currentPhase": 7,
+  "currentPhase": 1,
   "retryBudget": 3,
   "phases": [
     {
