@@ -3,12 +3,13 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from ..pdf_extractor import load_pdf_robust
 from .store import ChatStorage
-from src.domains.ater.source_service import SourceIngestionService
+from src.domains.ater.source_service import SourceLearningJobService
 
 class AttachmentManager:
-    def __init__(self, storage: ChatStorage, vault_path: Optional[str] = None):
+    def __init__(self, storage: ChatStorage, vault_path: Optional[str] = None, inbox_path: Optional[str] = None):
         self.storage = storage
         self.vault_path = Path(vault_path) if vault_path else None
+        self.inbox_path = Path(inbox_path) if inbox_path else None
 
     def extract_and_chunk(self, file_path: str, file_type: str) -> Dict[str, Any]:
         """
@@ -16,6 +17,37 @@ class AttachmentManager:
         Supported types: 'pdf', 'markdown', 'text', 'note' (Obsidian note), 'artifact'.
         """
         path = Path(file_path)
+        
+        # Helper to check if child path resolves inside parent path
+        def is_subpath(child: Path, parent: Path) -> bool:
+            try:
+                # We use resolve() to handle symlinks and relative parts cleanly
+                child.resolve().relative_to(parent.resolve())
+                return True
+            except ValueError:
+                return False
+
+        # Safety Check: only allow approved roots
+        if file_type == 'note':
+            resolved_path = path if path.is_absolute() else (self.vault_path / path if self.vault_path else path)
+            if not self.vault_path or not is_subpath(resolved_path, self.vault_path):
+                raise ValueError("Access Denied: Obsidian note must reside inside the vault.")
+        elif file_type == 'artifact':
+            # Artifacts should not require arbitrary path reads. Allow inside workspace or vault or inbox.
+            # If path is arbitrary and not in approved roots, reject.
+            in_inbox = self.inbox_path and is_subpath(path, self.inbox_path)
+            in_vault = self.vault_path and is_subpath(path, self.vault_path)
+            # Allow workspace path if in current folder or app folder
+            in_workspace = is_subpath(path, Path(".").resolve())
+            if not in_inbox and not in_vault and not in_workspace:
+                raise ValueError("Access Denied: Artifact path must reside inside the workspace, vault, or inbox.")
+        else:
+            # pdf, markdown, text must reside in inbox_path or vault_path
+            in_inbox = self.inbox_path and is_subpath(path, self.inbox_path)
+            in_vault = self.vault_path and is_subpath(path, self.vault_path)
+            if not in_inbox and not in_vault:
+                raise ValueError("Access Denied: Attachment file must reside inside the approved roots (Inbox or Vault).")
+
         if not path.exists() and file_type != 'note':
             raise FileNotFoundError(f"Attachment file not found: {file_path}")
 
@@ -86,10 +118,20 @@ class AttachmentManager:
             "chunk_metadata": chunk_metadata
         }
 
-    def attach_file(self, conversation_id: str, file_path: str, file_type: str, message_id: Optional[str] = None) -> Dict[str, Any]:
+    def attach_file(self, conversation_id: str, file_path: str, file_type: str, message_id: Optional[str] = None, content: Optional[str] = None) -> Dict[str, Any]:
         """
         Extracts, chunks and saves the file in the database.
         """
+        if content is not None:
+            return self.storage.create_attachment(
+                conv_id=conversation_id,
+                filename=Path(file_path).name,
+                file_path=file_path,
+                file_type=file_type,
+                extracted_text=content,
+                chunk_metadata=[{"length": len(content), "offset": 0}],
+                message_id=message_id
+            )
         extracted = self.extract_and_chunk(file_path, file_type)
         return self.storage.create_attachment(
             conv_id=conversation_id,
@@ -130,10 +172,12 @@ class AttachmentManager:
         file_type = attachment["file_type"]
 
         if file_type == 'pdf':
-            # Use SourceIngestionService to ingest the pdf
-            ingestion_service = SourceIngestionService()
-            ingested = ingestion_service.ingest_pdf(file_path)
-            return ingested
+            service = SourceLearningJobService(self.storage.db_path)
+            return service.create_or_resume_from_path(
+                file_path,
+                conversation_id=attachment.get("conversation_id"),
+                attachment_id=attachment_id,
+            )
         else:
             # Markdown/text fallback promotion
             with open(file_path, "r", encoding="utf-8") as f:

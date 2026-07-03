@@ -25,6 +25,19 @@ router = APIRouter()
 # Track in-progress vault generations
 _vault_status: Dict[str, str] = {}
 
+def _source_job_db_path(secrets: AppSecrets) -> Path:
+    base = Path(secrets.inbox_path or (Path(secrets.vault_path or ".") / "Inbox"))
+    return base / "ater_queue.db"
+
+def _source_job_service(secrets: AppSecrets):
+    from src.domains.ater.source_service import SourceLearningJobService
+    return SourceLearningJobService(_source_job_db_path(secrets))
+
+def _prompt_teacher_service(secrets: AppSecrets):
+    from src.domains.ater.prompt_teacher_service import PromptTeacherJobService
+    vault_path = Path(secrets.vault_path) if secrets.vault_path else None
+    return PromptTeacherJobService(_source_job_db_path(secrets), vault_path=vault_path)
+
 def _update_rag_status(status_state: Dict[str, Any]):
     state.rag_sync_status.update(status_state)
 
@@ -62,6 +75,145 @@ async def validate_vault_path(vault_path: Optional[str] = None, secrets: AppSecr
 
 
 # --- Core Ater & Obsidian Endpoints ---
+
+@router.post("/ater/source/jobs")
+async def create_source_learning_job(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    file_path = payload.get("file_path") or payload.get("inbox_file")
+    attachment_id = payload.get("attachment_id")
+    conversation_id = payload.get("conversation_id")
+    if not file_path and not attachment_id:
+        raise HTTPException(status_code=400, detail="file_path, inbox_file, or attachment_id is required")
+    try:
+        if attachment_id and not file_path:
+            from src.domains.ater.chat_runtime.store import ChatStorage
+            db_path = _source_job_db_path(secrets)
+            storage = ChatStorage(db_path)
+            conn = storage._get_connection()
+            try:
+                row = conn.execute("SELECT * FROM chat_attachments WHERE id = ?", (attachment_id,)).fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail=f"Attachment not found: {attachment_id}")
+                file_path = row["file_path"]
+                conversation_id = conversation_id or row["conversation_id"]
+            finally:
+                conn.close()
+        service = _source_job_service(secrets)
+        return service.create_or_resume_from_path(str(file_path), conversation_id=conversation_id, attachment_id=attachment_id)
+    except HTTPException:
+        raise
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ater/source/jobs/{job_id}")
+async def get_source_learning_job(
+    job_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    try:
+        return _source_job_service(secrets).get_job(job_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/source/jobs/{job_id}/start")
+async def start_source_learning_job(
+    job_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    try:
+        service = _source_job_service(secrets)
+        started = service.start_learning(job_id)
+        if secrets.vault_path:
+            started["deployment"] = service.deploy_to_vault(job_id, secrets.vault_path)
+        return started
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/source/jobs/{job_id}/deploy")
+async def deploy_source_learning_job(
+    job_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+    try:
+        return _source_job_service(secrets).deploy_to_vault(job_id, secrets.vault_path)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/prompt/jobs")
+async def create_prompt_teacher_job(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    prompt = payload.get("prompt")
+    conversation_id = payload.get("conversation_id")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+    try:
+        from src.domains.ater.prompt_teacher_service import classify_prompt_learning_intent
+        intent = classify_prompt_learning_intent(str(prompt))
+        if intent["intent"] == "quick_explanation":
+            return {"status": "quick_explanation", "next_action": "answer_inline", "intent": intent}
+        if intent["intent"] != "teacher_job":
+            raise HTTPException(status_code=400, detail="Prompt is not a learning job request.")
+        return _prompt_teacher_service(secrets).create_or_resume(str(prompt), conversation_id=conversation_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ater/prompt/jobs/{job_id}")
+async def get_prompt_teacher_job(
+    job_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    try:
+        return _prompt_teacher_service(secrets).get_job(job_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/prompt/jobs/{job_id}/start")
+async def start_prompt_teacher_job(
+    job_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    try:
+        service = _prompt_teacher_service(secrets)
+        started = service.start_learning(job_id)
+        if secrets.vault_path:
+            started["deployment"] = service.deploy_to_vault(job_id, secrets.vault_path)
+        return started
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ater/prompt/jobs/{job_id}/deploy")
+async def deploy_prompt_teacher_job(
+    job_id: str,
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault Path is required")
+    try:
+        return _prompt_teacher_service(secrets).deploy_to_vault(job_id, secrets.vault_path)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/obsidian/files")
 def list_obsidian_files(secrets: AppSecrets = Depends(get_app_secrets)):
@@ -2697,4 +2849,3 @@ async def get_learner_recommendations_endpoint(
         return {"recommendations": recommendations}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

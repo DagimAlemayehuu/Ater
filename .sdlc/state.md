@@ -1,9 +1,9 @@
 # SDLC State
 
 Status: implementing
-Active Change: full-chatbot-runtime
+Active Change: source-grounded-teacher-runtime
 GitHub Issue:
-Branch: feature/full-chatbot-runtime
+Branch: feature/source-grounded-teacher-runtime
 Worktree:
 Base Branch: main
 Run File: .sdlc/run.json

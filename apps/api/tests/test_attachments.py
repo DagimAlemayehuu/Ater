@@ -33,7 +33,8 @@ def temp_db_and_files():
 def test_attachment_creation_and_extraction(temp_db_and_files):
     db_path, txt_path, note_path = temp_db_and_files
     storage = ChatStorage(db_path)
-    am = AttachmentManager(storage)
+    # Pass approved roots:
+    am = AttachmentManager(storage, vault_path=str(note_path.parent), inbox_path=str(txt_path.parent))
     
     conv_id = storage.create_conversation("Attachments")["id"]
     
@@ -57,7 +58,7 @@ def test_attachment_creation_and_extraction(temp_db_and_files):
 def test_promotion_to_source_grounded(temp_db_and_files):
     db_path, txt_path, _ = temp_db_and_files
     storage = ChatStorage(db_path)
-    am = AttachmentManager(storage)
+    am = AttachmentManager(storage, inbox_path=str(txt_path.parent))
     conv_id = storage.create_conversation("Promotion")["id"]
     
     att = am.attach_file(conv_id, str(txt_path), "text")
@@ -66,3 +67,24 @@ def test_promotion_to_source_grounded(temp_db_and_files):
     assert promoted["file_name"] == txt_path.name
     assert len(promoted["pages"]) == 1
     assert "Line 1 of test content." in promoted["pages"][0]["content"]
+
+def test_attachment_safety_rejection(temp_db_and_files):
+    db_path, txt_path, note_path = temp_db_and_files
+    storage = ChatStorage(db_path)
+    
+    # Set approved roots to folders different from where the files reside
+    am = AttachmentManager(storage, vault_path="/some/other/vault", inbox_path="/some/other/inbox")
+    conv_id = storage.create_conversation("Rejection")["id"]
+    
+    # PDF/text outside roots should raise ValueError
+    with pytest.raises(ValueError, match="Access Denied"):
+        am.attach_file(conv_id, str(txt_path), "text")
+        
+    # Note outside roots should raise ValueError
+    with pytest.raises(ValueError, match="Access Denied"):
+        am.attach_file(conv_id, str(note_path), "note")
+
+    # Content parameter bypasses filesystem check
+    att = am.attach_file(conv_id, "/arbitrary/path/to/artifact.html", "artifact", content="<html>Active Artifact</html>")
+    assert att["filename"] == "artifact.html"
+    assert att["extracted_text"] == "<html>Active Artifact</html>"

@@ -41,7 +41,9 @@ class TutorSessionManager:
                 active_question_overrides TEXT DEFAULT '{}',
                 generated_ahead_paths TEXT DEFAULT '[]',
                 transfer_gate_outcomes TEXT DEFAULT '{}',
-                offline_readiness TEXT DEFAULT '{}'
+                offline_readiness TEXT DEFAULT '{}',
+                source_job_id TEXT,
+                current_concept_node_id TEXT
             )
         """)
         self.conn.execute("""
@@ -56,7 +58,8 @@ class TutorSessionManager:
         # Run safety schema migrations on DB connection initialization
         for col_name in [
             "active_note_unlocks", "consecutive_failures", "active_question_overrides",
-            "generated_ahead_paths", "transfer_gate_outcomes", "offline_readiness"
+            "generated_ahead_paths", "transfer_gate_outcomes", "offline_readiness",
+            "source_job_id", "current_concept_node_id"
         ]:
             try:
                 self.conn.execute(f"ALTER TABLE tutor_sessions ADD COLUMN {col_name} TEXT")
@@ -189,9 +192,41 @@ class TutorSessionManager:
         completed = json.loads(row["completed_notes"])
         active_unlocks = json.loads(row["active_note_unlocks"]) if row["active_note_unlocks"] else []
         generated_ahead = json.loads(row["generated_ahead_paths"]) if ("generated_ahead_paths" in keys and row["generated_ahead_paths"]) else []
+        source_job_id = row["source_job_id"] if "source_job_id" in keys else None
+        current_concept_node_id = row["current_concept_node_id"] if "current_concept_node_id" in keys else None
+        source_job_state = None
+        if source_job_id:
+            try:
+                from src.domains.ater.source_service import SourceLearningJobService
+                from src.domains.ater import learning_object as lo
+                source_job_state = SourceLearningJobService(self.db_path).get_job(source_job_id)
+                source_nodes = (source_job_state.get("concept_graph") or {}).get("nodes") or []
+                if source_nodes:
+                    curriculum = [
+                        f"SourceJobs/{source_job_id}/{lo.normalize_title(node['title'])}.md"
+                        for node in source_nodes
+                    ]
+                elif row["current_note_path"]:
+                    curriculum = [
+                        (source_job_state.get("current_tutor_link") or {}).get("current_note_path")
+                        or row["current_note_path"]
+                    ]
+            except Exception as e:
+                logger.warning(f"[TutorSessionManager] Failed to restore source job state: {e}")
         
         # Reconciliation: Treat existing note files as generated
         reconciled = False
+        source_nodes_by_path = {}
+        if source_job_state:
+            try:
+                from src.domains.ater import learning_object as lo
+                source_nodes_by_path = {
+                    f"SourceJobs/{source_job_id}/{lo.normalize_title(node['title'])}.md": node
+                    for node in ((source_job_state.get("concept_graph") or {}).get("nodes") or [])
+                }
+            except Exception:
+                source_nodes_by_path = {}
+
         for path_rel in curriculum:
             if path_rel not in completed and path_rel not in active_unlocks:
                 if (self.vault_path / path_rel).exists() and path_rel not in generated_ahead:
@@ -222,12 +257,14 @@ class TutorSessionManager:
             offline_ready = (self.vault_path / path_rel).exists()
             
             note_stem = Path(path_rel).stem
+            source_node = source_nodes_by_path.get(path_rel, {})
             roadmap.append({
                 "path": path_rel,
-                "title": note_stem.replace("_", " "),
+                "id": source_node.get("id"),
+                "title": source_node.get("title") or note_stem.replace("_", " "),
                 "status": status,
                 "offline_ready": offline_ready,
-                "source_pages": []
+                "source_pages": source_node.get("source_pages", [])
             })
             
         session_data = {
@@ -246,6 +283,11 @@ class TutorSessionManager:
             "generated_ahead_paths": generated_ahead,
             "transfer_gate_outcomes": json.loads(row["transfer_gate_outcomes"]) if ("transfer_gate_outcomes" in keys and row["transfer_gate_outcomes"]) else {},
             "offline_readiness": json.loads(row["offline_readiness"]) if ("offline_readiness" in keys and row["offline_readiness"]) else {},
+            "source_job_id": source_job_id,
+            "current_concept_node_id": current_concept_node_id,
+            "source_job": source_job_state,
+            "source_coverage": (source_job_state or {}).get("coverage"),
+            "warnings": (source_job_state or {}).get("warnings", []),
             "roadmap": roadmap
         }
         session_data["current_note_mastery"] = self.get_note_mastery_state(session_data, session_data["current_note_path"])
@@ -360,7 +402,7 @@ class TutorSessionManager:
 
             if failures == 1:
                 # First failure: get mistake diagnosis lesson but no remediation question
-                lesson = await self.generate_detailed_remediation_lesson(session["current_note_path"], question_data, user_answer)
+                lesson = await self.generate_source_remediation_lesson(session, question_data, user_answer)
                 diagnosis = {
                     "is_misconception": False,
                     "misconception_text": lesson,
@@ -369,7 +411,7 @@ class TutorSessionManager:
                 }
             else:
                 # Consecutive failures: get detailed lesson & clean remediation question
-                lesson = await self.generate_detailed_remediation_lesson(session["current_note_path"], question_data, user_answer)
+                lesson = await self.generate_source_remediation_lesson(session, question_data, user_answer)
                 remediation_q = await self.generate_clean_remediation_question(session["current_note_path"], question_data, user_answer, lesson)
 
                 diagnosis = {
@@ -401,6 +443,19 @@ class TutorSessionManager:
             session_id
         ))
         self.conn.commit()
+        if session.get("source_job_id") and session.get("current_concept_node_id"):
+            try:
+                from src.domains.ater.source_service import SourceLearningJobService
+                service = SourceLearningJobService(self.db_path)
+                service.update_coverage_for_answer(
+                    session["source_job_id"],
+                    session["current_concept_node_id"],
+                    correct=is_correct,
+                    transfer_passed=False,
+                    remediation_completed=not is_correct and bool(diagnosis.get("remediation_question")),
+                )
+            except Exception as e:
+                logger.warning(f"[TutorSessionManager] Failed to update source coverage: {e}")
         
         return {
             "score": new_score,
@@ -408,6 +463,49 @@ class TutorSessionManager:
             "diagnosis": diagnosis,
             "session": self.get_session(session_id)
         }
+
+    async def generate_source_remediation_lesson(self, session: Dict[str, Any], question: Dict[str, Any], user_answer: str) -> str:
+        if not session.get("source_job_id"):
+            return await self.generate_detailed_remediation_lesson(session["current_note_path"], question, user_answer)
+        source_job = session.get("source_job") or {}
+        node = None
+        for candidate in source_job.get("concept_graph", {}).get("nodes", []):
+            if candidate.get("id") == session.get("current_concept_node_id"):
+                node = candidate
+                break
+        if not node:
+            return await self.generate_detailed_remediation_lesson(session["current_note_path"], question, user_answer)
+
+        excerpt = " ".join(ex.get("text", "") for ex in node.get("source_excerpts", []))[:1200]
+        profile = node.get("teaching_profile", {})
+        if self.ai_service and getattr(self.ai_service, "llm", None):
+            try:
+                prompt = f"""Create source-grounded remediation for a failed tutor answer.
+Use only the cited source excerpt and teaching profile. Do not introduce macroeconomics, programming, biology, or outside examples.
+
+Concept: {node.get("title")}
+Source pages: {node.get("source_pages")}
+Teaching profile: {json.dumps(profile, ensure_ascii=False)}
+Source excerpt: {excerpt}
+Question: {json.dumps(question, ensure_ascii=False)}
+Learner answer: {user_answer}
+
+Write 2 continuous paragraphs plus one retry prompt."""
+                response = await self.ai_service.llm.ainvoke([
+                    SystemMessage(content="You are a source-grounded tutor. Stay inside the provided source."),
+                    HumanMessage(content=prompt),
+                ])
+                text = response.content if hasattr(response, "content") else str(response)
+                lowered = text.lower()
+                if not any(term in lowered for term in ["central banking", "exchange rates", "programming", "biology"]):
+                    return text
+            except Exception as e:
+                logger.warning(f"[TutorSessionManager] Source remediation AI failed: {e}")
+        return (
+            f"{node.get('title')} should be repaired from the source evidence on page(s) "
+            f"{', '.join(map(str, node.get('source_pages', [])))}. {excerpt[:500]} "
+            "Use the cited definition or relationship, then retry by explaining the concept in your own words."
+        )
 
     async def generate_detailed_remediation_lesson(self, note_path: str, question: Dict[str, Any], user_answer: str, attempt_number: int = 0, seen_summaries=None) -> str:
         if self.ai_service and getattr(self.ai_service, "llm", None):
@@ -1602,6 +1700,18 @@ User Answer: {user_answer}"""
             (json.dumps(transfer_gate_outcomes), session_id)
         )
         self.conn.commit()
+        if session.get("source_job_id") and session.get("current_concept_node_id"):
+            try:
+                from src.domains.ater.source_service import SourceLearningJobService
+                SourceLearningJobService(self.db_path).update_coverage_for_answer(
+                    session["source_job_id"],
+                    session["current_concept_node_id"],
+                    correct=True,
+                    transfer_passed=is_correct,
+                    remediation_completed=not is_correct,
+                )
+            except Exception as e:
+                logger.warning(f"[Tutor] Failed to update source transfer coverage: {e}")
         
         return {
             "is_correct": is_correct,

@@ -125,3 +125,60 @@ def test_message_persistence_and_branch_ancestry(temp_db):
     branches = storage.get_branches(cid)
     assert len(branches) == 1
     assert branches[0]["id"] == branch["id"]
+
+def test_sqlite_foreign_key_cascades(temp_db):
+    storage = ChatStorage(temp_db)
+    conv = storage.create_conversation("Delete Me")
+    cid = conv["id"]
+    
+    # Add message
+    msg = storage.append_message(cid, "user", "Test message")
+    mid = msg["id"]
+    
+    # Add attachment
+    storage.create_attachment(cid, "test.pdf", "/path/to/test.pdf", "pdf", message_id=mid)
+    
+    # Add summary
+    storage.set_summary(cid, "Summary", mid)
+    
+    # Add memory
+    storage.create_memory("session", "Memory content", conversation_id=cid, source_message_id=mid)
+    
+    # Add context snapshot
+    storage.create_context_snapshot("snap-1", cid, mid, [{"test": 1}])
+    
+    # Add stream run
+    storage.create_stream_run("run-1", cid)
+    
+    # Add tool call
+    storage.create_tool_call("call-1", mid, "run-1", "test_tool", {"arg": 1})
+    
+    # Verify everything exists
+    conn = storage._get_connection()
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM chat_messages").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM chat_attachments").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM chat_summaries").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM chat_memories").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM chat_context_snapshots").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM chat_stream_runs").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM chat_tool_calls").fetchone()[0] == 1
+    finally:
+        conn.close()
+        
+    # Hard delete conversation
+    storage.delete_conversation(cid, hard=True)
+    
+    # Verify everything is removed via cascade!
+    conn = storage._get_connection()
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM chat_conversations").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_messages").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_attachments").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_summaries").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_memories").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_context_snapshots").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_stream_runs").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM chat_tool_calls").fetchone()[0] == 0
+    finally:
+        conn.close()
