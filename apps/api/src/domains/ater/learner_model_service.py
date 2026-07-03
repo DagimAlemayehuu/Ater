@@ -2,7 +2,7 @@ import sqlite3
 import json
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -53,7 +53,125 @@ class LearnerModelManager:
                 last_studied_at TEXT
             )
         """)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS learner_source_objective_stats (
+                source_job_id TEXT,
+                objective_id TEXT,
+                failures INTEGER DEFAULT 0,
+                transfer_failures INTEGER DEFAULT 0,
+                recurring_misconceptions TEXT DEFAULT '[]',
+                updated_at TEXT,
+                PRIMARY KEY (source_job_id, objective_id)
+            )
+        """)
         self.conn.commit()
+
+    def summarize_source_mastery(self, source_job_id: str) -> Dict[str, Any]:
+        rows = self.conn.execute(
+            "SELECT * FROM coverage_matrix_rows WHERE job_id = ?",
+            (source_job_id,),
+        ).fetchall()
+        total = len(rows)
+        mastered = sum(1 for row in rows if row["mastery_state"] == "mastered")
+        transfer_weak = [
+            dict(row) for row in rows
+            if row["row_type"] == "concept" and row["recall_passed"] and not row["transfer_passed"]
+        ]
+        weak_objectives = [
+            dict(row) for row in rows
+            if row["row_type"] == "objective" and not row["objective_mapped"]
+        ]
+        return {
+            "source_job_id": source_job_id,
+            "completion_fraction": mastered / total if total else 0.0,
+            "mastered_rows": mastered,
+            "total_rows": total,
+            "transfer_weaknesses": transfer_weak,
+            "weak_objectives": weak_objectives,
+        }
+
+    def record_source_transfer_failure(self, source_job_id: str, objective_id: str) -> Dict[str, Any]:
+        now = datetime.now().isoformat()
+        self.conn.execute("""
+            INSERT INTO learner_source_objective_stats
+            (source_job_id, objective_id, failures, transfer_failures, recurring_misconceptions, updated_at)
+            VALUES (?, ?, 0, 1, '[]', ?)
+            ON CONFLICT(source_job_id, objective_id) DO UPDATE SET
+                transfer_failures = transfer_failures + 1,
+                updated_at = excluded.updated_at
+        """, (source_job_id, objective_id, now))
+        self.conn.commit()
+        row = self.conn.execute(
+            "SELECT * FROM learner_source_objective_stats WHERE source_job_id = ? AND objective_id = ?",
+            (source_job_id, objective_id),
+        ).fetchone()
+        return dict(row)
+
+    def recommend_source_next_actions(self, source_job_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        coverage_rows = [dict(row) for row in self.conn.execute(
+            "SELECT * FROM coverage_matrix_rows WHERE job_id = ?",
+            (source_job_id,),
+        ).fetchall()]
+        graph_rows = [dict(row) for row in self.conn.execute(
+            "SELECT id, title, objective_ids, teaching_order FROM concept_graph_nodes WHERE job_id = ? ORDER BY teaching_order",
+            (source_job_id,),
+        ).fetchall()]
+        stats_rows = {
+            row["objective_id"]: dict(row)
+            for row in self.conn.execute(
+                "SELECT * FROM learner_source_objective_stats WHERE source_job_id = ?",
+                (source_job_id,),
+            ).fetchall()
+        }
+        concept_cov = {row.get("concept_node_id"): row for row in coverage_rows if row.get("row_type") == "concept"}
+        objective_cov = {row.get("objective_id"): row for row in coverage_rows if row.get("row_type") == "objective"}
+        recommendations: List[Dict[str, Any]] = []
+
+        for node in graph_rows:
+            node_id = node["id"]
+            cov = concept_cov.get(node_id, {})
+            objective_ids = json.loads(node.get("objective_ids") or "[]")
+            title = node.get("title", node_id)
+            if not cov.get("source_extracted"):
+                recommendations.append({"type": "review_source", "concept_node_id": node_id, "title": title, "reason": "Source evidence is missing", "priority": 100})
+                continue
+            if cov.get("recall_passed") and not cov.get("transfer_passed"):
+                recommendations.append({"type": "application_practice", "concept_node_id": node_id, "title": title, "reason": "Recall passed but transfer is still weak", "priority": 110})
+            if cov.get("remediation_required") and not cov.get("remediation_completed"):
+                recommendations.append({"type": "remediate", "concept_node_id": node_id, "title": title, "reason": "Failed answer needs remediation", "priority": 115})
+            for objective_id in objective_ids:
+                stats = stats_rows.get(objective_id)
+                if stats and (stats.get("failures", 0) >= 2 or stats.get("transfer_failures", 0) >= 1):
+                    recommendations.append({"type": "objective_remediation", "objective_id": objective_id, "title": title, "reason": "Recurring source objective weakness", "priority": 120})
+            if not cov.get("taught"):
+                recommendations.append({"type": "learn_prerequisite", "concept_node_id": node_id, "title": title, "reason": "Uncovered prerequisite concept", "priority": 90 - int(node.get("teaching_order") or 0)})
+                continue
+
+        for objective_id, cov in objective_cov.items():
+            if not cov.get("objective_mapped"):
+                recommendations.append({"type": "map_objective", "objective_id": objective_id, "title": objective_id, "reason": "Required source objective is unmapped", "priority": 100})
+
+        recommendations.sort(key=lambda item: item["priority"], reverse=True)
+        return recommendations[:limit]
+
+    def record_source_misconception(self, source_job_id: str, objective_id: str, text: str) -> Dict[str, Any]:
+        now = datetime.now().isoformat()
+        row = self.conn.execute(
+            "SELECT * FROM learner_source_objective_stats WHERE source_job_id = ? AND objective_id = ?",
+            (source_job_id, objective_id),
+        ).fetchone()
+        existing = json.loads(row["recurring_misconceptions"] or "[]") if row else []
+        normalized = re.sub(r"\s+", " ", text.strip().lower())
+        if normalized and normalized not in existing:
+            existing.append(normalized)
+        failures = (row["failures"] if row else 0) + 1
+        self.conn.execute("""
+            INSERT OR REPLACE INTO learner_source_objective_stats
+            (source_job_id, objective_id, failures, transfer_failures, recurring_misconceptions, updated_at)
+            VALUES (?, ?, ?, COALESCE((SELECT transfer_failures FROM learner_source_objective_stats WHERE source_job_id = ? AND objective_id = ?), 0), ?, ?)
+        """, (source_job_id, objective_id, failures, source_job_id, objective_id, json.dumps(existing), now))
+        self.conn.commit()
+        return {"source_job_id": source_job_id, "objective_id": objective_id, "failures": failures, "recurring_misconceptions": existing}
 
     def _resolve_vault_path(self, note_id: str) -> Optional[Path]:
         p = Path(note_id)

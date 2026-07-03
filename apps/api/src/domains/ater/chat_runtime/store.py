@@ -12,6 +12,7 @@ class ChatStorage:
 
     def _get_connection(self):
         conn = sqlite3.connect(str(self.db_path), check_same_thread=False, timeout=30.0)
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -109,7 +110,8 @@ class ChatStorage:
                         finished_at TEXT,
                         result_summary TEXT,
                         error_text TEXT,
-                        emitted_actions TEXT DEFAULT '[]'
+                        emitted_actions TEXT DEFAULT '[]',
+                        FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
                     )
                 """)
                 # 8. chat_context_snapshots

@@ -865,7 +865,7 @@ def get_chat_runtime_components(secrets: AppSecrets = Depends(get_app_secrets)):
     db_path = base_dir / "ater_queue.db"
     storage = ChatStorage(db_path)
     memory_manager = MemoryManager(storage)
-    attachment_manager = AttachmentManager(storage, secrets.vault_path)
+    attachment_manager = AttachmentManager(storage, secrets.vault_path, secrets.inbox_path)
     streaming_manager = StreamingManager(storage, memory_manager, attachment_manager)
     return {
         "storage": storage,
@@ -960,12 +960,14 @@ async def append_historical_message(
     content = payload.get("content", "")
     status = payload.get("status", "completed")
     parent_message_id = payload.get("parent_message_id")
+    metadata = payload.get("metadata")
     return deps["storage"].append_message(
         conv_id=conv_id,
         role=role,
         content=content,
         status=status,
-        parent_message_id=parent_message_id
+        parent_message_id=parent_message_id,
+        metadata=metadata
     )
 
 @router.post("/chat/conversations/{conv_id}/stream")
@@ -978,6 +980,9 @@ async def stream_turn(
     user_message = payload.get("message", "")
     parent_message_id = payload.get("parent_message_id")
     token_budget = payload.get("token_budget", 8000)
+    rag_context = payload.get("rag_context")
+    user_context = payload.get("user_context")
+    active_artifact = payload.get("active_artifact")
 
     if not secrets.ai_key:
         raise HTTPException(status_code=400, detail="AI API key is required. Please set it in Settings.")
@@ -989,7 +994,10 @@ async def stream_turn(
                 user_message_content=user_message,
                 secrets=secrets,
                 parent_message_id=parent_message_id,
-                token_budget=token_budget
+                token_budget=token_budget,
+                rag_context=rag_context,
+                user_context=user_context,
+                active_artifact=active_artifact
             ):
                 yield event
         except Exception as e:
@@ -1015,10 +1023,33 @@ async def regenerate_message(
     deps: Dict[str, Any] = Depends(get_chat_runtime_components)
 ):
     assistant_message_id = payload.get("message_id", "")
-    content = deps["streaming_manager"].regenerate_message(conv_id, assistant_message_id, secrets)
-    if not content:
-        raise HTTPException(status_code=400, detail="Invalid assistant message or parent not found")
-    return {"success": True, "prompt": content}
+    msg = deps["storage"].get_message(assistant_message_id)
+    if not msg or msg["role"] != "assistant":
+        raise HTTPException(status_code=400, detail="Invalid assistant message ID")
+        
+    parent_user_msg_id = msg["parent_message_id"]
+    if not parent_user_msg_id:
+        raise HTTPException(status_code=400, detail="Parent user message not found")
+        
+    parent_user_msg = deps["storage"].get_message(parent_user_msg_id)
+    if not parent_user_msg:
+        raise HTTPException(status_code=400, detail="Parent user message content not found")
+
+    async def sse_generator():
+        try:
+            async for event in deps["streaming_manager"].stream_assistant_turn(
+                conversation_id=conv_id,
+                user_message_content=parent_user_msg["content"],
+                secrets=secrets,
+                parent_message_id=parent_user_msg_id,
+                is_regenerate=True
+            ):
+                yield event
+        except Exception as e:
+            logger.error(f"[Chat Regen] error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
 @router.post("/chat/conversations/{conv_id}/branch")
 async def branch_message(
@@ -1030,7 +1061,26 @@ async def branch_message(
     message_id = payload.get("message_id", "")
     new_content = payload.get("content", "")
     res = deps["streaming_manager"].branch_from_message(conv_id, message_id, new_content, secrets)
-    return res
+    
+    branch_id = res["branch_id"]
+    new_user_message_id = res["new_user_message_id"]
+
+    async def sse_generator():
+        yield f"data: {json.dumps({'type': 'branch_created', 'branch_id': branch_id, 'new_user_message_id': new_user_message_id})}\n\n"
+        try:
+            async for event in deps["streaming_manager"].stream_assistant_turn(
+                conversation_id=conv_id,
+                user_message_content=new_content,
+                secrets=secrets,
+                parent_message_id=new_user_message_id,
+                is_regenerate=True
+            ):
+                yield event
+        except Exception as e:
+            logger.error(f"[Chat Branch] error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
 # --- Memories ---
 @router.get("/chat/memories")
@@ -1093,9 +1143,10 @@ async def upload_attachment(
     file_path = payload.get("file_path", "")
     file_type = payload.get("file_type", "")
     message_id = payload.get("message_id")
+    content = payload.get("content")
     
     attachment = deps["attachment_manager"].attach_file(
-        conversation_id=conv_id, file_path=file_path, file_type=file_type, message_id=message_id
+        conversation_id=conv_id, file_path=file_path, file_type=file_type, message_id=message_id, content=content
     )
     return attachment
 
@@ -1121,4 +1172,3 @@ async def get_message_tools(
     deps: Dict[str, Any] = Depends(get_chat_runtime_components)
 ):
     return deps["storage"].get_tool_calls(message_id)
-

@@ -27,8 +27,6 @@ interface SavedConversation {
 
 import {sidecarApi} from '@/lib/sidecarApi'
 import {cn} from '@/lib/utils'
-import { listen } from '@tauri-apps/api/event'
-import { NoteCanvas } from '@/components/intelligence/NoteCanvas'
 import { LearningWorkspace } from '@/components/intelligence/LearningWorkspace'
 import { useConfig} from '@/lib/ConfigContext'
 import {useHeader} from '@/context/header-context'
@@ -37,23 +35,51 @@ import {useNavigate} from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { MiniLoader } from '@/components/ui/loading-state'
-import { ArtifactViewer } from '@/components/obsidian/ArtifactViewer'
-import { extractArtifacts } from '@/lib/artifacts/parser'
-import { useArtifactStore } from '@/lib/artifacts/store'
-import { shouldShowArtifactReopenButton } from '@/lib/artifacts/panel'
+import { useChatStore } from '@/context/chatStore'
 import { Send, Trash2, Bookmark, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
 import { dispatchWalkthroughTrigger } from '@/components/layout/InteractiveTour'
 import { open } from '@tauri-apps/plugin-dialog'
 
+interface ChatMemory {
+  id: string
+  scope: 'durable' | 'session'
+  content: string
+  confidence?: number
+  enabled?: boolean
+  status?: string
+}
+
+interface ChatAttachment {
+  id: string
+  filename: string
+  file_path: string
+  file_type: string
+  chunk_metadata?: any[]
+}
+
+interface ToolCall {
+  id: string
+  tool_name: string
+  status: string
+  arguments?: Record<string, any>
+  result_summary?: string
+  error_text?: string | null
+  emitted_actions?: any[]
+  duration_ms?: number
+}
+
 interface Message {
   id?: string;
   role: 'user' | 'assistant';
   content: string;
   status?: string;
+  parent_message_id?: string | null;
+  created_at?: string;
+  metadata?: any;
   customAction?: {
-    label: string
+    label?: string
     hubPath: string
     semesterName: string
     courseName: string
@@ -61,6 +87,9 @@ interface Message {
     hubTitle: string
     sessionId: string
     results: string[]
+    promptJobId?: string
+    sourceJobId?: string
+    sourceJobState?: any
   }
 }
 
@@ -70,29 +99,20 @@ const cleanTitle = (val: any): string => {
   return String(val).replace(/\[\[(.*?)\]\]/g, '$1').replace(/_/g, ' ').trim()
 }
 
-const isTemporaryLessonPath = (path?: string | null) => {
-  return typeof path === 'string' && path.includes('remediation_temp')
-}
-
-const firstRealLessonPath = (...paths: Array<string | null | undefined>) => {
-  return paths.find(path => path && !isTemporaryLessonPath(path)) || null
-}
+const hydrateMessageActions = (msgs: Message[]): Message[] => msgs.map((msg) => {
+  const sourceTeacherAction = msg.metadata?.sourceTeacherAction
+  if (!sourceTeacherAction || msg.customAction) return msg
+  return { ...msg, customAction: sourceTeacherAction }
+})
 
 interface OracleViewProps {
   isHistoryOpen: boolean;
   setIsHistoryOpen: (open: boolean) => void;
-  activeNotePath?: string | null;
-  onStateChange?: (state: {
-    hasMessages: boolean;
-    hasPreview: boolean;
-    isPanelOpen: boolean;
-    isLessonOpen: boolean;
-  }) => void;
   onNoteSelect?: (path: string | null) => void;
 }
 
 /* ─── Oracle Chat View ─── */
-function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateChange, onNoteSelect }: OracleViewProps) {
+function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleViewProps) {
   const navigate = useNavigate();
   const { setSidebarContent } = useSidebarContent();
   const isMountedRef = useRef(true);
@@ -115,13 +135,16 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     fetchStatus();
   };
 
-  // Load conversation list
-  const [conversations, setConversations] = useState<SavedConversation[]>([]);
-
-  // Active conversation ID
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
-    return localStorage.getItem('ater_oracle_active_conversation_id') || null;
-  });
+  const conversations = useChatStore(state => state.conversations);
+  const setConversations = useChatStore(state => state.setConversations);
+  const activeConversationId = useChatStore(state => state.activeConversationId);
+  const setActiveConversationId = useChatStore(state => state.setActiveConversationId);
+  const activeSessionId = useChatStore(state => state.activeSessionId);
+  const setActiveSessionId = useChatStore(state => state.setActiveSessionId);
+  const activeWorkspace = useChatStore(state => state.activeWorkspace);
+  const setActiveWorkspace = useChatStore(state => state.setActiveWorkspace);
+  const messages = useChatStore(state => state.messages);
+  const setMessages = useChatStore(state => state.setMessages);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -144,7 +167,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
   const loadMessages = useCallback(async (convId: string) => {
     try {
       const msgs = await sidecarApi.getMessages(convId);
-      setMessages(msgs);
+      setMessages(hydrateMessageActions(msgs));
     } catch (err) {
       console.error('[Oracle] Failed to get messages:', err);
     }
@@ -201,18 +224,62 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     return conversations.find(c => c.id === activeConversationId) || null;
   }, [activeConversationId, conversations]);
 
-  const [messages, setMessages] = useState<Message[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [activeMessageIds, setActiveMessageIds] = useState<Record<string, string>>({});
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [memories, setMemories] = useState<ChatMemory[]>([]);
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
+  const [attachmentsPanelOpen, setAttachmentsPanelOpen] = useState(false);
+  const [expandedToolMessageId, setExpandedToolMessageId] = useState<string | null>(null);
+  const [toolCallsByMessageId, setToolCallsByMessageId] = useState<Record<string, ToolCall[]>>({});
+  const [toolTimelineLoadingId, setToolTimelineLoadingId] = useState<string | null>(null);
+
+  const messageGroups = useMemo(() => {
+    const groups: Record<string, Message[]> = {};
+    for (const m of messages) {
+      const parentKey = m.parent_message_id || 'root';
+      if (!groups[parentKey]) groups[parentKey] = [];
+      groups[parentKey].push(m);
+    }
+    for (const key of Object.keys(groups)) {
+      groups[key].sort((a, b) => {
+        const t1 = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const t2 = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return t1 - t2;
+      });
+    }
+    return groups;
+  }, [messages]);
+
+  const activeThread = useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+    const thread: Message[] = [];
+    let currentParent = 'root';
+    
+    while (messageGroups[currentParent] && messageGroups[currentParent].length > 0) {
+      const siblings = messageGroups[currentParent];
+      let activeId = activeMessageIds[currentParent];
+      let activeMsg = siblings.find(s => s.id === activeId);
+      if (!activeMsg) {
+        activeMsg = siblings[siblings.length - 1];
+      }
+      thread.push(activeMsg);
+      currentParent = activeMsg.id!;
+    }
+    return thread;
+  }, [messages, messageGroups, activeMessageIds]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
-  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const generatedSpecRef = useRef<Set<string>>(new Set());
-  const artifactState = useArtifactStore();
   const [pendingPdfSession, setPendingPdfSession] = useState<{
     sessionId: string
+    promptJobId?: string
+    sourceJobId?: string
+    sourceJobState?: any
     hubPath: string
     semesterName: string
     courseName: string
@@ -224,111 +291,108 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
   const [isGeneratingLesson, setIsGeneratingLesson] = useState(false);
   const [generatingStatus, setGeneratingStatus] = useState<string | null>(null);
 
-  const [preview, setPreview] = useState<LessonPreview | null>(() => {
-    if (activeConv) return activeConv.preview;
-    try {
-      const saved = localStorage.getItem('ater_lesson_preview');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const preview = activeWorkspace;
+  const setPreview = setActiveWorkspace;
   const [tutorSession, setTutorSession] = useState<any | null>(null);
   const [panelOpen, setPanelOpen] = useState(() => {
     if (activeConv) return activeConv.panelOpen;
-    try {
-      const saved = localStorage.getItem('ater_lesson_panel_open');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
+    return false;
   });
 
-  const activeLessonPath = firstRealLessonPath(
-    preview?.notePath,
-    activeNotePath,
-    localStorage.getItem('ater_study_active_note_path'),
-    localStorage.getItem('ater_canonical_lesson_path'),
-    localStorage.getItem('ater_original_note_path'),
-  ) || '';
-  const activeLessonTitle = (!isTemporaryLessonPath(preview?.notePath) && preview?.title)
-    ? preview.title
-    : cleanTitle(activeLessonPath.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || '');
-
-  const openCurrentLesson = useCallback(async () => {
-    let nextPreview = preview;
-    const savedPreview = localStorage.getItem('ater_lesson_preview');
-    if (!nextPreview && savedPreview) {
-      try {
-        nextPreview = JSON.parse(savedPreview);
-      } catch {
-        nextPreview = null;
-      }
+  const refreshRuntimePanels = useCallback(async (convId: string) => {
+    try {
+      const [memoryRows, attachmentRows] = await Promise.all([
+        sidecarApi.listMemories(convId),
+        sidecarApi.listAttachments(convId),
+      ]);
+      setMemories(Array.isArray(memoryRows) ? memoryRows : []);
+      setAttachments(Array.isArray(attachmentRows) ? attachmentRows : []);
+    } catch (err) {
+      console.error('[Oracle] Failed to load runtime panels:', err);
     }
+  }, []);
 
-    const path = firstRealLessonPath(
-      nextPreview?.notePath,
-      activeNotePath,
-      localStorage.getItem('ater_study_active_note_path'),
-      localStorage.getItem('ater_canonical_lesson_path'),
-      localStorage.getItem('ater_original_note_path'),
-    ) || '';
-
-    if (nextPreview && path && nextPreview.notePath !== path) {
-      nextPreview = {
-        ...nextPreview,
-        title: cleanTitle(path.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || nextPreview.title || 'Lesson'),
-        lessonPath: path,
-        notePath: path,
-      };
+  useEffect(() => {
+    if (activeConversationId) {
+      void refreshRuntimePanels(activeConversationId);
+    } else {
+      setMemories([]);
+      setAttachments([]);
+      setToolCallsByMessageId({});
+      setExpandedToolMessageId(null);
     }
+  }, [activeConversationId, refreshRuntimePanels]);
 
-    if (!nextPreview && path) {
-      nextPreview = {
-        title: cleanTitle(path.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson'),
-        lessonPath: path,
-        notePath: path,
-        hubPath: '',
-        previewUrl: '',
-      };
-    }
-
-    if (!nextPreview) {
-      toast.error('No active lesson found to continue.');
+  const toggleToolTimeline = useCallback(async (messageId: string) => {
+    if (expandedToolMessageId === messageId) {
+      setExpandedToolMessageId(null);
       return;
     }
 
-    setPreview(nextPreview);
-    if (nextPreview.notePath) {
-      onNoteSelect?.(nextPreview.notePath);
-      localStorage.setItem('ater_study_active_note_path', nextPreview.notePath);
-      localStorage.setItem('ater_canonical_lesson_path', nextPreview.notePath);
-      localStorage.setItem('ater_original_note_path', nextPreview.notePath);
-    }
+    setExpandedToolMessageId(messageId);
+    if (toolCallsByMessageId[messageId]) return;
 
-    const activeSessionId = localStorage.getItem('ater_active_session_id');
-    if (activeSessionId && !tutorSession) {
-      try {
-        const session = await sidecarApi.getTutorStatus(activeSessionId);
-        if (session) setTutorSession(session);
-      } catch (err) {
-        console.error('[Oracle] Failed to restore tutor session:', err);
-      }
-    } else if (nextPreview.hubPath && !tutorSession) {
-      try {
-        const session = await sidecarApi.getTutorSessionByHub(nextPreview.hubPath);
-        if (session) setTutorSession(session);
-      } catch (err) {
-        console.error('[Oracle] Failed to restore tutor session by hub:', err);
-      }
-    }
+    setToolTimelineLoadingId(messageId);
+    try {
+      let calls = await sidecarApi.getMessageTools(messageId);
+      if ((!Array.isArray(calls) || calls.length === 0)) {
+        const currentMessage = useChatStore.getState().messages.find((message: Message) => message.id === messageId);
+        const siblingMessages = useChatStore.getState().messages.filter((message: Message) => (
+          message.role === 'assistant' &&
+          message.parent_message_id &&
+          currentMessage?.parent_message_id &&
+          message.parent_message_id === currentMessage.parent_message_id &&
+          message.id !== messageId
+        ));
 
-    setPanelOpen(true);
-    localStorage.setItem('ater_lesson_panel_open', JSON.stringify(true));
-  }, [activeNotePath, onNoteSelect, preview, tutorSession]);
+        for (const sibling of siblingMessages) {
+          if (!sibling.id) continue;
+          const siblingCalls = await sidecarApi.getMessageTools(sibling.id);
+          if (Array.isArray(siblingCalls) && siblingCalls.length > 0) {
+            calls = siblingCalls.map((call: ToolCall) => ({
+              ...call,
+              result_summary: call.result_summary
+                ? `[Recorded on another response version]\n${call.result_summary}`
+                : '[Recorded on another response version]',
+            }));
+            break;
+          }
+        }
+      }
+      setToolCallsByMessageId(prev => ({
+        ...prev,
+        [messageId]: Array.isArray(calls) ? calls : [],
+      }));
+    } catch (err) {
+      console.error('[Oracle] Failed to load tool timeline:', err);
+      toast.error('Failed to load tool timeline');
+    } finally {
+      setToolTimelineLoadingId(null);
+    }
+  }, [expandedToolMessageId, toolCallsByMessageId]);
+
+  const updateMemoryEnabled = useCallback(async (memoryId: string, enabled: boolean) => {
+    try {
+      await sidecarApi.patchMemory(memoryId, { enabled });
+      if (activeConversationId) await refreshRuntimePanels(activeConversationId);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update memory');
+    }
+  }, [activeConversationId, refreshRuntimePanels]);
+
+  const deleteMemory = useCallback(async (memoryId: string) => {
+    try {
+      await sidecarApi.deleteMemory(memoryId);
+      if (activeConversationId) await refreshRuntimePanels(activeConversationId);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete memory');
+    }
+  }, [activeConversationId, refreshRuntimePanels]);
 
   const handleAttachFile = async () => {
-    let assistantIndex = messages.length + 1
+    let currentMsgs: Message[] = []
+    let assistantIndex = 0
+    let attachmentConversationId = activeConversationId;
     try {
       const selected = await open({
         multiple: false,
@@ -343,68 +407,75 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
       setIsLoading(true);
       setActiveStatus('Saving to Inbox...');
 
-      const userMsg = { role: 'user' as const, content: `Please process the source document: ${fileName}` }
-      setMessages(prev => [...prev, userMsg])
+      let createdAttachmentConversation = false;
+      if (!attachmentConversationId) {
+        const created = await sidecarApi.createConversation(`Source: ${fileName}`);
+        attachmentConversationId = created.id;
+        createdAttachmentConversation = true;
+        setActiveConversationId(attachmentConversationId);
+        setMessages([]);
+        await loadConversations();
+      }
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
+      const userMsg = { role: 'user' as const, content: `Please process the source document: ${fileName}` }
+      const assistantPlaceholder = {
+        role: 'assistant' as const,
         content: `Source Document: ${fileName}\n\nStarting background deployment...`
-      }])
+      }
+      const baseMessages = createdAttachmentConversation ? [] : useChatStore.getState().messages;
+      currentMsgs = [...baseMessages, userMsg, assistantPlaceholder]
+      assistantIndex = currentMsgs.length - 1
+      setMessages(currentMsgs)
 
       // 1. Upload/Copy file natively to Inbox
       const uploadRes = await sidecarApi.aterInboxUpload(selected, fileName)
       const inboxFilePath = uploadRes.path
+      await sidecarApi.appendMessage(attachmentConversationId!, userMsg.role, userMsg.content);
 
-      // 2. Pure detection
-      setActiveStatus('Detecting curriculum...')
-      setMessages(prev => {
-        const next = [...prev]
-        next[assistantIndex] = {
-          role: 'assistant',
-          content: `Source Document: ${fileName}\n\n- Saved to Inbox\n- Detecting semester and course curriculum structure...`
-        }
-        return next
-      })
+      const extension = fileName.split('.').pop()?.toLowerCase();
+      const fileType = extension === 'pdf' ? 'pdf' : extension === 'md' ? 'markdown' : 'text';
+      try {
+        await sidecarApi.uploadAttachment(attachmentConversationId!, inboxFilePath, fileType);
+        await refreshRuntimePanels(attachmentConversationId!);
+      } catch (attachmentErr) {
+        console.error('[Oracle] Failed to register chat attachment:', attachmentErr);
+      }
 
-      const detectRes = await sidecarApi.aterProcess({ file_path: inboxFilePath })
-      const curriculum = detectRes.detected_curriculum || {}
-      const semesterName = curriculum.semester || 'General'
-      const courseName = curriculum.course || 'General_Knowledge'
-      const unitNum = curriculum.unit || ''
-      const hubTitle = curriculum.hub_title || 'General'
+      // 2. Unified source job creation
+      setActiveStatus('Auditing source...')
+      currentMsgs = [...currentMsgs]
+      currentMsgs[assistantIndex] = {
+        role: 'assistant',
+        content: `Source Document: ${fileName}\n\n- Saved to Inbox\n- Auditing source and building learning roadmap...`
+      }
+      setMessages(currentMsgs)
 
-      // 3. Plan Generation
-      setActiveStatus('Generating learning plan...')
-      setMessages(prev => {
-        const next = [...prev]
-        next[assistantIndex] = {
-          role: 'assistant',
-          content: `Source Document: ${fileName}\n\n- Saved to Inbox\n- Detected curriculum: ${semesterName} / ${courseName}\n- Planning learning roadmap...`
-        }
-        return next
-      })
-
-      const planRes = await sidecarApi.aterGeneratePlan({
+      const sourceJob = await sidecarApi.createSourceLearningJob({
         file_path: inboxFilePath,
-        curriculum: curriculum
+        conversation_id: attachmentConversationId || undefined
       })
 
-      const planStructured = planRes.plan_structured || {}
-      const sessionId = planRes.session_id
-
-      // Extract titles and chapters
-      const atomicNotes: any[] = planStructured.atomic_notes || []
-      const allResults = atomicNotes.map(n => typeof n === 'string' ? n : n.title)
-      const chapters: any[] = planStructured.chapters || []
-
-      const cleanCourseTitle = courseName.replace(/[^a-zA-Z0-9]/g, '_')
-      const cleanHubTitle = hubTitle.replace(/[^a-zA-Z0-9]/g, '_')
-      const canonicalHubPath = `Inbox/Generated/${semesterName}/${cleanCourseTitle}/${unitNum ? `${unitNum}_` : ''}${cleanHubTitle}_Hub.md`
+      const semesterName = 'Source'
+      const courseName = sourceJob.domain || 'Source_Learning'
+      const unitNum = ''
+      const hubTitle = sourceJob.topic || sourceJob.title || fileName
+      const sessionId = `source:${sourceJob.job_id}`
+      const allResults: string[] = (sourceJob.roadmap || [])
+        .map((item: any) => item.title)
+        .filter(Boolean)
+      const chapters = allResults.length > 0 ? [{
+        title: sourceJob.title || 'Source Roadmap',
+        atomic_notes: allResults
+      }] : []
+      const canonicalHubPath = `SourceJobs/${sourceJob.job_id}/${(hubTitle || 'Source').replace(/[^a-zA-Z0-9]/g, '_')}_Hub.md`
 
       // Compile roadmap markdown exactly matching the from-scratch design:
       const lessonTitle = `${courseName} — ${hubTitle.replace(/[_-]/g, ' ')}`
       let roadmapMarkdown = `## ${lessonTitle} — Learning Roadmap\n\n`
-      roadmapMarkdown += `${chapters.length || allResults.length} chapters · ${allResults.length} lessons planned for: *${fileName}*\n\n`
+      roadmapMarkdown += `${sourceJob.audit?.page_count || 0} pages · ${allResults.length} source-grounded concepts planned for: *${fileName}*\n\n`
+      if (sourceJob.warnings?.length) {
+        roadmapMarkdown += `Warnings:\n\n${sourceJob.warnings.map((w: any) => `- ${w.severity}: ${w.description}`).join('\n')}\n\n`
+      }
       roadmapMarkdown += `---\n\n`
 
       if (chapters.length > 0) {
@@ -416,42 +487,74 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         })
         roadmapMarkdown += chapterCards.join('\n\n---\n\n')
       } else {
-        allResults.forEach((note, idx) => {
-          roadmapMarkdown += `${idx + 1}. **${note.replace(/[_-]/g, ' ')}**\n`
-        })
+        roadmapMarkdown += [
+          `No teachable concepts were returned for this source yet.`,
+          ``,
+          `Debug details:`,
+          `- Job ID: ${sourceJob.job_id || 'missing'}`,
+          `- Status: ${sourceJob.status || 'unknown'}`,
+          `- Topic: ${sourceJob.topic || sourceJob.title || 'unknown'}`,
+          `- Page count: ${sourceJob.audit?.page_count || sourceJob.page_count || 0}`,
+          ``,
+          `Try attaching the file again after refreshing, or open the Source Job status if this repeats.`
+        ].join('\n')
       }
-      roadmapMarkdown += `\n\n---\n\nClick **Start Lesson** to generate the full lesson workspace.`
+      roadmapMarkdown += `\n\n---\n\nClick **Start Lesson** to open the source-grounded teacher workspace.`
 
-      setPendingPdfSession({
-        sessionId,
+      const sourceTeacherAction = {
+        label: 'Start Lesson',
+        sourceJobId: sourceJob.job_id,
+        sourceJobState: sourceJob,
         hubPath: canonicalHubPath,
         semesterName,
         courseName,
         unitNum,
         hubTitle,
+        sessionId,
         results: allResults
+      }
+
+      setPendingPdfSession({
+        ...sourceTeacherAction
       })
 
-      setMessages(prev => {
-        const next = [...prev]
-        next[assistantIndex] = {
-          role: 'assistant',
-          content: roadmapMarkdown
-        }
-        return next
-      })
+      const successMsgs = [...currentMsgs]
+      successMsgs[assistantIndex] = {
+        role: 'assistant',
+        content: roadmapMarkdown,
+        metadata: { sourceTeacherAction },
+        customAction: sourceTeacherAction
+      }
+      await sidecarApi.appendMessage(
+        attachmentConversationId!,
+        'assistant',
+        roadmapMarkdown,
+        undefined,
+        { sourceTeacherAction }
+      );
+      setMessages(successMsgs)
+      if (createdAttachmentConversation) {
+        await loadConversations();
+      }
+      const persistedMessages = await sidecarApi.getMessages(attachmentConversationId!);
+      setMessages(hydrateMessageActions(persistedMessages));
 
     } catch (err: any) {
       const errMsg = err.message || 'Processing failed'
       console.error(err)
-      setMessages(prev => {
-        const next = [...prev]
-        next[assistantIndex] = {
-          role: 'assistant',
-          content: `Processing Failed\n\nError: ${errMsg}`
+      const failMsgs = currentMsgs.length ? [...currentMsgs] : [...useChatStore.getState().messages]
+      failMsgs[assistantIndex] = {
+        role: 'assistant',
+        content: `Processing Failed\n\nError: ${errMsg}`
+      }
+      if (attachmentConversationId) {
+        try {
+          await sidecarApi.appendMessage(attachmentConversationId, 'assistant', `Processing Failed\n\nError: ${errMsg}`);
+        } catch (appendErr) {
+          console.error('[Oracle] Failed to persist source processing error:', appendErr);
         }
-        return next
-      })
+      }
+      setMessages(failMsgs)
       toast.error(errMsg)
     } finally {
       setIsLoading(false)
@@ -464,7 +567,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     if (!activeConversationId && messages.length > 0) {
       const newId = `ater-conv-${Date.now()}`;
       setActiveConversationId(newId);
-      localStorage.setItem('ater_oracle_active_conversation_id', newId);
 
       const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
       const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
@@ -478,11 +580,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         timestamp: Date.now()
       };
 
-      setConversations(prev => {
-        const updated = [newConv, ...prev];
-        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
-        return updated;
-      });
+      setConversations([newConv, ...conversations]);
     }
   }, [activeConversationId, messages]);
 
@@ -490,66 +588,22 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
   useEffect(() => {
     if (!activeConversationId) return;
 
-    setConversations(prev => {
-      const index = prev.findIndex(c => c.id === activeConversationId);
-      const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
-      const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
-
-      if (index > -1) {
-        const existing = prev[index];
-        if (
-          JSON.stringify(existing.messages) === JSON.stringify(messages) &&
-          JSON.stringify(existing.preview) === JSON.stringify(preview) &&
-          existing.panelOpen === panelOpen
-        ) {
-          return prev;
-        }
-
-        const updated = [...prev];
-        updated[index] = {
-          ...existing,
-          title: existing.title === 'New Chat' ? title : existing.title,
+    setConversations(conversations.map(c => {
+      if (c.id === activeConversationId) {
+        const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
+        const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
+        return {
+          ...c,
+          title: c.title === 'New Chat' ? title : c.title,
           messages,
           preview,
           panelOpen,
           timestamp: Date.now()
         };
-        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
-        return updated;
-      } else {
-        const newConv: SavedConversation = {
-          id: activeConversationId,
-          title,
-          messages,
-          preview,
-          panelOpen,
-          timestamp: Date.now()
-        };
-        const updated = [newConv, ...prev];
-        localStorage.setItem('ater_oracle_conversations', JSON.stringify(updated));
-        return updated;
       }
-    });
+      return c;
+    }));
   }, [messages, preview, panelOpen, activeConversationId]);
-
-  useEffect(() => {
-    if (preview) {
-      if (!isTemporaryLessonPath(preview.notePath)) {
-        localStorage.setItem('ater_lesson_preview', JSON.stringify(preview));
-      }
-    } else {
-      localStorage.removeItem('ater_lesson_preview');
-    }
-  }, [preview]);
-
-  useEffect(() => {
-    localStorage.setItem('ater_lesson_panel_open', JSON.stringify(panelOpen));
-  }, [panelOpen]);
-
-  // Save messages to localStorage for backward compatibility
-  useEffect(() => {
-    localStorage.setItem('ater_oracle_chat_history', JSON.stringify(messages));
-  }, [messages]);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -580,8 +634,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     setMessages([]);
     setPreview(null);
     setPanelOpen(false);
-    useArtifactStore.getState().resetArtifacts();
-    generatedSpecRef.current.clear();
     if (onNoteSelect) {
       onNoteSelect(null);
     }
@@ -603,12 +655,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     if (!conv) return;
 
     setActiveConversationId(convId);
-    localStorage.setItem('ater_oracle_active_conversation_id', convId);
-
-    useArtifactStore.getState().resetArtifacts();
 
     try {
-      const msgs = await sidecarApi.getMessages(convId);
+      const msgs = hydrateMessageActions(await sidecarApi.getMessages(convId));
       setMessages(msgs);
 
       // Restore tutor session from metadata if present
@@ -625,6 +674,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         };
         setPreview(nextPreview);
         if (meta.session_id) {
+          setActiveSessionId(meta.session_id);
           try {
             const session = await sidecarApi.getTutorStatus(meta.session_id);
             if (session) {
@@ -645,7 +695,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     } catch (err) {
       console.error('[Oracle] Failed to load messages:', err);
     }
-  }, [conversations, isLoading, onNoteSelect, loadMessages]);
+  }, [conversations, isLoading, onNoteSelect, loadMessages, setActiveConversationId, setActiveSessionId, setPreview, setMessages]);
 
   const handleNewChat = useCallback(async () => {
     if (isLoading) {
@@ -656,13 +706,10 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
       const created = await sidecarApi.createConversation('New Chat');
       if (created && created.id) {
         setActiveConversationId(created.id);
-        localStorage.setItem('ater_oracle_active_conversation_id', created.id);
         loadConversations();
         setMessages([]);
         setPreview(null);
         setPanelOpen(false);
-        useArtifactStore.getState().resetArtifacts();
-        generatedSpecRef.current.clear();
         if (onNoteSelect) {
           onNoteSelect(null);
         }
@@ -670,7 +717,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     } catch (err) {
       toast.error('Failed to create new conversation');
     }
-  }, [isLoading, onNoteSelect, loadConversations]);
+  }, [isLoading, onNoteSelect, loadConversations, setActiveConversationId, setMessages, setPreview]);
 
   const handleDeleteConversation = useCallback(async (e: React.MouseEvent, convId: string) => {
     e.stopPropagation();
@@ -688,7 +735,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         if (updated.length > 0) {
           const first = updated[0];
           setActiveConversationId(first.id);
-          localStorage.setItem('ater_oracle_active_conversation_id', first.id);
           await loadMessages(first.id);
           setPreview(first.preview);
           setPanelOpen(first.panelOpen);
@@ -697,12 +743,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
           }
         } else {
           setActiveConversationId(null);
-          localStorage.removeItem('ater_oracle_active_conversation_id');
           setMessages([]);
           setPreview(null);
           setPanelOpen(false);
-          useArtifactStore.getState().resetArtifacts();
-          generatedSpecRef.current.clear();
           if (onNoteSelect) {
             onNoteSelect(null);
           }
@@ -712,7 +755,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     } catch (err) {
       toast.error('Failed to delete conversation');
     }
-  }, [activeConversationId, isLoading, onNoteSelect, conversations, loadMessages]);
+  }, [activeConversationId, isLoading, onNoteSelect, conversations, loadMessages, setActiveConversationId, setConversations, setMessages, setPreview]);
 
   useEffect(() => {
     setSidebarContent(
@@ -739,7 +782,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
                 : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
             )}
           >
-            PIPELINE
+            BULK IMPORT
           </button>
         </div>
 
@@ -837,14 +880,193 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     };
   }, [setSidebarContent]);
 
+  const handleBranchMessage = async (messageId: string, newContent: string) => {
+    setIsLoading(true);
+    setActiveStatus('Branching chat...');
+    try {
+      const response = await sidecarApi.branchMessage(activeConversationId!, messageId, newContent);
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body has no reader.');
+
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let assistantContent = '';
+      let isFirstChunk = true;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          try {
+            const parsed = JSON.parse(trimmed.slice(6));
+            if (parsed.type === 'branch_created') {
+              const newUserId = parsed.new_user_message_id;
+              const updatedMsgs = hydrateMessageActions(await sidecarApi.getMessages(activeConversationId!));
+              setMessages(updatedMsgs);
+              
+              const userMsgObj = updatedMsgs.find((m: any) => m.id === newUserId);
+              if (userMsgObj) {
+                setActiveMessageIds(prev => ({
+                  ...prev,
+                  [userMsgObj.parent_message_id || 'root']: newUserId
+                }));
+              }
+            } else if (parsed.type === 'run_start') {
+              setActiveRunId(parsed.run_id);
+            } else if (parsed.type === 'status') {
+              setActiveStatus(parsed.message);
+            } else if (parsed.type === 'chunk') {
+              if (isFirstChunk) {
+                const currentMsgs = hydrateMessageActions(await sidecarApi.getMessages(activeConversationId!));
+                setMessages(currentMsgs);
+                isFirstChunk = false;
+              }
+              setActiveStatus(null);
+              assistantContent += parsed.content;
+              const currentMsgs = [...useChatStore.getState().messages];
+              const lastIndex = currentMsgs.length - 1;
+              if (lastIndex >= 0 && currentMsgs[lastIndex].role === 'assistant') {
+                currentMsgs[lastIndex] = { ...currentMsgs[lastIndex], content: assistantContent };
+              }
+              setMessages(currentMsgs);
+            } else if (parsed.type === 'lesson_created') {
+              setIsGeneratingLesson(false);
+              setGeneratingStatus(null);
+              if (onNoteSelect) {
+                onNoteSelect(null);
+              }
+              const notePath = parsed.note_path || parsed.lesson_path || '';
+              if (notePath) {
+                setPreview({
+                  title: parsed.title || 'Teacher Lesson',
+                  lessonPath: parsed.lesson_path || '',
+                  notePath,
+                  hubPath: parsed.hub_path || '',
+                  previewUrl: '',
+                });
+                setActiveSessionId(parsed.session_id);
+                try {
+                  const session = await sidecarApi.getTutorStatus(parsed.session_id);
+                  if (session) {
+                    setTutorSession(session);
+                  }
+                } catch {}
+                setPanelOpen(true);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      const finalMsgs = hydrateMessageActions(await sidecarApi.getMessages(activeConversationId!));
+      setMessages(finalMsgs);
+    } catch (err: any) {
+      toast.error(err.message || 'Branching failed');
+    } finally {
+      setIsLoading(false);
+      setActiveStatus(null);
+    }
+  };
+
+  const handleRegenerateMessage = async (messageId: string) => {
+    setIsLoading(true);
+    setActiveStatus('Regenerating response...');
+    try {
+      const response = await sidecarApi.regenerateMessage(activeConversationId!, messageId);
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body has no reader.');
+
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let assistantContent = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          try {
+            const parsed = JSON.parse(trimmed.slice(6));
+            if (parsed.type === 'run_start') {
+              setActiveRunId(parsed.run_id);
+              const updatedMsgs = hydrateMessageActions(await sidecarApi.getMessages(activeConversationId!));
+              setMessages(updatedMsgs);
+              
+              setActiveMessageIds(prev => ({
+                ...prev,
+                [parsed.parent_message_id || 'root']: parsed.message_id
+              }));
+            } else if (parsed.type === 'status') {
+              setActiveStatus(parsed.message);
+            } else if (parsed.type === 'chunk') {
+              setActiveStatus(null);
+              assistantContent += parsed.content;
+              const currentMsgs = [...useChatStore.getState().messages];
+              const lastIndex = currentMsgs.length - 1;
+              if (lastIndex >= 0 && currentMsgs[lastIndex].role === 'assistant') {
+                currentMsgs[lastIndex] = { ...currentMsgs[lastIndex], content: assistantContent };
+              }
+              setMessages(currentMsgs);
+            } else if (parsed.type === 'lesson_created') {
+              setIsGeneratingLesson(false);
+              setGeneratingStatus(null);
+              if (onNoteSelect) {
+                onNoteSelect(null);
+              }
+              const notePath = parsed.note_path || parsed.lesson_path || '';
+              if (notePath) {
+                setPreview({
+                  title: parsed.title || 'Teacher Lesson',
+                  lessonPath: parsed.lesson_path || '',
+                  notePath,
+                  hubPath: parsed.hub_path || '',
+                  previewUrl: '',
+                });
+                setActiveSessionId(parsed.session_id);
+                try {
+                  const session = await sidecarApi.getTutorStatus(parsed.session_id);
+                  if (session) {
+                    setTutorSession(session);
+                  }
+                } catch {}
+                setPanelOpen(true);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      const finalMsgs = hydrateMessageActions(await sidecarApi.getMessages(activeConversationId!));
+      setMessages(finalMsgs);
+    } catch (err: any) {
+      toast.error(err.message || 'Regeneration failed');
+    } finally {
+      setIsLoading(false);
+      setActiveStatus(null);
+    }
+  };
+
   const handleClearHistory = () => {
     setConversations([]);
-    localStorage.removeItem('ater_oracle_conversations');
     setActiveConversationId(null);
-    localStorage.removeItem('ater_oracle_active_conversation_id');
     setMessages([]);
-    useArtifactStore.getState().resetArtifacts();
-    generatedSpecRef.current.clear();
     setPreview(null);
     setPanelOpen(false);
     if (onNoteSelect) {
@@ -852,185 +1074,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     }
     toast.success('All conversation history cleared.');
   };
-
-  useEffect(() => {
-    for (const [messageIndex, msg] of messages.entries()) {
-      if (msg.role !== 'assistant') continue;
-      const extracted = extractArtifacts(msg.content);
-
-      if (extracted.artifacts.length > 0) {
-        const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-        const mappedArtifacts = extracted.artifacts.map((artifact) => {
-          const topicId = `oracle-topic-${slugify(artifact.title)}`;
-          return {
-            ...artifact,
-            id: topicId,
-            messageIndex,
-            versions: artifact.versions.map((version) => ({
-              ...version,
-              messageIndex,
-              chapters: version.chapters.map((chapter) => ({
-                ...chapter,
-                id: `${topicId}-${chapter.id}`,
-              })),
-            })),
-          };
-        });
-
-        const stateBefore = useArtifactStore.getState();
-        const previousCodesByArtifact: Record<string, string> = {};
-        for (const artifact of mappedArtifacts) {
-          const existingArtifact = stateBefore.artifacts.find(item => item.id === artifact.id);
-          const activeVersionNumber = existingArtifact ? stateBefore.activeVersionByArtifact[existingArtifact.id] : undefined;
-          const activeVersion = existingArtifact?.versions.find(v => v.version === activeVersionNumber) || (existingArtifact ? existingArtifact.versions[existingArtifact.versions.length - 1] : undefined);
-          const previousCode = activeVersion?.chapters.find(c => c.sandbox)?.sandbox || '';
-          previousCodesByArtifact[artifact.id] = previousCode;
-        }
-
-        useArtifactStore.getState().registerArtifacts(mappedArtifacts);
-
-        for (const artifact of mappedArtifacts) {
-          const version = artifact.versions[0];
-          for (const [chapterIndex, chapter] of version.chapters.entries()) {
-            if (!chapter.sandboxSpec) continue;
-            const key = `${messageIndex}:${artifact.id}:${chapter.id}:${chapter.sandboxSpec}`;
-            if (generatedSpecRef.current.has(key)) continue;
-            generatedSpecRef.current.add(key);
-
-            const previousCode = previousCodesByArtifact[artifact.id] || '';
-
-            const checkAndGenerate = async () => {
-              const isOnline = navigator.onLine;
-              if (!isOnline) {
-                console.warn("Skipping sandbox compilation: browser is offline");
-                useArtifactStore.getState().recordCompileError(artifact.id, "Browser is offline. Connect to the internet to compile.");
-                return;
-              }
-              try {
-                const health = await sidecarApi.health();
-                if (health.status !== 'ok') {
-                  console.warn("Skipping sandbox compilation: sidecar unhealthy");
-                  useArtifactStore.getState().recordCompileError(artifact.id, "FastAPI sidecar service is unhealthy.");
-                  return;
-                }
-              } catch {
-                console.warn("Skipping sandbox compilation: sidecar unreachable");
-                useArtifactStore.getState().recordCompileError(artifact.id, "FastAPI sidecar service is unreachable.");
-                return;
-              }
-
-              try {
-                const result = await sidecarApi.generateArtifactCode({
-                  prompt: chapter.sandboxSpec!,
-                  context: msg.content,
-                  previous_code: previousCode
-                });
-                const code = result.code || result.answer || '';
-                if (!code) {
-                  useArtifactStore.getState().recordCompileError(artifact.id, "FastAPI sidecar generated empty code.");
-                  return;
-                }
-                const chapters = version.chapters.map((item) => (
-                  item.id === chapter.id ? { ...item, sandbox: code } : item
-                ));
-                useArtifactStore.getState().recordCompileError(artifact.id, null);
-                useArtifactStore.getState().addVersion(artifact.id, chapters, code, messageIndex);
-              } catch (err: any) {
-                console.error("Failed to generate sandbox code:", err);
-                useArtifactStore.getState().recordCompileError(artifact.id, err?.message || String(err));
-              }
-            };
-
-            checkAndGenerate();
-          }
-        }
-      }
-
-      for (const spec of extracted.sandboxSpecs) {
-        const key = `${messageIndex}:${spec.placeholderId}:${spec.prompt}`;
-        if (generatedSpecRef.current.has(key)) continue;
-        generatedSpecRef.current.add(key);
-
-        const artifactId = `oracle-message-${messageIndex}-${spec.placeholderId}`;
-        useArtifactStore.getState().registerArtifacts([{
-          id: artifactId,
-          title: spec.prompt,
-          versions: [{
-            version: 1,
-            messageIndex,
-            raw: `<sandbox-spec>${spec.prompt}</sandbox-spec>`,
-            chapters: [{
-              id: `${artifactId}-chapter-1`,
-              title: 'Generated Sandbox',
-              content: '',
-              sandboxSpec: spec.prompt,
-              sandboxPlaceholderId: spec.placeholderId,
-            }],
-          }],
-        }]);
-
-        const checkAndGenerateSpec = async () => {
-          const isOnline = navigator.onLine;
-          if (!isOnline) {
-            console.warn("Skipping sandbox compilation: browser is offline");
-            useArtifactStore.getState().recordCompileError(artifactId, "Browser is offline. Connect to the internet to compile.");
-            return;
-          }
-          try {
-            const health = await sidecarApi.health();
-            if (health.status !== 'ok') {
-              console.warn("Skipping sandbox compilation: sidecar unhealthy");
-              useArtifactStore.getState().recordCompileError(artifactId, "FastAPI sidecar service is unhealthy.");
-              return;
-            }
-          } catch {
-            console.warn("Skipping sandbox compilation: sidecar unreachable");
-            useArtifactStore.getState().recordCompileError(artifactId, "FastAPI sidecar service is unreachable.");
-            return;
-          }
-
-          try {
-            const result = await sidecarApi.generateArtifactCode({ prompt: spec.prompt, context: msg.content });
-            const code = result.code || result.answer || '';
-            if (!code) {
-              useArtifactStore.getState().recordCompileError(artifactId, "FastAPI sidecar generated empty code.");
-              return;
-            }
-            useArtifactStore.getState().recordCompileError(artifactId, null);
-            useArtifactStore.getState().addVersion(artifactId, [{
-              id: `${artifactId}-chapter-1-generated`,
-              title: 'Generated Sandbox',
-              content: '',
-              sandbox: code,
-            }], code, messageIndex);
-          } catch (err: any) {
-            console.error("Failed to generate sandbox code:", err);
-            useArtifactStore.getState().recordCompileError(artifactId, err?.message || String(err));
-          }
-        };
-
-        checkAndGenerateSpec();
-      }
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (!isDraggingSplit) return;
-
-    const onMove = (event: MouseEvent) => {
-      const viewportWidth = window.innerWidth || 1;
-      const rightWidth = viewportWidth - event.clientX;
-      useArtifactStore.getState().setPanelWidth((rightWidth / viewportWidth) * 100);
-    };
-    const onUp = () => setIsDraggingSplit(false);
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, [isDraggingSplit]);
 
   useEffect(() => {
     if (!preview?.hubPath) {
@@ -1084,17 +1127,93 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     }
   }, [navigate, onNoteSelect]);
 
+  const startTeacherJobAction = useCallback(async (customAction: NonNullable<Message['customAction']>) => {
+    const jobId = customAction.promptJobId || customAction.sourceJobId;
+    if (!jobId) return false;
+
+    const started = customAction.promptJobId
+      ? await sidecarApi.startPromptTeacherJob(jobId)
+      : await sidecarApi.startSourceLearningJob(jobId);
+    const sourceJob = started.source_job || customAction.sourceJobState || {};
+    const tutor = started.tutor_session || {};
+    const currentNote = tutor.current_note || {};
+    const notePath = tutor.current_note_path || `${currentNote.note_title || sourceJob.topic || 'Source_Lesson'}.md`;
+    localStorage.setItem('ater_original_note_path', notePath);
+    localStorage.setItem('ater_study_active_note_path', notePath);
+    localStorage.setItem('ater_canonical_lesson_path', notePath);
+
+    const canonicalHubPath = tutor.hub_path || customAction.hubPath;
+
+    setPreview({
+      title: sourceJob.topic || customAction.hubTitle.replace(/[_-]/g, ' '),
+      lessonPath: canonicalHubPath,
+      notePath,
+      hubPath: canonicalHubPath,
+      previewUrl: '',
+    });
+    onNoteSelect?.(notePath);
+
+    setTutorSession({
+      session_id: tutor.session_id,
+      source_job_id: jobId,
+      prompt_job_id: customAction.promptJobId,
+      source_job: sourceJob,
+      hub_path: canonicalHubPath,
+      current_note_path: notePath,
+      current_concept_node_id: tutor.current_concept_node_id,
+      completed_notes: tutor.completed_notes || [],
+      wagers: {},
+      score: 0,
+      status: 'active',
+      updated_at: new Date().toISOString(),
+      active_note_unlocks: tutor.active_note_unlocks || [notePath],
+      curriculum: tutor.curriculum || (sourceJob.roadmap || []).map((item: any) => item.path).filter(Boolean),
+      coverage: sourceJob.coverage,
+      roadmap: tutor.roadmap || sourceJob.roadmap,
+      warnings: sourceJob.warnings || [],
+    });
+
+    setPendingPdfSession(null);
+    setPanelOpen(true);
+    return true;
+  }, [onNoteSelect, setPreview]);
+
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
     if (!text) return;
 
     const isStartLesson = text.toLowerCase() === 'start lesson' || text.toLowerCase() === 'start';
 
+    const latestTeacherAction = [...useChatStore.getState().messages]
+      .reverse()
+      .map((message: Message) => message.customAction || message.metadata?.sourceTeacherAction)
+      .find((action: Message['customAction']) => action?.sourceJobId || action?.promptJobId);
+
+    if (isStartLesson && !pendingPdfSession && latestTeacherAction) {
+      try {
+        setIsLoading(true);
+        setActiveStatus('Starting teacher tutor...');
+        await startTeacherJobAction(latestTeacherAction);
+        return;
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to start lesson.');
+      } finally {
+        setIsLoading(false);
+        setActiveStatus(null);
+      }
+      return;
+    }
+
     if (isStartLesson && pendingPdfSession) {
       try {
         const customAction = pendingPdfSession;
         setIsLoading(true);
-        setActiveStatus('Deploying workspace...');
+        setActiveStatus(customAction.sourceJobId || customAction.promptJobId ? 'Starting teacher tutor...' : 'Deploying workspace...');
+
+        if (customAction.sourceJobId || customAction.promptJobId) {
+          await startTeacherJobAction(customAction);
+          return;
+        }
 
         let currentHasMore = true;
         let tempBatch = 0;
@@ -1192,7 +1311,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         const created = await sidecarApi.createConversation('New Chat');
         currentId = created.id;
         setActiveConversationId(currentId);
-        localStorage.setItem('ater_oracle_active_conversation_id', currentId!);
       } catch (err) {
         toast.error('Failed to initialize conversation');
         setIsLoading(false);
@@ -1257,25 +1375,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         auto_deploy: config?.autoDeploy,
       };
 
-      const getActiveArtifactPayload = () => {
-        const state = useArtifactStore.getState();
-        const artifact = state.artifacts.find((item) => item.id === state.activeArtifactId);
-        if (!artifact) return undefined;
-        const versions = artifact.versions || [];
-        const lastVersion = versions[versions.length - 1];
-        const versionNumber = state.activeVersionByArtifact[artifact.id] || lastVersion?.version || 1;
-        const version = versions.find((item) => item.version === versionNumber) || lastVersion;
-        const chapters = version?.chapters || [];
-        const sandboxChapter = chapters.find((chapter) => chapter.sandbox);
-        const code = sandboxChapter?.sandbox || version?.raw || '';
-        if (!code) return undefined;
-        return {
-          title: artifact.title,
-          version: version?.version || 1,
-          code,
-        };
-      };
-
       // 3. Call Assistant Stream API
       setActiveStatus('Contacting assistant...');
       const parentMessageId = messages.length > 0 ? messages[messages.length - 1].id : undefined;
@@ -1284,13 +1383,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         message: text,
         parent_message_id: parentMessageId,
         rag_context: ragContext,
-        active_artifact: getActiveArtifactPayload(),
         user_context: userContext
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: '', status: 'incomplete' }]);
+      setMessages([...useChatStore.getState().messages, { role: 'assistant', content: '', status: 'incomplete' }]);
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Response body has no reader.');
@@ -1321,14 +1419,12 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
             } else if (parsed.type === 'chunk') {
               setActiveStatus(null);
               assistantContent += parsed.content;
-              setMessages(prev => {
-                const next = [...prev];
-                const lastIndex = next.length - 1;
-                if (lastIndex >= 0 && next[lastIndex].role === 'assistant') {
-                  next[lastIndex] = { ...next[lastIndex], content: assistantContent };
-                }
-                return next;
-              });
+              const currentMsgs = [...useChatStore.getState().messages];
+              const lastIndex = currentMsgs.length - 1;
+              if (lastIndex >= 0 && currentMsgs[lastIndex].role === 'assistant') {
+                currentMsgs[lastIndex] = { ...currentMsgs[lastIndex], content: assistantContent };
+              }
+              setMessages(currentMsgs);
             } else if (parsed.type === 'lesson_created') {
               setIsGeneratingLesson(false);
               setGeneratingStatus(null);
@@ -1339,7 +1435,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
               const hubPath = parsed.hub_path || '';
               if (notePath) {
                 localStorage.setItem('ater_study_active_note_path', notePath);
-                if (!isTemporaryLessonPath(notePath)) {
+                if (!notePath.includes('remediation_temp')) {
                   localStorage.setItem('ater_canonical_lesson_path', notePath);
                   localStorage.setItem('ater_original_note_path', notePath);
                 }
@@ -1352,10 +1448,15 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
                 previewUrl: '',
               });
               if (Array.isArray(parsed.curriculum) && parsed.curriculum.length > 0) {
+                const sessionId = parsed.session_id || `teacher_${parsed.workspace || Date.now()}`;
+                setActiveSessionId(sessionId);
                 setTutorSession({
-                  session_id: `teacher_${parsed.workspace || Date.now()}`,
+                  session_id: sessionId,
+                  source_job_id: parsed.source_job_id,
+                  prompt_job_id: parsed.prompt_job_id,
                   hub_path: hubPath,
                   current_note_path: notePath,
+                  current_concept_node_id: parsed.current_concept_node_id,
                   completed_notes: [],
                   wagers: {},
                   score: 0,
@@ -1363,12 +1464,63 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
                   updated_at: new Date().toISOString(),
                   active_note_unlocks: [notePath],
                   curriculum: parsed.curriculum,
+                  coverage: parsed.coverage,
+                  roadmap: parsed.roadmap,
+                  warnings: parsed.warnings || [],
                 });
               }
               if (notePath && onNoteSelect) {
                 onNoteSelect(notePath);
               }
               setPanelOpen(true);
+            } else if (parsed.type === 'prompt_teacher_job') {
+              const promptJobId = parsed.prompt_job_id || parsed.job_id;
+              if (promptJobId && parsed.next_action === 'start_learning') {
+                const roadmap = Array.isArray(parsed.roadmap) ? parsed.roadmap : [];
+                const topic = parsed.topic || roadmap[0]?.title || 'Prompt Teacher';
+                const hubPath = parsed.hub_path || `SourceJobs/${promptJobId}/Prompt_Teacher_Hub.md`;
+                setPendingPdfSession({
+                  sessionId: `prompt:${promptJobId}`,
+                  promptJobId,
+                  sourceJobState: {
+                    job_id: promptJobId,
+                    topic,
+                    roadmap,
+                    coverage: parsed.coverage,
+                    warnings: parsed.warnings || [],
+                  },
+                  hubPath,
+                  semesterName: 'Prompt',
+                  courseName: 'Prompt_Teacher',
+                  unitNum: '1',
+                  hubTitle: topic,
+                  results: roadmap.map((item: any) => item.title).filter(Boolean),
+                });
+              }
+            } else if (parsed.type === 'source_learning_job') {
+              const sourceJobId = parsed.source_job_id || parsed.job_id;
+              if (sourceJobId && parsed.next_action === 'start_learning') {
+                const roadmap = Array.isArray(parsed.roadmap) ? parsed.roadmap : [];
+                const topic = parsed.topic || roadmap[0]?.title || 'Source Learning';
+                const hubPath = parsed.hub_path || `SourceJobs/${sourceJobId}/Source_Hub.md`;
+                setPendingPdfSession({
+                  sessionId: `source:${sourceJobId}`,
+                  sourceJobId,
+                  sourceJobState: {
+                    job_id: sourceJobId,
+                    topic,
+                    roadmap,
+                    coverage: parsed.coverage,
+                    warnings: parsed.warnings || [],
+                  },
+                  hubPath,
+                  semesterName: 'Source',
+                  courseName: 'Source_Learning',
+                  unitNum: '1',
+                  hubTitle: topic,
+                  results: roadmap.map((item: any) => item.title).filter(Boolean),
+                });
+              }
             } else if (parsed.type === 'action') {
               if (parsed.action === 'navigate' && parsed.route) {
                 navigate(parsed.route);
@@ -1445,6 +1597,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
           } catch (e) {}
         }
       }
+      if (currentId) {
+        const finalMessages = hydrateMessageActions(await sidecarApi.getMessages(currentId));
+        setMessages(finalMessages);
+        await refreshRuntimePanels(currentId);
+      }
       if (config?.isDemoMode) {
         dispatchWalkthroughTrigger('oracle_queried');
       }
@@ -1470,16 +1627,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
     handleSendMessageRef.current(textToSend);
   }, []);
 
-  // Report state to parent dashboard for header buttons
-  useEffect(() => {
-    onStateChange?.({
-      hasMessages: messages.length > 0,
-      hasPreview: !!preview,
-      isPanelOpen: panelOpen || artifactState.isPanelOpen,
-      isLessonOpen: !!preview && panelOpen
-    });
-  }, [messages.length, preview, panelOpen, artifactState.isPanelOpen, onStateChange]);
-
   // Listen to custom window events for header actions
   useEffect(() => {
     const handleNewChatEvent = () => {
@@ -1492,8 +1639,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
           localStorage.setItem('ater_lesson_panel_open', JSON.stringify(next));
           return next;
         });
-      } else if (artifactState.artifacts.length > 0) {
-        artifactState.setPanelOpen(!artifactState.isPanelOpen);
       }
     };
     window.addEventListener('ater-new-chat', handleNewChatEvent);
@@ -1502,7 +1647,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
       window.removeEventListener('ater-new-chat', handleNewChatEvent);
       window.removeEventListener('ater-toggle-panel', handleTogglePanelEvent);
     };
-  }, [handleNewChat, preview, artifactState]);
+  }, [handleNewChat, preview]);
 
   const quickActions = [
     { title: "Search Vault", prompt: "What are my notes about...?", icon: Search, description: "Semantic search content." },
@@ -1511,7 +1656,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
   ];
 
   return (
-    <div className="flex-1 flex min-h-0 relative">
+    <div className="h-full w-full flex min-h-0 relative">
       {/* History Sidebar is now rendered in the outer sidebar */}
 
       {preview && panelOpen ? (
@@ -1526,10 +1671,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
         />
       ) : (
       <div className="flex-1 flex min-h-0 relative">
-        <div
-          className="flex min-h-0 flex-col flex-1"
-          style={{ width: artifactState.isPanelOpen ? `${100 - artifactState.panelWidth}%` : '100%' }}
-        >
+        <div className="flex min-h-0 flex-col flex-1">
         <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-w-0 custom-scrollbar">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center -mt-12">
@@ -1537,100 +1679,298 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-8">
-              {messages.map((msg, index) => (
-                <div key={index} className="space-y-2">
-                  {msg.role === 'user' ? (
-                    <div className="flex justify-end w-full">
-                      <div className="max-w-[80%] bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">{msg.content}</div>
-                    </div>
-                  ) : (
-                    msg.content ? (
-                      <div className="flex justify-start w-full">
-                        <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto flex flex-col gap-4">
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={stableSendMessage} />
+              {activeThread.map((msg, index) => {
+                const parentKey = msg.parent_message_id || 'root';
+                const siblings = messageGroups[parentKey] || [];
+                const siblingIndex = siblings.findIndex(s => s.id === msg.id);
+                const citations = Array.isArray(msg.metadata?.citations) ? msg.metadata.citations : [];
+                const toolCalls = msg.id ? (toolCallsByMessageId[msg.id] || []) : [];
+                const isToolTimelineOpen = Boolean(msg.id && expandedToolMessageId === msg.id);
+
+                return (
+                  <div key={msg.id || index} className="space-y-2 group">
+                    {msg.role === 'user' ? (
+                      <div className="flex flex-col items-end w-full gap-2">
+                        {editingMessageId === msg.id ? (
+                          <div className="w-full max-w-[80%] bg-muted/10 border border-border p-3 rounded-[12px] flex flex-col gap-2">
+                            <textarea
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              className="w-full bg-transparent border-0 outline-none text-[13px] text-foreground resize-none custom-scrollbar"
+                              rows={3}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => setEditingMessageId(null)}
+                                className="h-7 px-3 border border-border hover:bg-muted text-[10px] uppercase font-bold rounded-[6px] transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (editingContent.trim()) {
+                                    handleBranchMessage(msg.id!, editingContent.trim());
+                                    setEditingMessageId(null);
+                                  }
+                                }}
+                                className="h-7 px-3 bg-foreground text-background hover:opacity-90 text-[10px] uppercase font-bold rounded-[6px] transition-colors"
+                              >
+                                Save & Resend
+                              </button>
+                            </div>
                           </div>
-                          {(() => {
-                            const isLastMessage = index === messages.length - 1;
-                            const hasRoadmap = msg.content.includes('Start Lesson');
-                            const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap && !isLoading;
-
-                            if (msg.customAction) {
-                              const customAction = msg.customAction;
-                              return (
-                                <div className="mt-2 pt-4 border-t border-border/40 flex items-center justify-between gap-3">
-                                  <p className="text-[10px] text-muted-foreground font-medium">
-                                    Ready to begin? Load the generated learning path in your workspace.
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const curriculumPaths = customAction.results.map((note: string) => {
-                                        const cleanCourseTitle = customAction.courseName.replace(/[^a-zA-Z0-9]/g, '_')
-                                        const noteFilename = `${note}.md`
-                                        return `Inbox/Generated/${customAction.semesterName}/${cleanCourseTitle}/${noteFilename}`
-                                      })
-                                      const firstLessonPath = curriculumPaths[0] || customAction.hubPath;
-                                      localStorage.setItem('ater_original_note_path', firstLessonPath);
-
-                                      setPreview({
-                                        title: customAction.hubTitle.replace(/_/g, ' '),
-                                        lessonPath: customAction.hubPath,
-                                        notePath: firstLessonPath,
-                                        hubPath: customAction.hubPath,
-                                        previewUrl: '',
-                                      })
-                                      localStorage.setItem('ater_study_active_note_path', firstLessonPath);
-                                      localStorage.setItem('ater_canonical_lesson_path', firstLessonPath);
-                                      onNoteSelect?.(firstLessonPath);
-
-                                      setTutorSession({
-                                        session_id: customAction.sessionId,
-                                        hub_path: customAction.hubPath,
-                                        current_note_path: firstLessonPath,
-                                        completed_notes: [],
-                                        wagers: {},
-                                        score: 0,
-                                        status: 'active',
-                                        updated_at: new Date().toISOString(),
-                                        active_note_unlocks: [firstLessonPath],
-                                        curriculum: curriculumPaths,
-                                      })
-
-                                      setPanelOpen(true)
-                                    }}
-                                    className="shrink-0 h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 transition-all flex items-center gap-2"
-                                  >
-                                    <BookOpenCheck size={12} />
-                                    Open Learning Path
-                                  </button>
-                                </div>
-                              )
-                            }
-
-                            if (showStartButton) {
-                              return (
-                                <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSendMessage('Start Lesson')}
-                                    disabled={isLoading}
-                                    className="h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                                  >
-                                    <BookOpenCheck size={12} />
-                                    Start Lesson
-                                  </button>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
+                        ) : (
+                          <div className="relative max-w-[80%] flex flex-col gap-1 items-end">
+                            <div className="bg-muted/20 border border-border px-4 py-3 text-[13px] rounded-[12px] text-foreground leading-relaxed">
+                              {msg.content}
+                            </div>
+                            
+                            {/* Hover Edit Action */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mt-1">
+                              <button
+                                onClick={() => {
+                                  setEditingMessageId(msg.id!);
+                                  setEditingContent(msg.content);
+                                }}
+                                className="text-[10px] text-muted-foreground hover:text-foreground font-bold flex items-center gap-1 bg-muted/10 hover:bg-muted/30 px-2 py-0.5 rounded-[4px] border border-border/20 transition-all"
+                              >
+                                <FileEdit size={10} />
+                                Edit
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : null
-                  )}
-                </div>
-              ))}
+                    ) : (
+                      msg.content ? (
+                        <div className="flex justify-start w-full">
+                          <div className="max-w-full w-full border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground overflow-x-auto flex flex-col gap-4">
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <AterMarkdown content={msg.content.replace(/\(\(([^)]+)\)\)/g, '[[$1]]')} onNavigate={handleWikiLinkClick} onSendMessage={stableSendMessage} />
+                            </div>
+                            {(msg.status && msg.status !== 'completed') && (
+                              <div className="flex items-center gap-2 rounded-[6px] border border-border/40 bg-muted/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                <Activity size={12} />
+                                {msg.status}
+                              </div>
+                            )}
+                            {citations.length > 0 && (
+                              <div className="rounded-[8px] border border-border/40 bg-muted/10 px-3 py-2">
+                                <div className="mb-2 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                  <Bookmark size={11} />
+                                  Citations
+                                </div>
+                                <div className="space-y-1.5">
+                                  {citations.map((citation: any, citationIndex: number) => (
+                                    <div key={`${msg.id}-citation-${citationIndex}`} className="flex items-start gap-2 text-[11px] text-foreground/80">
+                                      <span className="mt-0.5 text-[9px] font-black text-muted-foreground tabular-nums">{citationIndex + 1}</span>
+                                      <span className="min-w-0 break-words">
+                                        {citation.filename || citation.source || citation.path || 'Source'}
+                                        {citation.page ? ` · page ${citation.page}` : ''}
+                                        {citation.paragraph ? ` · paragraph ${citation.paragraph}` : ''}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {msg.id && (
+                              <div className="rounded-[8px] border border-border/40 bg-muted/10 overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleToolTimeline(msg.id!)}
+                                  className="w-full h-8 px-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <Activity size={12} />
+                                    Tool Timeline
+                                  </span>
+                                  <ChevronDown size={12} className={cn("transition-transform", isToolTimelineOpen && "rotate-180")} />
+                                </button>
+                                {isToolTimelineOpen && (
+                                  <div className="border-t border-border/40 px-3 py-2 space-y-2">
+                                    {toolTimelineLoadingId === msg.id ? (
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loading tools...</p>
+                                    ) : toolCalls.length === 0 ? (
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">No tool calls recorded.</p>
+                                    ) : toolCalls.map(call => (
+                                      <div key={call.id} className="rounded-[6px] border border-border/30 bg-bento-panel px-3 py-2">
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                          <span className="text-[10px] font-black text-foreground">{call.tool_name}</span>
+                                          <span className={cn(
+                                            "text-[9px] font-black uppercase tracking-widest",
+                                            call.status === 'failed' ? "text-destructive" : "text-muted-foreground"
+                                          )}>
+                                            {call.status}
+                                          </span>
+                                        </div>
+                                        {call.arguments && (
+                                          <pre className="mb-1 overflow-x-auto rounded-[4px] bg-muted/20 px-2 py-1 text-[10px] text-muted-foreground font-sans">
+                                            {JSON.stringify(call.arguments, null, 2)}
+                                          </pre>
+                                        )}
+                                        {call.result_summary && (
+                                          <p className="text-[10px] text-foreground/75">{call.result_summary}</p>
+                                        )}
+                                        {call.error_text && (
+                                          <p className="text-[10px] text-destructive">{call.error_text}</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {(() => {
+                              const isLastMessage = index === activeThread.length - 1;
+                              const hasRoadmap = msg.content.includes('Start Lesson');
+                              const showStartButton = msg.role === 'assistant' && isLastMessage && hasRoadmap && !isLoading;
+
+                              if (msg.customAction) {
+                                const customAction = msg.customAction;
+                                if (customAction.sourceJobId || customAction.promptJobId) {
+                                  return (
+                                    <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            setIsLoading(true);
+                                            setActiveStatus('Starting teacher tutor...');
+                                            await startTeacherJobAction(customAction);
+                                          } catch (err: any) {
+                                            toast.error(err.message || 'Failed to start lesson.');
+                                          } finally {
+                                            setIsLoading(false);
+                                            setActiveStatus(null);
+                                          }
+                                        }}
+                                        disabled={isLoading}
+                                        className="h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                      >
+                                        <BookOpenCheck size={12} />
+                                        Start Lesson
+                                      </button>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="mt-2 pt-4 border-t border-border/40 flex items-center justify-between gap-3">
+                                    <p className="text-[10px] text-muted-foreground font-medium">
+                                      Ready to begin? Load the generated learning path in your workspace.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const curriculumPaths = customAction.results.map((note: string) => {
+                                          const cleanCourseTitle = customAction.courseName.replace(/[^a-zA-Z0-9]/g, '_')
+                                          const noteFilename = `${note}.md`
+                                          return `Inbox/Generated/${customAction.semesterName}/${cleanCourseTitle}/${noteFilename}`
+                                        })
+                                        const firstLessonPath = curriculumPaths[0] || customAction.hubPath;
+                                        localStorage.setItem('ater_original_note_path', firstLessonPath);
+
+                                        setPreview({
+                                          title: customAction.hubTitle.replace(/_/g, ' '),
+                                          lessonPath: customAction.hubPath,
+                                          notePath: firstLessonPath,
+                                          hubPath: customAction.hubPath,
+                                          previewUrl: '',
+                                        })
+                                        localStorage.setItem('ater_study_active_note_path', firstLessonPath);
+                                        localStorage.setItem('ater_canonical_lesson_path', firstLessonPath);
+                                        onNoteSelect?.(firstLessonPath);
+
+                                        setTutorSession({
+                                          session_id: customAction.sessionId,
+                                          hub_path: customAction.hubPath,
+                                          current_note_path: firstLessonPath,
+                                          completed_notes: [],
+                                          wagers: {},
+                                          score: 0,
+                                          status: 'active',
+                                          updated_at: new Date().toISOString(),
+                                          active_note_unlocks: [firstLessonPath],
+                                          curriculum: curriculumPaths,
+                                        })
+
+                                        setPanelOpen(true)
+                                      }}
+                                      className="shrink-0 h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 transition-all flex items-center gap-2"
+                                    >
+                                      <BookOpenCheck size={12} />
+                                      Open Learning Path
+                                    </button>
+                                  </div>
+                                )
+                              }
+
+                              if (showStartButton) {
+                                return (
+                                  <div className="mt-2 pt-4 border-t border-border/40 flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSendMessage('Start Lesson')}
+                                      disabled={isLoading}
+                                      className="h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                                    >
+                                      <BookOpenCheck size={12} />
+                                      Start Lesson
+                                    </button>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </div>
+                      ) : null
+                    )}
+
+                    {/* Sibling & Regenerate Controls */}
+                    <div className="flex items-center gap-4 px-2 select-none h-6">
+                      {siblings.length > 1 && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/10 px-2 py-0.5 rounded-[4px] border border-border/20">
+                          <button
+                            onClick={() => {
+                              const prevIdx = (siblingIndex - 1 + siblings.length) % siblings.length;
+                              setActiveMessageIds(prev => ({
+                                ...prev,
+                                [parentKey]: siblings[prevIdx].id!
+                              }));
+                            }}
+                            className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <ChevronLeft size={10} />
+                          </button>
+                          <span className="font-bold tabular-nums">{siblingIndex + 1} / {siblings.length}</span>
+                          <button
+                            onClick={() => {
+                              const nextIdx = (siblingIndex + 1) % siblings.length;
+                              setActiveMessageIds(prev => ({
+                                ...prev,
+                                [parentKey]: siblings[nextIdx].id!
+                              }));
+                            }}
+                            className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <ChevronRight size={10} />
+                          </button>
+                        </div>
+                      )}
+                      {msg.role === 'assistant' && !isLoading && (
+                        <button
+                          onClick={() => handleRegenerateMessage(msg.id!)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground hover:text-foreground font-bold flex items-center gap-1 bg-muted/10 hover:bg-muted/30 px-2 py-0.5 rounded-[4px] border border-border/20 transition-all"
+                        >
+                          <RefreshCw size={10} />
+                          Regenerate
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
               {isLoading && (
                 <div className="flex justify-start w-full animate-pulse">
                   <div className="border border-border bg-bento-card px-5 py-4 rounded-[12px] flex items-center gap-3">
@@ -1650,25 +1990,112 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
 
         <div className="p-6 border-t border-border/40 bg-muted/10 shrink-0">
           <div className="max-w-3xl mx-auto space-y-3">
-            {!panelOpen && activeLessonPath && (
-              <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/60 bg-bento-card px-4 py-3">
-                <div className="min-w-0">
-                  <div className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/60">
-                    Active Lesson
+            {(activeConversationId || memories.length > 0 || attachments.length > 0) && (
+              <div className="rounded-[10px] border border-border/50 bg-bento-card overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/40">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setMemoryPanelOpen(prev => !prev)}
+                      className={cn(
+                        "h-7 px-2 rounded-[6px] border text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors",
+                        memoryPanelOpen ? "bg-muted/40 border-foreground/30 text-foreground" : "bg-muted/10 border-border/40 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <BrainCircuit size={12} />
+                      Memories
+                      <span className="tabular-nums">{memories.length}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttachmentsPanelOpen(prev => !prev)}
+                      className={cn(
+                        "h-7 px-2 rounded-[6px] border text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors",
+                        attachmentsPanelOpen ? "bg-muted/40 border-foreground/30 text-foreground" : "bg-muted/10 border-border/40 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Paperclip size={12} />
+                      Sources
+                      <span className="tabular-nums">{attachments.length}</span>
+                    </button>
                   </div>
-                  <div className="truncate text-xs font-black text-foreground">
-                    {activeLessonTitle || 'Current Lesson'}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => activeConversationId && refreshRuntimePanels(activeConversationId)}
+                    disabled={!activeConversationId}
+                    className="h-7 w-7 rounded-[6px] border border-border/40 bg-muted/10 text-muted-foreground hover:text-foreground disabled:opacity-40 flex items-center justify-center"
+                    title="Refresh chat runtime context"
+                  >
+                    <RefreshCw size={12} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void openCurrentLesson()}
-                  disabled={isLoading}
-                  className="h-9 shrink-0 rounded-[8px] border border-border bg-bento-item px-4 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
-                >
-                  <BookOpenCheck size={13} />
-                  Continue Lesson
-                </button>
+
+                {memoryPanelOpen && (
+                  <div className="px-3 py-2 border-b border-border/40 space-y-2 max-h-36 overflow-y-auto custom-scrollbar">
+                    {memories.length === 0 ? (
+                      <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">No stored memories for this conversation.</p>
+                    ) : memories.map(memory => (
+                      <div key={memory.id} className="flex items-start justify-between gap-3 rounded-[6px] border border-border/30 bg-muted/10 px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{memory.scope}</span>
+                            {memory.status && <span className="text-[9px] font-bold text-muted-foreground/60">{memory.status}</span>}
+                          </div>
+                          <p className="text-[11px] text-foreground/85 leading-relaxed">{memory.content}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => updateMemoryEnabled(memory.id, !memory.enabled)}
+                            className="h-6 px-2 rounded-[4px] border border-border/30 text-[9px] font-bold uppercase text-muted-foreground hover:text-foreground"
+                          >
+                            {memory.enabled === false ? 'Enable' : 'Disable'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteMemory(memory.id)}
+                            className="h-6 w-6 rounded-[4px] border border-border/30 text-muted-foreground hover:text-destructive flex items-center justify-center"
+                            title="Delete memory"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {attachmentsPanelOpen && (
+                  <div className="px-3 py-2 space-y-2 max-h-36 overflow-y-auto custom-scrollbar">
+                    {attachments.length === 0 ? (
+                      <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">No source attachments registered.</p>
+                    ) : attachments.map(attachment => (
+                      <div key={attachment.id} className="flex items-center justify-between gap-3 rounded-[6px] border border-border/30 bg-muted/10 px-3 py-2">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <FileText size={13} className="text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="truncate text-[11px] font-bold text-foreground">{attachment.filename}</p>
+                            <p className="truncate text-[9px] text-muted-foreground">{attachment.file_type} · {attachment.file_path}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const job = await sidecarApi.promoteAttachmentToSourceJob(attachment.id);
+                              toast.success(`Source job ready: ${job.title || job.file_name}`);
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to promote source');
+                            }
+                          }}
+                          className="h-6 px-2 rounded-[4px] border border-border/30 text-[9px] font-bold uppercase text-muted-foreground hover:text-foreground shrink-0"
+                        >
+                          Learn
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
@@ -1730,29 +2157,6 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, activeNotePath, onStateCh
           </div>
         </div>
         </div>
-
-        {/* Artifact Side Panel */}
-        {(artifactState.artifacts.length > 0 && artifactState.isPanelOpen) ? (
-          <>
-            <button
-              type="button"
-              aria-label="Resize side panel"
-              onMouseDown={(event) => {
-                event.preventDefault();
-                setIsDraggingSplit(true);
-              }}
-              className="w-1.5 shrink-0 cursor-col-resize border-x border-border/40 bg-muted hover:bg-foreground/20"
-            />
-            <div
-              className="min-w-[420px] max-w-[82%] flex flex-col bg-bento-bg border-l border-border/40 min-h-0"
-              style={{ width: `${artifactState.panelWidth}%` }}
-            >
-              <div className="flex-1 flex flex-col min-h-0 relative">
-                <ArtifactViewer shielded={isDraggingSplit} />
-              </div>
-            </div>
-          </>
-        ) : null}
 
       </div>
       )}
@@ -2181,49 +2585,6 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     }
   });
 
-  const [oracleState, setOracleState] = useState({
-    hasMessages: false,
-    hasPreview: false,
-    isPanelOpen: false,
-    isLessonOpen: false
-  });
-
-  const artifactState = useArtifactStore();
-
-  // Split-Pane Layout States
-  const [leftPaneWidth, setLeftPaneWidth] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('ater_study_split_width');
-      return saved ? JSON.parse(saved) : 50;
-    } catch {
-      return 50;
-    }
-  });
-
-  const [lastUnsnappedWidth, setLastUnsnappedWidth] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('ater_study_split_last_width');
-      return saved ? JSON.parse(saved) : 50;
-    } catch {
-      return 50;
-    }
-  });
-
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState<boolean>(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState<boolean>(false);
-
-  const [isDragging, setIsDragging] = useState(false);
-  const [activeNotePath, setActiveNotePath] = useState<string | null>(() => {
-    return firstRealLessonPath(
-      localStorage.getItem('ater_study_active_note_path'),
-      localStorage.getItem('ater_canonical_lesson_path'),
-      localStorage.getItem('ater_original_note_path'),
-    );
-  });
-  const [hasNewNoteAlert, setHasNewNoteAlert] = useState(false);
-
-  const studyContainerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleToggleHistory = () => {
       setIsHistoryOpen(prev => {
@@ -2241,79 +2602,6 @@ function AterDashboard({onBack}: {onBack: () => void}) {
     return () => {
       window.removeEventListener('ater-toggle-history', handleToggleHistory);
       window.removeEventListener('ater-open-history', handleOpenHistory);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (oracleState.isLessonOpen) {
-      setIsLeftCollapsed(false);
-      setIsRightCollapsed(true);
-    } else {
-      setIsLeftCollapsed(false);
-      setIsRightCollapsed(false);
-    }
-  }, [oracleState.isLessonOpen]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!studyContainerRef.current) return;
-      const rect = studyContainerRef.current.getBoundingClientRect();
-      const widthPx = rect.width;
-      if (widthPx <= 0) return;
-
-      const relativeX = e.clientX - rect.left;
-      const pct = Math.max(15, Math.min(85, (relativeX / widthPx) * 100));
-
-      setIsLeftCollapsed(false);
-      setIsRightCollapsed(false);
-      setLeftPaneWidth(pct);
-      setLastUnsnappedWidth(pct);
-      localStorage.setItem('ater_study_split_left_collapsed', 'false');
-      localStorage.setItem('ater_study_split_right_collapsed', 'false');
-      localStorage.setItem('ater_study_split_width', JSON.stringify(pct));
-      localStorage.setItem('ater_study_split_last_width', JSON.stringify(pct));
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  // Listen to note-created Tauri events
-  useEffect(() => {
-    let unlistenFn: (() => void) | null = null;
-    const setupListener = async () => {
-      try {
-        const u = await listen<any>('note-created', (event) => {
-          const path = event.payload?.path || event.payload?.note_path || (typeof event.payload === 'string' ? event.payload : null);
-          if (path && typeof path === 'string') {
-            setActiveNotePath(path);
-            localStorage.setItem('ater_study_active_note_path', path);
-            if (!isTemporaryLessonPath(path)) {
-              localStorage.setItem('ater_canonical_lesson_path', path);
-            }
-
-            // Trigger a pulse alert to notify user without expanding
-            setHasNewNoteAlert(true);
-          }
-        });
-        unlistenFn = u;
-      } catch (err) {
-        console.error('Failed to setup note-created listener:', err);
-      }
-    };
-    setupListener();
-    return () => {
-      if (unlistenFn) unlistenFn();
     };
   }, []);
 
@@ -2498,25 +2786,6 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 } else {
   setIsCompleted(true);
 
-  // Resolve first atomic note and expand right panel
-  const firstNote = structuredPlan?.atomic_notes?.[0];
-  const firstNoteTitle = typeof firstNote === 'string' ? firstNote : (firstNote?.title || firstNote?.note);
-  if (firstNoteTitle) {
-    try {
-      const findRes = await sidecarApi.findVaultPage(firstNoteTitle);
-      if (findRes.found && findRes.path) {
-        setActiveNotePath(findRes.path);
-        localStorage.setItem('ater_study_active_note_path', findRes.path);
-        if (!isTemporaryLessonPath(findRes.path)) {
-          localStorage.setItem('ater_canonical_lesson_path', findRes.path);
-        }
-        setIsRightCollapsed(false);
-        localStorage.setItem('ater_study_split_right_collapsed', 'false');
-      }
-    } catch (findErr) {
-      console.error('Failed to auto-open first curriculum note:', findErr);
-    }
-  }
   break;
 }
 }
@@ -2532,185 +2801,16 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
     <div className="flex-1 overflow-hidden relative">
       <div
-        ref={studyContainerRef}
         className={cn(
-          "h-full w-full flex overflow-hidden relative bg-bento-panel rounded-[12px] border border-border/40 shadow-sm",
+          "h-full w-full flex min-h-0 overflow-hidden relative bg-bento-panel rounded-[12px] border border-border/40 shadow-sm",
           activeTab !== 'ater' && "hidden"
         )}
       >
-          <style>{`
-            @keyframes grayPulse {
-              0%, 100% { background-color: rgba(120, 120, 120, 0.15); }
-              50% { background-color: rgba(120, 120, 120, 0.45); }
-            }
-            .animate-gray-pulse {
-              animation: grayPulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            }
-          `}</style>
-
-          {/* Left Margin Tab (shows when left pane is collapsed) */}
-          {isLeftCollapsed && (
-            <button
-              onClick={() => {
-                setIsLeftCollapsed(false);
-                setLeftPaneWidth(lastUnsnappedWidth);
-                setHasNewNoteAlert(false);
-                localStorage.setItem('ater_study_split_left_collapsed', 'false');
-                localStorage.setItem('ater_study_split_width', JSON.stringify(lastUnsnappedWidth));
-              }}
-              className={cn(
-                "w-4 h-full bg-muted/20 border-r border-border/40 hover:bg-muted/40 transition-colors flex items-center justify-center shrink-0 cursor-pointer relative",
-                hasNewNoteAlert && "animate-gray-pulse bg-muted/60"
-              )}
-              title="Restore Chat Panel"
-            >
-              <div className="rotate-90 origin-center whitespace-nowrap text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                Chat
-              </div>
-            </button>
-          )}
-
-          {/* Left Pane (Oracle View) */}
-          <div
-            className={cn("h-full overflow-hidden flex flex-col relative", isLeftCollapsed && "hidden")}
-            style={{ width: (!activeNotePath || isRightCollapsed || oracleState.isLessonOpen) ? '100%' : `${leftPaneWidth}%` }}
-          >
-            <OracleView
-              isHistoryOpen={isHistoryOpen}
-              setIsHistoryOpen={setIsHistoryOpen}
-              activeNotePath={activeNotePath}
-              onStateChange={setOracleState}
-              onNoteSelect={(path) => {
-                setActiveNotePath(path);
-                if (path) {
-                  localStorage.setItem('ater_study_active_note_path', path);
-                  if (!isTemporaryLessonPath(path)) {
-                    localStorage.setItem('ater_canonical_lesson_path', path);
-                  }
-                } else {
-                  localStorage.removeItem('ater_study_active_note_path');
-                }
-              }}
-            />
-          </div>
-
-          {/* Vertical Divider / Drag Handle */}
-          {activeNotePath && !oracleState.isLessonOpen && !isLeftCollapsed && !isRightCollapsed && (
-            <div className="w-1.5 shrink-0 flex flex-col relative bg-muted/50 border-x border-border/40 group/divider">
-              {/* Invisible touch target for drag handle */}
-              <div
-                className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize z-20"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-              />
-              {/* Control Buttons Container at the top of the handle */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex flex-col gap-1 items-center bg-bento-card border border-border/40 p-1 rounded-full shadow-md">
-                <button
-                  onClick={() => {
-                    setIsLeftCollapsed(true);
-                    setIsRightCollapsed(false);
-                    localStorage.setItem('ater_study_split_left_collapsed', 'true');
-                    localStorage.setItem('ater_study_split_right_collapsed', 'false');
-                  }}
-                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Collapse Left (Chat)"
-                >
-                  <ChevronLeft size={10} />
-                </button>
-                <button
-                  onClick={() => {
-                    setIsLeftCollapsed(false);
-                    setIsRightCollapsed(false);
-                    setLeftPaneWidth(50);
-                    setLastUnsnappedWidth(50);
-                    localStorage.setItem('ater_study_split_left_collapsed', 'false');
-                    localStorage.setItem('ater_study_split_right_collapsed', 'false');
-                    localStorage.setItem('ater_study_split_width', '50');
-                    localStorage.setItem('ater_study_split_last_width', '50');
-                  }}
-                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Reset to 50/50"
-                >
-                  <div className="size-1.5 rounded-full bg-foreground" />
-                </button>
-                <button
-                  onClick={() => {
-                    setIsLeftCollapsed(false);
-                    setIsRightCollapsed(true);
-                    localStorage.setItem('ater_study_split_left_collapsed', 'false');
-                    localStorage.setItem('ater_study_split_right_collapsed', 'true');
-                  }}
-                  className="size-4 hover:bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Collapse Right (Note Canvas)"
-                >
-                  <ChevronRight size={10} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Right Pane (Note Canvas) */}
-          <div
-            className={cn("h-full overflow-hidden flex flex-col relative", (!activeNotePath || isRightCollapsed || oracleState.isLessonOpen) && "hidden")}
-            style={{ width: isLeftCollapsed ? '100%' : `${100 - leftPaneWidth}%` }}
-          >
-            <NoteCanvas
-              notePath={activeNotePath}
-              onClose={() => {
-                setActiveNotePath(null);
-                localStorage.removeItem('ater_study_active_note_path');
-              }}
-              onNavigate={async (pageName) => {
-                try {
-                  const res = await sidecarApi.findVaultPage(pageName);
-                  if (res.found && res.path) {
-                    setActiveNotePath(res.path);
-                    localStorage.setItem('ater_study_active_note_path', res.path);
-                    if (!isTemporaryLessonPath(res.path)) {
-                      localStorage.setItem('ater_canonical_lesson_path', res.path);
-                    }
-                  } else {
-                    setActiveNotePath(pageName);
-                    localStorage.setItem('ater_study_active_note_path', pageName);
-                    if (!isTemporaryLessonPath(pageName)) {
-                      localStorage.setItem('ater_canonical_lesson_path', pageName);
-                    }
-                  }
-                } catch (err) {
-                  console.error('Failed to resolve page name in NoteCanvas onNavigate:', err);
-                  setActiveNotePath(pageName);
-                  localStorage.setItem('ater_study_active_note_path', pageName);
-                  if (!isTemporaryLessonPath(pageName)) {
-                    localStorage.setItem('ater_canonical_lesson_path', pageName);
-                  }
-                }
-              }}
-            />
-          </div>
-
-          {/* Right Margin Tab (shows when right pane is collapsed) */}
-          {isRightCollapsed && activeNotePath && !oracleState.isLessonOpen && (
-            <button
-              onClick={() => {
-                setIsRightCollapsed(false);
-                setLeftPaneWidth(lastUnsnappedWidth);
-                setHasNewNoteAlert(false);
-                localStorage.setItem('ater_study_split_right_collapsed', 'false');
-                localStorage.setItem('ater_study_split_width', JSON.stringify(lastUnsnappedWidth));
-              }}
-              className={cn(
-                "w-4 h-full bg-muted/20 border-l border-border/40 hover:bg-muted/40 transition-colors flex items-center justify-center shrink-0 cursor-pointer relative",
-                hasNewNoteAlert && "animate-gray-pulse bg-muted/60"
-              )}
-              title="Restore Note Panel"
-            >
-              <div className="-rotate-90 origin-center whitespace-nowrap text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                Notes
-              </div>
-            </button>
-          )}
+        <OracleView
+          isHistoryOpen={isHistoryOpen}
+          setIsHistoryOpen={setIsHistoryOpen}
+          onNoteSelect={() => {}}
+        />
       </div>
 
       <div
@@ -2720,7 +2820,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
         )}
       >
           <div className="max-w-3xl mx-auto w-full h-full flex flex-col overflow-hidden">
-        {/* Pipeline Content (Already exists in AterDashboard return) */}
+        {/* Bulk/background import content */}
         {queueStatus?.status !== 'idle' && (
           <div className="flex flex-col h-full overflow-hidden mb-4">
           <div className="p-8 rounded-[12px] border border-border bg-bento-card flex flex-col h-full overflow-hidden gap-8 shadow-sm">

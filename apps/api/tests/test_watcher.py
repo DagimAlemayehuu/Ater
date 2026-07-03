@@ -128,6 +128,20 @@ def test_inbox_handler_exclusion_posix(queue_manager, tmp_path):
     status = manager.get_status()
     assert status["queue_size"] == 1
 
+
+def test_inbox_handler_debounces_create_modify_duplicate(queue_manager, tmp_path):
+    manager, _db_file = queue_manager
+    handler = InboxHandler(manager)
+    uploaded_file = tmp_path / "Inbox" / "Uploaded.pdf"
+    uploaded_file.touch()
+
+    with patch.object(manager, "add_to_queue", wraps=manager.add_to_queue) as add_to_queue:
+        handler.on_created(MockEvent(src_path=str(uploaded_file)))
+        handler.on_modified(MockEvent(src_path=str(uploaded_file)))
+
+    assert add_to_queue.call_count == 1
+    assert manager.get_status()["queue_size"] == 1
+
 def test_inbox_handler_exclusion_windows_fallback(queue_manager):
     """Verify that simulated Windows paths are excluded/ingested correctly via string fallback."""
     manager, db_file = queue_manager

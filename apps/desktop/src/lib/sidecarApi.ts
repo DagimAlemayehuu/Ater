@@ -2413,6 +2413,140 @@ export const sidecarApi = {
             throw err;
         }
     },
+    createSourceLearningJob: async (payload: { file_path?: string; inbox_file?: string; attachment_id?: string; conversation_id?: string }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to create source learning job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] createSourceLearningJob failed:', err);
+            throw err;
+        }
+    },
+    getSourceLearningJob: async (jobId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders();
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to get source learning job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getSourceLearningJob failed:', err);
+            throw err;
+        }
+    },
+    startSourceLearningJob: async (jobId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}/start`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({})
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to start source learning job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] startSourceLearningJob failed:', err);
+            throw err;
+        }
+    },
+    deploySourceLearningJob: async (jobId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}/deploy`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({})
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to deploy source learning job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] deploySourceLearningJob failed:', err);
+            throw err;
+        }
+    },
+    createPromptTeacherJob: async (payload: { prompt: string; conversation_id?: string }) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/prompt/jobs`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to create prompt teacher job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] createPromptTeacherJob failed:', err);
+            throw err;
+        }
+    },
+    getPromptTeacherJob: async (jobId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders();
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/prompt/jobs/${encodeURIComponent(jobId)}`, {
+                method: 'GET',
+                headers
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to get prompt teacher job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] getPromptTeacherJob failed:', err);
+            throw err;
+        }
+    },
+    startPromptTeacherJob: async (jobId: string) => {
+        try {
+            const port = await invoke<number>('get_sidecar_port');
+            const headers = await getBaseHeaders('application/json');
+            const res = await fetch(`http://127.0.0.1:${port}/api/ater/prompt/jobs/${encodeURIComponent(jobId)}/start`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({})
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to start prompt teacher job (HTTP ${res.status})`);
+            }
+            return await res.json();
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] startPromptTeacherJob failed:', err);
+            throw err;
+        }
+    },
+    promoteAttachmentToSourceJob: async (attachmentId: string) => {
+        return await sidecarApi.promoteAttachment(attachmentId);
+    },
     getLearnerProfile: async (topic: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
@@ -2469,8 +2603,7 @@ export const sidecarApi = {
     createConversation: async (title: string, metadata?: any) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations`, {
                 method: 'POST',
                 headers,
@@ -2485,8 +2618,7 @@ export const sidecarApi = {
     listConversations: async (includeArchived?: boolean) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations?include_archived=${!!includeArchived}`, {
                 method: 'GET',
                 headers
@@ -2500,8 +2632,7 @@ export const sidecarApi = {
     getConversation: async (convId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}`, {
                 method: 'GET',
                 headers
@@ -2515,8 +2646,7 @@ export const sidecarApi = {
     updateConversation: async (convId: string, data: { title?: string; metadata?: any }) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}`, {
                 method: 'PATCH',
                 headers,
@@ -2531,8 +2661,7 @@ export const sidecarApi = {
     deleteConversation: async (convId: string, hard?: boolean) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}?hard=${!!hard}`, {
                 method: 'DELETE',
                 headers
@@ -2546,8 +2675,7 @@ export const sidecarApi = {
     archiveConversation: async (convId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/archive`, {
                 method: 'POST',
                 headers
@@ -2561,8 +2689,7 @@ export const sidecarApi = {
     restoreConversation: async (convId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/restore`, {
                 method: 'POST',
                 headers
@@ -2576,8 +2703,7 @@ export const sidecarApi = {
     getMessages: async (convId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/messages`, {
                 method: 'GET',
                 headers
@@ -2588,15 +2714,14 @@ export const sidecarApi = {
             throw err;
         }
     },
-    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string) => {
+    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string, metadata?: any) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/messages`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ role, content, parent_message_id: parentMessageId })
+                body: JSON.stringify({ role, content, parent_message_id: parentMessageId, metadata })
             });
             return await res.json();
         } catch (err) {
@@ -2607,8 +2732,7 @@ export const sidecarApi = {
     cancelStream: async (runId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/stream/cancel`, {
                 method: 'POST',
                 headers,
@@ -2623,14 +2747,12 @@ export const sidecarApi = {
     regenerateMessage: async (convId: string, messageId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/regenerate`, {
+            const headers = await getBaseHeaders('application/json');
+            return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/regenerate`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message_id: messageId })
             });
-            return await res.json();
         } catch (err) {
             console.error('[Oracle Client] regenerateMessage failed:', err);
             throw err;
@@ -2639,14 +2761,12 @@ export const sidecarApi = {
     branchMessage: async (convId: string, messageId: string, content: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/branch`, {
+            const headers = await getBaseHeaders('application/json');
+            return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/branch`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message_id: messageId, content })
             });
-            return await res.json();
         } catch (err) {
             console.error('[Oracle Client] branchMessage failed:', err);
             throw err;
@@ -2655,8 +2775,7 @@ export const sidecarApi = {
     listMemories: async (conversationId?: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const url = conversationId 
                 ? `http://127.0.0.1:${port}/api/chat/memories?conversation_id=${conversationId}`
                 : `http://127.0.0.1:${port}/api/chat/memories`;
@@ -2673,8 +2792,7 @@ export const sidecarApi = {
     createMemory: async (data: { scope: string; content: string; confidence?: number; conversation_id?: string; status?: string }) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories`, {
                 method: 'POST',
                 headers,
@@ -2689,8 +2807,7 @@ export const sidecarApi = {
     patchMemory: async (memoryId: string, data: { enabled?: boolean; status?: string }) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories/${memoryId}`, {
                 method: 'PATCH',
                 headers,
@@ -2705,8 +2822,7 @@ export const sidecarApi = {
     deleteMemory: async (memoryId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories/${memoryId}`, {
                 method: 'DELETE',
                 headers
@@ -2720,8 +2836,7 @@ export const sidecarApi = {
     uploadAttachment: async (convId: string, filePath: string, fileType: string, messageId?: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/attachments`, {
                 method: 'POST',
                 headers,
@@ -2736,8 +2851,7 @@ export const sidecarApi = {
     listAttachments: async (convId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/attachments`, {
                 method: 'GET',
                 headers
@@ -2751,8 +2865,7 @@ export const sidecarApi = {
     promoteAttachment: async (attachmentId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/attachments/${attachmentId}/promote`, {
                 method: 'POST',
                 headers
@@ -2766,8 +2879,7 @@ export const sidecarApi = {
     getMessageTools: async (messageId: string) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders();
             const res = await fetch(`http://127.0.0.1:${port}/api/chat/messages/${messageId}/tools`, {
                 method: 'GET',
                 headers
@@ -2791,8 +2903,7 @@ export const sidecarApi = {
     ) => {
         try {
             const port = await invoke<number>('get_sidecar_port');
-            const sidecarToken = await invoke<string>('get_sidecar_token');
-            const headers = { 'Content-Type': 'application/json', 'X-Ater-Token': sidecarToken };
+            const headers = await getBaseHeaders('application/json');
             return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/stream`, {
                 method: 'POST',
                 headers,
@@ -2804,4 +2915,3 @@ export const sidecarApi = {
         }
     }
 };
-

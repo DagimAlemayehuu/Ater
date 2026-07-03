@@ -88,3 +88,6 @@ apps/api/mock_inbox/
 # Git Worktrees
 .worktrees/
 worktrees/
+
+# Temp home directory
+.tmp_home/

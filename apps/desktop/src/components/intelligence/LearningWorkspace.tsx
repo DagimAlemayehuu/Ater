@@ -36,6 +36,8 @@ const isTemporaryLessonPath = (path?: string | null) => {
   return typeof path === 'string' && path.includes('remediation_temp')
 }
 
+const normalizeNoteTitle = (title: string) => title.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+
 export function LearningWorkspace({
   preview,
   tutorSession,
@@ -137,8 +139,32 @@ export function LearningWorkspace({
   }, [hubPath])
 
   const tree = useMemo(() => {
+    const sourceJob = tutorSession?.source_job
+    const sourceJobId = tutorSession?.source_job_id || sourceJob?.job_id
+    const roadmapItems = Array.isArray(tutorSession?.roadmap) ? tutorSession.roadmap : []
+    const sourceNodes = Array.isArray(sourceJob?.concept_graph?.nodes) ? sourceJob.concept_graph.nodes : []
+
+    const canonicalItems = roadmapItems.length > 0
+      ? roadmapItems
+      : sourceNodes.map((node: any) => ({
+        id: node.id,
+        title: node.title,
+        path: sourceJobId ? `SourceJobs/${sourceJobId}/${normalizeNoteTitle(node.title)}.md` : undefined,
+        status: node.id === tutorSession?.current_concept_node_id ? 'current' : 'locked',
+      }))
+
+    if (canonicalItems.length > 0) {
+      return canonicalItems.map((item: any, index: number): NavNode => ({
+        label: item.title || titleFromPath(item.path) || `Lesson ${index + 1}`,
+        target: item.path || null,
+        depth: 0,
+        children: [],
+        isChecked: item.status === 'completed',
+      }))
+    }
+
     return parseHubTree(hubContent)
-  }, [hubContent])
+  }, [hubContent, tutorSession?.current_concept_node_id, tutorSession?.roadmap, tutorSession?.source_job, tutorSession?.source_job_id])
 
   useEffect(() => {
     const expandAll = (nodes: NavNode[]) => {
@@ -199,7 +225,7 @@ export function LearningWorkspace({
     const stem = getNoteStem(target)
 
     // Check API roadmap first
-    const apiItem = tutorSession?.roadmap?.find((r: any) => getNoteStem(r.path) === stem)
+    const apiItem = tutorSession?.roadmap?.find((r: any) => getNoteStem(r.path || r.title || '') === stem)
     if (apiItem) {
       return apiItem.status
     }
@@ -212,7 +238,7 @@ export function LearningWorkspace({
 
   const openItemByTarget = (target: string) => {
     const targetStem = getNoteStem(target)
-    const matchPath = tutorSession?.curriculum?.find((p: string) => getNoteStem(p) === targetStem)
+    const matchPath = tutorSession?.curriculum?.find((p: string) => getNoteStem(p) === targetStem) || target
     if (matchPath) {
       setActivePractice(null)
       onPreviewChange({
@@ -702,7 +728,7 @@ export function LearningWorkspace({
           <div className="min-h-0 flex-1 overflow-y-auto p-3 custom-scrollbar">
             {tree.length > 0 ? (
               <div className="flex flex-col space-y-0.5">
-                {tree.map((node, idx) => renderNode(node, idx))}
+                {tree.map((node: NavNode, idx: number) => renderNode(node, idx))}
               </div>
             ) : (
               <div className="py-16 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Loading map</div>

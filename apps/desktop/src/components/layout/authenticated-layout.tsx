@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { LayoutProvider, useLayout } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import { AppHeader } from '@/components/layout/app-header'
 import React, { useState, useEffect } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -61,6 +62,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
       )}
       {!isFullscreen && <AppSidebar />}
       <main id="content" className="flex-1 flex flex-col overflow-hidden relative gap-3">
+        {!isFullscreen && <AppHeader />}
         <div className="flex-1 overflow-hidden relative">
           {children ?? <Outlet />}
         </div>

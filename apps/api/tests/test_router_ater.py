@@ -13,32 +13,37 @@ client = TestClient(app)
 # PR 38: resolve_note_path Helper Tests
 # =====================================================================
 
-def test_resolve_note_path_valid():
-    vault = Path("/fake/vault")
+def test_resolve_note_path_valid(tmp_path):
     # Simple relative path
-    res = resolve_note_path("hello.md", vault)
-    assert res == vault / "hello.md"
+    (tmp_path / "hello.md").write_text("content")
+    res = resolve_note_path("hello.md", tmp_path)
+    assert res == "hello.md"
 
-def test_resolve_note_path_nested():
-    vault = Path("/fake/vault")
+def test_resolve_note_path_nested(tmp_path):
     # Subdirectories
-    res = resolve_note_path("Sub/Folder/notes.md", vault)
-    assert res == vault / "Sub" / "Folder" / "notes.md"
+    sub = tmp_path / "Sub" / "Folder"
+    sub.mkdir(parents=True)
+    (sub / "notes.md").write_text("content")
+    res = resolve_note_path("Sub/Folder/notes.md", tmp_path)
+    assert res == "Sub/Folder/notes.md"
 
-def test_resolve_note_path_absolute_safety():
-    vault = Path("/fake/vault")
+def test_resolve_note_path_absolute_safety(tmp_path):
     # Absolute paths are forced relative to vault root
-    res = resolve_note_path("/absolute/path/file.md", vault)
-    assert res == vault / "absolute" / "path" / "file.md"
+    note_path = tmp_path / "file.md"
+    note_path.write_text("content")
+    res = resolve_note_path(str(note_path), tmp_path)
+    assert res == "file.md"
 
-def test_resolve_note_path_relative_escape():
-    vault = Path("/fake/vault")
-    # Directory traversal escapes are normalized
-    res = resolve_note_path("../../../etc/passwd", vault)
-    assert res == vault / "etc" / "passwd"
+def test_resolve_note_path_relative_escape(tmp_path):
+    res = resolve_note_path("/absolute/path/file.md", tmp_path)
+    assert res is None
 
-    res2 = resolve_note_path("Folder/../../outside.md", vault)
-    assert res2 == vault / "outside.md"
+def test_resolve_note_path_search(tmp_path):
+    sub = tmp_path / "Sub"
+    sub.mkdir()
+    (sub / "target_note.md").write_text("content")
+    res = resolve_note_path("target_note", tmp_path)
+    assert res == "Sub/target_note.md"
 
 
 # =====================================================================
@@ -46,24 +51,24 @@ def test_resolve_note_path_relative_escape():
 # =====================================================================
 
 def test_read_obsidian_file_missing_vault_path():
-    response = client.get("/api/obsidian/item?path=test.md")
+    response = client.get("/api/obsidian/file?path=test.md")
     assert response.status_code == 400
     assert response.json() == {"detail": "Vault Path missing"}
 
 def test_read_obsidian_file_not_found(tmp_path):
     headers = {"x-vault-path": str(tmp_path)}
-    response = client.get("/api/obsidian/item?path=nonexistent.md", headers=headers)
+    response = client.get("/api/obsidian/file?path=nonexistent.md", headers=headers)
     assert response.status_code == 404
-    assert response.json() == {"detail": "Item not found"}
+    assert response.json() == {"detail": "File not found"}
 
 def test_read_obsidian_file_success(tmp_path):
     headers = {"x-vault-path": str(tmp_path)}
     test_file = tmp_path / "test.md"
     test_file.write_text("Hello Obsidian content", encoding="utf-8")
 
-    response = client.get("/api/obsidian/item?path=test.md", headers=headers)
+    response = client.get("/api/obsidian/file?path=test.md", headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"content": "Hello Obsidian content"}
+    assert response.json() == {"content": "Hello Obsidian content", "metadata": {}}
 
 
 # =====================================================================
@@ -71,13 +76,13 @@ def test_read_obsidian_file_success(tmp_path):
 # =====================================================================
 
 def test_write_obsidian_file_missing_vault_path():
-    response = client.post("/api/obsidian/item?path=test.md", json={"content": "test"})
+    response = client.post("/api/obsidian/file?path=test.md", json="test")
     assert response.status_code == 400
     assert response.json() == {"detail": "Vault Path missing"}
 
 def test_write_obsidian_file_success(tmp_path):
     headers = {"x-vault-path": str(tmp_path)}
-    response = client.post("/api/obsidian/item?path=subfolder/new_note.md", json={"content": "Written content"}, headers=headers)
+    response = client.post("/api/obsidian/file?path=subfolder/new_note.md", json="Written content", headers=headers)
     assert response.status_code == 200
     assert response.json() == {"status": "success"}
 
@@ -93,7 +98,7 @@ def test_write_obsidian_file_failure(tmp_path, monkeypatch):
 
     monkeypatch.setattr(pathlib.Path, "write_text", mock_write_text)
 
-    response = client.post("/api/obsidian/item?path=error.md", json={"content": "written"}, headers=headers)
+    response = client.post("/api/obsidian/file?path=error.md", json="written", headers=headers)
     assert response.status_code == 500
     assert "Mocked disk error" in response.json()["detail"]
 
@@ -128,11 +133,12 @@ def test_list_obsidian_files_success(tmp_path):
     data = response.json()
     files = data["files"]
     
-    assert len(files) == 3
+    assert len(files) == 4
     # Check that they include file paths relative to vault root
     paths = [f["path"] for f in files]
     assert "file1.md" in paths
     assert "file2.txt" in paths
+    assert "sub" in paths
     assert "sub/nested.md" in paths
 
 

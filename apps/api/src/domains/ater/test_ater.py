@@ -599,4 +599,33 @@ def test_search_web_and_schemas(tmp_path):
         res = assistant.search_web("quantum computing")
         assert "*(Offline: falling back to local vault RAG)*" in res
 
+    # 3. Test search_web filters Prime Video noise and retries office-holder queries
+    with patch("src.domains.ater.assistant.DDGS") as mock_ddgs:
+        ddgs = mock_ddgs.return_value.__enter__.return_value
+        ddgs.text.side_effect = [
+            [
+                {
+                    "title": "The Grand Tour - Welcome to Prime Video",
+                    "href": "https://www.primevideo.com/",
+                    "body": "Watch movies and TV shows with Prime.",
+                },
+                {
+                    "title": "Amazon.com: Prime Video",
+                    "href": "https://www.amazon.com/Prime-Video/",
+                    "body": "Included with Prime.",
+                },
+            ],
+            [
+                {
+                    "title": "Prime Minister of Ethiopia",
+                    "href": "https://en.wikipedia.org/wiki/Prime_Minister_of_Ethiopia",
+                    "body": "The incumbent prime minister is Abiy Ahmed, serving since 2 April 2018.",
+                }
+            ],
+        ]
+
+        res = assistant.search_web("prime minister of ethiopia 2024")
+        assert "Abiy Ahmed" in res
+        assert "Prime Video" not in res
+        assert ddgs.text.call_count == 2
 

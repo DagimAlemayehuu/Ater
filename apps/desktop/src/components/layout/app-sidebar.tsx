@@ -11,6 +11,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { useSecurityStore } from '@/context/securityStore'
 import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
+import { useSidebarContent } from '@/context/sidebar-content-context'
 
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export function AppSidebar() {
   const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore();
   const creditBalance = useSecurityStore(state => state.creditBalance);
   const { theme, setTheme } = useTheme();
+  const { sidebarContent } = useSidebarContent();
 
   // Collapsed state synced with localStorage and global event
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
@@ -242,6 +244,11 @@ export function AppSidebar() {
           </NavLink>
         </div>
 
+        {sidebarContent && (
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto border-t border-border/20 pt-3 pr-1">
+            {sidebarContent}
+          </div>
+        )}
       </div>
 
       {/* Footer Area with Credit System, Theme Toggle, and Settings */}

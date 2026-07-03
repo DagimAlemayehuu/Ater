@@ -478,6 +478,7 @@ async def _stream_learning_runtime_lesson(
     topic: str,
     secrets: AppSecrets,
     request: Optional[Any] = None,
+    source_context_prompt: Optional[str] = None,
 ):
     """Run Teach Anything through the new Ater learning-runtime modules.
 
@@ -509,12 +510,100 @@ async def _stream_learning_runtime_lesson(
 
     try:
         import asyncio
-        from src.domains.ater.compiler_service import AterLessonCompiler
-        from src.domains.ater.artifact_service import ArtifactService
+        from src.domains.ater.prompt_teacher_service import PromptTeacherJobService
         from src.domains.ater import learning_object as lo
 
         vault_root = Path(secrets.vault_path)
         service = AterService(secrets)
+        db_path = Path(secrets.inbox_path or (vault_root / "Inbox")) / "ater_queue.db"
+        prompt_teacher = PromptTeacherJobService(db_path, vault_path=vault_root)
+
+        if not source_context_prompt:
+            teacher_prompt = original_learning_prompt or latest_prompt or f"Teach me {topic}"
+            if is_start_lesson:
+                yield {"type": "status", "message": "Starting durable teacher session..."}
+                job = prompt_teacher.create_or_resume(teacher_prompt)
+                if job.get("status") == "awaiting_clarification":
+                    question = (job.get("prompt_teacher") or {}).get("clarification_question") or "What topic should Ater teach?"
+                    yield {"type": "chunk", "content": question}
+                    return
+                started = prompt_teacher.start_learning(job["job_id"])
+                deployment = None
+                if secrets.vault_path:
+                    deployment = prompt_teacher.deploy_to_vault(job["job_id"], secrets.vault_path)
+                source_job = started.get("source_job") or prompt_teacher.get_job(job["job_id"])
+                tutor = started.get("tutor_session") or {}
+                current_note = tutor.get("current_note") or {}
+                note_path = tutor.get("current_note_path") or ""
+                link = source_job.get("current_tutor_link") or {}
+                hub_path = tutor.get("hub_path") or link.get("hub_path") or f"SourceJobs/{job['job_id']}/{lo.normalize_title(source_job.get('topic') or 'Prompt_Learning')}_Hub.md"
+                yield {
+                    "type": "chunk",
+                    "content": (
+                        f"## {source_job.get('topic') or 'Learning Path'}\n\n"
+                        "Your durable teacher session is ready. The workspace is using the same tutor, coverage, and mastery runtime as source-grounded learning."
+                    ),
+                }
+                yield {
+                    "type": "lesson_created",
+                    "title": (current_note.get("note_title") or source_job.get("topic") or "Teacher Lesson").replace("_", " "),
+                    "lesson_path": note_path,
+                    "note_path": note_path,
+                    "hub_path": link.get("hub_path") or hub_path,
+                    "preview_url": "",
+                    "session_id": tutor.get("session_id"),
+                    "source_job_id": job["job_id"],
+                    "prompt_job_id": job["job_id"],
+                    "current_concept_node_id": tutor.get("current_concept_node_id"),
+                    "curriculum": [item.get("title") for item in source_job.get("roadmap", [])],
+                    "roadmap": source_job.get("roadmap", []),
+                    "coverage": source_job.get("coverage"),
+                    "warnings": source_job.get("warnings", []),
+                    "deployment": deployment,
+                }
+                return
+
+            yield {"type": "status", "message": "Building durable teacher roadmap..."}
+            job = prompt_teacher.create_or_resume(teacher_prompt)
+            prompt_state = job.get("prompt_teacher") or {}
+            if job.get("status") == "awaiting_clarification":
+                yield {
+                    "type": "chunk",
+                    "content": prompt_state.get("clarification_question") or "What topic should Ater teach, and what outcome are you aiming for?",
+                }
+                yield {"type": "prompt_teacher_job", "job_id": job["job_id"], "status": job.get("status"), "next_action": "answer_clarification"}
+                return
+            roadmap = job.get("roadmap") or []
+            assumptions = prompt_state.get("assumptions") or []
+            warnings = job.get("warnings") or []
+            roadmap_lines = "\n".join(f"- [ ] {item.get('title')}" for item in roadmap)
+            assumptions_block = "\n".join(f"- {item}" for item in assumptions) or "- No special assumptions recorded."
+            warnings_block = "\n".join(f"- {w.get('severity')}: {w.get('description')}" for w in warnings) or "- No blocking warnings."
+            yield {
+                "type": "chunk",
+                "content": (
+                    f"## {job.get('topic') or topic} — Learning Roadmap\n\n"
+                    f"{len(roadmap)} concepts planned through a synthetic source pack.\n\n"
+                    f"Assumptions:\n\n{assumptions_block}\n\n"
+                    f"Warnings:\n\n{warnings_block}\n\n"
+                    f"Roadmap:\n\n{roadmap_lines}\n\n"
+                    "Click **Start Lesson** to open the unified teacher workspace."
+                ),
+            }
+            yield {
+                "type": "prompt_teacher_job",
+                "job_id": job["job_id"],
+                "prompt_job_id": job["job_id"],
+                "status": job.get("status"),
+                "topic": job.get("topic"),
+                "hub_path": f"SourceJobs/{job['job_id']}/{lo.normalize_title(job.get('topic') or 'Prompt_Learning')}_Hub.md",
+                "roadmap": roadmap,
+                "coverage": job.get("coverage"),
+                "warnings": warnings,
+                "assumptions": assumptions,
+                "next_action": "start_learning",
+            }
+            return
 
         # ── PHASE 2: "Start Lesson" — retrieve cached curriculum, generate + compile ──
         if is_start_lesson:
@@ -555,6 +644,9 @@ async def _stream_learning_runtime_lesson(
 
             yield {"type": "status", "message": "Writing Hub, Chapters, and Atomic Notes..."}
             written = service.planner.write_curriculum(curriculum, mode="Progressive")
+
+            from src.domains.ater.compiler_service import AterLessonCompiler
+            from src.domains.ater.artifact_service import ArtifactService
 
             compiler = AterLessonCompiler(str(vault_root))
             artifact_service = ArtifactService(vault_path=str(vault_root))
@@ -693,8 +785,10 @@ async def _stream_learning_runtime_lesson(
 
         # ── PHASE 1: New topic request — generate curriculum, stream roadmap ──
         # Get the actual user topic from the latest message
-        topic_prompt = latest_prompt
+        topic_prompt = source_context_prompt or latest_prompt
         cache_key = topic_prompt.strip().lower()[:80]
+        if source_context_prompt:
+            cache_key = latest_prompt.strip().lower()[:80]
 
         yield {"type": "status", "message": "Planning your learning roadmap..."}
         try:
@@ -1048,9 +1142,10 @@ def resolve_assistant_oracle_path() -> Path:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class AterAssistant:
-    def __init__(self, secrets: AppSecrets, user_context: Optional[Dict[str, Any]] = None):
+    def __init__(self, secrets: AppSecrets, user_context: Optional[Dict[str, Any]] = None, tool_observer: Optional[Any] = None):
         self.secrets = secrets
         self.user_context = user_context or {}
+        self.tool_observer = tool_observer
         if not self.user_context.get("display_name"):
             fallback_name = get_fallback_display_name()
             if fallback_name:
@@ -1258,20 +1353,28 @@ class AterAssistant:
             return f"*(Offline: falling back to local vault RAG)*\n\n{local_res}"
             
         try:
-            # Query DuckDuckGo text search
+            selected_query = query
+            selected_results = []
+
             with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=5))
-                
-            if not results:
-                return f"No search results found on the web for: '{query}'."
-                
-            formatted = [f"### Web Search Results for: \"{query}\"\n"]
-            for idx, r in enumerate(results, 1):
+                for variant in _web_search_query_variants(query):
+                    results = list(ddgs.text(variant, max_results=5))
+                    relevant = [r for r in results if _is_relevant_web_result(variant, r)]
+                    if relevant:
+                        selected_query = variant
+                        selected_results = relevant
+                        break
+
+            if not selected_results:
+                return f"No reliable search results found on the web for: '{query}'."
+
+            formatted = [f"### Web Search Results for: \"{selected_query}\"\n"]
+            for idx, r in enumerate(selected_results[:5], 1):
                 title = r.get("title", "No Title")
                 url = r.get("href", "#")
                 snippet = r.get("body", "")
                 formatted.append(f"{idx}. **[{title}]({url})**\n   {snippet}\n")
-                
+
             return "\n".join(formatted)
             
         except Exception as e:
@@ -2804,6 +2907,11 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
         ]
 
     async def execute_tool(self, name: str, args: dict) -> str:
+        if hasattr(self, "tool_observer") and self.tool_observer:
+            return await self.tool_observer(name, args, self._execute_tool_inner)
+        return await self._execute_tool_inner(name, args)
+
+    async def _execute_tool_inner(self, name: str, args: dict) -> str:
         try:
             dispatch = {
                 "search_web": lambda: self.search_web(**args),
@@ -3002,17 +3110,113 @@ _LESSON_TRIGGER_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_BAD_SEARCH_RESULT_PATTERNS = re.compile(
+    r"(primevideo|prime\s+video|amazon\.com|amazon\s+prime|imdb\.com)",
+    re.IGNORECASE,
+)
+
+
+def _web_search_query_variants(query: str) -> List[str]:
+    clean = re.sub(r"\s+", " ", str(query or "")).strip()
+    if not clean:
+        return []
+
+    variants = [clean]
+    lowered = clean.lower()
+
+    if "prime minister" in lowered:
+        without_year = re.sub(r"\b(?:19|20)\d{2}\b", "", clean)
+        without_year = re.sub(r"\s+", " ", without_year).strip()
+        variants.extend([
+            f"{without_year or clean} current incumbent official",
+            f"{without_year or clean} office of the prime minister incumbent",
+            f"site:wikipedia.org {without_year or clean} incumbent",
+        ])
+
+    deduped = []
+    for variant in variants:
+        if variant and variant not in deduped:
+            deduped.append(variant)
+    return deduped
+
+
+def _is_relevant_web_result(query: str, result: Dict[str, Any]) -> bool:
+    title = str(result.get("title") or "")
+    url = str(result.get("href") or "")
+    body = str(result.get("body") or "")
+    combined = f"{title} {url} {body}"
+
+    if _BAD_SEARCH_RESULT_PATTERNS.search(combined):
+        return False
+
+    lowered_query = query.lower()
+    lowered_combined = combined.lower()
+    if "prime minister" in lowered_query:
+        return "prime minister" in lowered_combined or "head of government" in lowered_combined
+
+    return True
+
 
 def _is_lesson_request(messages_history: List[Dict[str, Any]]) -> tuple[bool, str]:
-    """Return (is_lesson, topic) based on whether any user message in history is a lesson request."""
-    for msg in messages_history:
-        if msg.get("role") == "user":
-            text = msg.get("content", "")
-            if text.strip().lower() in ["confirm", "proceed", "yes", "y", "ok", "start", "proceed with lesson", "start lesson"]:
+    """Return (is_lesson, topic) from the latest meaningful user intent."""
+    start_like = {"confirm", "proceed", "yes", "y", "ok", "start", "proceed with lesson", "start lesson"}
+
+    latest_user_index = -1
+    latest_text = ""
+    for index in range(len(messages_history) - 1, -1, -1):
+        msg = messages_history[index]
+        if msg.get("role") != "user":
+            continue
+        text = str(msg.get("content") or "").strip()
+        if not text:
+            continue
+        latest_user_index = index
+        latest_text = text
+        break
+
+    if not latest_text:
+        return False, ""
+
+    latest_normalized = latest_text.lower()
+    if latest_normalized in start_like:
+        for msg in reversed(messages_history[:latest_user_index]):
+            if msg.get("role") != "user":
+                continue
+            text = str(msg.get("content") or "").strip()
+            if not text or text.lower() in start_like:
                 continue
             if _LESSON_TRIGGER_PATTERNS.search(text):
-                return True, text.strip()
+                return True, text
+            return False, ""
+        return False, ""
+
+    if _LESSON_TRIGGER_PATTERNS.search(latest_text):
+        return True, latest_text
     return False, ""
+
+
+def _source_grounded_lesson_prompt(topic: str, packed_context: Optional[Dict[str, Any]]) -> Optional[str]:
+    attachments_block = (packed_context or {}).get("attachments")
+    if not attachments_block:
+        return None
+
+    topic_lower = str(topic or "").lower()
+    source_phrases = ("this source", "attached source", "the source", "from source", "from the pdf", "from this pdf")
+    if not any(phrase in topic_lower for phrase in source_phrases):
+        return None
+
+    filename = "attached source"
+    match = re.search(r"\[([^\]]+)\]:", str(attachments_block))
+    if match:
+        filename = match.group(1).strip()
+    title = Path(filename).stem.replace("_", " ").replace("-", " ").replace(",", " ")
+    title = re.sub(r"\s+", " ", title).strip() or filename
+
+    return (
+        f"Teach me the material in the attached source titled '{title}'. "
+        "Build the roadmap only from the source content and preserve the source's real subject, vocabulary, and examples.\n\n"
+        f"Attached source excerpt:\n{attachments_block}"
+    )
 
 
 def _xml_escape(value: Any) -> str:
@@ -3288,7 +3492,9 @@ async def run_assistant_chat(
     rag_context: Optional[str] = None,
     user_context: Optional[Dict[str, Any]] = None,
     active_artifact: Optional[Dict[str, Any]] = None,
-    request: Optional[Any] = None
+    request: Optional[Any] = None,
+    packed_context: Optional[Dict[str, Any]] = None,
+    tool_observer: Optional[Any] = None
 ):
     """
     Ater agent loop. Yields SSE events:
@@ -3297,7 +3503,7 @@ async def run_assistant_chat(
       data: {"type": "action",  "action": "navigate"|"toast"|"pomodoro_*", ...}
       data: {"type": "error",   "message": "..."}
     """
-    assistant = AterAssistant(secrets, user_context)
+    assistant = AterAssistant(secrets, user_context, tool_observer=tool_observer)
     tools = assistant.get_tools()
     llm_with_tools = assistant.llm.bind_tools(tools)
 
@@ -3382,30 +3588,61 @@ async def run_assistant_chat(
     import datetime
     current_time_str = datetime.datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
 
-    program_info_str = f" They are enrolled in: {program_info}.\n" if program_info else "\n"
-    active_hub_str = f"- Current focus hub: {to_underscore_title_case(user_context.get('active_hub'))}\n" if user_context and user_context.get("active_hub") else ""
-    rag_context_str = f"\n<rag_context>\n{rag_context}\n</rag_context>\n" if rag_context else ""
+    if packed_context:
+        # Build system prompt from packed context sections
+        sys_prompt_parts = []
+        if "system_prompt" in packed_context:
+            sys_prompt_parts.append(packed_context["system_prompt"])
+        if "summary" in packed_context:
+            sys_prompt_parts.append(packed_context["summary"])
+        if "session_memories" in packed_context:
+            sys_prompt_parts.append(packed_context["session_memories"])
+        if "durable_memories" in packed_context:
+            sys_prompt_parts.append(packed_context["durable_memories"])
+        if "attachments" in packed_context:
+            sys_prompt_parts.append(packed_context["attachments"])
+        if "rag_context" in packed_context:
+            sys_prompt_parts.append(packed_context["rag_context"])
+        if "active_artifact_context" in packed_context:
+            sys_prompt_parts.append(packed_context["active_artifact_context"])
+        if "user_context" in packed_context:
+            sys_prompt_parts.append(packed_context["user_context"])
+        if "tool_state" in packed_context:
+            sys_prompt_parts.append(packed_context["tool_state"])
+        
+        sys_prompt = "\n\n".join(sys_prompt_parts)
+        if active_artifact and active_artifact.get("code"):
+            sys_prompt += (
+                "\nIf the user asks to modify, fix, expand, or personalize this simulator, you MUST return an updated XML artifact with all chapters preserved, but replace the <sandbox> block with a <sandbox-spec> tag specifying the requested changes (e.g., <sandbox-spec>change the colors of the rubik's cube simulator to bright neon</sandbox-spec>). Do NOT write or edit the full code inside a <sandbox> block yourself — the system will automatically edit the previous code inline according to your sandbox specification.\n"
+            )
+        if "prior_messages" not in packed_context:
+            # Only keep the last 6 messages if prior_messages was excluded
+            messages_history = messages_history[-6:]
+    else:
+        program_info_str = f" They are enrolled in: {program_info}.\n" if program_info else "\n"
+        active_hub_str = f"- Current focus hub: {to_underscore_title_case(user_context.get('active_hub'))}\n" if user_context and user_context.get("active_hub") else ""
+        rag_context_str = f"\n<rag_context>\n{rag_context}\n</rag_context>\n" if rag_context else ""
 
-    sys_prompt = f"=== CURRENT ENVIRONMENT TIME ===\n- Current date/time: {current_time_str}\n\n" + template
-    sys_prompt = sys_prompt.replace("{{user_identity}}", user_identity)
-    sys_prompt = sys_prompt.replace("{{program_info}}", program_info_str)
-    sys_prompt = sys_prompt.replace("{{top_level_folders}}", ', '.join(sorted(top_level_folders)) if top_level_folders else 'None found')
-    sys_prompt = sys_prompt.replace("{{total_notes}}", str(len(vault_notes)))
-    sys_prompt = sys_prompt.replace("{{pomodoro_str}}", pomodoro_str if pomodoro_str else 'not active')
-    sys_prompt = sys_prompt.replace("{{hub_catalog}}", hub_catalog_str)
-    sys_prompt = sys_prompt.replace("{{active_hub_str}}", active_hub_str)
-    sys_prompt = sys_prompt.replace("{{rag_context_str}}", rag_context_str)
+        sys_prompt = f"=== CURRENT ENVIRONMENT TIME ===\n- Current date/time: {current_time_str}\n\n" + template
+        sys_prompt = sys_prompt.replace("{{user_identity}}", user_identity)
+        sys_prompt = sys_prompt.replace("{{program_info}}", program_info_str)
+        sys_prompt = sys_prompt.replace("{{top_level_folders}}", ', '.join(sorted(top_level_folders)) if top_level_folders else 'None found')
+        sys_prompt = sys_prompt.replace("{{total_notes}}", str(len(vault_notes)))
+        sys_prompt = sys_prompt.replace("{{pomodoro_str}}", pomodoro_str if pomodoro_str else 'not active')
+        sys_prompt = sys_prompt.replace("{{hub_catalog}}", hub_catalog_str)
+        sys_prompt = sys_prompt.replace("{{active_hub_str}}", active_hub_str)
+        sys_prompt = sys_prompt.replace("{{rag_context_str}}", rag_context_str)
 
-    if active_artifact and active_artifact.get("code"):
-        sys_prompt += (
-            "\n=== ACTIVE ARTIFACT FOR ITERATIVE EDITS ===\n"
-            "The user has an active interactive simulator panel open. You can modify, fix, expand, or personalize it.\n"
-            f"Title: {active_artifact.get('title', 'Untitled artifact')}\n"
-            f"Version: {active_artifact.get('version', 1)}\n"
-            "Current sandbox code:\n"
-            f"{active_artifact.get('code')}\n"
-            "If the user asks to modify, fix, expand, or personalize this simulator, you MUST return an updated XML artifact with all chapters preserved, but replace the <sandbox> block with a <sandbox-spec> tag specifying the requested changes (e.g., <sandbox-spec>change the colors of the rubik's cube simulator to bright neon</sandbox-spec>). Do NOT write or edit the full code inside a <sandbox> block yourself — the system will automatically edit the previous code inline according to your sandbox specification.\n"
-        )
+        if active_artifact and active_artifact.get("code"):
+            sys_prompt += (
+                "\n=== ACTIVE ARTIFACT FOR ITERATIVE EDITS ===\n"
+                "The user has an active interactive simulator panel open. You can modify, fix, expand, or personalize it.\n"
+                f"Title: {active_artifact.get('title', 'Untitled artifact')}\n"
+                f"Version: {active_artifact.get('version', 1)}\n"
+                "Current sandbox code:\n"
+                f"{active_artifact.get('code')}\n"
+                "If the user asks to modify, fix, expand, or personalize this simulator, you MUST return an updated XML artifact with all chapters preserved, but replace the <sandbox> block with a <sandbox-spec> tag specifying the requested changes (e.g., <sandbox-spec>change the colors of the rubik's cube simulator to bright neon</sandbox-spec>). Do NOT write or edit the full code inside a <sandbox> block yourself — the system will automatically edit the previous code inline according to your sandbox specification.\n"
+            )
 
     # ── Format message history ─────────────────────────────────────────────
     formatted_messages = [SystemMessage(content=sys_prompt)]
@@ -3424,11 +3661,13 @@ async def run_assistant_chat(
 
     if _lesson_mode:
         try:
+            source_context_prompt = _source_grounded_lesson_prompt(_lesson_topic, packed_context)
             async for event in _stream_learning_runtime_lesson(
                 messages_history=messages_history,
                 topic=_lesson_topic,
                 secrets=secrets,
                 request=request,
+                source_context_prompt=source_context_prompt,
             ):
                 yield f"data: {json.dumps(event)}\n\n"
             return

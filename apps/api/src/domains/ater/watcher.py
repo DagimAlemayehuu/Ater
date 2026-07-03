@@ -4,6 +4,7 @@ import sys
 import asyncio
 import logging
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -32,6 +33,7 @@ class InboxHandler(FileSystemEventHandler):
     def __init__(self, manager: 'AterQueueManager'):
         self.manager = manager
         self.logger = watcher_logger
+        self._recent_events: Dict[str, float] = {}
 
     def on_created(self, event):
         if event.is_directory:
@@ -93,6 +95,12 @@ class InboxHandler(FileSystemEventHandler):
         src_path = Path(event.dest_path) if is_move else Path(event.src_path)
         if "ater_queue.db" in src_path.name or src_path.name.startswith('.'):
             return
+        event_key = str(src_path.absolute())
+        now = time.monotonic()
+        last_seen = self._recent_events.get(event_key)
+        if last_seen is not None and now - last_seen < 1.0:
+            return
+        self._recent_events[event_key] = now
         
         supported = {'.pdf', '.txt', '.md', '.py', '.js', '.ts', '.json', '.cpp', '.java', '.rs', '.html', '.css'}
         

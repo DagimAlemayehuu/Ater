@@ -99,6 +99,25 @@ def test_messaging_and_stream_api(mock_secrets, tmp_path):
     assert tools[0]["tool_name"] == "file_lister"
     assert tools[0]["status"] == "completed"
 
+def test_append_message_preserves_metadata(mock_secrets):
+    client = TestClient(app)
+    conv = client.post("/api/chat/conversations", json={"title": "Metadata"}).json()
+    cid = conv["id"]
+
+    resp = client.post(
+        f"/api/chat/conversations/{cid}/messages",
+        json={
+            "role": "assistant",
+            "content": "Click **Start Lesson**",
+            "metadata": {"sourceTeacherAction": {"sourceJobId": "srcjob_1"}},
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["metadata"]["sourceTeacherAction"]["sourceJobId"] == "srcjob_1"
+
+    messages = client.get(f"/api/chat/conversations/{cid}/messages").json()
+    assert messages[0]["metadata"]["sourceTeacherAction"]["sourceJobId"] == "srcjob_1"
+
 def test_memories_api(mock_secrets):
     client = TestClient(app)
     
@@ -128,3 +147,44 @@ def test_memories_api(mock_secrets):
     resp_del = client.delete(f"/api/chat/memories/{mem_id}")
     assert resp_del.status_code == 200
     assert resp_del.json()["success"] is True
+
+def test_regenerate_and_branch_api(mock_secrets):
+    client = TestClient(app)
+    
+    # Create conversation
+    conv = client.post("/api/chat/conversations", json={"title": "BranchRegen"}).json()
+    cid = conv["id"]
+    
+    # 1. First stream to get messages
+    with client.stream("POST", f"/api/chat/conversations/{cid}/stream", json={"message": "First message"}) as r:
+        assert r.status_code == 200
+        list(r.iter_lines())
+        
+    resp_msgs = client.get(f"/api/chat/conversations/{cid}/messages").json()
+    assert len(resp_msgs) == 2
+    ast_msg_id = resp_msgs[1]["id"]
+    user_msg_id = resp_msgs[0]["id"]
+    
+    # 2. Test Regenerate API (streams response)
+    with client.stream("POST", f"/api/chat/conversations/{cid}/regenerate", json={"message_id": ast_msg_id}) as r:
+        assert r.status_code == 200
+        lines = [line if isinstance(line, str) else line.decode("utf-8") for line in r.iter_lines() if line]
+    assert len(lines) > 0
+    assert any("chunk" in l for l in lines)
+    
+    # Check that a sibling assistant message was added
+    resp_msgs2 = client.get(f"/api/chat/conversations/{cid}/messages").json()
+    assert len(resp_msgs2) == 3 # user, assistant1, assistant2 (sibling)
+    
+    # 3. Test Branch API (streams response)
+    with client.stream("POST", f"/api/chat/conversations/{cid}/branch", json={"message_id": user_msg_id, "content": "Edited message"}) as r:
+        assert r.status_code == 200
+        lines = [line if isinstance(line, str) else line.decode("utf-8") for line in r.iter_lines() if line]
+    assert len(lines) > 0
+    assert any("branch_created" in l for l in lines)
+    assert any("chunk" in l for l in lines)
+    
+    # Check that another user message and assistant message were added
+    resp_msgs3 = client.get(f"/api/chat/conversations/{cid}/messages").json()
+    # Should contain: user1, assistant1, assistant2, user_edited, assistant_edited
+    assert len(resp_msgs3) == 5

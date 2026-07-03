@@ -6,6 +6,7 @@ import { HeaderProvider } from '../context/header-context';
 import { MemoryRouter } from 'react-router-dom';
 import { sidecarApi } from '../lib/sidecarApi';
 import { useTelemetryStore } from '../lib/telemetryStore';
+import { readFileSync } from 'node:fs';
 
 // Mock sidecarApi
 vi.mock('../lib/sidecarApi', () => ({
@@ -70,6 +71,12 @@ describe('AterDashboard', () => {
             expect(screen.getByText(/Everything done/i)).toBeInTheDocument();
             expect(screen.getByText(/Inbox empty/i)).toBeInTheDocument();
         }, { timeout: 3000 });
+    });
+
+    it('labels the legacy pipeline surface as bulk import', () => {
+        const source = readFileSync('src/routes/agents.tsx', 'utf-8');
+        expect(source).toContain('BULK IMPORT');
+        expect(source).toContain('Bulk/background import content');
     });
 
     it('should show processing state when queue has files', async () => {

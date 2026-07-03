@@ -58,8 +58,10 @@ def test_parent_watchdog_process_died():
         mock_proc_instance = MagicMock()
         mock_proc_instance.create_time.side_effect = [1000.0, 2000.0]  # Different time -> process recycled
         mock_process.return_value = mock_proc_instance
+        mock_exit.side_effect = SystemExit(1)
 
-        ServerLifespanManager.parent_watchdog()
+        with pytest.raises(SystemExit):
+            ServerLifespanManager.parent_watchdog()
 
         mock_logger.critical.assert_called_once()
         mock_exit.assert_called_once_with(1)

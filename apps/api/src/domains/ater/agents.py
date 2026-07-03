@@ -507,11 +507,7 @@ UNIVERSAL_MODALITY_MATRIX = {
 def get_persona(mode: str, modality: str = "Qualitative/Definitional") -> dict:
     """Helper to fetch the congruent persona based on domain and epistemic nature dynamically."""
     mode = normalize_mode(mode)
-    
-    # Get base domain config
-    base_config = DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
-    base_persona = base_config.get("persona", "Subject Matter Expert")
-    
+
     # Normalize modality
     norm_modality = "Qualitative/Definitional"
     if modality:
@@ -523,6 +519,19 @@ def get_persona(mode: str, modality: str = "Qualitative/Definitional") -> dict:
             norm_modality = "Comparative"
         elif "Caus" in modality or "Hist" in modality:
             norm_modality = "Causal/Historical"
+
+    # Highest priority: domain-specific modality profiles from the dynamic matrix.
+    dynamic_domain = DYNAMIC_DOMAIN_MATRIX.get(mode, {})
+    dynamic_config = dynamic_domain.get(norm_modality) if isinstance(dynamic_domain, dict) else None
+    if isinstance(dynamic_config, dict) and dynamic_config:
+        result = dict(dynamic_config)
+        result.setdefault("question_modes", DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"]).get("question_modes", ["mcq", "true_false", "writing"]))
+        result.setdefault("prohibitions", result.get("prohibited_anti_patterns", "Stay inside the source and selected domain."))
+        return result
+
+    # Get base domain config
+    base_config = DOMAIN_MATRIX.get(mode, DOMAIN_MATRIX["ACADEMIC-GENERAL"])
+    base_persona = base_config.get("persona", "Subject Matter Expert")
             
     mod_config = UNIVERSAL_MODALITY_MATRIX.get(norm_modality, UNIVERSAL_MODALITY_MATRIX["Qualitative/Definitional"])
     
