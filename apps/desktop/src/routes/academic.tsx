@@ -394,7 +394,11 @@ export default function AcademicDashboard() {
      <div className="flex-1 overflow-hidden">
       {data && (
        <>
-        {activeTab === 'PROGRAM' && <ProgramTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />}
+        {activeTab === 'PROGRAM' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <ProgramTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
+          </div>
+        )}
 
         {activeTab === 'COURSES' && (
           <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">

@@ -451,18 +451,15 @@ export function usePracticeSession() {
         }
       }
 
-      if (!sessionPath) {
-        setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
-        setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
-        setStreak(prev => isCorrect ? prev + 1 : 0);
-      }
-
       // Store explanation in question hints so the UI can render it
       setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: explanation }));
 
-      if (sessionPath) {
+      const isTutorSession = sessionPath && !sessionPath.endsWith('.md') && !sessionPath.includes('Practice_');
+      const isPracticeSession = sessionPath && (sessionPath.endsWith('.md') || sessionPath.includes('Practice_'));
+
+      if (isTutorSession) {
         const subRes = await sidecarApi.submitTutorAnswer({
-          session_id: sessionPath,
+          session_id: sessionPath!,
           question_id: String(currentQuestion.id),
           is_correct: isCorrect,
           wager: 'low',
@@ -487,60 +484,66 @@ export function usePracticeSession() {
           }
         }
       } else {
+        // Practice Session or Local Mini Recall
         setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
         setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
+        setStreak(prev => isCorrect ? prev + 1 : 0);
 
-        const activeTutorSessionId = localStorage.getItem('ater_active_session_id');
-        const isRemediationNote = typeof notePath === 'string' && notePath.includes('remediation_temp');
-        if (activeTutorSessionId && !isRemediationNote) {
-          await sidecarApi.submitTutorAnswer({
-            session_id: activeTutorSessionId,
-            question_id: String(currentQuestion.id),
-            is_correct: isCorrect,
-            wager: 'low',
-            user_answer: resolvedUserAnswer,
-          }).catch((err) => {
-            console.error('[usePracticeSession] Tutor recall persistence failed:', err);
-          });
-        }
-
-        if (!isCorrect) {
-          const attempt = failureAttempts[String(currentQuestion.id)] || 0;
-          const history = remediationHistory[String(currentQuestion.id)] || { seenTypes: [], lessonSummaries: [] };
-          try {
-            const remRes = await sidecarApi.practiceRemediate({
-              note_path: notePath || '',
-              question: currentQuestion,
+        if (!isPracticeSession) {
+          // Local Mini Recall triggers Active Tutor session sync & remediation
+          const activeTutorSessionId = localStorage.getItem('ater_active_session_id');
+          const isRemediationNote = typeof notePath === 'string' && notePath.includes('remediation_temp');
+          if (activeTutorSessionId && !isRemediationNote) {
+            await sidecarApi.submitTutorAnswer({
+              session_id: activeTutorSessionId,
+              question_id: String(currentQuestion.id),
+              is_correct: isCorrect,
+              wager: 'low',
               user_answer: resolvedUserAnswer,
-              attempt_number: attempt,
-              seen_question_types: history.seenTypes,
-              seen_lesson_summaries: history.lessonSummaries,
+            }).catch((err) => {
+              console.error('[usePracticeSession] Tutor recall persistence failed:', err);
             });
-            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: remRes.detailed_lesson }));
-            setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: remRes.remediation_question }));
-            // Record the new type and a short summary to avoid future repetition
-            const newType = remRes.remediation_question?.type || 'writing';
-            const lessonSummary = (remRes.detailed_lesson || '').slice(0, 120);
-            setRemediationHistory(prev => ({
-              ...prev,
-              [String(currentQuestion.id)]: {
-                seenTypes: [...history.seenTypes, newType],
-                lessonSummaries: [...history.lessonSummaries, lessonSummary],
-              }
-            }));
-          } catch (e) {
-            console.error("Failed to generate AI remediation, using local fallback:", e);
-            const remediation = buildFallbackRemediationQuestion(currentQuestion, ans, attempt, notePath, history.seenTypes);
-            setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: explanation }));
-            setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: remediation }));
           }
-          setFailureAttempts(prev => ({ ...prev, [currentQuestion.id]: attempt + 1 }));
+
+          if (!isCorrect) {
+            const attempt = failureAttempts[String(currentQuestion.id)] || 0;
+            const history = remediationHistory[String(currentQuestion.id)] || { seenTypes: [], lessonSummaries: [] };
+            try {
+              const remRes = await sidecarApi.practiceRemediate({
+                note_path: notePath || '',
+                question: currentQuestion,
+                user_answer: resolvedUserAnswer,
+                attempt_number: attempt,
+                seen_question_types: history.seenTypes,
+                seen_lesson_summaries: history.lessonSummaries,
+              });
+              setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: remRes.detailed_lesson }));
+              setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: remRes.remediation_question }));
+              const newType = remRes.remediation_question?.type || 'writing';
+              const lessonSummary = (remRes.detailed_lesson || '').slice(0, 120);
+              setRemediationHistory(prev => ({
+                ...prev,
+                [String(currentQuestion.id)]: {
+                  seenTypes: [...history.seenTypes, newType],
+                  lessonSummaries: [...history.lessonSummaries, lessonSummary],
+                }
+              }));
+            } catch (e) {
+              console.error("Failed to generate AI remediation, using local fallback:", e);
+              const remediation = buildFallbackRemediationQuestion(currentQuestion, ans, attempt, notePath, history.seenTypes);
+              setMisconceptionText(prev => ({ ...prev, [currentQuestion.id]: explanation }));
+              setRemediationQuestion(prev => ({ ...prev, [currentQuestion.id]: remediation }));
+            }
+            setFailureAttempts(prev => ({ ...prev, [currentQuestion.id]: attempt + 1 }));
+          }
         }
 
+        // Record performance for study telemetry & spaced-repetition card updates
         const timeTakenMs = Date.now() - questionStartTimeRef.current;
-        if (notePath) {
+        const targetNotePath = currentQuestion.note_id || notePath;
+        if (targetNotePath) {
           await sidecarApi.recordPerformance({
-            note_path: notePath,
+            note_path: targetNotePath,
             was_correct: isCorrect,
             time_ms: timeTakenMs,
             question_type: currentQuestion.type,

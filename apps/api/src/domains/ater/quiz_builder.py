@@ -425,7 +425,7 @@ async def generate_practice(
         practice_dir = vm.academic_root / "Practice"
         practice_dir.mkdir(exist_ok=True)
         
-        atomic_notes = list(unit_dir.glob("*.md"))
+        atomic_notes = list(unit_dir.rglob("*.md"))
         selected_notes = config.selectedAtomicNotes
         
         if isinstance(config_raw, dict):
@@ -509,7 +509,7 @@ async def generate_practice(
             found_selected = False
 
     if config.hubId != "all" and (not selected_notes or is_explicitly_empty):
-        pq_file = next(unit_dir.glob("*_Possible_Questions.md"), None)
+        pq_file = next(unit_dir.rglob("*_Possible_Questions.md"), None)
         if pq_file:
             with open(pq_file, "r", encoding="utf-8") as f:
                 context_parts.append(f"## Reference Questions\n{f.read()}")

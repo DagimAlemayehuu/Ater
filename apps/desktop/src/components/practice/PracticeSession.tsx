@@ -93,40 +93,40 @@ export function PracticeSession({
       >
         {/* ── Feynman Gate Locked Overlay ── */}
         {session.isFeynmanLocked && (
-          <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-6">
-            <div className="max-w-xl w-full border border-border bg-bento-panel p-8 rounded-[12px] space-y-6 shadow-2xl relative">
-              <div className="flex items-center gap-3 border-b border-border pb-4">
-                <BrainCircuit className="text-primary shrink-0" size={24} />
+          <div className="absolute inset-0 z-40 bg-bento-panel/90 backdrop-blur-md flex items-center justify-center p-6 font-sans">
+            <div className="max-w-xl w-full border border-destructive/25 bg-bento-panel p-8 rounded-[12px] space-y-6 shadow-2xl relative">
+              <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+                <BrainCircuit className="text-destructive shrink-0" size={24} />
                 <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-primary">Cognitive Lock Engaged</h3>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-destructive">Cognitive Lock Engaged</h3>
+                  <p className="text-[8.5px] font-black uppercase tracking-widest text-muted-foreground/45 mt-0.5">
                     FSRS Telemetry: Memory Decay Detected
                   </p>
                 </div>
-                <div className="ml-auto bg-destructive/10 border border-destructive/20 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-[6px]">
+                <div className="ml-auto bg-destructive/10 border border-destructive/25 text-destructive text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-[4px] font-sans">
                   Locked
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div className="p-3 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
-                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-bento-card border border-border/40 rounded-[8px] flex flex-col gap-0.5 shadow-sm">
+                  <span className="text-[7.5px] font-black uppercase tracking-widest text-muted-foreground/50">
                     Retrievability
                   </span>
                   <span className={cn('text-xs font-black tracking-tight', retrievability < 0.7 ? 'text-destructive' : 'text-foreground')}>
                     {(retrievability * 100).toFixed(1)}%
                   </span>
                 </div>
-                <div className="p-3 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
-                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">
+                <div className="p-3 bg-bento-card border border-border/40 rounded-[8px] flex flex-col gap-0.5 shadow-sm">
+                  <span className="text-[7.5px] font-black uppercase tracking-widest text-muted-foreground/50">
                     Stability
                   </span>
                   <span className="text-xs font-black tracking-tight text-foreground">
                     {currentCard?.stability ? `${currentCard.stability.toFixed(2)}d` : '0d'}
                   </span>
                 </div>
-                <div className="p-3 bg-bento-item border border-border rounded-[8px] flex flex-col gap-0.5">
-                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/40">Lapses</span>
+                <div className="p-3 bg-bento-card border border-border/40 rounded-[8px] flex flex-col gap-0.5 shadow-sm">
+                  <span className="text-[7.5px] font-black uppercase tracking-widest text-muted-foreground/50">Lapses</span>
                   <span className={cn('text-xs font-black tracking-tight', lapses >= 3 ? 'text-destructive' : 'text-foreground')}>
                     {lapses}
                   </span>
@@ -137,7 +137,7 @@ export function PracticeSession({
                 <h4 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
                   The Feynman Challenge
                 </h4>
-                <p className="text-xs text-foreground/80 leading-relaxed">
+                <p className="text-xs text-foreground/80 leading-relaxed font-sans">
                   Your memory weights for{' '}
                   <strong className="text-foreground">{cleanTitle(currentQuestion.note_title || currentCardPath)}</strong>{' '}
                   indicate high fading. Write a clear, comprehensive explanation of this topic in your own words to unlock.
@@ -151,7 +151,7 @@ export function PracticeSession({
                   disabled={session.isFeynmanValidating}
                   rows={5}
                   placeholder="Explain the core concepts, mechanisms, and rules of this topic..."
-                  className="w-full p-4 bg-bento-item border border-border rounded-[8px] text-xs font-medium focus:ring-1 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:opacity-20 resize-none"
+                  className="w-full p-4 bg-bento-item/50 border border-border/40 rounded-[12px] text-xs font-sans focus:border-border/60 outline-none placeholder:opacity-30 resize-none transition-colors"
                 />
 
                 {session.feynmanError && (
@@ -169,7 +169,7 @@ export function PracticeSession({
                   variant="ghost"
                   onClick={resetSession}
                   disabled={session.isFeynmanValidating}
-                  className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border bg-bento-item rounded-[8px]"
+                  className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border bg-bento-card rounded-[6px] font-sans"
                 >
                   Exit Session
                 </Button>
@@ -182,7 +182,7 @@ export function PracticeSession({
                     await session.submitFeynmanChallenge()
                   }}
                   disabled={session.isFeynmanValidating || !session.feynmanExplanation.trim()}
-                  className="h-10 flex-1 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[9px] font-black uppercase tracking-widest rounded-[8px] transition-all"
+                  className="h-10 flex-1 bg-foreground text-background hover:bg-foreground/95 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans"
                 >
                   {session.isFeynmanValidating ? 'Analyzing Telemetry...' : 'Validate & Unlock'}
                 </Button>
@@ -208,6 +208,8 @@ export function PracticeSession({
             explanation: explainQuestion.explanation,
             context: (explainQuestion as any).content || (explainQuestion as any).codeSnippet || '',
             userAnswer: formattedUserAnswer,
+            isCorrect: session.scores[explainQuestion.id] ?? false,
+            notePath: explainQuestion.note_id || session.notePath,
           })
           return (
             <AterExplainDialog
@@ -225,24 +227,24 @@ export function PracticeSession({
 
         <div className="px-8 py-3 border-b border-border flex flex-row items-center justify-between gap-3">
           <div className="flex flex-row items-center gap-8 w-auto">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Practice</span>
-              <div className="text-xs font-black uppercase tracking-tight truncate max-w-[200px]">
+            <div className="flex flex-col gap-0.5 select-none">
+              <span className="text-[8px] font-black text-muted-foreground/45 uppercase tracking-widest leading-none">Practice</span>
+              <div className="text-[11px] font-black uppercase tracking-tight truncate max-w-[200px] mt-0.5">
                 {cleanTitle(hubs.find((h) => h.id === selectedHub)?.title || '')}
               </div>
             </div>
-            <div className="flex-1 w-64 h-1 bg-muted/20 rounded-none overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+            <div className="flex-1 w-64 h-1.5 bg-[#18181a] border border-border/20 rounded-full overflow-hidden">
+              <div className="h-full bg-foreground rounded-full" style={{ width: `${progress}%` }} />
             </div>
           </div>
-          <div className="flex items-center justify-end w-auto gap-6 text-[9px] font-black uppercase tracking-widest">
+          <div className="flex items-center justify-end w-auto gap-4 text-[9px] font-black uppercase tracking-widest font-mono">
             {globalTimeLeft !== null && (
               <div className="flex flex-col items-end gap-0.5">
-                <span className="text-muted-foreground/20 text-[7px]">Total</span>
+                <span className="text-muted-foreground/30 text-[7px] font-sans">Total</span>
                 <div
                   className={cn(
-                    'px-2 py-0.5 rounded-none border',
-                    globalTimeLeft < 60 ? 'border-destructive text-destructive' : 'border-border text-muted-foreground/60'
+                    'px-2.5 py-1 rounded-[4px] border font-mono select-none',
+                    globalTimeLeft < 60 ? 'border-destructive/35 bg-destructive/5 text-destructive' : 'border-border/40 bg-bento-card text-muted-foreground/60'
                   )}
                 >
                   {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}
@@ -251,11 +253,11 @@ export function PracticeSession({
             )}
             {questionTimeLeft !== null && (
               <div className="flex flex-col items-end gap-0.5">
-                <span className="text-muted-foreground/20 text-[7px]">Q-Time</span>
+                <span className="text-muted-foreground/30 text-[7px] font-sans">Q-Time</span>
                 <div
                   className={cn(
-                    'px-2 py-0.5 rounded-none border',
-                    questionTimeLeft < 10 ? 'border-destructive text-destructive' : 'border-border text-primary'
+                    'px-2.5 py-1 rounded-[4px] border font-mono select-none',
+                    questionTimeLeft < 10 ? 'border-destructive/35 bg-destructive/5 text-destructive' : 'border-border/40 bg-bento-card text-primary'
                   )}
                 >
                   {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}
@@ -263,8 +265,8 @@ export function PracticeSession({
               </div>
             )}
             <div className="flex flex-col items-end gap-0.5">
-              <span className="text-muted-foreground/20 text-[7px]">Progress</span>
-              <div className="px-2 py-0.5 rounded-none border border-border">
+              <span className="text-muted-foreground/30 text-[7px] font-sans">Progress</span>
+              <div className="px-2.5 py-1 rounded-[4px] border border-border/40 bg-bento-card text-foreground font-mono select-none">
                 {currentQuestionIdx + 1} / {questions.length}
               </div>
             </div>
@@ -277,7 +279,7 @@ export function PracticeSession({
               <div className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/40 flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-[6px] px-1.5 py-0"
+                  className="text-[8px] border-primary/20 bg-primary/5 text-primary rounded-[6px] px-1.5 py-0 select-none"
                 >
                   {currentQuestion.difficulty || '1'}
                 </Badge>
@@ -307,7 +309,7 @@ export function PracticeSession({
                 <button
                   onClick={() => session.toggleBookmark(currentQuestionIdx)}
                   className={cn(
-                    'ml-auto transition-none',
+                    'ml-auto transition-none cursor-pointer',
                     bookmarked.has(currentQuestionIdx) ? 'text-primary' : 'text-muted-foreground/20 hover:text-foreground'
                   )}
                   title="Bookmark Question"
@@ -315,14 +317,14 @@ export function PracticeSession({
                   <Bookmark size={14} className={bookmarked.has(currentQuestionIdx) ? 'fill-primary' : ''} />
                 </button>
               </div>
-              <div className="text-2xl font-black tracking-tight leading-snug text-foreground/90">
+              <div className="text-2xl font-black tracking-tight leading-snug text-foreground/95 select-text selection:bg-foreground/10">
                 <MarkdownBlock content={currentQuestion.question} />
               </div>
             </div>
 
             <div className="space-y-6">
               {currentQuestion.type === 'mcq' && (
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 gap-3">
                   {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
                     const isSelected = userAnswers[currentQuestion.id] === key
                     const isCorrect =
@@ -336,27 +338,33 @@ export function PracticeSession({
                         disabled={isRevealed}
                         onClick={() => handleSelectAnswer(key)}
                         className={cn(
-                          'p-4 border rounded-[8px] text-left text-sm font-bold flex items-start w-full transition-all duration-150',
+                          'p-5 border rounded-[12px] text-left text-sm font-bold flex items-start w-full transition-all shadow-sm cursor-pointer',
                           isCorrect
-                            ? 'bg-primary/10 border-primary text-primary'
+                            ? 'bg-primary/10 border-primary text-primary font-extrabold ring-1 ring-inset ring-primary'
                             : isWrongSelected
-                            ? 'bg-destructive/10 border-destructive text-destructive'
+                            ? 'bg-destructive/10 border-destructive text-destructive font-extrabold ring-1 ring-inset ring-destructive'
                             : isRevealed
-                            ? 'border-border opacity-30 grayscale'
+                            ? 'border-border/30 opacity-30 grayscale'
                             : isSelected
-                            ? 'bg-bento-item border-foreground text-foreground'
-                            : 'border-border bg-bento-panel hover:bg-bento-item text-foreground'
+                            ? 'bg-bento-item border-foreground text-foreground ring-1 ring-inset ring-foreground'
+                            : 'border-border/40 bg-bento-card hover:bg-bento-item/10 text-foreground'
                         )}
                       >
                         <span
                           className={cn(
-                            'shrink-0 mt-0.5 mr-3 px-2 py-0.5 border text-xs font-bold rounded-[6px]',
-                            isSelected ? 'border-foreground bg-foreground/10 text-foreground' : 'border-border bg-bento-item text-muted-foreground/50'
+                            'shrink-0 mt-0.5 mr-3 w-5 h-5 flex items-center justify-center border text-[9px] font-black rounded-[4px] select-none',
+                            isCorrect
+                              ? 'bg-primary border-primary text-primary-foreground font-sans'
+                              : isWrongSelected
+                              ? 'bg-destructive border-destructive text-destructive-foreground font-sans'
+                              : isSelected
+                              ? 'bg-foreground border-foreground text-background font-sans'
+                              : 'border-border/40 bg-bento-panel text-muted-foreground/50 font-sans'
                           )}
                         >
                           {key}
                         </span>
-                        <div className="flex-1 overflow-x-auto">
+                        <div className="flex-1 overflow-x-auto select-text">
                           <MarkdownBlock content={String(val)} />
                         </div>
                       </button>
@@ -615,12 +623,12 @@ export function PracticeSession({
                 </div>
               )}
 
-              {isRevealed && currentQuestion.explanation && (
+              {isRevealed && (session.questionHint?.[currentQuestion.id] || currentQuestion.explanation) && (
                 <div className="p-5 border border-border/10 rounded-none bg-muted/5 text-[13px] font-medium text-muted-foreground/80 italic leading-relaxed text-left">
                   <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2 not-italic">
                     Explanation
                   </div>
-                  <MarkdownBlock content={currentQuestion.explanation} />
+                  <MarkdownBlock content={session.questionHint?.[currentQuestion.id] || currentQuestion.explanation} />
                 </div>
               )}
 
@@ -723,16 +731,16 @@ export function PracticeSession({
           </div>
         </div>
 
-        <div className="p-6 border-t border-border/10 bg-transparent">
-          <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+        <div className="p-6 border-t border-border/40 bg-transparent">
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            <Button variant="ghost" onClick={resetSession} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/45 hover:text-foreground font-sans">
               Exit
             </Button>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 onClick={handleExplainMore}
-                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-border bg-bento-card hover:bg-muted text-foreground rounded-[6px] flex items-center gap-2 transition-all duration-150"
+                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-border/40 bg-bento-card hover:bg-bento-item text-foreground rounded-[6px] flex items-center gap-2 transition-all font-sans cursor-pointer shadow-sm"
                 title="Get a detailed lesson on this question's concept"
               >
                 <BookOpen size={12} />
@@ -742,7 +750,7 @@ export function PracticeSession({
                 {session.retryActive?.[currentQuestion.id] ? (
                   <Button
                     onClick={session.handleRetry}
-                    className="h-10 px-10 bg-amber-500 hover:bg-amber-600 text-amber-foreground text-[10px] font-black uppercase tracking-widest rounded-none"
+                    className="h-10 px-10 bg-[#ffeaac] border border-[#ffaa66] text-[#663300] hover:bg-[#ffe088] text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm"
                   >
                     Try Again
                   </Button>
@@ -765,7 +773,7 @@ export function PracticeSession({
                         ].includes(currentQuestion.type)
                       )
                     }
-                    className="h-10 px-10 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all"
+                    className="h-10 px-10 bg-foreground text-background hover:bg-foreground/90 border border-foreground text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm disabled:opacity-30 disabled:pointer-events-none"
                   >
                     {session.isSubmitting ? 'Submitting...' : 'Submit Answer'}
                   </Button>
@@ -781,7 +789,7 @@ export function PracticeSession({
                               nextQuestion(false)
                             }}
                             variant="outline"
-                            className="h-10 px-6 text-[9px] font-black uppercase border-destructive/20 text-destructive/40 rounded-[6px]"
+                            className="h-10 px-6 border border-destructive/35 bg-destructive/5 text-destructive hover:bg-destructive/10 text-[9px] font-black uppercase rounded-[6px] transition-all font-sans cursor-pointer"
                           >
                             Wrong
                           </Button>
@@ -794,7 +802,7 @@ export function PracticeSession({
                               currentQuestion.required_keywords.length > 0 &&
                               currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])
                             }
-                            className="h-10 px-6 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[9px] font-black uppercase disabled:opacity-50 disabled:cursor-not-allowed rounded-[6px] transition-all"
+                            className="h-10 px-6 bg-foreground text-background hover:bg-foreground/95 text-[9px] font-black uppercase rounded-[6px] transition-all font-sans disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
                             title={
                               Array.isArray(currentQuestion.required_keywords) &&
                               currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])
@@ -812,7 +820,7 @@ export function PracticeSession({
                       session.scores[currentQuestion.id] !== undefined) && (
                       <Button
                         onClick={() => nextQuestion()}
-                        className="h-10 px-10 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all"
+                        className="h-10 px-10 bg-foreground text-background hover:bg-foreground/95 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm"
                       >
                         Next
                       </Button>

@@ -738,9 +738,9 @@ class AterService:
                     links = re.findall(r"\[\[(.*?)\]\]", section_text)
                     if links:
                         # Map titles to files in the unit directory for verification
-                        dir_files = {f.stem.lower().replace("_", " "): f for f in unit_dir.glob("*.md")}
+                        dir_files = {f.stem.lower().replace("_", " "): f for f in unit_dir.rglob("*.md")}
                         # Also index by canonical stem
-                        for f in unit_dir.glob("*.md"):
+                        for f in unit_dir.rglob("*.md"):
                             dir_files[f.stem.lower()] = f
 
                         ordered_notes = []
@@ -769,7 +769,7 @@ class AterService:
         # FALLBACK: If no connections section or extraction failed, list all files in the unit directory
         all_notes = []
         if unit_dir.exists():
-            for file in unit_dir.glob("*.md"):
+            for file in unit_dir.rglob("*.md"):
                 # STRICT FILTER: Only atomic notes
                 if file.name.endswith("_Hub.md") or "Possible_Questions" in file.name or "Practice" in file.name or file.name.startswith("_"):
                     continue

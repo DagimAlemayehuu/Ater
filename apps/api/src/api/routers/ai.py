@@ -165,6 +165,19 @@ async def explain_question(
     context = payload.get("context", "")
     user_answer = payload.get("userAnswer", payload.get("user_answer", ""))
 
+    note_path = payload.get("note_path")
+    if note_path and secrets.vault_path:
+        try:
+            from pathlib import Path
+            resolved_p = Path(secrets.vault_path) / note_path if not Path(note_path).is_absolute() else Path(note_path)
+            if resolved_p.exists() and resolved_p.is_file():
+                with open(resolved_p, "r", encoding="utf-8") as f:
+                    note_content = f.read()
+                    if note_content.strip():
+                        context = f"{context}\n\nSource Note Material ({resolved_p.name}):\n{note_content}"
+        except Exception as e:
+            logger.error(f"Failed to load note content for grading: {e}")
+
     provider = secrets.planner_provider or secrets.ai_provider or "google"
     model = secrets.planner_model or secrets.ai_model or "gemini-2.0-flash"
 
