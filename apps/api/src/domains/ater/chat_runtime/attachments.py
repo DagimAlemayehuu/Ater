@@ -120,19 +120,26 @@ class AttachmentManager:
 
     def _validate_path(self, file_path: str, file_type: str) -> Path:
         from src.utils.vault_path import resolve_vault_path
-        allowed_roots = []
+        allowed_roots: list[Path] = []
         if self.vault_path:
             allowed_roots.append(self.vault_path)
         if file_type != 'note' and self.inbox_path:
             allowed_roots.append(self.inbox_path)
         if file_type == 'artifact':
             allowed_roots.append(Path(".").resolve())
-        
-        path_to_check = Path(file_path)
-        if file_type == 'note' and not path_to_check.is_absolute() and self.vault_path:
-            path_to_check = self.vault_path / path_to_check
-            
-        return resolve_vault_path(path_to_check, allowed_roots)
+
+        if file_type == 'note' and not self.vault_path:
+            raise ValueError("Access Denied: Obsidian note must reside inside the vault.")
+        if not allowed_roots:
+            raise ValueError("Access Denied: Attachment file must reside inside an approved root.")
+
+        for root in allowed_roots:
+            try:
+                return resolve_vault_path(root, file_path)
+            except ValueError:
+                continue
+
+        raise ValueError("Access Denied: Attachment file must reside inside an approved root.")
 
     def attach_file(self, conversation_id: str, file_path: str, file_type: str, message_id: Optional[str] = None, content: Optional[str] = None) -> Dict[str, Any]:
         """
