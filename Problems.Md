@@ -76,11 +76,27 @@ This section records the final manual cleanup pass after the Jules PR campaign. 
     - [x] Desktop lint passed with warnings only.
     - [x] Desktop typecheck passed.
 
+- [x] Fixed CI regressions discovered after opening final cleanup PR #91.
+  - Problem fixed: full backend CI exposed regressions not covered by the initial targeted local tests.
+  - What changed:
+    - Restored legacy self-study learning-object defaults while preserving explicit academic/source-job routing.
+    - Reintroduced transient `SourceJobs/...` runtime notes and hubs for source-learning sessions while keeping deployment writes in final academic/external vault locations.
+    - Fixed source PDF topic inference for split chapter headings such as `CHAPTER THREE` followed by `3. Theory of Consumer Behavior`.
+    - Fixed stale chat attachment promotion after source PDF deployment moves the original file.
+    - Kept content-backed artifact attachments safe by copying them into an internal attachment store, while still rejecting content-backed markdown/text outside approved roots.
+    - Added legacy `X-Inbox-Path`/`X-Vault-Path` header compatibility for practice logging, analytics, and SRS routes.
+    - Restored edit-mode handling for `/api/ater/artifact/generate` payloads with `previous_code` without reintroducing duplicate routes.
+  - Verification:
+    - [x] `uv run pytest` from `apps/api` passed: 474 tests, 3 warnings.
+    - [x] `pnpm --filter @ater/desktop typecheck`
+    - [x] `pnpm --filter @ater/desktop test -- src/tests/sidecarApi.test.ts src/tests/PdfViewer.test.tsx src/tests/UnifiedSandboxViewer.test.tsx src/tests/app-sidebar.test.tsx`
+    - [x] `pnpm --filter @ater/desktop lint`
+
 ### Remaining After Final Cleanup
 
-- [ ] Full CI was not run locally end to end.
-  - Completed local verification covered backend targeted security tests, desktop typecheck, focused desktop tests, and desktop lint.
-  - Still recommended: run the repository's full CI matrix after the final cleanup PR lands.
+- [ ] Full GitHub CI is still pending final rerun.
+  - Completed local verification now covers the full backend pytest suite, desktop typecheck, focused desktop tests, and desktop lint.
+  - Still recommended: wait for the GitHub CI matrix after the final cleanup PR update.
 
 - [ ] Desktop lint still reports warnings, but zero errors.
   - Current result: `964 problems (0 errors, 964 warnings)`.

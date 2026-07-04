@@ -186,21 +186,27 @@ def _parse_chapter_heading(text: str) -> Tuple[Optional[str], Optional[str]]:
     number = int(raw_number) if raw_number.isdigit() else _NUMBER_WORDS.get(raw_number)
     title = f"Chapter {number}" if number else f"Chapter {raw_number.title()}"
     rest = match.group(2).strip(" .:-\t")
-    if number and rest.startswith(str(number)):
-        rest = rest[len(str(number)):].strip(" .:-\t")
+    if number:
+        rest = re.sub(rf"^{number}\s*[\).:-]?\s*", "", rest).strip(" .:-\t")
     return title, (rest or None)
 
 
 def infer_topic(pages: List[Dict[str, Any]], file_name: str = "") -> str:
     for page in pages[:4]:
         raw_content = page.get("content", "") or ""
-        first_line = next((line.strip() for line in re.split(r"[\n\r]+", raw_content) if line.strip()), "")
+        lines = [line.strip() for line in re.split(r"[\n\r]+", raw_content) if line.strip()]
+        first_line = lines[0] if lines else ""
         content = re.sub(r"\s+", " ", first_line or raw_content).strip()
         if not content:
             continue
         _chapter_title, chapter_topic = _parse_chapter_heading(content)
         if chapter_topic:
             return chapter_topic[:80]
+        if _chapter_title and len(lines) > 1:
+            next_line = re.sub(r"\s+", " ", lines[1]).strip(" .:-\t")
+            next_line = re.sub(r"^\d+\s*[\).:-]?\s*", "", next_line).strip(" .:-\t")
+            if next_line and not re.match(r"^(objectives?|learning objectives?)$", next_line, flags=re.IGNORECASE):
+                return next_line[:80]
         first_sentence = re.split(r"(?<=[.!?])\s+", content, maxsplit=1)[0].strip(" .:-\t")
         if first_sentence and len(first_sentence.split()) <= 12:
             return first_sentence[:80]
@@ -353,6 +359,15 @@ def _source_note_rel_path(job: Dict[str, Any], note_title: str) -> str:
         f"Notes/external/{placement.get('external_domain')}/{placement.get('learning_path')}/"
         f"{chapter}/{note_file}"
     )
+
+
+def _source_session_note_rel_path(job: Dict[str, Any], note_title: str) -> str:
+    return f"SourceJobs/{job['job_id']}/{lo.normalize_title(note_title)}.md"
+
+
+def _source_session_hub_rel_path(job: Dict[str, Any]) -> str:
+    title = lo.normalize_title(job.get("topic") or job.get("title") or "Source")
+    return f"SourceJobs/{job['job_id']}/{title}_Hub.md"
 
 
 def _source_hub_rel_path(job: Dict[str, Any]) -> str:
@@ -988,6 +1003,40 @@ class SourceLearningJobService:
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _runtime_root(self) -> Path:
+        parent = self.db_path.parent
+        if parent.name.lower() == "inbox":
+            return parent.parent
+        return parent
+
+    def _write_session_note(self, job: Dict[str, Any], note: Dict[str, Any]) -> str:
+        rel_path = _source_session_note_rel_path(job, note["note_title"])
+        note_path = self._runtime_root() / rel_path
+        note_path.parent.mkdir(parents=True, exist_ok=True)
+        yaml_lines = ["---"] + [f"{key}: {json.dumps(value)}" for key, value in note["frontmatter"].items()] + ["---", ""]
+        note_path.write_text("\n".join(yaml_lines) + note["content"].strip() + "\n", encoding="utf-8")
+        return rel_path
+
+    def _write_session_hub(self, job: Dict[str, Any], curriculum: List[str]) -> str:
+        rel_path = _source_session_hub_rel_path(job)
+        hub_path = self._runtime_root() / rel_path
+        hub_path.parent.mkdir(parents=True, exist_ok=True)
+        title = Path(rel_path).stem
+        links = "\n".join(f"- [[{Path(path).stem}]]" for path in curriculum)
+        hub_path.write_text(
+            "---\n"
+            f"title: {json.dumps(title)}\n"
+            "type: \"Learning Hub\"\n"
+            "generated_by: \"ater_source_job\"\n"
+            f"source_job_id: {json.dumps(job['job_id'])}\n"
+            "---\n\n"
+            f"# {title.replace('_', ' ')}\n\n"
+            "## Curriculum Map\n"
+            f"{links}\n",
+            encoding="utf-8",
+        )
+        return rel_path
+
     def _init_schema(self):
         conn = self._connect()
         try:
@@ -1299,11 +1348,12 @@ class SourceLearningJobService:
         if not nodes:
             raise ValueError("Source job has no teachable concept graph nodes.")
         session_id = f"source_tutor_{job_id}"
-        hub_path = _source_hub_rel_path(job)
+        hub_path = _source_session_hub_rel_path(job)
         curriculum = [
-            _source_note_rel_path(job, node["title"])
+            _source_session_note_rel_path(job, node["title"])
             for node in nodes
         ]
+        self._write_session_hub(job, curriculum)
         node_by_id = {node["id"]: node for node in nodes}
         conn = self._connect()
         try:
@@ -1348,7 +1398,7 @@ class SourceLearningJobService:
             profile = first.get("teaching_profile") or build_teaching_profile(first["domain"], first["modality"])
             note = SourceAtomicNoteCompiler().compile_fallback_note(job, first, profile)
             now = datetime.now().isoformat()
-            current_note_path = _source_note_rel_path(job, note["note_title"])
+            current_note_path = self._write_session_note(job, note)
             roadmap = [
                 {
                     "id": node["id"],

@@ -109,6 +109,22 @@ async def create_source_learning_job(
             finally:
                 conn.close()
         service = _source_job_service(secrets)
+        if attachment_id and file_path and not Path(str(file_path)).exists():
+            conn = service._connect()
+            try:
+                existing = conn.execute(
+                    """
+                    SELECT job_id FROM source_learning_jobs
+                    WHERE file_path = ? OR conversation_id = ?
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """,
+                    (str(file_path), conversation_id),
+                ).fetchone()
+                if existing:
+                    return service.get_job(existing["job_id"])
+            finally:
+                conn.close()
         return service.create_or_resume_from_path(
             str(file_path),
             conversation_id=conversation_id,
@@ -1155,16 +1171,22 @@ def resolve_note_path(note_id: str, vault_path: Path) -> Optional[str]:
             
     return note_id
 
+
+def _inbox_path_from_request(secrets: AppSecrets, request: Request) -> Optional[str]:
+    return secrets.inbox_path or request.headers.get("X-Inbox-Path") or request.headers.get("x-inbox-path")
+
 @router.post("/practice/log")
 async def log_practice(
+    request: Request,
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Logs individual question practice attempts."""
-    if not secrets.inbox_path:
+    inbox_path = _inbox_path_from_request(secrets, request)
+    if not inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "ater_queue.db"
+    db_path = Path(inbox_path) / "ater_queue.db"
     if not db_path.exists():
         return {"status": "ignored", "reason": "db not initialized"}
     
@@ -1343,13 +1365,15 @@ async def log_practice_result(
 
 @router.get("/practice/analytics")
 async def get_practice_analytics(
+    request: Request,
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Retrieves analytics for the dashboard based on real practice logs."""
-    if not secrets.inbox_path:
+    inbox_path = _inbox_path_from_request(secrets, request)
+    if not inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "ater_queue.db"
+    db_path = Path(inbox_path) / "ater_queue.db"
     if not db_path.exists():
          return {"modalities": {}, "weakest_concepts": []}
     
@@ -1634,13 +1658,15 @@ async def factory_reset_system(
 
 @router.get("/practice/srs")
 async def get_srs_data(
+    request: Request,
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Retrieves SRS review dates for notes."""
-    if not secrets.inbox_path:
+    inbox_path = _inbox_path_from_request(secrets, request)
+    if not inbox_path:
         raise HTTPException(status_code=400, detail="Inbox Path not configured")
     
-    db_path = Path(secrets.inbox_path) / "ater_queue.db"
+    db_path = Path(inbox_path) / "ater_queue.db"
     if not db_path.exists():
          return {"srs": {}}
     
@@ -2364,6 +2390,44 @@ async def generate_artifacts_endpoint(
     payload: Dict[str, Any] = Body(...),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
+    if payload.get("previous_code") is not None or (
+        payload.get("prompt") and not payload.get("note_title") and not payload.get("note_path")
+    ):
+        from src.api.routers.ai import _build_rubiks_cube_sandbox, _clean_markdown_fences, _is_rubiks_sandbox_request
+        from src.domains.ai.factory import ModelFactory
+
+        prompt = str(payload.get("prompt") or "")
+        context = str(payload.get("context") or "")
+        previous_code = str(payload.get("previous_code") or "")
+
+        if _is_rubiks_sandbox_request(prompt, previous_code):
+            return {"code": _build_rubiks_cube_sandbox()}
+
+        if not secrets.ai_key:
+            raise HTTPException(status_code=400, detail="AI API Key missing")
+
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            model_name=secrets.ai_model or "gemini-2.0-flash",
+            api_key=secrets.ai_key,
+            temperature=0.1,
+            max_tokens=3000,
+            base_url=secrets.ai_base_url,
+        )
+        system_prompt = (
+            "You edit self-contained browser sandbox code. For Rubik's Cube Flat Net Simulator "
+            "edits, preserve the simulator behavior and return raw HTML/CSS/JavaScript only."
+        )
+        human_prompt = (
+            f"Context:\n{context}\n\n"
+            f"Requested change:\n{prompt}\n\n"
+            f"Current sandbox code:\n{previous_code}\n\n"
+            "Return the complete updated code only."
+        )
+        result = await llm.ainvoke([("system", system_prompt), ("human", human_prompt)])
+        code = result.content if hasattr(result, "content") else str(result)
+        return {"code": _clean_markdown_fences(code)}
+
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault path missing")
     note_title = payload.get("note_title")

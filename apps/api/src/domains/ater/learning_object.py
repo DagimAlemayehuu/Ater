@@ -17,18 +17,20 @@ def normalize_title(title: str) -> str:
     return "_".join(capitalized_words)
 
 def get_hub_path(topic: str, semester: str = None, course: str = None, unit: str = None) -> str:
-    """Resolves the Learning Hub path for academic or external learning."""
+    """Resolves the Learning Hub path for self-study or academic learning."""
     norm_topic = normalize_title(topic)
     filename = f"{norm_topic}_Hub.md"
     if semester or course or unit:
-        norm_sem = normalize_title(semester or "General")
-        norm_course = normalize_title(course or "General")
-        norm_unit = normalize_title(unit or norm_topic)
-        return f"database/study planner/{norm_sem}/{norm_course}/{norm_unit}/{filename}"
-    return f"database/external/General/{norm_topic}/{filename}"
+        if unit:
+            norm_sem = normalize_title(semester or "General")
+            norm_course = normalize_title(course or "General")
+            norm_unit = normalize_title(unit)
+            return f"database/study planner/{norm_sem}/{norm_course}/{norm_unit}/{filename}"
+        return f"database/study planner/{filename}"
+    return f"database/learning paths/{filename}"
 
 def get_chapter_path(topic: str, chapter_title: str, order: int, semester: str = None, course: str = None, unit: str = None) -> str:
-    """Resolves Chapter file paths for external and academic notes."""
+    """Resolves Chapter file paths for self-study and academic notes."""
     norm_topic = normalize_title(topic)
     norm_chapter = normalize_title(chapter_title)
     padded_order = f"{order:02d}"
@@ -36,34 +38,38 @@ def get_chapter_path(topic: str, chapter_title: str, order: int, semester: str =
     filename = f"Chapter_{padded_order}_{norm_chapter}.md"
     
     if semester or course or unit:
-        norm_sem = normalize_title(semester or "")
-        norm_course = normalize_title(course or "")
-        norm_unit = normalize_title(unit or "")
-        return f"Notes/academic/{norm_sem}/{norm_course}/{norm_unit}/{chapter_folder}/{filename}"
-    return f"Notes/external/General/{norm_topic}/{chapter_folder}/{filename}"
+        norm_sem = normalize_title(semester or "General")
+        norm_course = normalize_title(course or "General")
+        norm_unit = normalize_title(unit or norm_topic)
+        return f"database/{norm_sem}/{norm_course}/{norm_unit}/{chapter_folder}/{filename}"
+    return f"database/General/{norm_topic}/{chapter_folder}/{filename}"
 
 def get_note_path(topic: str, chapter_title: str = None, order: int = None, note_title: str = "", semester: str = None, course: str = None, unit: str = None) -> str:
-    """Resolves Atomic Note paths for external and academic notes."""
+    """Resolves Atomic Note paths for self-study and academic notes."""
     norm_topic = normalize_title(topic)
     norm_note = normalize_title(note_title)
     filename = f"{norm_note}.md"
     
     if semester or course or unit:
-        norm_sem = normalize_title(semester or "")
-        norm_course = normalize_title(course or "")
-        norm_unit = normalize_title(unit or "")
+        norm_sem = normalize_title(semester or "General")
+        norm_course = normalize_title(course or "General")
+        norm_unit = normalize_title(unit or norm_topic)
+        if unit:
+            base = f"Notes/academic/{norm_sem}/{norm_course}/{norm_unit}"
+        else:
+            base = f"database/{norm_sem}/{norm_course}/{norm_unit}"
         if chapter_title and order is not None:
             norm_chapter = normalize_title(chapter_title)
             padded_order = f"{order:02d}"
             chapter_folder = f"{padded_order}_{norm_chapter}"
-            return f"Notes/academic/{norm_sem}/{norm_course}/{norm_unit}/{chapter_folder}/{filename}"
+            return f"{base}/{chapter_folder}/{filename}"
         else:
-            return f"Notes/academic/{norm_sem}/{norm_course}/{norm_unit}/{filename}"
+            return f"{base}/{filename}"
     else:
         norm_chapter = normalize_title(chapter_title or "")
         padded_order = f"{order:02d}" if order is not None else "00"
         chapter_folder = f"{padded_order}_{norm_chapter}"
-        return f"Notes/external/General/{norm_topic}/{chapter_folder}/{filename}"
+        return f"database/General/{norm_topic}/{chapter_folder}/{filename}"
 
 def get_lesson_variant_path(note_title: str, variant: str) -> str:
     """Builds the deterministic filename for a lesson variant."""
@@ -233,7 +239,7 @@ def lookup_existing_hub(vault_path: str, topic: str) -> dict | None:
     search_dirs = [
         (vault_dir / "database" / "study planner", "academic"),
         (vault_dir / "database" / "external", "external"),
-        (vault_dir / "database" / "learning paths", "legacy-external"),
+        (vault_dir / "database" / "learning paths", "self-study"),
     ]
     
     for directory, path_type in search_dirs:

@@ -9,7 +9,7 @@ class AttachmentManager:
     def __init__(self, storage: ChatStorage, vault_path: Optional[str] = None, inbox_path: Optional[str] = None):
         self.storage = storage
         self.vault_path = Path(vault_path) if vault_path else None
-        self.inbox_path = Path(inbox_path) if inbox_path else None
+        self.inbox_path = Path(inbox_path) if inbox_path else Path(storage.db_path).parent
 
     def extract_and_chunk(self, file_path: str, file_type: str) -> Dict[str, Any]:
         """
@@ -145,19 +145,22 @@ class AttachmentManager:
         """
         Extracts, chunks and saves the file in the database.
         """
-        self._validate_path(file_path, file_type)
-
         if content is not None:
+            if file_type != 'artifact':
+                self._validate_path(file_path, file_type)
             import uuid
-            if self.inbox_path:
-                safe_dir = self.inbox_path / ".chat_attachments"
+            safe_base = self.inbox_path or Path(self.storage.db_path).parent
+            safe_dir = safe_base / ".chat_attachments"
+            try:
                 safe_dir.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                safe_dir = Path(self.storage.db_path).parent / ".chat_attachments"
+                safe_dir.mkdir(parents=True, exist_ok=True)
+            if safe_dir:
                 safe_name = f"{uuid.uuid4().hex}_{Path(file_path).name}"
                 internal_path = safe_dir / safe_name
                 internal_path.write_text(content, encoding="utf-8")
                 stored_file_path = str(internal_path)
-            else:
-                stored_file_path = file_path
 
             return self.storage.create_attachment(
                 conv_id=conversation_id,
@@ -168,11 +171,12 @@ class AttachmentManager:
                 chunk_metadata=[{"length": len(content), "offset": 0}],
                 message_id=message_id
             )
-        extracted = self.extract_and_chunk(file_path, file_type)
+        resolved_path = self._validate_path(file_path, file_type)
+        extracted = self.extract_and_chunk(str(resolved_path), file_type)
         return self.storage.create_attachment(
             conv_id=conversation_id,
             filename=extracted["filename"],
-            file_path=file_path,
+            file_path=str(resolved_path),
             file_type=file_type,
             extracted_text=extracted["extracted_text"],
             chunk_metadata=extracted["chunk_metadata"],
