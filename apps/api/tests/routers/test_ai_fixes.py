@@ -71,6 +71,17 @@ def test_upload_temp_cleanup(client, tmp_path, monkeypatch):
     temp_leaks = [f for f in new_files if f.startswith("temp_") or "ater_upload" in f]
     assert len(temp_leaks) == 0
 
+def test_upload_sanitizes_filename(client):
+    response = client.post(
+        "/api/ai/upload",
+        files={"file": ("../escape.txt", b"test content", "text/plain")}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "escape.txt"
+    assert data["file_uri"] == "temp:escape.txt"
+
 def test_soft_delete_message_gate(client, mock_storage):
     # Setup mock storage to return a soft-deleted conversation
     mock_storage.get_conversation.return_value = {"id": "conv1", "deleted_at": "2023-01-01T00:00:00Z"}

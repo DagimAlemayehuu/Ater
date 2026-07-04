@@ -45,8 +45,8 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
     import tempfile
     import shutil
     
-    # Save temporary file using a proper temp directory
-    fd, temp_path = tempfile.mkstemp(prefix="ater_upload_", suffix=f"_{file.filename}")
+    safe_name = Path(file.filename or "upload").name or "upload"
+    fd, temp_path = tempfile.mkstemp(prefix="ater_upload_", suffix=f"_{safe_name}")
     
     try:
         with os.fdopen(fd, "wb") as buffer:
@@ -69,9 +69,9 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
             else:
                 raise HTTPException(status_code=500, detail="File processing timed out")
 
-            return {"file_uri": uploaded_file.uri, "name": file.filename}
+            return {"file_uri": uploaded_file.uri, "name": safe_name}
         else:
-            return {"file_uri": f"temp:{file.filename}", "name": file.filename, "note": "Provider does not support direct file upload yet."}
+            return {"file_uri": f"temp:{safe_name}", "name": safe_name, "note": "Provider does not support direct file upload yet."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
