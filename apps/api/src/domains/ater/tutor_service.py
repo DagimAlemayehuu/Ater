@@ -1,3 +1,5 @@
+from src.utils.vault_path import resolve_vault_path
+from fastapi import HTTPException
 import sqlite3
 import json
 import logging
@@ -69,15 +71,18 @@ class TutorSessionManager:
         self.conn.commit()
 
     def _resolve_vault_path(self, note_id: str) -> Optional[Path]:
+        try:
+            target_path = resolve_vault_path(self.vault_path, note_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        if target_path.exists():
+            return target_path
+
         p = Path(note_id)
-        if p.is_absolute() and p.exists():
-            return p
-        if (self.vault_path / note_id).exists():
-            return self.vault_path / note_id
-            
         stem = p.stem
         stem = stem.replace("[", "").replace("]", "").replace(" ", "_").lower()
-        
+
         for md_path in self.vault_path.rglob("*.md"):
             if any(ignored in md_path.parts for ignored in [".git", ".ater", ".obsidian", "Practice"]):
                 continue

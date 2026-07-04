@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import Obsidian from '../routes/obsidian';
 import { ConfigProvider } from '../lib/ConfigContext';
 import { HeaderProvider } from '../context/header-context';
@@ -126,8 +126,9 @@ describe('Obsidian Notes Explorer', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByText('Computer_Science'));
-    fireEvent.click(await screen.findByText('Data_Structures'));
+    const sidebar = await screen.findByTestId('projected-sidebar');
+    fireEvent.click(await within(sidebar).findByText('Computer_Science'));
+    fireEvent.click(await within(sidebar).findByText('Data_Structures'));
 
     await waitFor(() => {
       expect(sidecarApi.readObsidianNote).toHaveBeenCalledWith('Computer_Science/Data_Structures.md');
@@ -152,8 +153,9 @@ describe('Obsidian Notes Explorer', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByText('Computer_Science'));
-    fireEvent.click(await screen.findByText('Data_Structures'));
+    const sidebar = await screen.findByTestId('projected-sidebar');
+    fireEvent.click(await within(sidebar).findByText('Computer_Science'));
+    fireEvent.click(await within(sidebar).findByText('Data_Structures'));
 
     expect(await screen.findByText('Linked-list notes.')).toBeInTheDocument();
     expect(screen.queryByText('Interactive Lesson')).not.toBeInTheDocument();
@@ -178,8 +180,9 @@ describe('Obsidian Notes Explorer', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByText('Inbox'));
-    fireEvent.click(await screen.findByText('Algorithms_Syllabus'));
+    const sidebar = await screen.findByTestId('projected-sidebar');
+    fireEvent.click(await within(sidebar).findByText('PDFS'));
+    fireEvent.click(await within(sidebar).findByText('Algorithms_Syllabus'));
 
     const viewer = await screen.findByTestId('pdf-viewer');
     expect(viewer).toHaveAttribute('data-path', 'Inbox/Algorithms_Syllabus.pdf');
@@ -216,8 +219,9 @@ describe('Obsidian Notes Explorer', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByText('Computer_Science'));
-    fireEvent.click(await screen.findByText('Data_Structures'));
+    const sidebar = await screen.findByTestId('projected-sidebar');
+    fireEvent.click(await within(sidebar).findByText('Computer_Science'));
+    fireEvent.click(await within(sidebar).findByText('Data_Structures'));
     fireEvent.click(await screen.findByRole('button', { name: /continue lesson/i }));
 
     await waitFor(() => {
