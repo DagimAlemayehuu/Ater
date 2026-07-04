@@ -271,7 +271,6 @@ export default function AcademicDashboard() {
  const tabs = React.useMemo(() => [
  {id: 'PROGRAM' as AcademicTab, label: 'Program', icon: <GraduationCap size={11} />, dataTour: 'tab-academic-program'},
  {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />, dataTour: 'tab-academic-courses'},
- {id: 'PLANNER' as AcademicTab, label: 'Planner', icon: <LayoutDashboard size={11} />, dataTour: 'tab-academic-planner'},
  {id: 'ASSIGNMENTS' as AcademicTab, label: 'Assignments', icon: <ClipboardList size={11} />, dataTour: 'tab-academic-assignments'},
  {id: 'EXAMS' as AcademicTab, label: 'Exams', icon: <FlaskConical size={11} />, dataTour: 'tab-academic-exams'},
  {id: 'PRACTICE' as AcademicTab, label: 'Practice', icon: <Layers size={11} />, dataTour: 'tab-academic-practice'},

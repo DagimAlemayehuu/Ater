@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react'
-import { Check, BookOpen, Plus, Search, Clock, Trash2 } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Check, BookOpen, Plus, Search, Clock, Trash2, ChevronRight, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { stripWL, getVal, getNumVal, wrapWL, cleanTitle, groupBy, statusColorClass } from './utils'
 import { SectionHeader, EmptyState, BigPropertyCard, EditableTitle, StatCard, CreateBanner } from './SharedComponents'
 import type { TabProps } from './types'
+import { sidecarApi } from '@/lib/sidecarApi'
 
 const INTERNAL = ['id', 'title', 'path', 'last_synced', 'links']
 
@@ -21,6 +22,13 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
   const [search,     setSearch]     = useState('')
   const [adding,     setAdding]     = useState(false)
   const [prevInitId,    setPrevInitId]    = useState<string | null>(initialSelectedId || null)
+  const [vaultFiles, setVaultFiles] = useState<any[]>([])
+
+  useEffect(() => {
+    sidecarApi.listObsidianFiles()
+      .then(res => setVaultFiles(res?.files || []))
+      .catch(err => console.error("Error loading obsidian files in StudyPlannerTab:", err))
+  }, [])
 
   // Sync external navigation
   if (initialSelectedId && initialSelectedId !== prevInitId) {
@@ -102,74 +110,211 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
     const linkedExam = stripWL(getVal(hub, 'exam', 'Exam', 'linked_exam'))
     const examItem   = exams.find(e => cleanTitle(e.title).toLowerCase() === linkedExam.toLowerCase())
 
-    const extraKeys = Object.keys({ ...schema, ...hub }).filter(k =>
-      !INTERNAL.includes(k) && !['status', 'Status', 'course', 'Course', 'exam', 'Exam', 'total_time', 'study_time', 'practice_score', 'practice_total'].includes(k))
+    // ─── Filter Yaml Properties (Hiding internal fields & duplicate keys) ───
+    const seenLower = new Set<string>()
+    const extraKeys = Object.keys({ ...schema, ...hub }).filter(k => {
+      const lower = k.toLowerCase()
+      if (INTERNAL.includes(lower)) return false
+      if (['status', 'course', 'exam', 'total_time', 'study_time', 'practice_score', 'practice_total', 'unit', 'linked_exam', 'created_time', 'last_edited_time'].includes(lower)) return false
+      if (seenLower.has(lower)) return false
+      seenLower.add(lower)
+      return true
+    })
+
+    // ─── Atomic Notes & PDF Search ───
+    const courseVal = String(getVal(hub, 'Course', 'course') || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+    const unitVal   = String(getVal(hub, 'Unit', 'unit') || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+
+    const hubNotes = (courseVal && unitVal) ? vaultFiles.filter(f => {
+      if (f.is_dir) return false
+      if (!f.path.toLowerCase().endsWith('.md')) return false
+      const pathLower = f.path.toLowerCase()
+      return pathLower.includes(courseVal) && pathLower.includes(unitVal)
+    }) : []
+
+    const hubPdfs = (courseVal && unitVal) ? vaultFiles.filter(f => {
+      if (f.is_dir) return false
+      if (!f.path.toLowerCase().endsWith('.pdf')) return false
+      const pathLower = f.path.toLowerCase()
+      return pathLower.includes(courseVal) && pathLower.includes(unitVal)
+    }) : []
+
+    const currentLessonPath = getVal(hub, 'Current Lesson Path', 'current_lesson_path')
 
     return (
-      <div data-tour="planner-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
-        <div className="flex items-start justify-between">
+      <div data-tour="planner-detail-view" className="h-full overflow-y-auto custom-scrollbar p-8 space-y-6 pb-20">
+        
+        {/* Header Block */}
+        <div className="flex items-start justify-between border-b border-border/40 pb-4">
           <div>
-            <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-2">← Study Planner</button>
-            <EditableTitle value={cleanTitle(hub.title || hub.id)} className="text-2xl font-black uppercase tracking-tight"
+            <button onClick={() => setSelectedId(null)} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1 font-sans">
+              ← Study Planner
+            </button>
+            <EditableTitle value={cleanTitle(hub.title || hub.id)} className="text-xl font-black uppercase tracking-tight text-foreground"
               onSave={v => onUpdate(DB_ID, hub.id, { title: v })} />
-            <div className="flex items-center gap-3 mt-1">
-              {course && <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">{course}</span>}
-              {linkedExam && <span className="text-[9px] font-black uppercase text-foreground/40">→ {linkedExam}</span>}
+            <div className="flex items-center gap-3 mt-1 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">
+              {course && <span>{course}</span>}
+              {linkedExam && <span>→ {linkedExam}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isDone && (
+            {!isDone ? (
               <button onClick={() => onUpdate(DB_ID, hub.id, { status: wrapWL('Completed') })}
-                className="px-3 py-2 border border-foreground text-foreground bg-background text-[8px] font-black uppercase hover:bg-muted/5">
+                className="px-2.5 py-1 bg-muted/20 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] transition-all font-sans">
                 Mark Complete
               </button>
+            ) : (
+              <button onClick={() => onUpdate(DB_ID, hub.id, { status: wrapWL('In Progress') })}
+                className="px-2.5 py-1 bg-muted/20 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] transition-all font-sans">
+                Reopen Hub
+              </button>
             )}
-            <button onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10"><BookOpen size={14} /></button>
-            <button onClick={() => { onDelete(DB_ID, selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 size={14} /></button>
+            <button onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)} className="p-1.5 border border-border bg-bento-card hover:bg-bento-item/20 text-muted-foreground hover:text-foreground rounded-[4px] transition-colors"><BookOpen size={12} /></button>
+            <button onClick={() => { onDelete(DB_ID, selectedId); setSelectedId(null) }} className="p-1.5 border border-border bg-bento-card hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-[4px] transition-colors"><Trash2 size={12} /></button>
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-4">
-          <BigPropertyCard label="Status" value={getVal(hub, 'status', 'Status') || 'Active'}
-            schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { status: v })} />
-          <BigPropertyCard label="Course" value={getVal(hub, 'course', 'Course')}
-            schema={{ type: 'relation', source: 'database/courses' }} onUpdate={v => onUpdate(DB_ID, hub.id, { course: v })} />
-          <BigPropertyCard label="Unit" value={getVal(hub, 'unit', 'Unit') || ''}
-            schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { unit: v })} />
-          <StatCard label="Study Time" value={studyTime > 0 ? `${Math.round(studyTime / 60)}m` : '--'} />
-          <StatCard label="Practice Accuracy" value={accuracy !== null ? `${accuracy}%` : '--'} />
-        </div>
-
-        {linkedExam && examItem && (
-          <div className="p-4 border border-border bg-bento-card rounded-[8px] flex items-center justify-between">
-            <div>
-              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Linked Exam</span>
-              <p className="text-[13px] font-black uppercase mt-0.5 text-foreground">{cleanTitle(examItem.title)}</p>
+        {/* 2-Column Grid Redesign */}
+        <div className="grid grid-cols-3 gap-6 items-start">
+          
+          {/* Left Column (Details, Properties & Practice Actions) */}
+          <div className="col-span-2 space-y-6">
+            
+            {/* Top Stat Cards */}
+            <div className="grid grid-cols-4 gap-3">
+              <BigPropertyCard label="Status" value={getVal(hub, 'status', 'Status') || 'Active'}
+                schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { status: v })} />
+              <BigPropertyCard label="Course" value={getVal(hub, 'course', 'Course')}
+                schema={{ type: 'relation', source: 'database/courses' }} onUpdate={v => onUpdate(DB_ID, hub.id, { course: v })} />
+              <BigPropertyCard label="Unit" value={getVal(hub, 'unit', 'Unit') || ''}
+                schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { unit: v })} />
+              <StatCard label="Study Time" value={studyTime > 0 ? `${Math.round(studyTime / 60)}m` : '--'} />
             </div>
-            <button onClick={() => navigateTo('EXAMS', examItem.id)}
-              className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View →</button>
-          </div>
-        )}
 
-        {extraKeys.length > 0 && (
-          <div className="grid grid-cols-4 gap-4">
-            {extraKeys.map(key => (
-              <BigPropertyCard key={key} label={key} value={hub[key]} schema={schema[key]}
-                onUpdate={v => onUpdate(DB_ID, hub.id, { [key]: v })} />
-            ))}
-          </div>
-        )}
+            {/* Linked Exam Card */}
+            {linkedExam && examItem && (
+              <div className="p-3 border border-border bg-bento-card rounded-[6px] flex items-center justify-between">
+                <div>
+                  <span className="text-[7.5px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Linked Exam</span>
+                  <p className="text-[11px] font-black uppercase mt-0.5 text-foreground">{cleanTitle(examItem.title)}</p>
+                </div>
+                <button onClick={() => navigateTo('EXAMS', examItem.id)}
+                  className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground border border-border/40 hover:border-foreground/30 px-2 py-0.5 rounded-[4px] transition-colors font-sans">
+                  View →
+                </button>
+              </div>
+            )}
 
-        <div className="flex gap-3">
-          <button onClick={() => navigateTo('PRACTICE', hub.id)}
-            className="flex-1 px-4 py-3 border border-border bg-bento-item/50 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-bento-item transition-colors">
-            Practice This Hub →
-          </button>
-          <button onClick={() => navigateTo('CALENDAR')}
-            className="flex-1 px-4 py-3 border border-border bg-bento-item/30 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
-            View in Calendar
-          </button>
+            {/* Yaml Properties Grid (Fixed duplicates & Internal metadata) */}
+            {extraKeys.length > 0 && (
+              <div className="space-y-2">
+                <SectionHeader title="Yaml Properties" />
+                <div className="grid grid-cols-2 gap-3">
+                  {extraKeys.map(key => (
+                    <BigPropertyCard key={key} label={key} value={hub[key]} schema={schema[key]}
+                      onUpdate={v => onUpdate(DB_ID, hub.id, { [key]: v })} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Main Action Buttons */}
+            <div className="flex gap-3">
+              {currentLessonPath ? (
+                <button 
+                  onClick={() => onOpenNote(currentLessonPath)}
+                  className="flex-1 px-4 py-2.5 bg-foreground text-background border border-foreground rounded-[6px] text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 transition-all flex items-center justify-center gap-1.5 font-sans"
+                >
+                  <Clock size={11} />
+                  Continue Study
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    const firstNote = hubNotes[0]?.path || hub.path || `database/study planner/${hub.id}.md`
+                    onOpenNote(firstNote)
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-foreground text-background border border-foreground rounded-[6px] text-[10px] font-black uppercase tracking-widest hover:bg-foreground/90 transition-all flex items-center justify-center gap-1.5 font-sans"
+                >
+                  <Clock size={11} />
+                  Start Study
+                </button>
+              )}
+
+              <button onClick={() => navigateTo('PRACTICE', hub.id)}
+                className="flex-1 px-4 py-2.5 border border-border bg-bento-item/50 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-bento-item transition-all flex items-center justify-center gap-1.5 font-sans">
+                Practice This Hub →
+              </button>
+            </div>
+
+          </div>
+
+          {/* Right Column (Atomic Notes & PDF Resources) */}
+          <div className="col-span-1 border-l border-border/30 pl-6 space-y-6">
+            
+            {/* Atomic Notes Section */}
+            <div className="space-y-3">
+              <SectionHeader title="Atomic Notes" count={hubNotes.length} />
+              
+              <div className="max-h-[220px] overflow-y-auto custom-scrollbar-mini pr-1 space-y-2">
+                {hubNotes.length === 0 ? (
+                  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No notes found for this unit</p>
+                ) : (
+                  hubNotes.map((note, idx) => {
+                    const noteName = note.path.split('/').pop()?.replace('.md', '') || 'Untitled Note'
+                    const pathFolder = note.path.split('/').slice(0, -1).join('/')
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => onOpenNote(note.path)}
+                        className="p-2.5 border border-border/80 bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex flex-col gap-1 cursor-pointer font-sans"
+                      >
+                        <span className="text-[10px] font-black uppercase truncate text-foreground leading-tight">{cleanTitle(noteName)}</span>
+                        <span className="text-[7.5px] font-black uppercase text-muted-foreground/45 truncate leading-none">{pathFolder}</span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Reference PDFs Section */}
+            <div className="space-y-3">
+              <SectionHeader title="Reference PDFs" count={hubPdfs.length} />
+              
+              <div className="max-h-[150px] overflow-y-auto custom-scrollbar-mini pr-1 space-y-2">
+                {hubPdfs.length === 0 ? (
+                  <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No PDFs found for this unit</p>
+                ) : (
+                  hubPdfs.map((pdf, idx) => {
+                    const pdfName = pdf.path.split('/').pop() || 'document.pdf'
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => onOpenNote(pdf.path)}
+                        className="p-2.5 border border-border/80 bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer font-sans"
+                      >
+                        <div className="flex flex-col min-w-0 flex-1 mr-2">
+                          <span className="text-[10px] font-black uppercase truncate text-foreground leading-tight">{cleanTitle(pdfName)}</span>
+                          <span className="text-[7px] font-black uppercase text-muted-foreground/45 leading-none">Document PDF</span>
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onOpenNote(pdf.path) }}
+                          className="px-2 py-1 text-[7px] font-black uppercase border border-border bg-bento-item text-foreground hover:bg-foreground hover:text-background rounded-[4px] transition-colors font-sans"
+                        >
+                          Open PDF
+                        </button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
     )
   }

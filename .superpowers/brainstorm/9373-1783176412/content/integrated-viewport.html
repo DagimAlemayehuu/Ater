@@ -1,0 +1,307 @@
+<style>
+  .app-container {
+    display: flex;
+    background: #111113;
+    color: #ebebeb;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    height: 90vh;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #242426;
+  }
+
+  .sidebar {
+    width: 200px;
+    background: #151517;
+    border-right: 1px solid #242426;
+    padding: 15px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .main-viewport {
+    flex-1: 1;
+    display: grid;
+    grid-template-columns: 3fr 1.2fr;
+    padding: 15px;
+    gap: 12px;
+    overflow: hidden;
+    background: #111113;
+  }
+
+  .center-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .bento-card {
+    background: #151517;
+    border: 1px solid #242426;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: #a1a1aa;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+
+  .nav-item.active {
+    background: #232326;
+    color: #ebebeb;
+  }
+
+  .section-label {
+    font-size: 8px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #555;
+    margin: 12px 0 6px 4px;
+    display: block;
+  }
+
+  .btn-action {
+    background: #ebebeb;
+    color: #111113;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 900;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #242426;
+    color: #ebebeb;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 900;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+  }
+
+  /* Hotspot annotation overlays */
+  .annotation-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ebebeb;
+    color: #111113;
+    font-weight: 900;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    font-size: 9px;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+</style>
+
+<h2>Proposed Unified Workspace (Single Viewport)</h2>
+<p class="subtitle">See how we merge the components into your exact layout without adding scrolling or folder structures</p>
+
+<div class="app-container">
+  
+  <!-- Consolidated Sidebar -->
+  <div class="sidebar">
+    <div>
+      <div style="font-weight: 900; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #ebebeb; padding-left: 4px; margin-bottom: 20px;">
+        ATER
+      </div>
+      
+      <span class="section-label">WORKSPACE</span>
+      <div class="nav-item active"><span style="font-size:12px;">📊</span> Academic Dashboard</div>
+      <div class="nav-item"><span style="font-size:12px;">📥</span> Ingest Inbox</div>
+      <div class="nav-item"><span style="font-size:12px;">📚</span> Course Catalog</div>
+      <div class="nav-item"><span style="font-size:12px;">🕸️</span> Graph Relations</div>
+
+      <span class="section-label">ACADEMIC NAV</span>
+      <div class="nav-item"><span style="font-size:11px;">📅</span> Weekly View</div>
+      <div class="nav-item"><span style="font-size:11px;">🎯</span> Practice reviews</div>
+      <div class="nav-item"><span style="font-size:11px;">🎧</span> NotebookLM Studio</div>
+    </div>
+    
+    <div>
+      <div style="font-size: 9px; color: #a1a1aa; font-weight: bold; padding: 4px;">Credits: 20</div>
+      <div class="nav-item" style="font-size: 10px;">⚙️ Settings</div>
+    </div>
+  </div>
+
+  <!-- Main Viewport -->
+  <div class="main-viewport">
+    
+    <!-- Center Section -->
+    <div class="center-column">
+      
+      <!-- Academic Title & Program -->
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="font-size: 9px; color: #a1a1aa; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Academic Program</span>
+          <h1 style="font-size: 26px; font-weight: 900; line-height: 1.0; margin: 2px 0 0 0; letter-spacing: -0.5px;">COMPUTER SCIENCE</h1>
+          <span style="font-size: 9px; color: #a1a1aa; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Undergraduate · Winter 2026</span>
+        </div>
+        <button class="btn-outline">Edit Program</button>
+      </div>
+
+      <!-- Weekly Calendar Widget (Space-Constrained) -->
+      <div class="bento-card" style="flex-grow:1; display:flex; flex-direction:column; justify-content:space-between; min-height:160px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-weight:900; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#a1a1aa;">📅 Weekly Study Calendar</span>
+          <span style="font-size:9px; color:#a1a1aa; cursor:pointer;">Open Full Calendar →</span>
+        </div>
+        <!-- Simplified 7-Day Row -->
+        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; flex-grow:1;">
+          <div style="background:#1a1a1c; border:1px solid #242426; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#555;">MON 29</div>
+          </div>
+          <div style="background:#1a1a1c; border:1px solid #242426; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#555;">TUE 30</div>
+            <div style="background:#232326; padding:2px; font-size:7px; margin-top:4px; border-radius:2px; border:1px solid #242426;">Notes</div>
+          </div>
+          <div style="background:#1a1a1c; border:1px solid #242426; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#555;">WED 1</div>
+          </div>
+          <div style="background:#1a1a1c; border:1px solid #242426; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#555;">THU 2</div>
+          </div>
+          <div style="background:#1a1a1c; border:1px solid #242426; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#555;">FRI 3</div>
+            <div style="background:#232326; padding:2px; font-size:7px; color:#ebebeb; margin-top:4px; border-radius:2px; border:1px solid #242426; font-weight:bold;">Practice Due</div>
+          </div>
+          <div style="background:#232326; border:1px solid #ebebeb; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#ebebeb;">SAT 4</div>
+            <div style="font-size:7px; color:#a1a1aa; margin-top:4px;">Today</div>
+          </div>
+          <div style="background:#1a1a1c; border:1px solid #242426; border-radius:4px; padding:6px; text-align:center;">
+            <div style="font-size:8px; font-weight:900; color:#555;">SUN 5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unified Study Hubs (No folder trees!) -->
+      <div class="bento-card" style="min-height:100px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-weight:900; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#a1a1aa;">📁 Active Unit Hubs</span>
+          <span style="font-size:9px; color:#a1a1aa; cursor:pointer;">New Hub +</span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <div style="background:#1a1a1c; border:1px solid #242426; padding:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+            <div>
+              <strong>📦 Chapter 3 Hub</strong>
+              <div style="font-size:9px; color:#a1a1aa;">CS-101 · 6 Notes</div>
+            </div>
+            <span style="font-size:12px; color:#a1a1aa;">→</span>
+          </div>
+          <div style="background:#1a1a1c; border:1px solid #242426; padding:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+            <div>
+              <strong>📐 Linear Equations Hub</strong>
+              <div style="font-size:9px; color:#a1a1aa;">MATH-202 · 4 Notes</div>
+            </div>
+            <span style="font-size:12px; color:#a1a1aa;">→</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Section -->
+    <div class="right-column">
+      
+      <!-- Active Courses Panel -->
+      <div class="bento-card" style="flex-grow:1; display:flex; flex-direction:column; gap:8px;">
+        <span style="font-weight:900; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#a1a1aa; display:block; margin-bottom:4px;">📚 Active Courses</span>
+        
+        <!-- Course Row 1 -->
+        <div style="background:#1a1a1c; border:1px solid #242426; padding:8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>OOP WITH JAVA</strong>
+            <div style="font-size:8px; color:#a1a1aa; text-transform:uppercase;">Winter 2026 · 4 credits</div>
+          </div>
+          <span style="background:#232326; border:1px solid #242426; border-radius:4px; font-size:9px; padding:2px 4px;">5 notes</span>
+        </div>
+
+        <!-- Course Row 2 -->
+        <div style="background:#1a1a1c; border:1px solid #242426; padding:8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>GLOBAL TRENDS</strong>
+            <div style="font-size:8px; color:#a1a1aa; text-transform:uppercase;">Winter 2026 · 2 credits</div>
+          </div>
+          <span style="background:#232326; border:1px solid #242426; border-radius:4px; font-size:9px; padding:2px 4px;">3 notes</span>
+        </div>
+
+        <!-- Course Row 3 -->
+        <div style="background:#1a1a1c; border:1px solid #242426; padding:8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>ECONOMICS</strong>
+            <div style="font-size:8px; color:#a1a1aa; text-transform:uppercase;">Winter 2026 · 3 credits</div>
+          </div>
+          <span style="background:#232326; border:1px solid #242426; border-radius:4px; font-size:9px; padding:2px 4px;">4 notes</span>
+        </div>
+
+      </div>
+
+      <!-- Quick Tasks & NotebookLM Studio Link -->
+      <div class="bento-card" style="display:flex; flex-direction:column; gap:8px;">
+        <span style="font-weight:900; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#a1a1aa;">🎧 NotebookLM Podcasts</span>
+        <div style="background:#1a1a1c; border:1px solid #242426; padding:8px; border-radius:6px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <span style="font-size:16px;">🔊</span>
+          <div>
+            <strong>CS-101 Audio Overview</strong>
+            <div style="font-size:8px; color:#a1a1aa;">9 min duration · Ready</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="kb-course" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Visual Ingestion & Note Browsing</h3>
+      <p>Instead of the `/database` folder tree, clicking a course card (e.g. <strong>OOP WITH JAVA</strong>) or a <strong>Study Hub</strong> transitions the main viewport to show a simplified, graphical view of notes, reference PDFs, and the ingestion status for that specific subject. Notes are opened in a full-screen focus reader.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="srs-calendar" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Active Recall Engine Integration</h3>
+      <p>The FSRS practice schedule is bound directly to the <strong>Weekly Study Calendar</strong> card. If you have cards due, clicking "Practice Due" launches the practice session in place, completely replacing the need for a separate top-level Practice Hub page.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="nlm-widget" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>NotebookLM Podcast & Studio Bar</h3>
+      <p>Generated audio summaries, studio assets, and Google notebooks are listed as widgets on the right column or under their corresponding Course panels, rather than living on a disconnected page.</p>
+    </div>
+  </div>
+</div>

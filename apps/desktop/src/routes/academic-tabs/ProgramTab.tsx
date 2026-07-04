@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock } from 'lucide-react'
+import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { differenceInDays, startOfDay, addDays, isSameDay, startOfWeek, format } from 'date-fns'
 import { stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle, calcGPA, gradeColorClass, getDaysUntil } from './utils'
+import { invoke } from '@tauri-apps/api/core'
 import { SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle, CreateBanner } from './SharedComponents'
 import type { TabProps } from './types'
 import { useNavigate } from 'react-router-dom'
@@ -29,7 +30,37 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [showSetup,      setShowSetup]          = useState(false)
   const [addingSem,      setAddingSem]          = useState(false)
   const [addingCourse,   setAddingCourse]       = useState(false)
-  const [sidebarTab,     setSidebarTab]         = useState<'assignments' | 'exams'>('assignments')
+  const [sidebarTab,     setSidebarTab]         = useState<'assignments' | 'exams' | 'notebooklm'>('assignments')
+  const [notebooks, setNotebooks]               = useState<any[]>([])
+  const [sidecarPort, setSidecarPort]           = useState<number>(8765)
+  const [sidecarToken, setSidecarToken]         = useState<string>('')
+  
+  // Tab control state
+  const [leftBottomTab, setLeftBottomTab]       = useState<'courses' | 'planner' | 'practice'>('courses')
+  const [activeCoursesTab, setActiveCoursesTab] = useState<'hubs' | 'inbox' | 'pdf'>('hubs')
+  const [inboxFiles, setInboxFiles]             = useState<any[]>([])
+  const [pdfFiles, setPdfFiles]                 = useState<any[]>([])
+
+  // Courses search/filter/sort/add/edit states
+  const [coursesSearch, setCoursesSearch]       = useState('')
+  const [coursesSort, setCoursesSort]           = useState<'title' | 'credits' | 'grade'>('title')
+  const [coursesFilter, setCoursesFilter]       = useState<string>('All')
+  const [isAddingCourse, setIsAddingCourse]     = useState(false)
+  const [newCourseName, setNewCourseName]       = useState('')
+  const [newCourseCredits, setNewCourseCredits] = useState('4')
+  const [newCourseSem, setNewCourseSem]         = useState('')
+  
+  // Planner search/filter/sort/add/edit states
+  const [plannerSearch, setPlannerSearch]       = useState('')
+  const [plannerSort, setPlannerSort]           = useState<'title' | 'unit' | 'course'>('title')
+  const [plannerFilter, setPlannerFilter]       = useState<'Active' | 'All' | 'Completed'>('Active')
+  const [isAddingPlannerHub, setIsAddingPlannerHub] = useState(false)
+  const [newHubName, setNewHubName]             = useState('')
+  const [newHubCourse, setNewHubCourse]         = useState('')
+  const [newHubUnit, setNewHubUnit]             = useState('')
+
+  // Practice search/sort states
+  const [practiceSearch, setPracticeSearch]     = useState('')
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quickHubName, setQuickHubName]         = useState('')
   const [isAddingHub, setIsAddingHub]           = useState(false)
@@ -61,11 +92,71 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     }
   }, [initialSelectedId, data.semesters, data.years, onClearSelection])
 
-  React.useEffect(() => {
+  const loadStudyHistory = () => {
     sidecarApi.getStudyHistory()
       .then(res => setApiStudyHistory(res || { sessions: [], telemetry: [], practice: [] }))
       .catch(() => {})
+  }
+
+  const handleDeletePractice = async (path: string) => {
+    try {
+      await sidecarApi.deletePractice(path)
+      toast.success('Practice session deleted')
+      loadStudyHistory()
+    } catch {
+      toast.error('Failed to delete practice session')
+    }
+  }
+
+  React.useEffect(() => {
+    loadStudyHistory()
+
+    sidecarApi.aterListInbox()
+      .then(res => setInboxFiles(res?.files || []))
+      .catch(err => console.error("Error fetching inbox:", err))
+
+    sidecarApi.listObsidianFiles()
+      .then(res => {
+        const allFiles = res?.files || []
+        const pdfs = allFiles.filter((f: any) => !f.is_dir && f.path.toLowerCase().endsWith('.pdf'))
+        setPdfFiles(pdfs)
+      })
+      .catch(err => console.error("Error fetching vault files:", err))
   }, [data])
+
+  // Fetch Tauri sidecar config
+  React.useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const port = await invoke<number>('get_sidecar_port').catch(() => 8765)
+        const token = await invoke<string>('get_sidecar_token').catch(() => '')
+        setSidecarPort(port)
+        setSidecarToken(token)
+      } catch (err) {
+        console.error('Error fetching sidecar config in ProgramTab:', err)
+      }
+    }
+    fetchConfig()
+  }, [])
+
+  // Fetch notebooks list when sidecar is configured
+  React.useEffect(() => {
+    if (!sidecarPort) return
+    const fetchNotebooks = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:${sidecarPort}/api/notebooklm/notebooks`, {
+          headers: { 'X-Ater-Token': sidecarToken }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setNotebooks(data || [])
+        }
+      } catch (err) {
+        console.error('Error loading notebooks in ProgramTab:', err)
+      }
+    }
+    fetchNotebooks()
+  }, [sidecarPort, sidecarToken])
 
   const years     = data.years     || []
   const semesters = data.semesters || []
@@ -446,6 +537,82 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeekStart, i))
 
   const pendingAssignments = assignments.filter(a => !(a.done === true || a.done === 'true')).slice(0, 5)
+
+  // ─── Filter, Sort & Search Listings for Bottom Left container ───
+  const displayedCourses = useMemo(() => {
+    let list = courses
+    
+    if (coursesSearch.trim()) {
+      const q = coursesSearch.toLowerCase()
+      list = list.filter(c => cleanTitle(c.title).toLowerCase().includes(q))
+    }
+    
+    if (coursesFilter !== 'All') {
+      list = list.filter(c => {
+        const sem = stripWL(getVal(c, 'Semester', 'semester'))
+        return sem.toLowerCase() === coursesFilter.toLowerCase()
+      })
+    }
+    
+    list = [...list].sort((a, b) => {
+      if (coursesSort === 'credits') {
+        const credA = parseFloat(getVal(a, 'Credits', 'credits')) || 0
+        const credB = parseFloat(getVal(b, 'Credits', 'credits')) || 0
+        return credB - credA
+      }
+      if (coursesSort === 'grade') {
+        const gradeA = stripWL(getVal(a, 'Grade', 'grade')) || 'F'
+        const gradeB = stripWL(getVal(b, 'Grade', 'grade')) || 'F'
+        return gradeA.localeCompare(gradeB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+    
+    return list
+  }, [courses, coursesSearch, coursesFilter, coursesSort])
+
+  const displayedHubs = useMemo(() => {
+    let list = hubs
+    
+    if (plannerSearch.trim()) {
+      const q = plannerSearch.toLowerCase()
+      list = list.filter(h => cleanTitle(h.title).toLowerCase().includes(q))
+    }
+    
+    if (plannerFilter === 'Active') {
+      list = list.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    } else if (plannerFilter === 'Completed') {
+      list = list.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    }
+    
+    list = [...list].sort((a, b) => {
+      if (plannerSort === 'unit') {
+        const unitA = getVal(a, 'unit', 'Unit') || ''
+        const unitB = getVal(b, 'unit', 'Unit') || ''
+        return unitA.localeCompare(unitB)
+      }
+      if (plannerSort === 'course') {
+        const courseA = stripWL(getVal(a, 'course', 'Course')) || ''
+        const courseB = stripWL(getVal(b, 'course', 'Course')) || ''
+        return courseA.localeCompare(courseB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+    
+    return list
+  }, [hubs, plannerSearch, plannerFilter, plannerSort])
+
+  const displayedPractices = useMemo(() => {
+    let list = apiStudyHistory?.practice || []
+    if (practiceSearch.trim()) {
+      const q = practiceSearch.toLowerCase()
+      list = list.filter((p: any) => {
+        const title = p.title || p.note_path?.split('/').pop()?.replace('.md', '') || 'Practice Session'
+        return title.toLowerCase().includes(q)
+      })
+    }
+    return list
+  }, [apiStudyHistory?.practice, practiceSearch])
   const activeHubs = hubs.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).slice(0, 5)
   const upcomingExams = exams
     .filter(e => {
@@ -456,84 +623,97 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     .slice(0, 4)
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar p-10 pb-24 space-y-10">
+    <div className="h-full overflow-y-auto custom-scrollbar p-8 pb-16 space-y-6">
         {programYears.length === 0 || showSetup ? (
           <>
             {showSetup && <button onClick={() => setShowSetup(false)} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-6 transition-colors">← Back to Overview</button>}
             <ProgramSetupForm onScaffold={(n, y, l, c) => { handleScaffold(n, y, l, c); setShowSetup(false) }} />
           </>
         ) : (
-          <div className="space-y-10">
+          <div className="space-y-6">
             {/* Program Header */}
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2">Academic Program</p>
-                <h1 className="text-4xl font-black uppercase tracking-tight text-foreground">{activeProgram || 'Your Program'}</h1>
-                <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 block mt-1">
-                  {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level'))}
-                </span>
+            <div className="flex flex-col gap-2.5">
+              {/* Row 1: Program Name and Year Pills */}
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-1 leading-none">Academic Program</p>
+                  <h1 className="text-3xl font-black uppercase tracking-tight text-foreground leading-none">{activeProgram || 'Your Program'}</h1>
+                </div>
+                
+                {/* Year Pills (aligned inline with program name) */}
+                <div className="flex items-center gap-2 pt-3 flex-wrap">
+                  {programYears.map((y, idx) => {
+                    const status = stripWL(getVal(y, 'Status', 'status'))
+                    const isDone = status.toLowerCase().includes('complet')
+                    const isActive = getBoolVal(y, 'Current Year', 'current_year')
+                    return (
+                      <button 
+                        key={idx} 
+                        onClick={() => setSelectedYearId(y.id)}
+                        className={cn('px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer font-sans h-7',
+                          isActive 
+                           ? 'border-foreground/35 bg-bento-item text-foreground ring-1 ring-inset ring-foreground/5' 
+                           : 'border-border/40 bg-bento-card text-muted-foreground/55 hover:text-foreground hover:bg-bento-item/20')}
+                      >
+                        <span>{cleanTitle(y.title)}</span>
+                        {isActive && <div className="w-1.5 h-1.5 bg-foreground rounded-full" />}
+                        {isDone && <CheckCircle size={9} className="text-foreground/70" />}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Edit Program Button */}
+                <button 
+                  onClick={() => setShowSetup(true)}
+                  className="ml-auto h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans"
+                >
+                  Edit Program
+                </button>
               </div>
-              <button 
-                onClick={() => setShowSetup(true)}
-                className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans"
-              >
-                Edit Program
-              </button>
-            </div>
 
-            {/* All Years (Micro Pills) */}
-            <div className="flex gap-2 flex-wrap">
-              {programYears.map((y, idx) => {
-                const status = stripWL(getVal(y, 'Status', 'status'))
-                const isDone = status.toLowerCase().includes('complet')
-                const isActive = getBoolVal(y, 'Current Year', 'current_year')
-                return (
+              {/* Row 2: Academic Level (Undergraduate) and Active Status Buttons */}
+              <div className="flex items-center gap-4 flex-wrap border-t border-border/20 pt-2.5">
+                <span className="text-[12px] font-black uppercase tracking-wider text-muted-foreground/80 font-sans leading-none">
+                  {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level')) || 'Undergraduate'}
+                </span>
+                
+                <div className="w-px h-4 bg-border/30 mx-1" />
+
+                {/* Active Year button */}
+                {activeYear && (
                   <button 
-                    key={idx} 
-                    onClick={() => setSelectedYearId(y.id)}
-                    className={cn('px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border rounded-[4px] transition-all flex items-center gap-1.5 cursor-pointer font-sans',
-                      isActive 
-                       ? 'border-foreground/35 bg-bento-item text-foreground ring-1 ring-inset ring-foreground/5' 
-                       : 'border-border/40 bg-bento-card text-muted-foreground/55 hover:text-foreground hover:bg-bento-item/20')}
+                    onClick={() => setSelectedYearId(activeYear.id)}
+                    className="px-3.5 py-1.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[9.5px] font-black uppercase tracking-wider rounded-[6px] text-foreground transition-all flex items-center gap-1.5 h-7 font-sans"
                   >
-                    <span>{cleanTitle(y.title)}</span>
-                    {isActive && <div className="w-1.5 h-1.5 bg-foreground rounded-full" />}
-                    {isDone && <CheckCircle size={8} className="text-foreground/70" />}
+                    <span className="text-muted-foreground/50">Year:</span>
+                    <span>{cleanTitle(activeYear.title)}</span>
                   </button>
-                )
-              })}
-            </div>
+                )}
 
-            {/* Minimized Flex Stats Cards */}
-            <div className="flex gap-3 flex-wrap">
-              {activeYear && (
-                <div 
-                  onClick={() => setSelectedYearId(activeYear.id)}
-                  className="px-3 py-1.5 border border-border bg-bento-card hover:bg-bento-item/30 rounded-[6px] transition-all cursor-pointer flex flex-col gap-0.5"
-                >
-                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/50">Active Year</span>
-                  <span className="text-[10px] font-black uppercase text-foreground leading-tight">{cleanTitle(activeYear.title)}</span>
+                {/* Active Semester button */}
+                {activeSem && (
+                  <button 
+                    onClick={() => setSelectedSemId(activeSem.id)}
+                    className="px-3.5 py-1.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[9.5px] font-black uppercase tracking-wider rounded-[6px] text-foreground transition-all flex items-center gap-1.5 h-7 font-sans"
+                  >
+                    <span className="text-muted-foreground/50">Sem:</span>
+                    <span>{cleanTitle(activeSem.title)}</span>
+                  </button>
+                )}
+
+                {/* Cumulative GPA button */}
+                <div className="px-3.5 py-1.5 border border-border/50 bg-bento-card/30 text-[9.5px] font-black uppercase tracking-wider rounded-[6px] text-foreground flex items-center gap-1.5 h-7 font-sans select-none">
+                  <span className="text-muted-foreground/50">GPA:</span>
+                  <span>{getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'}</span>
                 </div>
-              )}
-              {activeSem && (
-                <div 
-                  onClick={() => setSelectedSemId(activeSem.id)}
-                  className="px-3 py-1.5 border border-border bg-bento-card hover:bg-bento-item/30 rounded-[6px] transition-all cursor-pointer flex flex-col gap-0.5"
-                >
-                  <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/50">Active Semester</span>
-                  <span className="text-[10px] font-black uppercase text-foreground leading-tight">{cleanTitle(activeSem.title)}</span>
-                </div>
-              )}
-              <div className="px-3 py-1.5 border border-border bg-bento-card rounded-[6px] flex flex-col gap-0.5 select-none">
-                <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/50">Cumulative GPA</span>
-                <span className="text-[10px] font-black uppercase text-foreground leading-tight">{getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'}</span>
               </div>
             </div>
 
             {/* Comprehensive Academic Life Hub Grid */}
-            <div className="grid grid-cols-3 gap-8 items-start">
+            <div className="grid grid-cols-3 gap-6 items-stretch">
               {/* Left Column: Calendar & Planner */}
-              <div className="col-span-2 space-y-8">
+              <div className="col-span-2 flex flex-col gap-6">
                 {/* Week Calendar */}
                 <section className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -618,7 +798,10 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                                     else if (evAny._type === 'Exam') navigateTo('EXAMS', evAny.id);
                                     else if (evAny._type === 'Note Visit' && evAny.id) onOpenNote(evAny.id);
                                     else if (evAny._type === 'Study' && evAny.notePath) onOpenNote(evAny.notePath);
-                                    else if (evAny._type === 'Study Session' && evAny.hub_id) navigateTo('PLANNER', evAny.hub_id);
+                                    else if (evAny._type === 'Study Session' && evAny.hub_id) {
+                                      const sHub = (data.study_sessions || []).find(h => h.id === evAny.hub_id);
+                                      onOpenNote(sHub?.path || `database/study planner/${evAny.hub_id}.md`);
+                                    }
                                   }}
                                   className={cn("text-[7.5px] font-black uppercase truncate px-1 py-0.5 rounded-[3px] border select-none leading-normal flex items-center gap-1", 
                                     style.bg, style.border, style.text,
@@ -652,240 +835,703 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   </div>
                 </section>
 
-                {/* Study Planner Checklist */}
-                <section className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <SectionHeader title="Study Planner" count={activeHubs.length} />
-                    <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
-                      Open Full Planner →
-                    </button>
-                  </div>
-                  {activeHubs.length === 0 ? (
-                    <div className="p-5 border border-border bg-bento-card rounded-[8px] text-center">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2">No active study hubs</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      {activeHubs.map((hub, idx) => {
-                        const isDone = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
-                        return (
-                          <div key={idx} onClick={() => navigateTo('PLANNER', hub.id)}
-                            className="p-3 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[8px] transition-colors flex items-center justify-between cursor-pointer gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <button onClick={(e) => toggleHub(hub, e)}
-                                className={cn("w-4 h-4 border rounded-[3px] flex items-center justify-center shrink-0 transition-colors bg-[#18181a]",
-                                  isDone ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground")}
-                              >
-                                {isDone && <Check size={9} strokeWidth={4} className="text-background" />}
-                              </button>
-                              <span className={cn("text-[10px] font-black uppercase truncate text-foreground/90", isDone && "line-through text-muted-foreground")}>{cleanTitle(hub.title || hub.id)}</span>
-                            </div>
-                            <ChevronRight size={10} className="text-muted-foreground/30 shrink-0" />
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {/* Quick Add Hub */}
-                  <div className="mt-3">
-                    {isAddingHub ? (
-                      <div className="flex gap-2 p-2 border border-border bg-bento-item/10 rounded-[8px]">
-                        <input 
-                          type="text" 
-                          value={quickHubName}
-                          onChange={e => setQuickHubName(e.target.value)}
-                          placeholder="New hub title..."
-                          className="flex-1 bg-transparent text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30"
-                          onKeyDown={async e => {
-                            if (e.key === 'Enter' && quickHubName.trim()) {
-                              try {
-                                await onCreate('study planner', quickHubName.trim(), { status: wrapWL('Active') })
-                                toast.success('Study hub created')
-                                setQuickHubName('')
-                                setIsAddingHub(false)
-                                onRefresh()
-                              } catch {
-                                toast.error('Failed to create')
-                              }
-                            }
-                          }}
-                        />
-                        <button 
-                          onClick={() => { setIsAddingHub(false); setQuickHubName('') }}
-                          className="text-[8px] font-black uppercase text-muted-foreground/60 hover:text-foreground"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
+                {/* Courses, Planner & Practice Tabbed Card */}
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col h-[350px] space-y-3">
+                  {/* Tabs Header */}
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
+                    <div className="flex gap-3">
                       <button 
-                        onClick={() => setIsAddingHub(true)}
-                        className="w-full py-2.5 border border-dashed border-border/60 hover:border-foreground/30 rounded-[8px] flex items-center justify-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-all"
+                        onClick={() => setLeftBottomTab('courses')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          leftBottomTab === 'courses' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
-                        <Plus size={10} /> Add New Study Hub
+                        Courses
                       </button>
+                      <button 
+                        onClick={() => setLeftBottomTab('planner')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          leftBottomTab === 'planner' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        Planner
+                      </button>
+                      <button 
+                        onClick={() => setLeftBottomTab('practice')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          leftBottomTab === 'practice' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        Practice
+                      </button>
+                    </div>
+                    
+                    {leftBottomTab === 'courses' && (
+                      <button onClick={() => navigateTo('COURSES')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
+                        All →
+                      </button>
+                    )}
+                    {leftBottomTab === 'planner' && (
+                      <button onClick={() => onOpenNote ? onOpenNote('database/study planner') : navigate('/obsidian?path=database/study planner')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
+                        All →
+                      </button>
+                    )}
+                    {leftBottomTab === 'practice' && (
+                      <button onClick={() => navigateTo('PRACTICE')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
+                        All →
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Controls Row (Fixed) */}
+                  <div className="py-1 shrink-0 flex gap-2 flex-wrap items-center">
+                    {leftBottomTab === 'courses' && (
+                      <>
+                        <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={coursesSearch}
+                            onChange={e => setCoursesSearch(e.target.value)}
+                            placeholder="Search..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <select 
+                          value={coursesFilter}
+                          onChange={e => setCoursesFilter(e.target.value)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="All">All Semesters</option>
+                          {(data.semesters || []).map(s => (
+                            <option key={s.id} value={s.title}>{cleanTitle(s.title)}</option>
+                          ))}
+                        </select>
+
+                        <select 
+                          value={coursesSort}
+                          onChange={e => setCoursesSort(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="title">Sort: Title</option>
+                          <option value="credits">Sort: Credits</option>
+                          <option value="grade">Sort: Grade</option>
+                        </select>
+
+                        <button 
+                          onClick={() => { setIsAddingCourse(!isAddingCourse); if (!isAddingCourse) { setNewCourseName(''); setNewCourseCredits('4'); setNewCourseSem(data.semesters?.[0]?.title || '') } }}
+                          className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                        >
+                          <Plus size={9} /> Add
+                        </button>
+                      </>
+                    )}
+
+                    {leftBottomTab === 'planner' && (
+                      <>
+                        <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={plannerSearch}
+                            onChange={e => setPlannerSearch(e.target.value)}
+                            placeholder="Search..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <select 
+                          value={plannerFilter}
+                          onChange={e => setPlannerFilter(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Completed">Completed</option>
+                          <option value="All">All Statuses</option>
+                        </select>
+
+                        <select 
+                          value={plannerSort}
+                          onChange={e => setPlannerSort(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="title">Sort: Title</option>
+                          <option value="unit">Sort: Unit</option>
+                          <option value="course">Sort: Course</option>
+                        </select>
+
+                        <button 
+                          onClick={() => { setIsAddingPlannerHub(!isAddingPlannerHub); if (!isAddingPlannerHub) { setNewHubName(''); setNewHubCourse(courses[0]?.title || ''); setNewHubUnit('') } }}
+                          className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                        >
+                          <Plus size={9} /> Add
+                        </button>
+                      </>
+                    )}
+
+                    {leftBottomTab === 'practice' && (
+                      <>
+                        <div className="flex-1 min-w-[120px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={practiceSearch}
+                            onChange={e => setPracticeSearch(e.target.value)}
+                            placeholder="Search Practice..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <button 
+                          onClick={() => navigateTo('PRACTICE')}
+                          className="px-2.5 py-0.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[4px] flex items-center gap-1 transition-all font-sans"
+                        >
+                          <Plus size={9} /> Start Session
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Tab Body (Scrollable) */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-mini pr-1 pt-1.5 space-y-3">
+                    {leftBottomTab === 'courses' && (
+                      <div className="flex-grow flex flex-col gap-3 font-sans">
+                        {isAddingCourse && (
+                          <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add New Course</span>
+                            <div className="space-y-1.5">
+                              <input 
+                                type="text"
+                                value={newCourseName}
+                                onChange={e => setNewCourseName(e.target.value)}
+                                placeholder="Course title (e.g. OOP with Java)"
+                                className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <input 
+                                  type="number"
+                                  value={newCourseCredits}
+                                  onChange={e => setNewCourseCredits(e.target.value)}
+                                  placeholder="Credits"
+                                  className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                />
+                                <select 
+                                  value={newCourseSem}
+                                  onChange={e => setNewCourseSem(e.target.value)}
+                                  className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
+                                >
+                                  <option value="">Semester...</option>
+                                  {(data.semesters || []).map(s => (
+                                    <option key={s.id} value={s.title}>{cleanTitle(s.title)}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => { setIsAddingCourse(false); setNewCourseName('') }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!newCourseName.trim()) return
+                                  try {
+                                    await onCreate('courses', newCourseName.trim(), {
+                                      Credits: newCourseCredits || '4',
+                                      Semester: wrapWL(newCourseSem || (data.semesters?.[0]?.title || 'Winter2026')),
+                                      Status: wrapWL('Planned')
+                                    })
+                                    toast.success('Course created')
+                                    setNewCourseName('')
+                                    setIsAddingCourse(false)
+                                    onRefresh()
+                                  } catch {
+                                    toast.error('Failed to create course')
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {displayedCourses.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No courses match filter</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {displayedCourses.map((c, idx) => {
+                              const grade       = stripWL(getVal(c, 'Grade', 'grade'))
+                              const credits     = getVal(c, 'Credits', 'credits')
+                              const courseTitleNorm = String(c.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+                              
+                              const cAssign     = assignments.filter(a => {
+                                const aCourse = stripWL(getVal(a, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+                                return aCourse && (aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse));
+                              });
+                              const pendingCt   = cAssign.filter(a => !a.done).length
+
+                              const cExams      = exams.filter(e => {
+                                const eCourse = stripWL(getVal(e, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+                                return eCourse && (eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse));
+                              });
+                              const nextEx      = cExams.filter(e => e.date).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+                              const daysToExam  = nextEx?.date ? differenceInDays(new Date(nextEx.date), now) : null
+
+                              return (
+                                <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
+                                  className="p-2.5 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex flex-col gap-1 cursor-pointer font-sans group relative">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90 leading-tight pr-4 font-sans">{cleanTitle(c.title)}</span>
+                                    {grade && <span className={cn('px-1 py-0.5 text-[6.5px] font-black uppercase border shrink-0 font-sans', gradeColorClass(grade))}>{grade}</span>}
+                                  </div>
+                                  <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans font-medium">
+                                    <span>{credits} CR</span>
+                                    {pendingCt > 0 ? (
+                                      <span className="text-foreground">{pendingCt} due</span>
+                                    ) : daysToExam !== null && daysToExam >= 0 ? (
+                                      <span className={daysToExam <= 7 ? 'text-foreground' : 'text-muted-foreground/50'}>exam in {daysToExam}d</span>
+                                    ) : (
+                                      <span className="text-muted-foreground/30">Clear</span>
+                                    )}
+                                  </div>
+
+                                  <button 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      if (confirm(`Delete course "${cleanTitle(c.title)}"?`)) {
+                                        onDelete('courses', c.id).then(onRefresh);
+                                      } 
+                                    }}
+                                    className="absolute top-1.5 right-1.5 p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
+                                  >
+                                    <Trash2 size={9} />
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {leftBottomTab === 'planner' && (
+                      <div className="flex-grow flex flex-col gap-3 font-sans">
+                        {isAddingPlannerHub && (
+                          <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add Study Hub</span>
+                            <div className="space-y-1.5">
+                              <input 
+                                type="text"
+                                value={newHubName}
+                                onChange={e => setNewHubName(e.target.value)}
+                                placeholder="Hub title (e.g. Chapter 3 Hub)"
+                                className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <select 
+                                  value={newHubCourse}
+                                  onChange={e => setNewHubCourse(e.target.value)}
+                                  className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
+                                >
+                                  <option value="">Course...</option>
+                                  {courses.map(c => (
+                                    <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                  ))}
+                                </select>
+                                <input 
+                                  type="text"
+                                  value={newHubUnit}
+                                  onChange={e => setNewHubUnit(e.target.value)}
+                                  placeholder="Unit (e.g. Chapter 3)"
+                                  className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => { setIsAddingPlannerHub(false); setNewHubName('') }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!newHubName.trim()) return
+                                  try {
+                                    await onCreate('study planner', newHubName.trim(), {
+                                      course: wrapWL(newHubCourse),
+                                      unit: newHubUnit,
+                                      status: wrapWL('Active')
+                                    })
+                                    toast.success('Study hub created')
+                                    setNewHubName('')
+                                    setIsAddingPlannerHub(false)
+                                    onRefresh()
+                                  } catch {
+                                    toast.error('Failed to create study hub')
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {displayedHubs.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No hubs match filter</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {displayedHubs.map((hub, idx) => {
+                              return (
+                                <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
+                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
+                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans">{cleanTitle(hub.title || hub.id)}</span>
+                                  
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                    
+                                    <button 
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if (confirm(`Delete study hub "${cleanTitle(hub.title || hub.id)}"?`)) {
+                                          onDelete('study planner', hub.id).then(onRefresh);
+                                        } 
+                                      }}
+                                      className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
+                                    >
+                                      <Trash2 size={9} />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {leftBottomTab === 'practice' && (
+                      <div className="flex-grow flex flex-col gap-3 font-sans">
+                        {displayedPractices.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No practice history</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {displayedPractices.map((p, idx) => {
+                              const score = p.score || 0
+                              const total = p.total_questions || p.totalQuestions || 0
+                              const dateStr = p.timestamp ? format(new Date(p.timestamp), 'MMM d') : ''
+                              
+                              return (
+                                <div key={idx} onClick={() => navigateTo('PRACTICE')}
+                                  className="p-2.5 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex flex-col gap-1 cursor-pointer group relative font-sans">
+                                  <div className="flex items-start justify-between gap-2 pr-4">
+                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90 leading-tight">
+                                      {cleanTitle(p.title || p.note_path?.split('/').pop()?.replace('.md', '') || 'Practice Session')}
+                                    </span>
+                                    {total > 0 && (
+                                      <span className="px-1 py-0.5 text-[6.5px] font-black uppercase border border-border bg-bento-item text-foreground shrink-0 font-sans">
+                                        {score}/{total}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans font-medium">
+                                    <span>Recall Practice</span>
+                                    <span>{dateStr}</span>
+                                  </div>
+
+                                  <button 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      if (confirm('Delete practice history record?')) {
+                                        handleDeletePractice(p.path);
+                                      } 
+                                    }}
+                                    className="absolute top-1.5 right-1.5 p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
+                                  >
+                                    <Trash2 size={9} />
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </section>
               </div>
 
               {/* Right Column: Courses, Combined Tasks & Exams */}
-              <div className="space-y-6">
-                {/* Active Courses */}
-                {activeCourses.length > 0 && (
-                  <section className="p-5 border border-border bg-bento-card rounded-[8px] space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Active Courses</h3>
-                      <button onClick={() => navigateTo('COURSES')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
-                        All →
+              <div className="col-span-1 flex flex-col gap-6">
+                {/* Upper Right Hub/Inbox/PDF Tabbed Interface */}
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col h-[270px] space-y-3">
+                  {/* Tabs Header */}
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => setActiveCoursesTab('hubs')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          activeCoursesTab === 'hubs' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        Hubs
+                      </button>
+                      <button 
+                        onClick={() => setActiveCoursesTab('inbox')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          activeCoursesTab === 'inbox' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        Inbox
+                      </button>
+                      <button 
+                        onClick={() => setActiveCoursesTab('pdf')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          activeCoursesTab === 'pdf' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        PDF
                       </button>
                     </div>
-                    <div className="flex flex-col gap-3">
-                      {activeCourses.map((c, idx) => {
-                        const grade       = stripWL(getVal(c, 'Grade', 'grade'))
-                        const credits     = getVal(c, 'Credits', 'credits')
-                        const semester    = stripWL(getVal(c, 'Semester', 'semester'))
-                        const courseTitleNorm = String(c.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-                        
-                        const cAssign     = assignments.filter(a => {
-                          const aCourse = stripWL(getVal(a, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-                          return aCourse && (aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse));
-                        });
-                        const pendingCt   = cAssign.filter(a => !a.done).length
+                  </div>
 
-                        const cExams      = exams.filter(e => {
-                          const eCourse = stripWL(getVal(e, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-                          return eCourse && (eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse));
-                        });
-                        const nextEx      = cExams.filter(e => e.date).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
-                        const daysToExam  = nextEx?.date ? differenceInDays(new Date(nextEx.date), now) : null
-
-                        return (
-                          <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                            className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex flex-col gap-2 cursor-pointer font-sans">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="text-[10.5px] font-black uppercase truncate text-foreground/90 leading-tight">{cleanTitle(c.title)}</span>
-                              {grade && <span className={cn('px-1.5 py-0.5 text-[7px] font-black uppercase border shrink-0', gradeColorClass(grade))}>{grade}</span>}
-                            </div>
-                            <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest text-muted-foreground/60">
-                              <span>{semester} · {credits} CR</span>
-                              {pendingCt > 0 ? (
-                                <span className="text-foreground">{pendingCt} due</span>
-                              ) : daysToExam !== null && daysToExam >= 0 ? (
-                                <span className={daysToExam <= 7 ? 'text-foreground' : 'text-muted-foreground/50'}>exam in {daysToExam}d</span>
-                              ) : (
-                                <span className="text-muted-foreground/30">Clear</span>
-                              )}
-                            </div>
+                  {/* Tab Body (Scrollable) */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-mini pr-1 pt-1.5 space-y-3">
+                    {activeCoursesTab === 'hubs' && (
+                      <div className="flex-grow flex flex-col gap-3 font-sans">
+                        {hubs.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No study hubs</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {hubs.map((hub, idx) => {
+                              const isDone = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
+                              return (
+                                <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
+                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
+                                  <span className={cn("text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans", isDone && "line-through text-muted-foreground/60")}>{cleanTitle(hub.title || hub.id)}</span>
+                                  <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                </div>
+                              )
+                            })}
                           </div>
-                        )
-                      })}
-                    </div>
-                  </section>
-                )}
+                        )}
+                      </div>
+                    )}
 
-                {/* Combined Tasks & Exams Card */}
-                <section className="p-5 border border-border bg-bento-card rounded-[8px] space-y-4">
+                    {activeCoursesTab === 'inbox' && (
+                      <div className="flex-grow flex flex-col gap-3 font-sans">
+                        {inboxFiles.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">Inbox is empty</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {inboxFiles.map((file, idx) => {
+                              const filename = file.name || file.path?.split('/').pop() || 'Untitled'
+                              return (
+                                <div key={idx} onClick={() => onOpenNote(file.path)}
+                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
+                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans">{cleanTitle(filename)}</span>
+                                  <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeCoursesTab === 'pdf' && (
+                      <div className="flex-grow flex flex-col gap-3 font-sans">
+                        {pdfFiles.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No PDFs in vault</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            {pdfFiles.map((file, idx) => {
+                              const filename = file.name || file.path?.split('/').pop() || 'Untitled'
+                              return (
+                                <div key={idx} onClick={() => onOpenNote(file.path)}
+                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
+                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans">{cleanTitle(filename)}</span>
+                                  <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Combined Tasks, Exams & NotebookLM Card */}
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex-1 flex flex-col space-y-4 min-h-[250px]">
                   {/* Tabs Header */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2">
                     <div className="flex gap-3">
                       <button 
                         onClick={() => setSidebarTab('assignments')}
-                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                        className={cn("text-[9px] font-black uppercase tracking-wider transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
                           sidebarTab === 'assignments' 
                             ? "text-foreground border-foreground" 
                             : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
-                        Assignments
+                        Tasks
                       </button>
                       <button 
                         onClick={() => setSidebarTab('exams')}
-                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                        className={cn("text-[9px] font-black uppercase tracking-wider transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
                           sidebarTab === 'exams' 
                             ? "text-foreground border-foreground" 
                             : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
                         Exams
                       </button>
+                      <button 
+                        onClick={() => setSidebarTab('notebooklm')}
+                        className={cn("text-[9px] font-black uppercase tracking-wider transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          sidebarTab === 'notebooklm' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        NotebookLM
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => navigateTo(sidebarTab === 'assignments' ? 'ASSIGNMENTS' : 'EXAMS')} 
-                      className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
-                    >
-                      Open →
-                    </button>
+                    {sidebarTab === 'assignments' && (
+                      <button 
+                        onClick={() => navigateTo('ASSIGNMENTS')} 
+                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
+                      >
+                        Open →
+                      </button>
+                    )}
+                    {sidebarTab === 'exams' && (
+                      <button 
+                        onClick={() => navigateTo('EXAMS')} 
+                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
+                      >
+                        Open →
+                      </button>
+                    )}
+                    {sidebarTab === 'notebooklm' && (
+                      <button 
+                        onClick={() => navigate('/notebooks')} 
+                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
+                      >
+                        Open →
+                      </button>
+                    )}
                   </div>
 
                   {/* Tab Body */}
-                  {sidebarTab === 'assignments' ? (
-                    <div>
-                      {pendingAssignments.length === 0 ? (
-                        <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No pending assignments</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {pendingAssignments.map((a, idx) => {
-                            const daysLeft = getDaysUntil(a.due_date)
-                            return (
-                              <div key={idx} onClick={() => navigateTo('ASSIGNMENTS', a.id)}
-                                className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <button onClick={(e) => toggleAssignment(a, e)}
-                                    className={cn("w-4 h-4 border rounded-[3px] flex items-center justify-center shrink-0 transition-colors bg-[#18181a]",
-                                      a.done ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground")}
-                                  >
-                                    {a.done && <Check size={9} strokeWidth={4} className="text-background" />}
-                                  </button>
-                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(a.title)}</span>
+                  <div className="h-[135px] overflow-y-auto custom-scrollbar-mini pr-1 pt-2">
+                    {sidebarTab === 'assignments' && (
+                      <div>
+                        {pendingAssignments.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No pending assignments</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {pendingAssignments.map((a, idx) => {
+                              const daysLeft = getDaysUntil(a.due_date)
+                              return (
+                                <div key={idx} onClick={() => navigateTo('ASSIGNMENTS', a.id)}
+                                  className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <button onClick={(e) => toggleAssignment(a, e)}
+                                      className={cn("w-4 h-4 border rounded-[3px] flex items-center justify-center shrink-0 transition-colors bg-bento-card",
+                                        a.done ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground")}
+                                    >
+                                      {a.done && <Check size={9} strokeWidth={4} className="text-background" />}
+                                    </button>
+                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(a.title)}</span>
+                                  </div>
+                                  {daysLeft !== null && (
+                                    <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
+                                      daysLeft < 0 
+                                        ? "bg-foreground text-background border-foreground font-black" 
+                                        : daysLeft <= 3 
+                                          ? "bg-foreground/5 border-foreground/20 text-foreground" 
+                                          : "bg-muted/10 border-border/40 text-muted-foreground/60"
+                                    )}>
+                                      {daysLeft < 0 ? "Late" : `${daysLeft}d`}
+                                    </span>
+                                  )}
                                 </div>
-                                {daysLeft !== null && (
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {sidebarTab === 'exams' && (
+                      <div>
+                        {upcomingExams.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No upcoming exams</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {upcomingExams.map((e, idx) => {
+                              const daysLeft = differenceInDays(new Date(e.date), now)
+                              return (
+                                <div key={idx} onClick={() => navigateTo('EXAMS', e.id)}
+                                  className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(e.title)}</span>
+                                    <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5">
+                                      {format(new Date(e.date), 'MMM d')}
+                                    </span>
+                                  </div>
                                   <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
-                                    daysLeft < 0 
+                                    daysLeft <= 3 
                                       ? "bg-foreground text-background border-foreground font-black" 
-                                      : daysLeft <= 3 
-                                        ? "bg-[#18181a] border-foreground/30 text-foreground" 
-                                        : "bg-[#18181a] border-border text-muted-foreground/60"
+                                      : "bg-muted/10 border-border/40 text-muted-foreground/60"
                                   )}>
-                                    {daysLeft < 0 ? "Late" : `${daysLeft}d`}
-                                  </span>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      {upcomingExams.length === 0 ? (
-                        <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No upcoming exams</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {upcomingExams.map((e, idx) => {
-                            const daysLeft = differenceInDays(new Date(e.date), now)
-                            return (
-                              <div key={idx} onClick={() => navigateTo('EXAMS', e.id)}
-                                className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
-                                <div className="flex flex-col min-w-0">
-                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(e.title)}</span>
-                                  <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5">
-                                    {format(new Date(e.date), 'MMM d')}
+                                    {daysLeft === 0 ? "Today" : `${daysLeft}d left`}
                                   </span>
                                 </div>
-                                <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
-                                  daysLeft <= 3 
-                                    ? "bg-foreground text-background border-foreground font-black" 
-                                    : "bg-[#18181a] border-border text-muted-foreground/60"
-                                )}>
-                                  {daysLeft === 0 ? "Today" : `${daysLeft}d left`}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {sidebarTab === 'notebooklm' && (
+                      <div>
+                        {notebooks.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No notebooks found</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {notebooks.slice(0, 4).map((nb, idx) => {
+                              return (
+                                <div key={idx} onClick={() => navigate('/notebooks')}
+                                  className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(nb.title)}</span>
+                                    <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5">
+                                      {nb.sources_count || nb.sources?.length || 0} sources
+                                    </span>
+                                  </div>
+                                  <ChevronRight size={10} className="text-muted-foreground/30 shrink-0" />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </section>
               </div>
             </div>

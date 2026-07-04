@@ -57,12 +57,12 @@ export function StatCard({ label, value, accent, onClick, sub }: {
 }) {
   return (
     <div onClick={onClick} className={cn(
-      'p-5 border border-border/40 bg-muted/10 rounded-[8px] flex flex-col gap-1 transition-all',
-      onClick && 'cursor-pointer hover:bg-muted/20 hover:border-foreground/30'
+      'p-2.5 px-3.5 border border-border/30 bg-muted/10 rounded-[6px] flex flex-col gap-0.5 transition-all',
+      onClick && 'cursor-pointer hover:bg-muted/20 hover:border-foreground/20'
     )}>
-      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
-      <span className={cn('text-xl font-black tracking-tighter truncate', accent ? 'text-foreground' : 'text-foreground/90')}>{value}</span>
-      {sub && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">{sub}</span>}
+      <span className="text-[7.5px] font-black uppercase tracking-[0.15em] text-muted-foreground/50">{label}</span>
+      <span className={cn('text-xs font-black tracking-tight truncate', accent ? 'text-foreground' : 'text-foreground/95')}>{value}</span>
+      {sub && <span className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/30">{sub}</span>}
     </div>
   )
 }
@@ -185,12 +185,12 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
   if (type === 'bool') {
     const checked = value === true || value === 'true'
     return (
-      <div className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col justify-between gap-4 hover:bg-bento-item/30 transition-colors cursor-pointer" onClick={() => handleSave(!checked)}>
-        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{displayLabel}</span>
+      <div className="p-2.5 px-3.5 border border-border/80 bg-bento-card rounded-[6px] flex flex-col justify-between gap-1 hover:bg-bento-item/30 transition-colors cursor-pointer" onClick={() => handleSave(!checked)}>
+        <span className="text-[7.5px] font-black uppercase tracking-[0.15em] text-muted-foreground">{displayLabel}</span>
         <div className="flex items-center justify-between">
-          <span className="text-lg font-black uppercase text-foreground">{checked ? 'Yes' : 'No'}</span>
-          <div className={cn('w-6 h-6 border flex items-center justify-center rounded-[8px]', checked ? 'border-foreground bg-bento-item' : 'border-border')}>
-            {checked && <Check size={12} strokeWidth={3} className="text-foreground" />}
+          <span className="text-xs font-black uppercase text-foreground">{checked ? 'Yes' : 'No'}</span>
+          <div className={cn('w-4 h-4 border flex items-center justify-center rounded-[4px]', checked ? 'border-foreground bg-bento-item' : 'border-border')}>
+            {checked && <Check size={8} strokeWidth={3} className="text-foreground" />}
           </div>
         </div>
       </div>
@@ -198,17 +198,17 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
   }
 
   return (
-    <div className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col gap-3 group/bigprop relative hover:bg-bento-item/30 transition-colors cursor-pointer"
+    <div className="p-2.5 px-3.5 border border-border/80 bg-bento-card rounded-[6px] flex flex-col gap-1.5 group/bigprop relative hover:bg-bento-item/30 transition-colors cursor-pointer"
       onClick={startEdit}>
       <div className="flex items-center justify-between">
-        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{displayLabel}</span>
-        <Edit3 size={10} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground/50" />
+        <span className="text-[7.5px] font-black uppercase tracking-[0.15em] text-muted-foreground">{displayLabel}</span>
+        <Edit3 size={8} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground/50" />
       </div>
 
       {editing ? (
         type === 'select' || type === 'relation' ? (
           <div className="relative">
-            <span className="text-lg font-black tracking-tighter text-foreground">Select {displayLabel}</span>
+            <span className="text-xs font-black tracking-tighter text-foreground">Select {displayLabel}</span>
             <SelectPropertyEditor value={String(value || '')} source={schema?.source}
               label={displayLabel} onSave={handleSave} onCancel={() => setEditing(false)} />
           </div>
@@ -216,17 +216,17 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
           <input autoFocus type="date" value={editVal}
             onChange={e => setEditVal(e.target.value)}
             onBlur={() => handleSave()}
-            className="bg-transparent text-foreground px-2 py-1 text-sm font-black outline-none border border-border rounded-[8px] focus:border-muted-foreground w-full" />
+            className="bg-transparent text-foreground px-1.5 py-0.5 text-[10px] font-black outline-none border border-border rounded-[4px] focus:border-muted-foreground w-full" />
         ) : (
           <input autoFocus value={editVal}
             onChange={e => setEditVal(e.target.value)}
             onBlur={() => handleSave()}
             onKeyDown={e => e.key === 'Enter' && handleSave()}
-            className="bg-transparent text-foreground px-2 py-1 text-lg font-black uppercase outline-none border border-border rounded-[8px] focus:border-muted-foreground w-full" />
+            className="bg-transparent text-foreground px-1.5 py-0.5 text-[10px] font-black uppercase outline-none border border-border rounded-[4px] focus:border-muted-foreground w-full" />
         )
       ) : (
-        <span className={cn('text-lg font-black tracking-tighter truncate leading-none',
-          isEmpty ? 'text-muted-foreground/30 italic text-sm' : 'text-foreground')}>
+        <span className={cn('text-xs font-black tracking-tight truncate leading-none',
+          isEmpty ? 'text-muted-foreground/30 italic text-[10px]' : 'text-foreground')}>
           {isEmpty ? 'None' : displayVal}
         </span>
       )}

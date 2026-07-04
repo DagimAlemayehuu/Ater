@@ -1,0 +1,120 @@
+<h2>Academic Dashboard Centralization Layouts</h2>
+<p class="subtitle">Select the visual framework to unify the dashboard, knowledge base, and ingestion pipeline</p>
+
+<div class="split">
+  <!-- Option A -->
+  <div class="mockup">
+    <div class="mockup-header">Approach A: Course-Centric Bento (Recommended)</div>
+    <div class="mockup-body" style="background:#111113; color:#ebebeb; padding:15px; font-family:'Outfit',sans-serif; min-height:350px; display:flex; flex-direction:column; justify-content:space-between; font-size:11px;">
+      
+      <!-- Top Bar -->
+      <div style="display:flex; justify-content:space-between; border-bottom:1px solid #242426; padding-bottom:8px; margin-bottom:10px;">
+        <span style="font-weight:900; letter-spacing:1px; text-transform:uppercase; color:#d9d9d9;">Semester I (Active)</span>
+        <div style="display:flex; gap:10px;">
+          <span style="color:#a1a1aa; border:1px solid #242426; padding:2px 6px; border-radius:4px; font-size:9px;">🔍 SEARCH VAULT</span>
+          <span style="color:#a1a1aa; border:1px solid #242426; padding:2px 6px; border-radius:4px; font-size:9px;">🕸️ GRAPH VIEW</span>
+        </div>
+      </div>
+
+      <!-- Main Bento Grid -->
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; flex-grow:1;">
+        
+        <!-- Left: Course Cards -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:9px; text-transform:uppercase; color:#a1a1aa; font-weight:bold;">Active Courses</span>
+          
+          <div style="background:#151517; border:1px solid #242426; padding:10px; border-radius:6px; cursor:pointer;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="font-weight:bold; font-size:12px;">CS-101: Computer Science II</span>
+              <span style="color:#a1a1aa;">5 Atomic Notes</span>
+            </div>
+            <div style="background:#232326; height:4px; width:100%; border-radius:2px;">
+              <div style="background:#ebebeb; width:60%; height:100%; border-radius:2px;"></div>
+            </div>
+          </div>
+
+          <div style="background:#151517; border:1px solid #242426; padding:10px; border-radius:6px; cursor:pointer;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="font-weight:bold; font-size:12px;">MATH-202: Linear Algebra</span>
+              <span style="color:#a1a1aa;">8 Atomic Notes</span>
+            </div>
+            <div style="background:#232326; height:4px; width:100%; border-radius:2px;">
+              <div style="background:#ebebeb; width:30%; height:100%; border-radius:2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Ingestion & Inbox Widget -->
+        <div style="background:#151517; border:1px solid #242426; padding:10px; border-radius:6px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <span style="font-size:9px; text-transform:uppercase; color:#a1a1aa; font-weight:bold; display:block; margin-bottom:8px;">Inbox Ingestion</span>
+            <div style="border:1px dashed #242426; padding:12px; border-radius:6px; text-align:center; color:#a1a1aa; margin-bottom:8px;">
+              Drop PDFs/Text here to queue notes
+            </div>
+            <div style="font-size:9px; background:#1a1a1c; padding:6px; border-radius:4px; border:1px solid #242426;">
+              📥 <strong>Lecture_4_Stacks.pdf</strong><br/>
+              <span style="color:#a1a1aa;">Awaiting planner confirmation...</span>
+            </div>
+          </div>
+          <button style="background:#ebebeb; color:#111113; border:none; padding:6px; border-radius:4px; font-weight:bold; width:100%; cursor:pointer; font-size:9px; text-transform:uppercase; letter-spacing:1px;">Ingest Source</button>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div style="margin-top:10px; padding-top:6px; border-top:1px solid #242426; color:#a1a1aa; font-size:9px; display:flex; justify-content:space-between;">
+        <span>FSRS Reviews Due Today: <strong>3 cards</strong></span>
+        <span>Obsidian Vault: Connected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="mockup">
+    <div class="mockup-header">Approach B: Ingestion-First Console</div>
+    <div class="mockup-body" style="background:#111113; color:#ebebeb; padding:15px; font-family:'Outfit',sans-serif; min-height:350px; display:flex; flex-direction:column; justify-content:between; font-size:11px;">
+      
+      <!-- Ingestion Centerpiece -->
+      <div style="background:#151517; border:1px solid #242426; padding:15px; border-radius:8px; text-align:center; flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px;">
+        <span style="font-size:24px;">📥</span>
+        <span style="font-weight:900; font-size:14px; text-transform:uppercase; letter-spacing:1px;">Deploy New Knowledge</span>
+        <p style="color:#a1a1aa; max-width:180px; margin:0 auto; font-size:10px;">Drag source syllabi, slides, or chapters to segment into your courses</p>
+        <button style="background:#ebebeb; color:#111113; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:9px; text-transform:uppercase; letter-spacing:1px;">Choose File</button>
+      </div>
+
+      <!-- Compact Course Shelf -->
+      <div style="margin-top:10px;">
+        <span style="font-size:9px; text-transform:uppercase; color:#a1a1aa; font-weight:bold; display:block; margin-bottom:6px;">Course Repositories</span>
+        <div style="display:flex; gap:6px;">
+          <div style="background:#151517; border:1px solid #242426; padding:6px 10px; border-radius:4px; flex:1; text-align:center; font-weight:bold;">
+            CS-101
+          </div>
+          <div style="background:#151517; border:1px solid #242426; padding:6px 10px; border-radius:4px; flex:1; text-align:center; font-weight:bold;">
+            MATH-202
+          </div>
+          <div style="background:#151517; border:1px solid #242426; padding:6px 10px; border-radius:4px; flex:1; text-align:center; font-weight:bold;">
+            CHEM-102
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Approach A: Course-Centric Bento (Recommended)</h3>
+      <p>Organizes the app around courses and semesters. Ingestion, reference vault, and note view flow from the selected course context. Keeps everything organized and highly scannable.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Approach B: Ingestion-First Console</h3>
+      <p>Organizes the homepage as a landing pad for new files, prompting note creation immediately on launch, while list interfaces are secondary items.</p>
+    </div>
+  </div>
+</div>
