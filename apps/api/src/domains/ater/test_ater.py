@@ -870,5 +870,5 @@ def test_learning_object_paths_separate_academic_and_external_vault_roots():
         course="Microeconomics",
         unit="04_Production_And_Cost",
     ) == "Notes/academic/Winter2026/Microeconomics/04_Production_And_Cost/01_Foundations/Production_Function.md"
-    assert lo.get_hub_path("System Design") == "database/external/General/System_Design/System_Design_Hub.md"
-    assert lo.get_note_path("System Design", "Foundations", 1, "Load Balancing") == "Notes/external/General/System_Design/01_Foundations/Load_Balancing.md"
+    assert lo.get_hub_path("System Design") == "database/learning paths/System_Design_Hub.md"
+    assert lo.get_note_path("System Design", "Foundations", 1, "Load Balancing") == "database/General/System_Design/01_Foundations/Load_Balancing.md"

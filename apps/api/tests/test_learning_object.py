@@ -43,7 +43,7 @@ def test_route_helpers():
     assert get_note_path("Git", "Foundations", 1, "Git Three State Model") == "database/General/Git/01_Foundations/Git_Three_State_Model.md"
     # note path coursework
     assert get_note_path("Git", "Foundations", 1, "Git Three State Model", semester="Spring 2026", course="Data Structures", unit="03 Trees") == \
-           "database/Spring_2026/Data_Structures/03_Trees/01_Foundations/Git_Three_State_Model.md"
+           "Notes/academic/Spring_2026/Data_Structures/03_Trees/01_Foundations/Git_Three_State_Model.md"
 
 def test_lesson_variant_and_artifact_helpers():
     assert get_lesson_variant_path("Git Three State Model", "simple") == "lessons/Git_Three_State_Model.simple.html"

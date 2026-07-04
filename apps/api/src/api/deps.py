@@ -62,9 +62,9 @@ async def get_app_secrets(
     x_utility_key: Optional[str] = Header(None),
     x_utility_model: Optional[str] = Header(None),
     
-    x_vault_path: Optional[str] = Header(None),
-    x_inbox_path: Optional[str] = Header(None),
-    x_academic_path: str = Header("Notes"),
+    x_vault_path: Optional[str] = Header(None, alias="X-Vault-Path"),
+    x_inbox_path: Optional[str] = Header(None, alias="X-Inbox-Path"),
+    x_academic_path: str = Header("Notes", alias="X-Academic-Path"),
     x_auto_deploy: str = Header("false"),
     x_google_calendar_token: Optional[str] = Header(None)
 ) -> AppSecrets:

@@ -4,7 +4,7 @@ import { AppSidebar } from '../components/layout/app-sidebar'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '../context/theme-provider'
 import { SidebarContentProvider } from '../context/sidebar-content-context'
-import { NavigationProvider } from '../context/navigation-context'
+import { NavigationProvider } from '../context/navigation-provider'
 import { LayoutProvider } from '../context/layout-provider'
 
 // Mocking dependencies to avoid deep rendering issues
@@ -15,6 +15,9 @@ vi.mock('../context/theme-provider', () => ({
 
 vi.mock('../context/navigation-context', () => ({
   useNavigation: () => ({ goBack: vi.fn(), goForward: vi.fn(), canGoBack: false, canGoForward: false }),
+}))
+
+vi.mock('../context/navigation-provider', () => ({
   NavigationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }))
 

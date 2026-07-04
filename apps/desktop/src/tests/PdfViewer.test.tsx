@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PdfViewer } from '../components/obsidian/PdfViewer';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -25,15 +26,15 @@ describe('PdfViewer', () => {
   beforeEach(() => {
     // Setup mocks
     globalFetch = vi.fn();
-    global.fetch = globalFetch;
+    global.fetch = globalFetch as unknown as typeof fetch;
 
     globalCreateObjectURL = vi.fn().mockReturnValue('blob:http://localhost/test-blob-url');
-    global.URL.createObjectURL = globalCreateObjectURL;
+    global.URL.createObjectURL = globalCreateObjectURL as unknown as typeof URL.createObjectURL;
 
     globalRevokeObjectURL = vi.fn();
-    global.URL.revokeObjectURL = globalRevokeObjectURL;
+    global.URL.revokeObjectURL = globalRevokeObjectURL as unknown as typeof URL.revokeObjectURL;
 
-    vi.mocked(invoke).mockImplementation(async (cmd) => {
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
       if (cmd === 'get_sidecar_port') return 8000;
       if (cmd === 'get_sidecar_token') return 'test-token-123';
       return null;
@@ -63,15 +64,15 @@ describe('PdfViewer', () => {
     // Wait for fetch to be called
     await waitFor(() => {
       const fetchCalls = globalFetch.mock.calls;
-      const pdfFetch = fetchCalls.find(call => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
+      const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
       expect(pdfFetch).toBeTruthy();
     });
 
     const fetchCalls = globalFetch.mock.calls;
-    const pdfFetch = fetchCalls.find(call => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
+    const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
+    expect(pdfFetch).toBeTruthy();
     
-    const url = pdfFetch[0];
-    const options = pdfFetch[1];
+    const [url, options] = pdfFetch as any[];
 
     // Note: React state batches updates but `fetchPort` might resolve after initial render.
     // Allow either the initial default port or the dynamically resolved port in the test.
@@ -86,10 +87,20 @@ describe('PdfViewer', () => {
   });
 
   it('shows error state on 401 response and does not crash', async () => {
-    globalFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      statusText: 'Unauthorized'
+    globalFetch.mockImplementation(async (url: string) => {
+      if (url.includes('pdf-metadata')) {
+        return {
+          ok: true,
+          json: async () => ({ page_count: 1 }),
+          text: async () => ''
+        };
+      }
+      return {
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        text: async () => ''
+      };
     });
 
     render(<PdfViewer path="test.pdf" title="Test PDF" />);
@@ -104,10 +115,20 @@ describe('PdfViewer', () => {
   });
 
   it('shows error state on 404 response', async () => {
-    globalFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      statusText: 'Not Found'
+    globalFetch.mockImplementation(async (url: string) => {
+      if (url.includes('pdf-metadata')) {
+        return {
+          ok: true,
+          json: async () => ({ page_count: 1 }),
+          text: async () => ''
+        };
+      }
+      return {
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => ''
+      };
     });
 
     render(<PdfViewer path="test.pdf" title="Test PDF" />);

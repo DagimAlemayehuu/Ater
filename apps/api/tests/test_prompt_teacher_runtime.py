@@ -14,7 +14,7 @@ from src.domains.ater.tutor_service import TutorSessionManager
 
 
 def test_prompt_teacher_job_creation_resume_diagnostic_and_clarification():
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         service = PromptTeacherJobService(root / "Inbox" / "ater_queue.db", vault_path=root)
         job = service.create_or_resume("Teach me consumer behavior for an exam next Friday", conversation_id="conv_1")
@@ -31,7 +31,7 @@ def test_prompt_teacher_job_creation_resume_diagnostic_and_clarification():
 
 
 def test_synthetic_source_pack_prefers_local_vault_and_exposes_confidence():
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         note = root / "database" / "Microeconomics" / "Consumer_Behavior.md"
         note.parent.mkdir(parents=True)
@@ -49,7 +49,7 @@ def test_synthetic_source_pack_prefers_local_vault_and_exposes_confidence():
 
 
 def test_prompt_graph_profiles_weak_fallback_and_tutor_reuse():
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         service = PromptTeacherJobService(root / "Inbox" / "ater_queue.db", vault_path=root)
         job = service.create_or_resume("Teach me consumer behavior")
@@ -74,7 +74,7 @@ def test_prompt_teacher_api_lifecycle_and_quick_explanation_classifier():
     assert classify_prompt_learning_intent("what is consumer surplus?")["intent"] == "quick_explanation"
     assert classify_prompt_learning_intent("help me master consumer behavior")["intent"] == "teacher_job"
 
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         inbox = root / "Inbox"
         inbox.mkdir()

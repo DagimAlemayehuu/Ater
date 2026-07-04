@@ -16,8 +16,6 @@ def mock_get_app_secrets():
         ai_key="mock-key"
     )
 
-app.dependency_overrides[get_app_secrets] = mock_get_app_secrets
-
 client = TestClient(app)
 
 def setup_mock_vault():
@@ -35,8 +33,10 @@ def setup_mock_vault():
 
 @pytest.fixture(autouse=True)
 def vault_setup():
+    app.dependency_overrides[get_app_secrets] = mock_get_app_secrets
     setup_mock_vault()
     yield
+    app.dependency_overrides.pop(get_app_secrets, None)
 
 def test_obsidian_file_path_traversal():
     response = client.get("/api/obsidian/file", params={"path": "../escape.md"})
@@ -92,4 +92,3 @@ def test_interactive_quiz_valid_path():
 def test_valid_paths_still_work():
     response = client.get("/api/obsidian/file", params={"path": "test_note.md"})
     assert response.status_code == 200
-

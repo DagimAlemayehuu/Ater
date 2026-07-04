@@ -211,15 +211,20 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       }
 
       // 3. Sync state with native Rust layer (Tauri offline DRM system)
-      let machineId = 'unknown-device'
+      let machineId = ''
       try {
         machineId = await Promise.race([
           invoke<string>('get_machine_id'),
           new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
         ])
       } catch (err) {
-        console.warn('[Security System] Failed to resolve device footprint, using fallback:', err)
-        machineId = crypto.randomUUID()
+        console.warn('[Security System] Failed to resolve device footprint; skipping lease sync until retry:', err)
+        return
+      }
+
+      if (!machineId) {
+        console.warn('[Security System] Native device footprint was empty; skipping lease sync until retry.')
+        return
       }
 
       let leaseApplied = false

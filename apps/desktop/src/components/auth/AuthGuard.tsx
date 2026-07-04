@@ -23,7 +23,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Bypass auth check during development/design capture
-  const isBypass = new URLSearchParams(window.location.search).get('bypass') === 'true' || window.location.hash.includes('bypass=true')
+  const isBypass = import.meta.env.DEV && (
+    new URLSearchParams(window.location.search).get('bypass') === 'true' ||
+    window.location.hash.includes('bypass=true')
+  )
   if (isBypass) {
     return <>{children}</>
   }

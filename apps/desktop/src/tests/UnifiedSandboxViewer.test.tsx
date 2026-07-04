@@ -2,6 +2,7 @@ import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { UnifiedSandboxViewer } from '../components/obsidian/UnifiedSandboxViewer'
 import { BrowserRouter } from 'react-router-dom'
+import type { InteractiveArtifact } from '@/lib/artifacts/types'
 
 // Mock dependencies
 vi.mock('@/lib/sidecarApi', () => ({
@@ -39,17 +40,19 @@ vi.mock('@/lib/artifacts/store', () => ({
   })
 }))
 
-const customArtifacts = [
+const customArtifacts: InteractiveArtifact[] = [
   {
     id: 'test-art',
     title: 'Test Artifact',
     versions: [
       {
         version: 1,
+        raw: '<h1>Sandbox</h1>',
         chapters: [
           {
             id: 'chap-1',
             title: 'Chap 1',
+            content: '',
             sandbox: '<h1>Sandbox</h1>'
           }
         ]

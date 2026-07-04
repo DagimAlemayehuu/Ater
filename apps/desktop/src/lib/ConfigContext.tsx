@@ -205,11 +205,13 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                             new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
                         ]);
                     } catch (err) {
-                        console.warn('[Config] Failed to get native machine ID, generating fallback:', err);
-                        machineId = crypto.randomUUID();
+                        console.warn('[Config] Failed to get native machine ID; leaving machineId unresolved:', err);
+                        machineId = '';
                     }
-                    await store.set('machineId', machineId);
-                    await store.save();
+                    if (machineId) {
+                        await store.set('machineId', machineId);
+                        await store.save();
+                    }
                 }
 
                 let loadedConfig: any = {

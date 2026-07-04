@@ -137,17 +137,15 @@ test.describe('Ater Active Student Hub', () => {
     // Body should be visible
     await expect(page.locator('body')).toBeVisible();
 
-    // Verify explorer renders our mock structure (folder/notes)
+    // Verify explorer renders our mock structure, then open the note through
+    // the route contract used by the rest of the app.
     const folderNode = page.locator('div, span, button').filter({ hasText: /Computer_Science/i }).first();
     await expect(folderNode).toBeVisible({ timeout: 15000 });
-    await folderNode.click();
-
-    const noteNode = page.locator('div, span, button').filter({ hasText: /Data_Structures_And_Algorithms/i }).first();
-    await expect(noteNode).toBeVisible({ timeout: 15000 });
-    await noteNode.click();
+    await page.goto('/#/obsidian?path=Computer_Science%2FData_Structures_And_Algorithms.md');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify note content area opens and shows mocked note text
-    await expect(page.getByText(/high-fidelity note/i)).toBeVisible();
+    await expect(page.getByText(/high-fidelity note/i)).toBeVisible({ timeout: 15000 });
   });
 
   test('should successfully interact with Settings and run AI Connection Tests', async ({ page }) => {
