@@ -118,15 +118,51 @@ class AttachmentManager:
             "chunk_metadata": chunk_metadata
         }
 
+    def _validate_path(self, file_path: str, file_type: str) -> Path:
+        from src.utils.vault_path import resolve_vault_path
+        allowed_roots: list[Path] = []
+        if self.vault_path:
+            allowed_roots.append(self.vault_path)
+        if file_type != 'note' and self.inbox_path:
+            allowed_roots.append(self.inbox_path)
+        if file_type == 'artifact':
+            allowed_roots.append(Path(".").resolve())
+
+        if file_type == 'note' and not self.vault_path:
+            raise ValueError("Access Denied: Obsidian note must reside inside the vault.")
+        if not allowed_roots:
+            raise ValueError("Access Denied: Attachment file must reside inside an approved root.")
+
+        for root in allowed_roots:
+            try:
+                return resolve_vault_path(root, file_path)
+            except ValueError:
+                continue
+
+        raise ValueError("Access Denied: Attachment file must reside inside an approved root.")
+
     def attach_file(self, conversation_id: str, file_path: str, file_type: str, message_id: Optional[str] = None, content: Optional[str] = None) -> Dict[str, Any]:
         """
         Extracts, chunks and saves the file in the database.
         """
+        self._validate_path(file_path, file_type)
+
         if content is not None:
+            import uuid
+            if self.inbox_path:
+                safe_dir = self.inbox_path / ".chat_attachments"
+                safe_dir.mkdir(parents=True, exist_ok=True)
+                safe_name = f"{uuid.uuid4().hex}_{Path(file_path).name}"
+                internal_path = safe_dir / safe_name
+                internal_path.write_text(content, encoding="utf-8")
+                stored_file_path = str(internal_path)
+            else:
+                stored_file_path = file_path
+
             return self.storage.create_attachment(
                 conv_id=conversation_id,
                 filename=Path(file_path).name,
-                file_path=file_path,
+                file_path=stored_file_path,
                 file_type=file_type,
                 extracted_text=content,
                 chunk_metadata=[{"length": len(content), "offset": 0}],
@@ -170,6 +206,9 @@ class AttachmentManager:
 
         file_path = attachment["file_path"]
         file_type = attachment["file_type"]
+
+        # Validate the stored file path to ensure no traversal upon promotion
+        self._validate_path(file_path, file_type)
 
         if file_type == 'pdf':
             service = SourceLearningJobService(self.storage.db_path)
