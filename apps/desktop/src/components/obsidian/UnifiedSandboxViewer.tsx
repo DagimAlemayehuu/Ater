@@ -256,6 +256,8 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
   // Handle postMessage events for runtime errors & state changes
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
+      if (event.source !== iframeRef.current?.contentWindow) return
+      if (event.origin !== 'null' && event.origin !== window.origin) return
       if (!event.data) return
 
       if (event.data.type === 'ater:sandbox-state-change') {
