@@ -6,6 +6,104 @@ Ignored scope: website and admin app.
 
 Status: incomplete but deep audit in progress. This document records confirmed problems found so far and gives a checklist-style path to fix them.
 
+## Continuation Update
+
+This section records the additional audit work done after the initial `Problems.Md` file was created.
+
+### Newly Checked In This Continuation
+
+- [x] Re-read the remaining high-risk portions of `apps/desktop/src/lib/sidecarApi.ts`.
+- [x] Rechecked Tauri CSP and bundle configuration in `apps/desktop/src-tauri/tauri.conf.json`.
+- [x] Compared frontend `invoke(...)` calls against registered Tauri commands.
+- [x] Compared desktop HTTP sidecar call patterns against FastAPI route declarations.
+- [x] Reviewed chat runtime attachment and promotion code.
+- [x] Reviewed `ConfigContext`, activation binding, and `securityStore` machine ID/lease behavior.
+- [x] Reviewed additional Ater router auth gaps and dead endpoints.
+
+### New Problems Found In This Continuation
+
+- [ ] `/practice/explain` can append misconceptions to an outside-vault path.
+  - Problem: `apps/api/src/api/routers/ai.py` accepts `note_path` in the explain payload. When a misconception is detected, it calls `AterService.append_misconception_to_note(note_path, misconception)`.
+  - Root cause: `apps/api/src/domains/ater/service.py` resolves `Path(note_path)` directly when it is absolute, and only prepends the vault for relative paths. It does not verify the final path is inside the vault before reading and writing the note.
+  - Impact: a crafted explain request can cause the backend to read and rewrite a Markdown-like file outside the configured vault.
+  - Fix checklist:
+    - [ ] Resolve `note_path` through the shared vault containment helper.
+    - [ ] Reject absolute paths outside the vault.
+    - [ ] Reject encoded traversal and `../` traversal.
+    - [ ] Add regression tests for `/practice/explain` with an outside absolute path and a valid inside-vault note.
+
+- [ ] `/ater/save-persona` is a broken dead endpoint and is not protected by sidecar auth.
+  - Problem: `apps/api/src/api/routers/ater.py` defines `/ater/save-persona` without `Depends(get_app_secrets)`.
+  - Additional runtime bug: the route imports `update_persona_prompt` from `src.domains.ater.agents`, but that function does not exist anywhere under `apps/api/src`.
+  - Impact: the endpoint 500s if called. If it is later implemented without adding auth, it becomes an unauthenticated prompt-writing endpoint.
+  - Fix checklist:
+    - [ ] Decide whether this endpoint is still needed.
+    - [ ] If unused, delete the route.
+    - [ ] If needed, implement the missing function intentionally.
+    - [ ] Add `Depends(get_app_secrets)` or router-level auth.
+    - [ ] Add a route test for success and token rejection.
+
+- [ ] Several Ater status endpoints bypass sidecar token validation.
+  - Problem: these routes are mounted under `ater_router` without router-level auth and do not depend on `get_app_secrets`:
+    - `/api/practice/status`
+    - `/api/rag/sync-status`
+    - `/api/practice/vault/status`
+  - Files:
+    - `apps/api/src/api/routers/ater.py`
+  - Impact: local unauthenticated callers can read global generation/sync status when `ATER_SIDECAR_TOKEN` is configured. This is lower severity than write-path auth gaps, but inconsistent with the protected sidecar model.
+  - Fix checklist:
+    - [ ] Add `Depends(get_app_secrets)` to these routes unless they are intentionally public.
+    - [ ] Add token-required tests.
+    - [ ] Document any route intentionally left public.
+
+- [ ] Source learning sidecar methods still lack consistent frontend feature locks.
+  - Problem: `uploadSourceFile`, `augmentGroundedContext`, `createSourceLearningJob`, `startSourceLearningJob`, `deploySourceLearningJob`, and `updateSourceLearningJobRoadmap` perform source ingestion/job mutations without the same `enforceFeatureLock()` pattern used by adjacent AI/source actions.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+  - Impact: locked users can still reach parts of the source learning pipeline from lower-level client calls.
+  - Fix checklist:
+    - [ ] Apply `file_ingestion` locks to upload/create/start/deploy paths.
+    - [ ] Apply `ai-features` or the chosen source-learning feature lock to augmentation/planning/deployment paths.
+    - [ ] Add tests for locked and unlocked states.
+
+- [ ] `srsFeynmanValidate` bypasses frontend feature-lock and credit checks.
+  - Problem: `sidecarApi.srsFeynmanValidate()` invokes the native command directly without `enforceFeatureLock()` or credit deduction, while nearby explain/practice AI actions enforce locks and/or credits.
+  - Files:
+    - `apps/desktop/src/lib/sidecarApi.ts`
+    - `apps/api/src/api/routers/ater.py`
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: Feynman validation can become a backdoor around practice/AI restrictions.
+  - Fix checklist:
+    - [ ] Decide the correct feature slug, likely `practice-recall` or `interactive_quiz`.
+    - [ ] Add `enforceFeatureLock()` before invoking.
+    - [ ] Add credit deduction if this path uses AI or expensive validation.
+    - [ ] Add locked-state tests.
+
+- [ ] Machine ID fallback can persist or request leases for a random device ID.
+  - Problem: `ConfigContext` persists `crypto.randomUUID()` as `machineId` if native `get_machine_id` times out. `securityStore` also uses `crypto.randomUUID()` when resolving the machine ID for lease generation fails.
+  - Files:
+    - `apps/desktop/src/lib/ConfigContext.tsx`
+    - `apps/desktop/src/context/securityStore.ts`
+    - `apps/desktop/src-tauri/src/lib.rs`
+    - `apps/desktop/src-tauri/src/commands.rs`
+  - Impact: the UI can display a fake persisted device ID, and the security store can ask the lease edge function for a lease bound to a random hash that Rust will reject against the real local machine hash. This creates entitlement drift and confusing lockout behavior when native machine ID resolution is slow.
+  - Fix checklist:
+    - [ ] Do not persist a random fallback as `machineId`.
+    - [ ] Treat native machine ID failure as a recoverable error state.
+    - [ ] Do not request security leases with a random machine hash.
+    - [ ] Add tests for native machine ID timeout/failure.
+
+- [ ] Chat attachment path validation is inconsistent for relative paths and promotion.
+  - Problem: `AttachmentManager.extract_and_chunk()` has local root checks, but stores the original `file_path`. Promotion later reopens `attachment["file_path"]` directly for non-PDF attachments. The earlier content-bypass bug makes this worse, but even normal attachment handling should store a resolved, approved path rather than the caller-supplied string.
+  - Files:
+    - `apps/api/src/domains/ater/chat_runtime/attachments.py`
+  - Impact: validation and later file reads can drift apart. A path that passed one branch can be reopened later through a different branch without re-validating the resolved target.
+  - Fix checklist:
+    - [ ] Store the resolved approved path, not the raw input path.
+    - [ ] Re-run containment validation during promotion.
+    - [ ] Use copied attachment storage instead of reopening caller paths where possible.
+    - [ ] Add tests for relative paths, absolute outside paths, content-provided attachments, and promotion.
+
 ## How To Use This File
 
 - `[ ]` means the issue is not fixed.
@@ -782,4 +880,3 @@ The audit is not finished. These are the remaining areas that should be continue
 - [ ] Add an endpoint collision check to prevent duplicate FastAPI routes like `/api/ater/artifact/generate`.
 - [ ] Review whether simulation/demo mode should be isolated from real file mutations more strictly.
 - [ ] Review current release packaging for every supported OS/architecture.
-
