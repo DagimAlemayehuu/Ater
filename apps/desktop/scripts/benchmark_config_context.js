@@ -1,4 +1,5 @@
-/* global process, setTimeout, console */
+/* eslint-disable no-console */
+/* global setTimeout, console */
 import { performance } from 'perf_hooks';
 
 // Simulate Tauri Store
@@ -11,33 +12,15 @@ class MockStore {
   }
   async set(key, value) {
     // Simulate some latency for store operation
-    await new Promise(r => {
-      if (process.env.NODE_ENV === 'development') {
-        setTimeout(r, 1);
-      } else {
-        r();
-      }
-    });
+    await new Promise(r => setTimeout(r, 1));
     this.data[key] = value;
   }
   async delete(key) {
-    await new Promise(r => {
-      if (process.env.NODE_ENV === 'development') {
-        setTimeout(r, 1);
-      } else {
-        r();
-      }
-    });
+    await new Promise(r => setTimeout(r, 1));
     delete this.data[key];
   }
   async save() {
-    await new Promise(r => {
-      if (process.env.NODE_ENV === 'development') {
-        setTimeout(r, 5);
-      } else {
-        r();
-      }
-    });
+    await new Promise(r => setTimeout(r, 5));
   }
 }
 
@@ -50,9 +33,7 @@ async function runBenchmark() {
 
   const iterations = 10;
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('--- Benchmarking Original Sequential Loop ---');
-  }
+  console.log('--- Benchmarking Original Sequential Loop ---');
   let startOriginal = performance.now();
   for (let it = 0; it < iterations; it++) {
     for (const key of Object.keys(entries)) {
@@ -66,13 +47,9 @@ async function runBenchmark() {
     await store.save();
   }
   let endOriginal = performance.now();
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Original Time: ${(endOriginal - startOriginal).toFixed(2)}ms`);
-  }
+  console.log(`Original Time: ${(endOriginal - startOriginal).toFixed(2)}ms`);
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('--- Benchmarking Promise.all ---');
-  }
+  console.log('--- Benchmarking Promise.all ---');
   let startOptimized = performance.now();
   for (let it = 0; it < iterations; it++) {
     await Promise.all(Object.keys(entries).map(async (key) => {
@@ -86,9 +63,7 @@ async function runBenchmark() {
     await store.save();
   }
   let endOptimized = performance.now();
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Optimized Time: ${(endOptimized - startOptimized).toFixed(2)}ms`);
-  }
+  console.log(`Optimized Time: ${(endOptimized - startOptimized).toFixed(2)}ms`);
 }
 
 runBenchmark();
