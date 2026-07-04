@@ -9,6 +9,7 @@ import re
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+from src.utils.vault_path import resolve_vault_path
 from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request
@@ -343,7 +344,10 @@ def read_obsidian_file(path: str, secrets: AppSecrets = Depends(get_app_secrets)
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault Path missing")
         
-    full_path = Path(secrets.vault_path) / path
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
     if not full_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
         
@@ -372,7 +376,10 @@ def write_obsidian_file(
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault Path missing")
         
-    full_path = Path(secrets.vault_path) / path
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
     try:
         full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_text(content, encoding="utf-8")
@@ -386,7 +393,10 @@ def delete_obsidian_item(path: str, secrets: AppSecrets = Depends(get_app_secret
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault Path missing")
         
-    full_path = Path(secrets.vault_path) / path
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
     if not full_path.exists():
         raise HTTPException(status_code=404, detail="Item not found")
         
@@ -1039,12 +1049,11 @@ async def get_practice_session(
     if not path:
         raise HTTPException(status_code=400, detail="path is required")
         
-    p = Path(path)
-    if not p.is_absolute() or not p.exists():
-        if secrets.vault_path:
-            resolved_p = Path(secrets.vault_path) / path
-            if resolved_p.exists():
-                p = resolved_p
+    try:
+        p = resolve_vault_path(secrets.vault_path or ".", path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
+
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice not found")
         
@@ -1071,12 +1080,11 @@ async def update_practice_score(
     if not path or score is None:
         raise HTTPException(status_code=400, detail="path and score are required")
         
-    p = Path(path)
-    if not p.is_absolute() or not p.exists():
-        if secrets.vault_path:
-            resolved_p = Path(secrets.vault_path) / path
-            if resolved_p.exists():
-                p = resolved_p
+    try:
+        p = resolve_vault_path(secrets.vault_path or ".", path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
+
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice file not found")
         
@@ -1107,12 +1115,11 @@ async def delete_practice_session(
     if not path:
         raise HTTPException(status_code=400, detail="path is required")
         
-    p = Path(path)
-    if not p.is_absolute() or not p.exists():
-        if secrets.vault_path:
-            resolved_p = Path(secrets.vault_path) / path
-            if resolved_p.exists():
-                p = resolved_p
+    try:
+        p = resolve_vault_path(secrets.vault_path or ".", path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
+
     if not p.exists():
         raise HTTPException(status_code=404, detail="Practice file not found")
         
@@ -2054,6 +2061,39 @@ async def vault_generation_status():
 
 # --- Academic Core Upgrades (V33.1) ---
 
+@router.post("/ater/interactive-quiz")
+async def ater_interactive_quiz(
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    if not secrets.vault_path:
+        raise HTTPException(status_code=400, detail="Vault path missing")
+    
+    note_path = payload.get("note_path")
+    if not note_path:
+        raise HTTPException(status_code=400, detail="note_path is required")
+        
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, note_path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
+        
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="Note file not found")
+        
+    try:
+        from src.domains.ater.service import AterService
+        service = AterService(secrets)
+        # Using the same configuration format as generate_practice
+        config = payload.get("config", {})
+        # Note: In the absence of a dedicated interactive-quiz method, 
+        # reusing generate_practice which takes a note path or hub ID
+        return await service.generate_practice(note_path, config)
+    except NotImplementedError:
+         raise HTTPException(status_code=501, detail="Interactive quiz generation not yet fully wired")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/ater/notes/regenerate-quiz")
 async def regenerate_note_quiz(
     payload: Dict[str, Any] = Body(...),
@@ -2162,6 +2202,12 @@ async def oracle_tutor_session(
 ):
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault path missing")
+    
+    try:
+        resolve_vault_path(secrets.vault_path, note_path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
+        
     user_message = payload.get("message")
     session_id = payload.get("session_id")
     if not user_message:
@@ -2218,12 +2264,17 @@ async def restore_note_version(
     if version_id is None:
         raise HTTPException(status_code=400, detail="version_id is required")
     try:
+        full_path = resolve_vault_path(secrets.vault_path, note_path)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path escapes vault")
+        
+    try:
         from src.domains.ater.academic_db import AcademicDB
         db = AcademicDB(Path(secrets.vault_path))
         version = db.get_version_by_id(version_id)
         if not version:
             raise HTTPException(status_code=404, detail="Version not found")
-        full_path = Path(secrets.vault_path) / note_path
+            
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(version["content"])
         return {"success": True}
@@ -2353,7 +2404,7 @@ async def generate_artifacts_endpoint(
         # Build LLM client
         provider = secrets.ai_provider or "openai"
         model_name = secrets.ai_model or "gpt-4o-mini"
-        api_key = secrets.ai_api_key or "mock-key"
+        api_key = secrets.ai_key or "mock-key"
         if not api_key:
             api_key = "mock-key"
         
@@ -2807,13 +2858,22 @@ async def upload_file_to_inbox(
     inbox_dir = Path(effective_inbox)
     inbox_dir.mkdir(parents=True, exist_ok=True)
     
-    target_path = inbox_dir / file.filename
+    safe_basename = Path(file.filename).name
+    if not safe_basename or safe_basename == "." or safe_basename == "..":
+        raise HTTPException(status_code=400, detail="Invalid filename")
+        
+    target_path = inbox_dir / safe_basename
+    if target_path.exists():
+        import uuid
+        safe_basename = f"{uuid.uuid4().hex[:8]}_{safe_basename}"
+        target_path = inbox_dir / safe_basename
+        
     try:
         with open(target_path, "wb") as f:
             f.write(await file.read())
         return {
             "status": "success", 
-            "file_name": file.filename, 
+            "file_name": safe_basename, 
             "path": str(target_path.absolute())
         }
     except Exception as e:
