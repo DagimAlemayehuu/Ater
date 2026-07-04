@@ -42,12 +42,16 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
     if not secrets.ai_key:
         raise HTTPException(status_code=400, detail="AI API Key missing")
     
-    # Save temporary file
-    temp_path = f"temp_{file.filename}"
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    import tempfile
+    import shutil
+    
+    # Save temporary file using a proper temp directory
+    fd, temp_path = tempfile.mkstemp(prefix="ater_upload_", suffix=f"_{file.filename}")
     
     try:
+        with os.fdopen(fd, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
         if secrets.ai_provider == "google":
             import google.generativeai as genai
             genai.configure(api_key=secrets.ai_key)
@@ -67,11 +71,11 @@ async def ai_upload(file: UploadFile = File(...), secrets: AppSecrets = Depends(
 
             return {"file_uri": uploaded_file.uri, "name": file.filename}
         else:
-            return {"file_uri": str(Path(temp_path).absolute()), "name": file.filename, "note": "Provider does not support direct file upload yet."}
+            return {"file_uri": f"temp:{file.filename}", "name": file.filename, "note": "Provider does not support direct file upload yet."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if os.path.exists(temp_path) and secrets.ai_provider == "google":
+        if os.path.exists(temp_path):
             os.remove(temp_path)
 
 @router.post("/ai/test-connection")
@@ -695,76 +699,6 @@ renderCube();
 renderStep();
 </script>"""
 
-
-@router.post("/ater/artifact/generate")
-async def generate_artifact_code(
-    payload: Dict[str, Any] = Body(...),
-    secrets: AppSecrets = Depends(get_app_secrets)
-):
-    """Generates raw self-contained HTML/JS code for a sandbox-spec request."""
-    prompt = payload.get("prompt", "")
-    context = payload.get("context", "")
-    previous_code = payload.get("previous_code", "")
-    if not prompt:
-        raise HTTPException(status_code=400, detail="prompt is required")
-    if _is_rubiks_sandbox_request(f"{prompt}\n{context}", previous_code):
-        return {"code": _build_rubiks_cube_sandbox()}
-
-    ai_key = secrets.ai_key
-    if not ai_key:
-        raise HTTPException(status_code=400, detail="AI API Key missing")
-
-    try:
-        llm = ModelFactory.get_model(
-            provider=secrets.ai_provider or "google",
-            model_name=secrets.ai_model or "gemini-2.0-flash",
-            api_key=ai_key,
-            temperature=0.3,
-            max_tokens=2500,
-        )
-        if previous_code:
-            if "rubik-shell" in previous_code:
-                sys_prompt = """You are a precise frontend code editor. Your task is to edit the provided Rubik's Cube Flat Net Simulator code.
-You MUST preserve the entire existing HTML/CSS/JS structure of the simulator.
-Do NOT rewrite the code from scratch. Do NOT simplify it. Do NOT discard its layout, styles, rotation math, buttons, step navigation, or features.
-You are ONLY allowed to modify the specific parts corresponding to the user's request (e.g. updating colors in the 'palette' object or editing CSS rules/variables).
-Return the complete, updated HTML page. Do not include markdown code blocks/fences (```), explanations, or prose. Just the raw updated code."""
-            else:
-                sys_prompt = """You are a precise frontend code editor. Your task is to modify the provided sandbox code inline according to the user's request.
-Do NOT rewrite the code from scratch. Do NOT simplify its structure or discard existing features.
-Keep all existing HTML tags, structure, classes, styles, scripts, event listeners, and logic intact, except for the specific lines that need to be changed to satisfy the user's request.
-Return the complete, updated HTML page. Do not include markdown code blocks/fences (```), explanations, or prose. Just the raw updated code."""
-            human_prompt = f"""Sandbox request: {prompt}
-
-Lesson context:
-{context}
-
-Previous sandbox code to edit:
-{previous_code}
-
-Return the complete updated code only. Do not explain, do not add markdown backticks."""
-        else:
-            sys_prompt = """Generate one self-contained browser sandbox snippet.
-Return raw HTML/CSS/JavaScript only. Do not use markdown fences, prose, React, imports, build tools, external files, or privileged APIs.
-Assume Tailwind CDN, the Outfit font, and CSS variables are injected by the host. Prefer compact SVG, Canvas, and vanilla JavaScript.
-
-Design & Behavior Guidelines:
-1. Theme Compatibility: The interface must support both light and dark themes using CSS variables or Tailwind dark: utility classes. The background must blend seamlessly with Ater's background (use Tailwind bg-background or transparent/custom colors, avoiding hardcoded bright white backgrounds unless requested).
-2. Render Immediately: The simulation must load and display immediately on page load. Do NOT include any mock 'Launch Simulator', 'Start', or title/landing screens with click-to-play buttons.
-3. No Emojis: Never use any emojis in the code, user interface, buttons, or logs.
-4. Clean aesthetics: Use a premium, modern design layout with Outfit font, appropriate padding, and smooth CSS transitions. Make it look beautiful and high-end."""
-            human_prompt = f"""Sandbox request: {prompt}
-
-Lesson context:
-{context}
-
-Return the code only."""
-        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
-        code = res.content.strip() if hasattr(res, "content") else str(res).strip()
-        return {"code": _clean_markdown_fences(code)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/ater/artifact/repair")
 async def repair_artifact_code(
     payload: Dict[str, Any] = Body(...),
@@ -948,6 +882,9 @@ async def get_messages(
     conv_id: str,
     deps: Dict[str, Any] = Depends(get_chat_runtime_components)
 ):
+    conv = deps["storage"].get_conversation(conv_id)
+    if not conv or conv.get("deleted_at") is not None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
     return deps["storage"].get_messages(conv_id)
 
 @router.post("/chat/conversations/{conv_id}/messages")
@@ -1060,6 +997,12 @@ async def branch_message(
 ):
     message_id = payload.get("message_id", "")
     new_content = payload.get("content", "")
+    
+    # Verify that the message belongs to the specified conversation
+    messages = deps["storage"].get_messages(conv_id)
+    if not any(msg["id"] == message_id for msg in messages):
+        raise HTTPException(status_code=400, detail="Message does not belong to this conversation")
+        
     res = deps["streaming_manager"].branch_from_message(conv_id, message_id, new_content, secrets)
     
     branch_id = res["branch_id"]
