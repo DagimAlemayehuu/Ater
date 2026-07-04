@@ -56,7 +56,7 @@ def test_parent_watchdog_process_died():
          patch("src.api.lifespan.logger") as mock_logger:
 
         mock_proc_instance = MagicMock()
-        mock_proc_instance.create_time.side_effect = [1000.0, 2000.0]  # Different time -> process recycled
+        mock_proc_instance.create_time.side_effect = [1000.0, psutil.NoSuchProcess(1234)]  # NoSuchProcess instead of time difference
         mock_process.return_value = mock_proc_instance
 
         ServerLifespanManager.parent_watchdog()
