@@ -12,6 +12,7 @@ from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.ai.tracker import tracker
 from src.domains.ai.factory import ModelFactory
 from src.domains.ater.assistant import run_assistant_chat
+from src.utils.vault_path import resolve_vault_path
 
 logger = logging.getLogger("Ater")
 router = APIRouter()
@@ -168,13 +169,14 @@ async def explain_question(
     note_path = payload.get("note_path")
     if note_path and secrets.vault_path:
         try:
-            from pathlib import Path
-            resolved_p = Path(secrets.vault_path) / note_path if not Path(note_path).is_absolute() else Path(note_path)
+            resolved_p = resolve_vault_path(secrets.vault_path, note_path)
             if resolved_p.exists() and resolved_p.is_file():
                 with open(resolved_p, "r", encoding="utf-8") as f:
                     note_content = f.read()
                     if note_content.strip():
                         context = f"{context}\n\nSource Note Material ({resolved_p.name}):\n{note_content}"
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid note path")
         except Exception as e:
             logger.error(f"Failed to load note content for grading: {e}")
 
