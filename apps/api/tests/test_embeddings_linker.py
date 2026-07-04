@@ -25,7 +25,8 @@ _MODEL_AVAILABLE = False
 try:
     import sys as _sys
     _real_transformers = _sys.modules.get("transformers")
-    _is_mocked = isinstance(_real_transformers, MagicMock)
+    _real_onnxruntime = _sys.modules.get("onnxruntime")
+    _is_mocked = isinstance(_real_transformers, MagicMock) or isinstance(_real_onnxruntime, MagicMock)
     if not _is_mocked:
         _linker_check = EmbeddingsLinker()
         _mp = _linker_check._get_model_paths()

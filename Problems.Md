@@ -87,6 +87,7 @@ This section records the final manual cleanup pass after the Jules PR campaign. 
     - Added legacy `X-Inbox-Path`/`X-Vault-Path` header compatibility for practice logging, analytics, and SRS routes.
     - Restored edit-mode handling for `/api/ater/artifact/generate` payloads with `previous_code` without reintroducing duplicate routes.
     - Made the ONNX embeddings loader tolerant of mocked `onnxruntime` modules without `__spec__`, fixing the Ubuntu CI-only `transformers`/`torch` import failure.
+    - Tightened the ONNX embeddings test availability guard so it skips when either `transformers` or `onnxruntime` is mocked.
   - Verification:
     - [x] `uv run pytest` from `apps/api` passed: 474 tests, 3 warnings.
     - [x] `pnpm --filter @ater/desktop typecheck`
