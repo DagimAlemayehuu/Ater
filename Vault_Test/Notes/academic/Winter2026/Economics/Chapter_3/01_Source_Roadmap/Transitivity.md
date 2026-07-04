@@ -2,9 +2,9 @@
 title: "Transitivity"
 hub: "[[Chapter_3_Hub]]"
 source: "[[Chapter 3 2024-1.pdf]]"
-source_file: "Chapter 3 2024-1.pdf"
+source_file: "Inbox/generated/academic/Chapter 3 2024-1.pdf"
 source_pages: [7]
-source_job_id: "srcjob_f4b691a8615e4d6e"
+source_job_id: "srcjob_9b26c2e74a10426c"
 domain: "ECON-MICRO"
 concept_modality: "Comparative"
 fallback_generation: true
@@ -12,23 +12,24 @@ generated_by: "ater_source_job"
 ---
 ## Mental Model
 
-**The mechanism of Transitivity can be compared to an organic agricultural soil-enrichment cycle.** **Transitivity** acts as the precise concentration of nutrients that determines growth rate and yield. Assumptions (axioms) of consumer preference • These assumptions are basically made to ensure consistency in consumer preference. Just as crops adapt based on weather shocks and soil constraints, individual micro-entities shift their choices in response to price signals and input costs.
+Treat Transitivity as a working part of the source's consumer-choice model: tracking how the consumer compares and ranks bundles before making a choice. The first anchor is: These assumptions are basically made to ensure consistency in consumer preference.
 
 ## How the Economics Actually Work
 
-Transitivity works by connecting the source's key terms, rules, and examples into one usable idea. it is contradictory to say (x1, x2) > (y1, y2) and at the same time (x1, x2) < (y1, y2) or vice versa.
+Start from that anchor, then add the next source detail: Complete: any two bundles can be compared (the consumer can rank his preference or is able to make choice between any two bundles). Together, these points show what the consumer is allowed to compare, measure, rank, or choose in this part of the chapter. A correct answer should name the relationship and then state its consequence in the same direction as the source.
 
 ## The Formal Math & Models
 
-In formal terms, Transitivity must be read through the exact language and constraints shown in the source. • Complete: any two bundles can be compared (the consumer can rank his preference or is able to make choice between any two bundles). • Reflexive: we assume that any bundle is at least as good as itself; (x1, x2) ≥ (x1, x2). • Transitivity: if (x1, x2) ≥ (y1, y2) and (y1, y2) ≥ (z1, z2), then we assume that (x1, x2) ≥ (z1, z2).
+Preserve this formal anchor exactly: Complete: any two bundles can be compared (the consumer can rank his preference or is able to make choice between any two bundles). If it is an equation, ranking, slope, condition, or named relationship, later practice should test that same structure rather than a looser paraphrase.
 
-| Source Detail | Meaning |
-|---|---|
-| Transitivity | The focused concept being studied. |
-| Policy Advisor | it is contradictory to say (x1, x2) > (y1, y2) and at the same time (x1, x2) < (y1, y2) or |
-| Source excerpt | The only authority for definitions and constraints. |
+## Source Evidence
 
-Pay close attention to the exact terminology the source uses to describe Transitivity. The most common study error is paraphrasing too loosely — the exam will test the source's precise definitions, not general knowledge of the domain.
+| Page | Evidence |
+| --- | --- |
+| p. 7 | These assumptions are basically made to ensure consistency in consumer preference |
+| p. 7 | Complete: any two bundles can be compared (the consumer can rank his preference or is able to make choice between any two bundles) |
+| p. 7 | Transitivity: if (x1, x2) ≥ (y1, y2) and (y1, y2) ≥ (z1, z2), then we assume that (x1, x2) ≥ (z1, z2) |
+| p. 7 | it is contradictory to say (x1, x2) > (y1, y2) and at the same time (x1, x2) < (y1, y2) or vice versa |
 
 ---
 
@@ -38,33 +39,32 @@ Pay close attention to the exact terminology the source uses to describe Transit
 [
   {
     "type": "mcq",
-    "question": "Which statement best matches the source's treatment of Transitivity?",
+    "question": "According to the source, which statement best explains Transitivity?",
     "options": {
-      "A": "Assumptions (axioms) of consumer preference \u2022 These assumptions are basically made to ensure consistency in consumer pre",
-      "B": "Transitivity is a peripheral detail that does not affect core understanding of the topic.",
-      "C": "Transitivity applies only in highly specialized edge cases not covered by the source.",
-      "D": "Transitivity can be safely ignored without losing the main argument of the source."
+      "A": "These assumptions are basically made to ensure consistency in consumer preference",
+      "B": "Transitivity can be ignored because it has no operational role in the cited source pages.",
+      "C": "Transitivity reverses the source relationship by treating the cited constraint or comparison as irrelevant.",
+      "D": "Transitivity is only a label and does not connect to any source definition, condition, ranking, equation, or example."
     },
     "answer": "A",
-    "explanation": "The source context directly connects Transitivity to specific behavior, definitions, or structural rules described on page 7.",
+    "explanation": "The correct option restates the source-grounded fact for Transitivity from page 7.",
     "explanation_page": 7
   },
   {
     "type": "true_false",
-    "question": "it is contradictory to say (x1, x2) > (y1, y2) and at the same time (x1, x2) < (y1, y2) or vice versa",
+    "question": "Transitivity should be interpreted using the chapter's stated source constraints: Complete: any two bundles can be compared (the consumer can rank his preference or is able to make choice between any two bundles).",
     "answer": true,
-    "explanation": "This follows directly from the source's definition of Transitivity on page 7.",
+    "explanation": "This follows from the cited source discussion of Transitivity.",
     "explanation_page": 7
   },
   {
     "type": "writing",
-    "question": "Explain Transitivity in one precise paragraph. Include one specific consequence or implication drawn from the source on page 7.",
-    "answer": "A strong answer defines Transitivity in the domain's own terms, explains its role or function, and anchors the explanation in the source definition from page 7.",
+    "question": "Explain Transitivity in one precise paragraph using the source's wording and one consequence from the cited pages.",
+    "answer": "A strong answer defines Transitivity, states the source-specific rule or relationship, and explains why that relationship matters in the chapter's consumer-choice model.",
     "required_keywords": [
-      "source",
       "transitivity"
     ],
-    "explanation": "This checks whether the learner can translate the source wording into a precise, usable explanation of Transitivity.",
+    "explanation": "This checks whether the learner can use the source facts for Transitivity, not just recognize the term.",
     "explanation_page": 7
   }
 ]

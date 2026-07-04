@@ -2,7 +2,7 @@
 title: "Chapter_3_Hub"
 type: "Hub"
 generated_by: "ater_source_job"
-source_job_id: "srcjob_f4b691a8615e4d6e"
+source_job_id: "srcjob_9b26c2e74a10426c"
 learning_scope: "academic"
 semester: "Winter2026"
 course: "Economics"
@@ -13,7 +13,7 @@ current_lesson_path: "Notes/academic/Winter2026/Economics/Chapter_3/01_Source_Ro
 chapters: ["[[Chapter_01_Source_Roadmap]]"]
 ---
 
-# CHAPTER THREE
+# Theory of Consumer Behavior
 
 [[Chapter_01_Source_Roadmap]]
 
@@ -72,3 +72,4 @@ chapters: ["[[Chapter_01_Source_Roadmap]]"]
 - [[Prices_Of_Goods]]
 - [[Taxes,_Subsides_And_Rationing]]
 - [[Equilibrium_Of_The_Consumer]]
+- [[Optimal_Choice]]

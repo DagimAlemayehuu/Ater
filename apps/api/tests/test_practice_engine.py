@@ -166,3 +166,46 @@ def test_dynamic_proving_grounds_selectors():
     assert "trace" not in types_edu
 
 
+def test_economics_practice_distribution_filters_code_debug_trace():
+    from src.domains.ater.quiz_builder import sanitize_question_distribution_for_context
+
+    original = {"mcq": 1, "debug": 1, "trace": 1, "code": 1, "find_error": 1}
+    sanitized = sanitize_question_distribution_for_context(
+        original,
+        "ECON-MICRO consumer preferences utility budget line price income ordinal cardinal",
+    )
+
+    assert sum(sanitized.values()) == sum(original.values())
+    assert not (set(sanitized) & {"debug", "trace", "code", "find_error"})
+    assert sanitized["scenario"] == 4
+    assert sanitized["mcq"] == 1
+
+
+def test_practice_fallback_data_analysis_uses_note_context_not_fake_metrics():
+    from src.domains.ater.quiz_builder import create_fallback_question
+
+    note_content = """
+## Mental Model
+
+Budget Constraint is anchored in the source statement that the budget set contains affordable bundles.
+
+## Source Evidence
+
+| Page | Evidence |
+| --- | --- |
+| p. 43 | The budget equation is PxX + PyY = M. |
+| p. 44 | Any bundle outside the budget line is unaffordable. |
+"""
+
+    question = create_fallback_question(
+        "data_analysis",
+        "Budget Constraint",
+        "Budget Constraint",
+        note_content=note_content,
+    )
+
+    combined = f"{question.get('question', '')}\n{question.get('content', '')}\n{question.get('answer', '')}"
+    assert "Baseline Metric" not in combined
+    assert "Target Metric" not in combined
+    assert "PxX + PyY = M" in combined
+    assert "source" in question["explanation"].lower()

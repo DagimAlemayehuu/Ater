@@ -362,10 +362,14 @@ def _source_note_rel_path(job: Dict[str, Any], note_title: str) -> str:
 
 
 def _source_session_note_rel_path(job: Dict[str, Any], note_title: str) -> str:
+    if _placement_from_job(job).get("learning_scope") == "academic":
+        return _source_note_rel_path(job, note_title)
     return f"SourceJobs/{job['job_id']}/{lo.normalize_title(note_title)}.md"
 
 
 def _source_session_hub_rel_path(job: Dict[str, Any]) -> str:
+    if _placement_from_job(job).get("learning_scope") == "academic":
+        return _source_hub_rel_path(job)
     title = lo.normalize_title(job.get("topic") or job.get("title") or "Source")
     return f"SourceJobs/{job['job_id']}/{title}_Hub.md"
 
@@ -775,6 +779,26 @@ def _build_generic_concept_nodes(
         for title in extractor(page.get("content", ""), topic, page_no):
             add_candidate(title, page_no, warning="objective_not_detected")
 
+    for node in by_key.values():
+        title_terms = {term for term in re.split(r"\W+", node["title"].lower()) if len(term) > 3}
+        if not title_terms:
+            continue
+        title_phrase = node["title"].lower()
+        for page in pages:
+            page_no = int(page.get("page_number", 1))
+            if page_no in node["source_pages"]:
+                continue
+            source_text = re.sub(r"\s+", " ", page.get("content", "") or "").strip()
+            if not source_text:
+                continue
+            source_lower = source_text.lower()
+            overlap = {term for term in title_terms if term in source_lower}
+            if title_phrase in source_lower or len(overlap) >= min(2, len(title_terms)):
+                node["source_pages"].append(page_no)
+                node["source_excerpts"].append({"page": page_no, "text": source_text[:800]})
+            if len(node["source_excerpts"]) >= 3:
+                break
+
     def sort_key(item: Dict[str, Any]):
         origin = item.get("origin_priority", 2)
         if origin == 0:
@@ -905,27 +929,321 @@ class SourceAtomicNoteCompiler:
             note["frontmatter"]["fallback_reason"] = "ai_failure"
             return note
 
+    def _source_sentences(self, node: Dict[str, Any], limit: int = 5) -> List[Dict[str, Any]]:
+        candidates: List[Dict[str, Any]] = []
+        seen = set()
+        title = str(node.get("title", ""))
+        for excerpt in node.get("source_excerpts", []) or []:
+            page = int(excerpt.get("page") or (node.get("source_pages") or [1])[0])
+            text = self._normalize_source_excerpt(str(excerpt.get("text", "")))
+            for raw in re.split(r"(?<=[.!?])\s+|[•●\uf0a7\uf0b7\uf0a8]+|\s+-\s+", text):
+                sentence = self._clean_fact(raw, title)
+                if self._reject_source_fact(sentence):
+                    continue
+                key = sentence.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                candidates.append({"page": page, "text": sentence, "score": self._source_fact_score(sentence, title)})
+        candidates.sort(key=lambda item: (-float(item.get("score", 0)), int(item.get("page", 0))))
+        return [{"page": item["page"], "text": item["text"]} for item in candidates[:limit]]
+
+    def _normalize_source_excerpt(self, text: str) -> str:
+        text = str(text or "")
+        text = text.replace("\uf0a7", ". ").replace("\uf0b7", ". ").replace("\uf0a8", ". ")
+        text = text.replace("", ". ").replace("•", ". ").replace("●", ". ")
+        text = text.replace("GivenThree", "Given three")
+        text = text.replace("Bergur", "Burger")
+        text = text.replace("you preference", "your preference")
+        # Slide exports often encode lists as ": 1. First 2. Second"; remove list counters
+        # while keeping the item text and normal sentence boundaries.
+        text = re.sub(r":\s*1\.\s*([^.;:]+?)\s+2\.\s*([^.;:]+?)(?=\.|$)", r": \1 and \2", text)
+        text = re.sub(r"\b(The\s+[A-Za-z]+ist\s+school)\s*\.\s+(was|is|uses|measures|compares)\b", r"\1 \2", text)
+        text = re.sub(r"\b(The\s+[A-Za-z]+\s+school)\s*\.\s+(was|is|uses|measures|compares)\b", r"\1 \2", text)
+        text = re.sub(r"(?<=:)\s*\d+\.\s*", " ", text)
+        text = re.sub(r"\s+\d+\.\s*", ". ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    def _title_terms(self, title: str) -> List[str]:
+        stop = {
+            "and", "or", "of", "the", "a", "an", "to", "for", "in", "on", "with", "by",
+            "is", "are", "case", "concept", "approach", "approaches", "theory",
+        }
+        return [term for term in re.findall(r"[A-Za-z]{3,}", str(title).lower()) if term not in stop]
+
+    def _reject_source_fact(self, sentence: str) -> bool:
+        if len(sentence) < 18:
+            return True
+        lowered = sentence.lower().strip()
+        if (
+            "chapter objectives" in lowered
+            or "after successful completion" in lowered
+            or lowered.startswith(("our goal ", "the goal ", "this chapter is to "))
+            or lowered.startswith(("explain ", "differentiate ", "define ", "derive ", "describe ", "discuss "))
+            or lowered.startswith(("rank them ", "which bundle ", "which bundles ", "which of "))
+        ):
+            return True
+        if sentence.endswith("?") and len(sentence.split()) < 12:
+            return True
+        if re.fullmatch(r"[\d\s.:-]+", sentence):
+            return True
+        if re.fullmatch(r"[A-Z][A-Za-z /&()-]{2,40}", sentence) and len(sentence.split()) <= 5:
+            return True
+        if re.search(r":\s*\d+\.?$", sentence):
+            return True
+        if re.search(r"\b\d+\.\s*$", sentence):
+            return True
+        return False
+
+    def _source_fact_score(self, sentence: str, title: str) -> float:
+        lowered = sentence.lower()
+        title_lower = str(title or "").lower()
+        terms = self._title_terms(title)
+        score = 0.0
+        for term in terms:
+            if term in lowered:
+                score += 3.0
+        if re.search(r"\b(is|are|means|refers to|shows|represents|contains|include|includes|measures|ranks)\b", lowered):
+            score += 2.5
+        if re.search(r"[A-Za-z]\w*\s*[+*/=-]\s*[A-Za-z0-9]", sentence):
+            score += 3.0
+        if any(token in lowered for token in ["equation", "slope", "price", "income", "utility", "preference", "affordable", "constraint", "rank"]):
+            score += 1.5
+        word_count = len(sentence.split())
+        if 8 <= word_count <= 35:
+            score += 1.0
+        elif word_count > 55:
+            score -= 1.0
+        if self._looks_like_slide_heading(sentence):
+            score -= 6.0
+        score += self._title_intent_adjustment(lowered, title_lower)
+        score += self._opposing_term_adjustment(lowered, title_lower)
+        return score
+
+    def _looks_like_slide_heading(self, sentence: str) -> bool:
+        stripped = sentence.strip()
+        words = stripped.split()
+        lowered = stripped.lower()
+        if len(words) <= 7 and ":" in stripped and not re.search(r"\b(is|are|means|refers to|shows|contains|include|includes|measures|ranks|equals)\b", lowered):
+            return True
+        if len(words) <= 5 and re.fullmatch(r"[A-Z][A-Za-z /&():-]+", stripped):
+            return True
+        if lowered.startswith(("approaches of ", "chapter ", "limitations", "basic concepts")) and len(words) <= 8:
+            return True
+        return False
+
+    def _title_intent_adjustment(self, lowered_sentence: str, lowered_title: str) -> float:
+        adjustment = 0.0
+        if "preference" in lowered_title:
+            if any(token in lowered_sentence for token in ["choose", "choice", "choices", "prefer", "preference"]):
+                adjustment += 5.0
+            if any(token in lowered_sentence for token in ["compare", "comparing", "rank", "ranking", "order of preference"]):
+                adjustment += 5.0
+            if "bundle" in lowered_sentence:
+                adjustment += 1.0
+        if "utility" in lowered_title:
+            if any(token in lowered_sentence for token in ["satisfaction", "usefulness", "utility", "utils", "rank", "ranking", "measure", "measured"]):
+                adjustment += 2.0
+        if "budget" in lowered_title:
+            if any(token in lowered_sentence for token in ["affordable", "unaffordable", "income", "price", "prices", "cost", "equation", "slope"]):
+                adjustment += 4.0
+        if "equilibrium" in lowered_title:
+            if any(token in lowered_sentence for token in ["equilibrium", "maximize", "maximum", "equal", "condition", "optimal"]):
+                adjustment += 4.0
+        return adjustment
+
+    def _opposing_term_adjustment(self, lowered_sentence: str, lowered_title: str) -> float:
+        opposing_pairs = [
+            {
+                "left": "ordinal",
+                "right": "cardinal",
+                "left_signals": ["ordinalist", "ranking", "rank", "order of preference", "preference order"],
+                "right_signals": ["cardinalist", "cardinal number", "utils", "quantitative terms", "numerically"],
+            },
+            {
+                "left": "variable",
+                "right": "fixed",
+                "left_signals": ["variable input", "changes", "altered"],
+                "right_signals": ["fixed input", "cannot readily be changed", "does not change"],
+            },
+        ]
+        adjustment = 0.0
+        for pair in opposing_pairs:
+            left = pair["left"]
+            right = pair["right"]
+            if left in lowered_title and right not in lowered_title:
+                has_left = left in lowered_sentence or any(signal in lowered_sentence for signal in pair["left_signals"])
+                has_right = right in lowered_sentence or any(signal in lowered_sentence for signal in pair["right_signals"])
+                if any(signal in lowered_sentence for signal in pair["left_signals"]):
+                    adjustment += 6.0
+                elif has_left:
+                    adjustment += 2.0
+                else:
+                    adjustment -= 3.0
+                if has_right and not has_left:
+                    adjustment -= 8.0
+                elif has_right and has_left and not any(signal in lowered_sentence for signal in pair["left_signals"]):
+                    adjustment -= 5.0
+            if right in lowered_title and left not in lowered_title:
+                has_right = right in lowered_sentence or any(signal in lowered_sentence for signal in pair["right_signals"])
+                has_left = left in lowered_sentence or any(signal in lowered_sentence for signal in pair["left_signals"])
+                if any(signal in lowered_sentence for signal in pair["right_signals"]):
+                    adjustment += 6.0
+                elif has_right:
+                    adjustment += 2.0
+                else:
+                    adjustment -= 3.0
+                if has_left and not has_right:
+                    adjustment -= 8.0
+                elif has_left and has_right and not any(signal in lowered_sentence for signal in pair["right_signals"]):
+                    adjustment -= 5.0
+        return adjustment
+
+    def _clean_fact(self, sentence: str, title: str) -> str:
+        fact = str(sentence or "")
+        fact = fact.replace("\uf0a7", " ").replace("\uf0b7", " ").replace("\uf0a8", " ")
+        fact = fact.replace("", " ").replace("•", " ").replace("●", " ")
+        fact = fact.replace("GivenThree", "Given three")
+        fact = fact.replace("Bergur", "Burger")
+        fact = fact.replace("you preference", "your preference")
+        fact = fact.replace("Consumers makes choices", "Consumers make choices")
+        fact = fact.replace("consumers makes choices", "consumers make choices")
+        fact = fact.replace("comparing bundle of goods", "comparing bundles of goods")
+        fact = re.sub(r":\s*1\.\s*([^.;:]+?)\s+2\.\s*([^.;:]+?)(?=\.|$)", r": \1 and \2", fact)
+        fact = re.sub(r"(?<=:)\s*\d+\.\s*", " ", fact)
+        fact = re.sub(r"\s+\d+\.\s*", ". ", fact)
+        fact = re.sub(r"\s+", " ", fact).strip(" .")
+        if len(fact) > 180:
+            fact = fact[:177].rsplit(" ", 1)[0] + "..."
+        if not fact.lower().startswith(title.lower()):
+            return fact
+        return fact
+
+    def _build_fallback_quiz(self, title: str, facts: List[Dict[str, Any]], source_pages: List[int]) -> List[Dict[str, Any]]:
+        primary = facts[0] if facts else {"text": f"{title} is defined by the cited source pages.", "page": source_pages[0] if source_pages else 1}
+        primary_text = self._clean_fact(primary["text"], title)
+        page = int(primary.get("page") or (source_pages[0] if source_pages else 1))
+        second = facts[1]["text"] if len(facts) > 1 else f"{title} is unrelated to the source's consumer-choice model."
+        title_keywords = [word.lower() for word in re.findall(r"[A-Za-z]{4,}", title)[:3]] or ["source"]
+        return [
+            {
+                "type": "mcq",
+                "question": f"According to the source, which statement best explains {title}?",
+                "options": {
+                    "A": primary_text,
+                    "B": f"{title} can be ignored because it has no operational role in the cited source pages.",
+                    "C": f"{title} reverses the source relationship by treating the cited constraint or comparison as irrelevant.",
+                    "D": f"{title} is only a label and does not connect to any source definition, condition, ranking, equation, or example.",
+                },
+                "answer": "A",
+                "explanation": f"The correct option restates the source-grounded fact for {title} from page {page}.",
+                "explanation_page": page,
+            },
+            {
+                "type": "true_false",
+                "question": f"{title} should be interpreted using the chapter's stated source constraints: {self._clean_fact(second, title)}.",
+                "answer": True,
+                "explanation": f"This follows from the cited source discussion of {title}.",
+                "explanation_page": int(facts[1].get("page", page)) if len(facts) > 1 else page,
+            },
+            {
+                "type": "writing",
+                "question": f"Explain {title} in one precise paragraph using the source's wording and one consequence from the cited pages.",
+                "answer": f"A strong answer defines {title}, states the source-specific rule or relationship, and explains why that relationship matters in the chapter's consumer-choice model.",
+                "required_keywords": title_keywords,
+                "explanation": f"This checks whether the learner can use the source facts for {title}, not just recognize the term.",
+                "explanation_page": page,
+            },
+        ]
+
+    def _concept_task(self, title: str, facts: List[str]) -> str:
+        haystack = f"{title} {' '.join(facts)}".lower()
+        if any(token in haystack for token in ["budget", "income", "price", "affordable", "unaffordable"]):
+            return "separating affordable choices from choices ruled out by income and prices"
+        if any(token in haystack for token in ["equilibrium", "optimal", "maximize", "maximum"]):
+            return "identifying the condition where the consumer has no better affordable choice"
+        if any(token in haystack for token in ["preference", "prefer", "rank", "ordinal", "bundle"]):
+            return "tracking how the consumer compares and ranks bundles before making a choice"
+        if any(token in haystack for token in ["utility", "satisfaction", "marginal", "total"]):
+            return "connecting satisfaction from consumption to the rule or comparison used in the model"
+        return "preserving the source's exact relationship between the concept, its conditions, and its consequence"
+
+    def _formal_anchor(self, facts: List[str], fallback: str) -> str:
+        equation = next(
+            (
+                text
+                for text in facts
+                if re.search(r"[A-Za-z]\w*\s*[+*/=-]\s*[A-Za-z0-9]", text)
+                or ("=" in text and any(operator in text for operator in ["+", "-", "−", "*", "/"]))
+            ),
+            None,
+        )
+        if equation:
+            return equation
+        formal_tokens = ["equation", "slope", "ratio", "marginal", "rank", "measure", "condition", "equals", "maximum"]
+        formal = next(
+            (
+                text
+                for text in facts
+                if not self._looks_like_slide_heading(text)
+                and any(token in text.lower() for token in formal_tokens)
+            ),
+            None,
+        )
+        if formal:
+            return formal
+        return next((text for text in facts if not self._looks_like_slide_heading(text)), fallback)
+
+    def _build_fallback_content(self, title: str, facts: List[Dict[str, Any]], quiz: List[Dict[str, Any]]) -> str:
+        fact_texts = [self._clean_fact(fact["text"], title) for fact in facts]
+        first = fact_texts[0] if fact_texts else f"The source introduces {title} as a required concept for this chapter."
+        second = fact_texts[1] if len(fact_texts) > 1 else first
+        third = fact_texts[2] if len(fact_texts) > 2 else second
+        concept_task = self._concept_task(title, fact_texts)
+        formal = self._formal_anchor(fact_texts, third)
+        evidence_rows = "\n".join(
+            f"| p. {int(fact.get('page') or 1)} | {self._clean_fact(fact.get('text', ''), title)} |"
+            for fact in facts[:4]
+        ) or f"| p. 1 | The source page identifies {title} as a concept to study. |"
+        quiz_block = "```interactive-quiz\n" + json.dumps(quiz, indent=2) + "\n```"
+        return (
+            "## Mental Model\n\n"
+            f"Treat {title} as a working part of the source's consumer-choice model: {concept_task}. "
+            f"The first anchor is: {first}.\n\n"
+            "## How the Economics Actually Work\n\n"
+            f"Start from that anchor, then add the next source detail: {second}. "
+            f"Together, these points show what the consumer is allowed to compare, measure, rank, or choose in this part of the chapter. "
+            f"A correct answer should name the relationship and then state its consequence in the same direction as the source.\n\n"
+            "## The Formal Math & Models\n\n"
+            f"Preserve this formal anchor exactly: {formal}. "
+            f"If it is an equation, ranking, slope, condition, or named relationship, later practice should test that same structure rather than a looser paraphrase.\n\n"
+            "## Source Evidence\n\n"
+            "| Page | Evidence |\n"
+            "| --- | --- |\n"
+            f"{evidence_rows}\n\n"
+            "---\n\n"
+            "## The Proving Grounds\n\n"
+            f"{quiz_block}"
+        )
+
+    def _source_file_ref(self, job: Dict[str, Any]) -> str:
+        return job.get("processed_source_path") or job.get("source_file_path") or job.get("file_name") or ""
+
     def compile_fallback_note(self, job: Dict[str, Any], node: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
         source_pages = [int(p) for p in node.get("source_pages", [])]
         if not source_pages and "unresolved-source" not in node.get("warnings", []):
             raise ValueError("Source-grounded concept node requires source pages or an unresolved-source warning.")
-
-        class NoteSchema:
-            pass
-
-        note_schema = NoteSchema()
-        note_schema.title = lo.normalize_title(node.get("title", "Untitled Concept"))
-        note_schema.description = node.get("title", "")
-        note_schema.source_context = " ".join(ex.get("text", "") for ex in node.get("source_excerpts", []))
-        note_schema.source_pages = source_pages
-        note_schema.concept_modality = node.get("modality", "Qualitative/Definitional")
-        note_schema.mode = node.get("domain", "ACADEMIC-GENERAL")
-        body = build_skeleton_note(note_schema, note_schema.source_context, profile, all_titles=[node.get("title", "")])
+        title = node.get("title", "Untitled Concept")
+        note_title = lo.normalize_title(title)
+        facts = self._source_sentences(node)
+        quiz = self._build_fallback_quiz(title, facts, source_pages)
+        body = self._build_fallback_content(title, facts, quiz)
         frontmatter = {
-            "title": note_schema.title,
+            "title": note_title,
             "hub": f"[[{Path(_source_hub_rel_path(job)).stem}]]",
             "source": f"[[{job.get('file_name', '')}]]",
-            "source_file": job.get("file_name"),
+            "source_file": self._source_file_ref(job),
             "source_pages": source_pages,
             "source_job_id": job.get("job_id"),
             "domain": node.get("domain"),
@@ -934,9 +1252,10 @@ class SourceAtomicNoteCompiler:
             "generated_by": "ater_source_job",
         }
         return {
-            "note_title": note_schema.title,
+            "note_title": note_title,
             "frontmatter": frontmatter,
             "content": body,
+            "quiz": quiz,
             "valid": True,
             "fallback": True,
         }
@@ -1394,6 +1713,9 @@ class SourceLearningJobService:
 
     def start_learning(self, job_id: str) -> Dict[str, Any]:
         job = self.get_job(job_id)
+        processed_source_path = self._processed_pdf_destination_rel_path(job, self._runtime_root())
+        if processed_source_path:
+            job["processed_source_path"] = processed_source_path
         nodes = job["concept_graph"]["nodes"]
         if not nodes:
             raise ValueError("Source job has no teachable concept graph nodes.")
@@ -1538,6 +1860,9 @@ class SourceLearningJobService:
         hub_path = vault / hub_rel_path
         root = hub_path.parent
         root.mkdir(parents=True, exist_ok=True)
+        processed_source_path = self._processed_pdf_destination_rel_path(job, vault)
+        if processed_source_path:
+            job["processed_source_path"] = processed_source_path
 
         note_links: List[str] = []
         for node in job["concept_graph"]["nodes"]:
@@ -1589,6 +1914,29 @@ class SourceLearningJobService:
             "processed_source_path": moved_source,
         }
 
+    def _processed_pdf_destination_rel_path(self, job: Dict[str, Any], vault: Path) -> Optional[str]:
+        if str(job.get("source_type") or "").lower() == "synthetic_source_pack":
+            return None
+        placement = job.get("placement") or _placement_from_job(job)
+        scope = "academic" if placement.get("learning_scope") == "academic" else "external"
+        file_name = str(job.get("file_name") or "")
+        if file_name:
+            existing_generated = vault / "Inbox" / "generated" / scope / file_name
+            if existing_generated.exists():
+                return existing_generated.relative_to(vault).as_posix()
+        source_path = Path(job.get("file_path") or "")
+        if not source_path.exists() or source_path.suffix.lower() != ".pdf":
+            return None
+        try:
+            source_path.resolve().relative_to((vault / "Inbox").resolve())
+        except Exception:
+            return None
+        destination_dir = vault / "Inbox" / "generated" / scope
+        destination = destination_dir / source_path.name
+        if destination.exists():
+            destination = destination_dir / f"{source_path.stem}_{job['job_id']}{source_path.suffix}"
+        return destination.relative_to(vault).as_posix()
+
     def _move_processed_pdf(self, job: Dict[str, Any], vault: Path) -> Optional[str]:
         if str(job.get("source_type") or "").lower() == "synthetic_source_pack":
             return None
@@ -1603,9 +1951,8 @@ class SourceLearningJobService:
         scope = "academic" if placement.get("learning_scope") == "academic" else "external"
         destination_dir = vault / "Inbox" / "generated" / scope
         destination_dir.mkdir(parents=True, exist_ok=True)
-        destination = destination_dir / source_path.name
-        if destination.exists():
-            destination = destination_dir / f"{source_path.stem}_{job['job_id']}{source_path.suffix}"
+        destination_rel = job.get("processed_source_path") or self._processed_pdf_destination_rel_path(job, vault)
+        destination = vault / destination_rel if destination_rel else destination_dir / source_path.name
         shutil.move(str(source_path), str(destination))
         return destination.relative_to(vault).as_posix()
 

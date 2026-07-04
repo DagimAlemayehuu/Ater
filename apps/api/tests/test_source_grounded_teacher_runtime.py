@@ -17,6 +17,7 @@ from src.domains.ater.source_service import (
     classify_concept_modality,
     extract_source_objectives,
 )
+from src.domains.ater.service import AterService
 from src.domains.ater.tutor_service import TutorSessionManager
 from src.api.deps import AppSecrets, get_app_secrets
 from src.api.main import app
@@ -111,6 +112,384 @@ def _arbitrary_ml_docs():
     return [SimpleNamespace(page_content=text, metadata={"page": idx}) for idx, text in enumerate(page_text)]
 
 
+def test_practice_discovers_nested_academic_study_planner_hubs(tmp_path):
+    root = tmp_path
+    hub_rel = "database/study planner/Winter2026/Economics/Chapter_3/Chapter_3_Hub.md"
+    hub_path = root / hub_rel
+    hub_path.parent.mkdir(parents=True)
+    hub_path.write_text(
+        """---
+title: "Chapter_3_Hub"
+type: "Hub"
+semester: "Winter2026"
+course: "Economics"
+unit: "Chapter_3"
+---
+
+# Chapter 3
+
+## Atomic Notes
+- [[Ordinal_Utility]]
+""",
+        encoding="utf-8",
+    )
+
+    note_dir = root / "Notes" / "academic" / "Winter2026" / "Economics" / "Chapter_3" / "01_Source_Roadmap"
+    note_dir.mkdir(parents=True)
+    (note_dir / "Ordinal_Utility.md").write_text("# Ordinal Utility", encoding="utf-8")
+
+    secrets = AppSecrets(vault_path=str(root), inbox_path=str(root / "Inbox"), academic_path="Notes/academic", ai_key=None)
+    service = AterService(secrets)
+
+    hubs = service.list_planner_hubs()
+    assert any(hub["path"] == hub_rel for hub in hubs)
+    resolved = service._find_hub("database/study planner/Winter2026/Economics/Chapter_3/Chapter_3_Hub")
+    assert resolved is not None
+    assert resolved["path"] == hub_rel
+    assert service._get_unit_dir(resolved) == note_dir
+
+
+def test_practice_resolves_academic_notes_when_academic_root_is_notes(tmp_path):
+    root = tmp_path
+    hub_rel = "database/study planner/Winter2026/Economics/Chapter_3/Chapter_3_Hub.md"
+    hub_path = root / hub_rel
+    hub_path.parent.mkdir(parents=True)
+    hub_path.write_text(
+        """---
+title: "Chapter_3_Hub"
+type: "Hub"
+semester: "Winter2026"
+course: "Economics"
+unit: "Chapter_3"
+---
+""",
+        encoding="utf-8",
+    )
+    note_dir = root / "Notes" / "academic" / "Winter2026" / "Economics" / "Chapter_3" / "01_Source_Roadmap"
+    note_dir.mkdir(parents=True)
+    (note_dir / "Budget_Line.md").write_text("# Budget Line", encoding="utf-8")
+
+    secrets = AppSecrets(vault_path=str(root), inbox_path=str(root / "Inbox"), academic_path="Notes", ai_key=None)
+    service = AterService(secrets)
+    resolved = service._find_hub(hub_rel.removesuffix(".md"))
+
+    assert resolved is not None
+    assert service._get_unit_dir(resolved) == note_dir
+
+
+@patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
+def test_academic_source_learning_uses_canonical_paths_without_visible_sourcejobs(_mock_pdf, tmp_path):
+    root = tmp_path
+    source = root / "Inbox" / "academic" / "Chapter 3 2024-1.pdf"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"fake pdf bytes")
+
+    parent_hub = "database/study planner/Winter2026/Economics/Chapter_3/Chapter_3_Hub.md"
+    service = SourceLearningJobService(root / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(source),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+        chapter_title="Chapter_3",
+        parent_hub_path=parent_hub,
+    )
+
+    started = service.start_learning(job["job_id"])
+    tutor = started["tutor_session"]
+
+    assert tutor["hub_path"] == parent_hub
+    assert tutor["current_note_path"].startswith("Notes/academic/Winter2026/Economics/Chapter_3/01_Source_Roadmap/")
+    assert all(path.startswith("Notes/academic/Winter2026/Economics/Chapter_3/01_Source_Roadmap/") for path in tutor["curriculum"])
+    assert not (root / "SourceJobs" / job["job_id"]).exists()
+    first_note = root / tutor["current_note_path"]
+    assert "source_file: \"Inbox/generated/academic/Chapter 3 2024-1.pdf\"" in first_note.read_text(encoding="utf-8")
+
+
+@patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
+def test_source_tutor_advance_updates_source_job_link_to_next_canonical_note(_mock_pdf, tmp_path):
+    import json
+
+    root = tmp_path
+    source = root / "Inbox" / "academic" / "Chapter 3 2024-1.pdf"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"fake pdf bytes")
+    parent_hub = "database/study planner/Winter2026/Economics/Chapter_3/Chapter_3_Hub.md"
+    service = SourceLearningJobService(root / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(source),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+        chapter_title="Chapter_3",
+        parent_hub_path=parent_hub,
+    )
+    service.update_roadmap_titles(job["job_id"], ["Consumer Preferences", "Ordinal Utility"])
+    started = service.start_learning(job["job_id"])
+    session_id = started["tutor_session"]["session_id"]
+    current_path = started["tutor_session"]["current_note_path"]
+    next_path = started["tutor_session"]["curriculum"][1]
+
+    conn = service._connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE tutor_sessions SET completed_notes = ?, transfer_gate_outcomes = ? WHERE session_id = ?",
+                (
+                    json.dumps([]),
+                    json.dumps({current_path: {"status": "passed"}}),
+                    session_id,
+                ),
+            )
+            for qid in ["Consumer_Preferences_q1", "Consumer_Preferences_q2", "Consumer_Preferences_q3"]:
+                conn.execute(
+                    "UPDATE tutor_sessions SET wagers = json_set(coalesce(wagers, '{}'), ?, json(?)) WHERE session_id = ?",
+                    (f"$.{qid}", json.dumps({"wager": "low", "correct": True}), session_id),
+                )
+    finally:
+        conn.close()
+
+    manager = TutorSessionManager(root / "Inbox" / "ater_queue.db", root)
+    advanced = manager.advance_note(session_id)
+    assert advanced["can_advance"] is True
+    assert advanced["current_note_path"] == next_path
+
+    linked = service.get_job(job["job_id"])["current_tutor_link"]
+    assert linked["current_note_path"] == next_path
+    assert linked["current_concept_node_id"].endswith("_concept_2")
+
+
+def test_fallback_economics_note_uses_source_facts_not_generic_boilerplate():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Quantitative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_budget",
+        "title": "Budget Line",
+        "domain": "ECON-MICRO",
+        "modality": "Quantitative",
+        "source_pages": [43, 44],
+        "source_excerpts": [
+            {
+                "page": 43,
+                "text": "Budget set: the set of affordable bundles given prices Px and Py and income M. The budget equation is PxX + PyY = M.",
+            },
+            {
+                "page": 44,
+                "text": "Any bundle on or within the budget line is affordable. Any bundle outside the budget line is unaffordable. The slope is negative because consuming more of good X requires consuming less of good Y.",
+            },
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+    quiz = note["quiz"]
+
+    assert "organic agricultural soil-enrichment cycle" not in content
+    assert "works by connecting the source's key terms" not in content
+    assert "PxX + PyY = M" in content or "𝑷𝑿𝑿" in content
+    assert "affordable" in content.lower()
+    assert quiz[0]["answer"] != "A" or "Chapter objectives" not in quiz[0]["options"]["A"]
+    assert all("explanation_page" in question for question in quiz)
+
+
+def test_fallback_note_cleans_numbered_slide_fragments_into_usable_facts():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Comparative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_ordinal",
+        "title": "Ordinal Utility",
+        "domain": "ECON-MICRO",
+        "modality": "Comparative",
+        "source_pages": [10, 11],
+        "source_excerpts": [
+            {
+                "page": 10,
+                "text": (
+                    "Two major approaches to measure or compare consumer's utility: 1. Cardinal Approach "
+                    "2. Ordinal Approach. Ordinal utility ranks bundles by preference rather than measuring "
+                    "utility numerically."
+                ),
+            },
+            {
+                "page": 11,
+                "text": "Utility is ordinal when the consumer can rank bundles but the exact amount of satisfaction is not measured.",
+            },
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+    option_a = note["quiz"][0]["options"]["A"]
+
+    assert ": 1." not in content
+    assert "Cardinal Approach 2." not in content
+    assert "Cardinal Approach and Ordinal Approach" in content
+    assert "ranks bundles by preference" in content
+    assert len(option_a.split()) >= 8
+    assert not option_a.strip().lower() in {"cardinal approach", "ordinal approach", "two major approaches"}
+
+
+def test_fallback_note_prefers_title_side_when_source_contrasts_opposing_approaches():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Comparative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_ordinal",
+        "title": "Ordinal Utility",
+        "domain": "ECON-MICRO",
+        "modality": "Comparative",
+        "source_pages": [10, 11],
+        "source_excerpts": [
+            {"page": 10, "text": "Approaches of measuring utility • Cardinal Approach • Ordinal Approach."},
+            {
+                "page": 11,
+                "text": (
+                    "The Cardinalist school measures utility objectively using utils. "
+                    "It is possible to express utility in cardinal numbers such as 1, 2, 3, 4, 5 and so on. "
+                    "The Ordinalist school compares utility by ranking bundles in order of preference."
+                ),
+            },
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    option_a = note["quiz"][0]["options"]["A"].lower()
+    content = note["content"].lower()
+
+    assert "ordinalist" in option_a or "ranking bundles" in option_a
+    assert "cardinal numbers" not in option_a
+    assert "ranking bundles" in content
+
+
+def test_fallback_note_rejects_source_prompts_and_prefers_explanatory_facts():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Quantitative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_preferences",
+        "title": "Consumer Preferences And Utility",
+        "domain": "ECON-MICRO",
+        "modality": "Quantitative",
+        "source_pages": [3, 4],
+        "source_excerpts": [
+            {
+                "page": 3,
+                "text": (
+                    "Consumer Preferences: What the Consumer Wants. Given three consumption Bundles A, B and C. "
+                    "Which Bundle do you prefer? Rank them according to your preference."
+                ),
+            },
+            {
+                "page": 4,
+                "text": (
+                    "Consumer Preferences • Consumers make choices by comparing bundles of goods or consumption bundles. "
+                    "A consumption bundle is a complete list of goods and services that are available for choice by the consumer."
+                ),
+            },
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+    option_a = note["quiz"][0]["options"]["A"]
+
+    assert "Which Bundle do you prefer" not in content
+    assert "Rank them according" not in content
+    assert "Consumers make choices by comparing bundles" in content
+    assert "Consumers make choices by comparing bundles" in option_a
+    assert not option_a.startswith("Consumer Preferences:")
+
+
+def test_fallback_note_writes_source_specific_lesson_prose():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Quantitative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_budget_line",
+        "title": "Budget Line",
+        "domain": "ECON-MICRO",
+        "modality": "Quantitative",
+        "source_pages": [43, 44],
+        "source_excerpts": [
+            {"page": 43, "text": "Budget set: the set of affordable bundles given prices Px and Py and income M."},
+            {"page": 43, "text": "The budget equation is PxX + PyY = M."},
+            {"page": 44, "text": "Any bundle outside the budget line is unaffordable."},
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+
+    assert "Use that source statement" not in content
+    assert "source statement as the mental handle" not in content
+    assert "The formal reading" not in content
+    assert "separating affordable choices" in content
+    assert "PxX + PyY = M" in content
+
+
+def test_fallback_formal_anchor_avoids_slide_heading_when_no_equation_exists():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Quantitative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_preferences",
+        "title": "Consumer Preferences And Utility",
+        "domain": "ECON-MICRO",
+        "modality": "Quantitative",
+        "source_pages": [3, 4],
+        "source_excerpts": [
+            {"page": 3, "text": "Consumer Preferences: What the Consumer Wants."},
+            {"page": 4, "text": "Consumers make choices by comparing bundles of goods or consumption bundles."},
+            {"page": 4, "text": "A consumption bundle is a complete list of goods and services that are available for choice by the consumer."},
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+
+    formal_section = content.split("## The Formal Math & Models", 1)[1].split("## Source Evidence", 1)[0]
+    assert "Consumer Preferences: What the Consumer Wants" not in formal_section
+    assert "Consumers make choices by comparing bundles" in formal_section
+
+
+def test_fallback_note_filters_chapter_objective_boilerplate_from_facts():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Quantitative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_preferences",
+        "title": "Consumer Preferences And Utility",
+        "domain": "ECON-MICRO",
+        "modality": "Quantitative",
+        "source_pages": [2, 3, 4],
+        "source_excerpts": [
+            {"page": 2, "text": "Chapter objectives After successful completion of this chapter, you will be able to: explain consumer preferences and utility. differentiate between cardinal and ordinal utility approach."},
+            {"page": 3, "text": "Consumer Preferences: What the Consumer Wants. Our goal is to understand how consumers make choices. Given consumption bundles A, B and C, the consumer ranks bundles according to preference."},
+            {"page": 4, "text": "Consumers make choices by comparing bundles of goods. Preferences describe what the consumer wants before the budget constraint is applied."},
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+    option_a = note["quiz"][0]["options"]["A"]
+
+    assert "Chapter objectives" not in content
+    assert "After successful completion" not in content
+    assert not option_a.lower().startswith("chapter objectives")
+    assert "consumers make choices" in content.lower() or "comparing bundles" in content.lower()
+
+
 def test_golden_pdf_extraction_audit_when_fixture_available():
     pdf_path = _chapter_pdf()
     if not pdf_path.exists():
@@ -144,6 +523,9 @@ def test_source_job_builds_objectives_concept_graph_profiles_and_coverage(_mock_
     assert "Consumer Preferences And Utility" in titles
     assert "Budget Line" in titles
     assert "Equilibrium Condition Of A Consumer" in titles
+    ordinal = next(node for node in job["concept_graph"]["nodes"] if node["title"] == "Ordinal Utility")
+    assert any(page > 2 for page in ordinal["source_pages"])
+    assert any("ordinal utility" in excerpt["text"].lower() for excerpt in ordinal["source_excerpts"])
     assert all(node["source_pages"] for node in job["concept_graph"]["nodes"])
     assert len(job["concept_graph"]["edges"]) == len(job["concept_graph"]["nodes"]) - 1
     budget = next(node for node in job["concept_graph"]["nodes"] if node["title"] == "Budget Line")

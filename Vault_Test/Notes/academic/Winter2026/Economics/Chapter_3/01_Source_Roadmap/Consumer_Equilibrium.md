@@ -2,9 +2,9 @@
 title: "Consumer_Equilibrium"
 hub: "[[Chapter_3_Hub]]"
 source: "[[Chapter 3 2024-1.pdf]]"
-source_file: "Chapter 3 2024-1.pdf"
-source_pages: [25, 26]
-source_job_id: "srcjob_f4b691a8615e4d6e"
+source_file: "Inbox/generated/academic/Chapter 3 2024-1.pdf"
+source_pages: [2, 25, 26]
+source_job_id: "srcjob_9b26c2e74a10426c"
 domain: "ECON-MICRO"
 concept_modality: "Quantitative"
 fallback_generation: true
@@ -12,23 +12,24 @@ generated_by: "ater_source_job"
 ---
 ## Mental Model
 
-**The mechanism of Consumer Equilibrium can be compared to an organic agricultural soil-enrichment cycle.** **Consumer Equilibrium** acts as the precise concentration of nutrients that determines growth rate and yield. Consumer equilibrium Two products, x and y, are priced at $1 and $2 respectively. Just as crops adapt based on weather shocks and soil constraints, individual micro-entities shift their choices in response to price signals and input costs.
+Treat Consumer Equilibrium as a working part of the source's consumer-choice model: separating affordable choices from choices ruled out by income and prices. The first anchor is: Consumer equilibrium is where the MU/P is the same for each product.
 
 ## How the Economics Actually Work
 
-Consumer Equilibrium works by connecting the source's key terms, rules, and examples into one usable idea. Quantity Product x ($1 each) Product y ($2 each) TU MU MU/P TU MU MU/P 1 60 60 60 42 42 21 2 100 40 40 74 32 16 3 125 25 25 98 24 12 4 137 12 12 106 18 9 5 139 5 5 120 14 7 6 141 2 2 123 12 6 Consumer equilibrium Explaining the solution • Consumer equilibrium is where the MU/P is the same for each product. • This is where 4 units of good x and 3 units of good y are consumed with a total utility score of 235.
+Start from that anchor, then add the next source detail: Consumer equilibrium Two products, x and y, are priced at $1 and $2 respectively. Together, these points show what the consumer is allowed to compare, measure, rank, or choose in this part of the chapter. A correct answer should name the relationship and then state its consequence in the same direction as the source.
 
 ## The Formal Math & Models
 
-In formal terms, Consumer Equilibrium must be read through the exact language and constraints shown in the source. • No other combination of goods generates a higher total utility; therefore, any other combination would provide less satisfaction. • This is referred to as the equi-marginal principle
+Preserve this formal anchor exactly: Consumer equilibrium is where the MU/P is the same for each product. If it is an equation, ranking, slope, condition, or named relationship, later practice should test that same structure rather than a looser paraphrase.
 
-| Source Detail | Meaning |
-|---|---|
-| Consumer Equilibrium | The focused concept being studied. |
-| Microeconomist | Quantity Product x ($1 each) Product y ($2 each) TU MU MU/P TU MU MU/P 1 60 60 60 42 42 21 |
-| Source excerpt | The only authority for definitions and constraints. |
+## Source Evidence
 
-Pay close attention to the exact terminology the source uses to describe Consumer Equilibrium. The most common study error is paraphrasing too loosely — the exam will test the source's precise definitions, not general knowledge of the domain.
+| Page | Evidence |
+| --- | --- |
+| p. 26 | Consumer equilibrium is where the MU/P is the same for each product |
+| p. 25 | Consumer equilibrium Two products, x and y, are priced at $1 and $2 respectively |
+| p. 25 | It is assumed that a consumer has $10 to spend |
+| p. 26 | This is referred to as the equi-marginal principle |
 
 ---
 
@@ -38,34 +39,34 @@ Pay close attention to the exact terminology the source uses to describe Consume
 [
   {
     "type": "mcq",
-    "question": "Which statement best matches the source's treatment of Consumer Equilibrium?",
+    "question": "According to the source, which statement best explains Consumer Equilibrium?",
     "options": {
-      "A": "Consumer equilibrium Two products, x and y, are priced at $1 and $2 respectively.",
-      "B": "Consumer Equilibrium is a peripheral detail that does not affect core understanding of the topic.",
-      "C": "Consumer Equilibrium applies only in highly specialized edge cases not covered by the source.",
-      "D": "Consumer Equilibrium can be safely ignored without losing the main argument of the source."
+      "A": "Consumer equilibrium is where the MU/P is the same for each product",
+      "B": "Consumer Equilibrium can be ignored because it has no operational role in the cited source pages.",
+      "C": "Consumer Equilibrium reverses the source relationship by treating the cited constraint or comparison as irrelevant.",
+      "D": "Consumer Equilibrium is only a label and does not connect to any source definition, condition, ranking, equation, or example."
     },
     "answer": "A",
-    "explanation": "The source context directly connects Consumer Equilibrium to specific behavior, definitions, or structural rules described on page 25.",
-    "explanation_page": 25
+    "explanation": "The correct option restates the source-grounded fact for Consumer Equilibrium from page 26.",
+    "explanation_page": 26
   },
   {
     "type": "true_false",
-    "question": "Quantity Product x ($1 each) Product y ($2 each) TU MU MU/P TU MU MU/P 1 60 60 60 42 42 21 2 100 40 40 74 32 16 3 125 25 25 98 24 12 4 137 12 12 106 18 9 5 139 5 5 120 14 7 6 141 2 2 123 12 6 Consumer equilibrium Explaining the solution \u2022 Consumer equilibrium is where the MU/P is the same for each product",
+    "question": "Consumer Equilibrium should be interpreted using the chapter's stated source constraints: Consumer equilibrium Two products, x and y, are priced at $1 and $2 respectively.",
     "answer": true,
-    "explanation": "This follows directly from the source's definition of Consumer Equilibrium on page 25.",
+    "explanation": "This follows from the cited source discussion of Consumer Equilibrium.",
     "explanation_page": 25
   },
   {
     "type": "writing",
-    "question": "Explain Consumer Equilibrium in one precise paragraph. Include one specific consequence or implication drawn from the source on page 25.",
-    "answer": "A strong answer defines Consumer Equilibrium in the domain's own terms, explains its role or function, and anchors the explanation in the source definition from page 25.",
+    "question": "Explain Consumer Equilibrium in one precise paragraph using the source's wording and one consequence from the cited pages.",
+    "answer": "A strong answer defines Consumer Equilibrium, states the source-specific rule or relationship, and explains why that relationship matters in the chapter's consumer-choice model.",
     "required_keywords": [
-      "source",
-      "consumer"
+      "consumer",
+      "equilibrium"
     ],
-    "explanation": "This checks whether the learner can translate the source wording into a precise, usable explanation of Consumer Equilibrium.",
-    "explanation_page": 25
+    "explanation": "This checks whether the learner can use the source facts for Consumer Equilibrium, not just recognize the term.",
+    "explanation_page": 26
   }
 ]
 ```

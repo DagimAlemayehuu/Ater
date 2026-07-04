@@ -600,13 +600,14 @@ class AterService:
             return []
         
         hubs = []
-        for file in planner_path.glob("*.md"):
+        for file in planner_path.rglob("*.md"):
             if file.name.startswith("_"): continue
+            rel_path = file.relative_to(self.vm.vault_path).as_posix()
             
             metadata = {
-                "id": file.name,
+                "id": rel_path.removesuffix(".md"),
                 "title": file.stem.replace("_", " "),
-                "path": file.relative_to(self.vm.vault_path).as_posix()
+                "path": rel_path
             }
             
             try:
@@ -679,11 +680,25 @@ class AterService:
         
         # List of roots to search (active academic root, then fallback Notes/ directory)
         roots_to_try = [self.vm.academic_root]
+        academic_subroot = self.vm.academic_root / "academic"
+        if academic_subroot.exists():
+            roots_to_try.append(academic_subroot)
         notes_root = self.vm.vault_path / "Notes"
         if notes_root.exists() and notes_root != self.vm.academic_root:
             roots_to_try.append(notes_root)
+            notes_academic = notes_root / "academic"
+            if notes_academic.exists():
+                roots_to_try.append(notes_academic)
             
         for root in roots_to_try:
+            if semester and course and unit_num:
+                direct_unit = root / semester / self.vm.get_canonical_title(course) / unit_num
+                roadmap_dir = direct_unit / "01_Source_Roadmap"
+                if roadmap_dir.exists():
+                    return roadmap_dir
+                if direct_unit.exists():
+                    return direct_unit
+
             # 1. Try direct path (in current root)
             academic_unit_dir = root / semester / self.vm.get_canonical_title(course) / unit_folder_name
             if academic_unit_dir.exists():

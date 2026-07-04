@@ -68,6 +68,56 @@ def test_path_traversal_serve_pdf(setup_vault):
     response = client.get("/api/obsidian/serve/..%2F..%2Fescape.pdf")
     assert response.status_code in (400, 404)
 
+def test_vault_search_reports_pdf_type_for_generated_inbox_pdf(setup_vault):
+    pdf_dir = setup_vault / "Inbox" / "generated" / "academic"
+    pdf_dir.mkdir(parents=True)
+    (pdf_dir / "Chapter 3 2024-1.pdf").write_bytes(b"%PDF-1.4\n")
+
+    response = client.get("/api/vault/search", params={"page_name": "Chapter 3 2024-1.pdf"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["found"] is True
+    assert data["type"] == "pdf"
+    assert data["path"] == "Inbox/generated/academic/Chapter 3 2024-1.pdf"
+
+def test_pdf_viewer_uses_vault_relative_serve_url_for_generated_pdf(setup_vault):
+    pdf_dir = setup_vault / "Inbox" / "generated" / "academic"
+    pdf_dir.mkdir(parents=True)
+    (pdf_dir / "Chapter 3 2024-1.pdf").write_bytes(b"%PDF-1.4\n")
+
+    response = client.get(
+        "/api/obsidian/viewer/Inbox/generated/academic/Chapter%203%202024-1.pdf",
+        params={"vault_path": str(setup_vault), "page": 2},
+    )
+
+    assert response.status_code == 200
+    html = response.text
+    assert "/api/obsidian/serve/Inbox/generated/academic/Chapter%203%202024-1.pdf" in html
+    assert "/api/obsidian/serve/" + quote_like_path(str(setup_vault)) not in html
+
+
+def test_pdf_serve_accepts_absolute_path_missing_leading_slash_when_inside_vault(setup_vault):
+    pdf_dir = setup_vault / "Inbox" / "generated" / "academic"
+    pdf_dir.mkdir(parents=True)
+    pdf_path = pdf_dir / "Chapter 3 2024-1.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n")
+    path_without_leading_slash = pdf_path.as_posix().lstrip("/")
+
+    response = client.get(
+        f"/api/obsidian/serve/{path_without_leading_slash}",
+        params={"vault_path": str(setup_vault)},
+    )
+
+    assert response.status_code == 200
+    assert response.content.startswith(b"%PDF")
+
+
+def quote_like_path(path: str) -> str:
+    from urllib.parse import quote
+
+    return quote(path.lstrip("/"))
+
 def test_path_traversal_create_option(setup_vault):
     response = client.post(
         "/api/vault/options",

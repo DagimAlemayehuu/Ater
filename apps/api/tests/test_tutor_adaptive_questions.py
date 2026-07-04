@@ -125,3 +125,69 @@ def test_remediation_fallback_chooses_domain_specific_type(tmp_path: Path):
     assert code_question.get("content") or code_question.get("codeSnippet") or code_question.get("buggyCode")
     assert process_question["type"] == "order"
     assert process_question["steps"]
+
+
+def test_economics_remediation_does_not_choose_code_debug_or_trace(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    manager = TutorSessionManager(tmp_path / "ater_queue.db", vault)
+    note_content = """
+---
+domain: ECON-MICRO
+concept_modality: Quantitative
+---
+# Consumer Preferences And Utility
+
+Consumer preferences and utility explain how a consumer ranks goods and chooses
+the best affordable bundle. A budget line depends on income and the prices of
+goods X and Y. Consumer equilibrium compares marginal utility per unit of price.
+"""
+    lesson = "The learner confused consumer-choice logic with production cost."
+    original = {
+        "id": "q1",
+        "type": "mcq",
+        "question": "Which statement explains consumer preferences and utility?",
+        "answer": "A",
+        "explanation": "It belongs to consumer-choice theory.",
+    }
+
+    chosen = manager._choose_proving_ground_type(original, lesson, note_content, ["mcq"], attempt_number=1)
+
+    assert chosen not in {"debug", "code", "trace", "find_error"}
+    assert chosen in {"scenario", "calculation", "synthesis", "fill_in", "matching", "writing", "true_false"}
+
+
+def test_economics_normalizer_coerces_model_debug_output_to_domain_type(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    manager = TutorSessionManager(tmp_path / "ater_queue.db", vault)
+    note_content = """
+# Budget Line
+
+In consumer theory, a budget line shows combinations of goods X and Y that can
+be purchased with a given income and given prices. The consumer chooses among
+affordable bundles according to preferences and utility.
+"""
+    original = {
+        "id": "q1",
+        "type": "mcq",
+        "question": "What does the budget line represent?",
+        "answer": "Affordable combinations of goods.",
+    }
+
+    normalized = manager._normalize_proving_ground_question(
+        {
+            "type": "debug",
+            "question": "A consumer has a budget of $100 for goods X and Y. Find the flaw.",
+            "buggyCode": "def utility(X, Y): return X * Y",
+            "answer": "Use the budget line to identify affordable bundles.",
+            "explanation": "This is consumer theory, not a coding exercise.",
+        },
+        "Economics/Budget_Line.md",
+        original_question=original,
+        preferred_type="scenario",
+        note_content=note_content,
+    )
+
+    assert normalized["type"] == "scenario"
+    assert "buggyCode" not in normalized or normalized["buggyCode"] == "def utility(X, Y): return X * Y"

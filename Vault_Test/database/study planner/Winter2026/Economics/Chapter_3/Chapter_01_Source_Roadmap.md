@@ -1,7 +1,7 @@
 ---
 type: "Chapter"
 generated_by: "ater_source_job"
-source_job_id: "srcjob_f4b691a8615e4d6e"
+source_job_id: "srcjob_9b26c2e74a10426c"
 ---
 
 # Source Roadmap
@@ -60,3 +60,4 @@ source_job_id: "srcjob_f4b691a8615e4d6e"
 - [[Prices_Of_Goods]]
 - [[Taxes,_Subsides_And_Rationing]]
 - [[Equilibrium_Of_The_Consumer]]
+- [[Optimal_Choice]]

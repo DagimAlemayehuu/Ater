@@ -832,7 +832,6 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const cleanHubName = String(hubVal).replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim()
 
   if (cleanHubName) {
-  const res = await sidecarApi.findVaultPage(cleanHubName)
   const tryPath = async (p: string) => {
   try {
   const note = await sidecarApi.readObsidianNote(p)
@@ -841,8 +840,16 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   return null
 }
 
+  const academicHubPath = academicHubPathFromNote(String(loadedPath || ''), cleanHubName)
+  if (academicHubPath) {
+  topologies = await tryPath(academicHubPath)
+}
+
+  if (!topologies) {
+  const res = await sidecarApi.findVaultPage(cleanHubName)
   if (res.found && res.path) {
-  topologies = await tryPath(res.path)
+    topologies = await tryPath(res.path)
+  }
 }
 
   if (!topologies) {
@@ -1251,7 +1258,19 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  }
 }, [renamingPath, newItemName, fetchFiles, selectedPath])
 
+const normalizeVaultPath = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
+
+const academicHubPathFromNote = (notePath: string, hubName: string): string => {
+  const normalized = String(notePath || '').replace(/\\/g, '/')
+  const match = normalized.match(/^Notes\/academic\/([^/]+)\/([^/]+)\/([^/]+)\//i)
+  if (!match || !hubName) return ''
+  return `database/study planner/${match[1]}/${match[2]}/${match[3]}/${hubName.replace(/\.md$/i, '')}.md`
+}
+
 const checkLockState = async (path: string): Promise<boolean> => {
+  const targetPath = normalizeVaultPath(path)
+  if (lockedNotes.has(targetPath)) return true
+
   const activeSessionId = localStorage.getItem('ater_active_session_id')
   if (!activeSessionId) return false
 
@@ -1259,15 +1278,12 @@ const checkLockState = async (path: string): Promise<boolean> => {
     const session = await sidecarApi.getTutorStatus(activeSessionId)
     if (!session || !session.curriculum) return false
 
-    const normalize = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
-    const targetPath = normalize(path)
-
-    const inCurriculum = session.curriculum.some((p: string) => normalize(p) === targetPath)
+    const inCurriculum = session.curriculum.some((p: string) => normalizeVaultPath(p) === targetPath)
     if (!inCurriculum) return false
 
-    const completed = new Set((session.completed_notes || []).map(normalize))
-    const unlocked = new Set((session.active_note_unlocks || []).map(normalize))
-    const current = normalize(session.current_note_path || '')
+    const completed = new Set((session.completed_notes || []).map(normalizeVaultPath))
+    const unlocked = new Set((session.active_note_unlocks || []).map(normalizeVaultPath))
+    const current = normalizeVaultPath(session.current_note_path || '')
 
     if (completed.has(targetPath) || unlocked.has(targetPath) || targetPath === current) {
       return false
@@ -1393,7 +1409,6 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         path: path,
         metadata: { page, filterPages }
       }, false);
-      return;
     }
 
     setSelectedPath(path)
@@ -1466,7 +1481,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         setLoadingNote(false)
       }
     }
-  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push])
+  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push, lockedNotes])
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
     let cleanPageName = pageName;
@@ -1562,13 +1577,18 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         .replace(/\.md$/i, '')
 
       if (hubName) {
-        try {
-          const res = await sidecarApi.findVaultPage(hubName)
-          if (res.found && res.path) {
-            hubPath = res.path
+        const academicHubPath = academicHubPathFromNote(selectedPath, hubName)
+        if (academicHubPath) {
+          hubPath = academicHubPath
+        } else {
+          try {
+            const res = await sidecarApi.findVaultPage(hubName)
+            if (res.found && res.path) {
+              hubPath = res.path
+            }
+          } catch (err) {
+            console.error('Failed to resolve lesson hub from Knowledge Base:', err)
           }
-        } catch (err) {
-          console.error('Failed to resolve lesson hub from Knowledge Base:', err)
         }
       }
     }

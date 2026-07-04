@@ -603,6 +603,34 @@ Detailed Lesson:"""
             str(note_content or "")[:2000],
         ]).lower()
 
+    def _is_code_question_context(self, context: str) -> bool:
+        return any(token in context for token in [
+            "```", "def ", "class ", "function", "bug", "debug", "exception", "compile", "runtime",
+            "javascript", "typescript", "python", "programming", "algorithm", "code",
+        ])
+
+    def _is_economics_question_context(self, context: str) -> bool:
+        return any(token in context for token in [
+            "econ-", "economics", "consumer", "utility", "budget", "preference", "preferences",
+            "indifference", "marginal", "commodity", "commodities", "price", "income",
+            "demand", "supply", "mrs", "budget line", "cardinal", "ordinal",
+        ])
+
+    def _allowed_proving_ground_types(self, context: str = "") -> List[str]:
+        unsupported_for_non_code = {"debug", "code", "trace", "find_error"}
+        if self._is_economics_question_context(context) and not self._is_code_question_context(context):
+            return sorted(self._SUPPORTED_PROVING_GROUND_TYPES - unsupported_for_non_code)
+        return sorted(self._SUPPORTED_PROVING_GROUND_TYPES)
+
+    def _coerce_type_for_context(self, q_type: str, context: str) -> str:
+        normalized = self._normalize_question_type(q_type)
+        allowed = set(self._allowed_proving_ground_types(context))
+        if normalized in allowed:
+            return normalized
+        if "calculation" in allowed and any(token in context for token in ["budget", "price", "income", "equation", "formula", "solve"]):
+            return "calculation"
+        return "scenario" if "scenario" in allowed else "writing"
+
     def _choose_proving_ground_type(
         self,
         question: Dict[str, Any],
@@ -614,9 +642,10 @@ Detailed Lesson:"""
         seen = {self._normalize_question_type(t) for t in (seen_question_types or [])}
         context = self._question_context_text(question, lesson, note_content)
         original_type = self._normalize_question_type(question.get("type"))
+        allowed = set(self._allowed_proving_ground_types(context))
 
         ranked: List[str] = []
-        if any(token in context for token in ["```", "def ", "class ", "function", "bug", "debug", "exception", "compile", "runtime"]):
+        if self._is_code_question_context(context) and {"debug", "trace", "code", "find_error"} & allowed:
             ranked.extend(["debug", "trace", "code", "find_error", "scenario"])
         if any(token in context for token in ["calculate", "equation", "formula", "solve", "number", "ratio", "probability", "derivative", "integral"]):
             ranked.extend(["calculation", "trace", "data_analysis", "fill_in"])
@@ -629,13 +658,13 @@ Detailed Lesson:"""
 
         ranked.extend([original_type, "scenario", "synthesis", "fill_in", "matching", "mcq", "writing", "true_false"])
         if attempt_number >= 1:
-            ranked = ["scenario", "trace", "synthesis"] + ranked
+            ranked = ["scenario", "calculation", "synthesis"] + ranked
 
         for q_type in ranked:
-            normalized = self._normalize_question_type(q_type)
+            normalized = self._coerce_type_for_context(q_type, context)
             if normalized not in seen:
                 return normalized
-        return self._normalize_question_type(ranked[attempt_number % len(ranked)] if ranked else "scenario")
+        return self._coerce_type_for_context(ranked[attempt_number % len(ranked)] if ranked else "scenario", context)
 
     def _as_list(self, value: Any) -> List[Any]:
         if value is None:
@@ -659,9 +688,11 @@ Detailed Lesson:"""
         note_content: str = "",
         adaptive: bool = False,
     ) -> Dict[str, Any]:
+        context = self._question_context_text(original_question, lesson, note_content)
         q_type = self._normalize_question_type(preferred_type) if preferred_type else self._choose_proving_ground_type(
             original_question, lesson, note_content, seen_question_types, attempt_number
         )
+        q_type = self._coerce_type_for_context(q_type, context)
         orig_id = str(original_question.get("id") or f"q_{Path(note_path).stem}")
         concept = str(original_question.get("question") or Path(note_path).stem.replace("_", " "))
         answer = original_question.get("answer") or "A correct answer explains the core mechanism and applies it to the case."
@@ -758,9 +789,12 @@ Detailed Lesson:"""
     ) -> Dict[str, Any]:
         original_question = original_question or {}
         q = dict(raw_question or {})
-        q_type = self._normalize_question_type(q.get("type") or preferred_type)
-        if preferred_type and q_type != self._normalize_question_type(preferred_type):
-            q_type = self._normalize_question_type(preferred_type)
+        context = self._question_context_text({**original_question, **q}, lesson, note_content)
+        q_type = self._coerce_type_for_context(q.get("type") or preferred_type, context)
+        if preferred_type:
+            preferred_normalized = self._coerce_type_for_context(preferred_type, context)
+            if q_type != preferred_normalized:
+                q_type = preferred_normalized
         if not str(q.get("question") or "").strip():
             return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, q_type, note_content, adaptive)
 
@@ -865,6 +899,9 @@ Detailed Lesson:"""
 
                 _seen = [self._normalize_question_type(t) for t in (seen_question_types or [])]
                 preferred_type = self._choose_proving_ground_type(question, lesson, note_content, _seen, attempt_number)
+                allowed_types = self._allowed_proving_ground_types(
+                    self._question_context_text(question, lesson, note_content)
+                )
 
                 parser = PydanticOutputParser(pydantic_object=RemediationQuestionSchema)
                 prompt = f"""You are Ater's expert tutor. A student made an error on a question in the note below.
@@ -886,7 +923,7 @@ Strict Rules:
 Attempt number: {attempt_number + 1}
 Previously used question types: {_seen}
 Preferred question type: {preferred_type}
-Supported types: {sorted(self._SUPPORTED_PROVING_GROUND_TYPES)}
+Supported types: {allowed_types}
 
 Rules:
 - Make this question harder than a basic recall. Test application of the concept, not just definition.
@@ -1109,6 +1146,9 @@ Original question type: {question.get("type")}
                 [item.get("type") for item in history if isinstance(item, dict) and item.get("type")],
                 len(history),
             )
+            allowed_types = self._allowed_proving_ground_types(
+                self._question_context_text(source_question, json.dumps(last_result or {}, ensure_ascii=False), clean_content)
+            )
             prompt = f"""Generate exactly one next Proving Grounds question for this Atomic Note.
 
 Atomic Note:
@@ -1122,7 +1162,7 @@ Last grading result:
 
 Pick the best supported UI question type for the learner's performance. If they were wrong, target the misconception with a concrete follow-up. If they were correct, increase transfer/application slightly. Do not generate a batch.
 Preferred type from Ater's selector: {preferred_type}
-Supported types: {sorted(self._SUPPORTED_PROVING_GROUND_TYPES)}
+Supported types: {allowed_types}
 
 Schema rules:
 - mcq: options as option-key map and answer as option key.
@@ -1784,6 +1824,13 @@ User Answer: {user_answer}"""
                     status = "completed"
         else:
             status = "completed"
+
+        next_concept_node_id = session.get("current_concept_node_id")
+        if session.get("source_job_id") and next_note:
+            for item in session.get("roadmap") or []:
+                if item.get("path") == next_note and item.get("id"):
+                    next_concept_node_id = item["id"]
+                    break
             
         if next_note:
             curr_chapter = Path(curr_note).parts[-2] if len(Path(curr_note).parts) >= 2 else ""
@@ -1815,7 +1862,7 @@ User Answer: {user_answer}"""
                 
         self.conn.execute("""
             UPDATE tutor_sessions
-            SET current_note_path = ?, completed_notes = ?, active_note_unlocks = ?, status = ?, updated_at = ?
+            SET current_note_path = ?, completed_notes = ?, active_note_unlocks = ?, status = ?, updated_at = ?, current_concept_node_id = ?
             WHERE session_id = ?
         """, (
             next_note,
@@ -1823,8 +1870,24 @@ User Answer: {user_answer}"""
             json.dumps(active_note_unlocks),
             status,
             datetime.now().isoformat(),
+            next_concept_node_id,
             session_id
         ))
+        if session.get("source_job_id"):
+            self.conn.execute(
+                """
+                UPDATE source_job_tutor_links
+                SET current_concept_node_id = ?, current_note_path = ?, updated_at = ?
+                WHERE job_id = ? AND tutor_session_id = ?
+                """,
+                (
+                    next_concept_node_id,
+                    next_note,
+                    datetime.now().isoformat(),
+                    session["source_job_id"],
+                    session_id,
+                ),
+            )
         self.conn.commit()
         
         updated_session = self.get_session(session_id)

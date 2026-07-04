@@ -757,7 +757,7 @@ async def find_vault_page(page_name: str, secrets: AppSecrets = Depends(get_app_
             # Try exact
             found = find_case_insensitive(pdf_store, target_pdf_name)
             if found:
-                return {"found": True, "type": "note", "path": found.relative_to(vault_root).as_posix()}
+                return {"found": True, "type": "pdf", "path": found.relative_to(vault_root).as_posix()}
 
     # 2. Search in 3-Database (prioritize database views)
     db_root = vault_root / DB_DIR_PREFIX
@@ -1095,11 +1095,26 @@ async def get_vault_backlinks(page_name: str, secrets: AppSecrets = Depends(get_
     
 def resolve_absolute_or_vault_path(decoded_path: str, effective_vault_path: Optional[str]) -> Optional[Path]:
     if effective_vault_path:
+        vault_root = Path(effective_vault_path).resolve()
+        candidate = Path(decoded_path)
+        if not candidate.is_absolute() and decoded_path.startswith(vault_root.as_posix().lstrip("/") + "/"):
+            try:
+                return resolve_vault_path(vault_root, "/" + decoded_path)
+            except ValueError:
+                return None
         try:
-            return resolve_vault_path(effective_vault_path, decoded_path)
+            return resolve_vault_path(vault_root, decoded_path)
         except ValueError:
             return None
     return None
+
+def to_vault_relative_url_path(resolved_path: Path, effective_vault_path: Optional[str]) -> str:
+    if effective_vault_path:
+        try:
+            return resolved_path.resolve().relative_to(Path(effective_vault_path).resolve()).as_posix()
+        except ValueError:
+            pass
+    return resolved_path.as_posix().lstrip("/")
 
 @router.get("/obsidian/pdf-metadata/{path:path}")
 async def get_pdf_metadata(
@@ -1151,9 +1166,7 @@ async def get_pdf_viewer(
     if not resolved_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
         
-    resolved_str = str(resolved_path.as_posix())
-    if resolved_str.startswith("/"):
-        resolved_str = resolved_str[1:]
+    resolved_str = to_vault_relative_url_path(resolved_path, effective_vault_path)
         
     auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
     effective_token = sidecar_token

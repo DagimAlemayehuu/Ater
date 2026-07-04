@@ -2,9 +2,9 @@
 title: "Marginal_Rate_Of_Substitution_(Mrs)"
 hub: "[[Chapter_3_Hub]]"
 source: "[[Chapter 3 2024-1.pdf]]"
-source_file: "Chapter 3 2024-1.pdf"
-source_pages: [35, 36]
-source_job_id: "srcjob_f4b691a8615e4d6e"
+source_file: "Inbox/generated/academic/Chapter 3 2024-1.pdf"
+source_pages: [26, 35, 36]
+source_job_id: "srcjob_9b26c2e74a10426c"
 domain: "ECON-MICRO"
 concept_modality: "Qualitative/Definitional"
 fallback_generation: true
@@ -12,23 +12,24 @@ generated_by: "ater_source_job"
 ---
 ## Mental Model
 
-**The mechanism of Marginal Rate Of Substitution (Mrs) can be compared to an organic agricultural soil-enrichment cycle.** **Marginal Rate Of Substitution (Mrs)** acts as the precise concentration of nutrients that determines growth rate and yield. Marginal rate of substitution (MRS) • Marginal rate of substitution is a rate at which consumers are willing to substitute one commodity for another in such a way that the consumer remains on the same level of satisfaction. Just as crops adapt based on weather shocks and soil constraints, individual micro-entities shift their choices in response to price signals and input costs.
+Treat Marginal Rate Of Substitution (Mrs) as a working part of the source's consumer-choice model: identifying the condition where the consumer has no better affordable choice. The first anchor is: Marginal rate of substitution is a rate at which consumers are willing to substitute one commodity for another in such a way that the consumer remains on the same level of.
 
 ## How the Economics Actually Work
 
-Marginal Rate Of Substitution (Mrs) works by connecting the source's key terms, rules, and examples into one usable idea. • Marginal rate of substitution of X for Y (𝑴𝑹𝑺𝒙,𝒚) is defined as the number of units of commodity Y that must be given up in exchange for an extra unit of commodity X so that the consumer maintains on the same level of satisfaction (IC curve).
+Start from that anchor, then add the next source detail: Marginal rate of substitution of X for Y (𝑴𝑹𝑺𝒙,𝒚) is defined as the number of units of commodity Y that must be given up in exchange for an extra unit of commodity X so that. Together, these points show what the consumer is allowed to compare, measure, rank, or choose in this part of the chapter. A correct answer should name the relationship and then state its consequence in the same direction as the source.
 
 ## The Formal Math & Models
 
-In formal terms, Marginal Rate Of Substitution (Mrs) must be read through the exact language and constraints shown in the source. Marginal rate of substitution (MRS) . • 𝑆𝑙𝑜𝑝𝑒 𝑜𝑓 𝐼𝐶 = 𝛥𝑌 𝛥𝑋 • 𝑀𝑅𝑆𝑋,𝑌 is the negative of the slope of an indifference curve. 𝑀𝑅𝑆𝑋,𝑌 = −𝛥𝑌 𝛥𝑋 • The 𝑴𝑹𝑺𝑿,𝒀 is related to the 𝑴𝑼𝑿 and the 𝑴𝑼𝒀.
+Preserve this formal anchor exactly: This is referred to as the equi-marginal principle. If it is an equation, ranking, slope, condition, or named relationship, later practice should test that same structure rather than a looser paraphrase.
 
-| Source Detail | Meaning |
-|---|---|
-| Marginal Rate Of Substitution (Mrs) | The focused concept being studied. |
-| Feynman Economist | • Marginal rate of substitution of X for Y (𝑴𝑹𝑺𝒙,𝒚) is defined as the number of units of c |
-| Source excerpt | The only authority for definitions and constraints. |
+## Source Evidence
 
-Pay close attention to the exact terminology the source uses to describe Marginal Rate Of Substitution (Mrs). The most common study error is paraphrasing too loosely — the exam will test the source's precise definitions, not general knowledge of the domain.
+| Page | Evidence |
+| --- | --- |
+| p. 35 | Marginal rate of substitution is a rate at which consumers are willing to substitute one commodity for another in such a way that the consumer remains on the same level of |
+| p. 35 | Marginal rate of substitution of X for Y (𝑴𝑹𝑺𝒙,𝒚) is defined as the number of units of commodity Y that must be given up in exchange for an extra unit of commodity X so that |
+| p. 26 | This is referred to as the equi-marginal principle |
+| p. 26 | Consumer equilibrium is where the MU/P is the same for each product |
 
 ---
 
@@ -38,33 +39,34 @@ Pay close attention to the exact terminology the source uses to describe Margina
 [
   {
     "type": "mcq",
-    "question": "Which statement best matches the source's treatment of Marginal Rate Of Substitution (Mrs)?",
+    "question": "According to the source, which statement best explains Marginal Rate Of Substitution (Mrs)?",
     "options": {
-      "A": "Marginal rate of substitution (MRS) \u2022 Marginal rate of substitution is a rate at which consumers are willing to substitu",
-      "B": "Marginal Rate Of Substitution (Mrs) is a peripheral detail that does not affect core understanding of the topic.",
-      "C": "Marginal Rate Of Substitution (Mrs) applies only in highly specialized edge cases not covered by the source.",
-      "D": "Marginal Rate Of Substitution (Mrs) can be safely ignored without losing the main argument of the source."
+      "A": "Marginal rate of substitution is a rate at which consumers are willing to substitute one commodity for another in such a way that the consumer remains on the same level of",
+      "B": "Marginal Rate Of Substitution (Mrs) can be ignored because it has no operational role in the cited source pages.",
+      "C": "Marginal Rate Of Substitution (Mrs) reverses the source relationship by treating the cited constraint or comparison as irrelevant.",
+      "D": "Marginal Rate Of Substitution (Mrs) is only a label and does not connect to any source definition, condition, ranking, equation, or example."
     },
     "answer": "A",
-    "explanation": "The source context directly connects Marginal Rate Of Substitution (Mrs) to specific behavior, definitions, or structural rules described on page 35.",
+    "explanation": "The correct option restates the source-grounded fact for Marginal Rate Of Substitution (Mrs) from page 35.",
     "explanation_page": 35
   },
   {
     "type": "true_false",
-    "question": "\u2022 Marginal rate of substitution of X for Y (\ud835\udc74\ud835\udc79\ud835\udc7a\ud835\udc99,\ud835\udc9a) is defined as the number of units of commodity Y that must be given up in exchange for an extra unit of commodity X so that the consumer maintains on the same level of satisfaction (IC curve)",
+    "question": "Marginal Rate Of Substitution (Mrs) should be interpreted using the chapter's stated source constraints: Marginal rate of substitution of X for Y (\ud835\udc74\ud835\udc79\ud835\udc7a\ud835\udc99,\ud835\udc9a) is defined as the number of units of commodity Y that must be given up in exchange for an extra unit of commodity X so that.",
     "answer": true,
-    "explanation": "This follows directly from the source's definition of Marginal Rate Of Substitution (Mrs) on page 35.",
+    "explanation": "This follows from the cited source discussion of Marginal Rate Of Substitution (Mrs).",
     "explanation_page": 35
   },
   {
     "type": "writing",
-    "question": "Explain Marginal Rate Of Substitution (Mrs) in one precise paragraph. Include one specific consequence or implication drawn from the source on page 35.",
-    "answer": "A strong answer defines Marginal Rate Of Substitution (Mrs) in the domain's own terms, explains its role or function, and anchors the explanation in the source definition from page 35.",
+    "question": "Explain Marginal Rate Of Substitution (Mrs) in one precise paragraph using the source's wording and one consequence from the cited pages.",
+    "answer": "A strong answer defines Marginal Rate Of Substitution (Mrs), states the source-specific rule or relationship, and explains why that relationship matters in the chapter's consumer-choice model.",
     "required_keywords": [
-      "source",
-      "marginal"
+      "marginal",
+      "rate",
+      "substitution"
     ],
-    "explanation": "This checks whether the learner can translate the source wording into a precise, usable explanation of Marginal Rate Of Substitution (Mrs).",
+    "explanation": "This checks whether the learner can use the source facts for Marginal Rate Of Substitution (Mrs), not just recognize the term.",
     "explanation_page": 35
   }
 ]

@@ -2,9 +2,9 @@
 title: "Prices_Of_Goods"
 hub: "[[Chapter_3_Hub]]"
 source: "[[Chapter 3 2024-1.pdf]]"
-source_file: "Chapter 3 2024-1.pdf"
-source_pages: [46]
-source_job_id: "srcjob_f4b691a8615e4d6e"
+source_file: "Inbox/generated/academic/Chapter 3 2024-1.pdf"
+source_pages: [30, 41, 46]
+source_job_id: "srcjob_9b26c2e74a10426c"
 domain: "ECON-MICRO"
 concept_modality: "Quantitative"
 fallback_generation: true
@@ -12,23 +12,24 @@ generated_by: "ater_source_job"
 ---
 ## Mental Model
 
-**The mechanism of Prices Of Goods can be compared to an organic agricultural soil-enrichment cycle.** **Prices Of Goods** acts as the precise concentration of nutrients that determines growth rate and yield. Determinants of the budget line • The budget line changes if one of the following things changes; 1. Just as crops adapt based on weather shocks and soil constraints, individual micro-entities shift their choices in response to price signals and input costs.
+Treat Prices Of Goods as a working part of the source's consumer-choice model: separating affordable choices from choices ruled out by income and prices. The first anchor is: The consumer is a rational being who aims at maximizing his level of satisfaction for given income and prices of goods and services, which he wish to consume.
 
 ## How the Economics Actually Work
 
-Prices Of Goods works by connecting the source's key terms, rules, and examples into one usable idea. The consumers income 2.
+Start from that anchor, then add the next source detail: In reality, the consumer is constrained by his/her money income and prices of the two commodities. Together, these points show what the consumer is allowed to compare, measure, rank, or choose in this part of the chapter. A correct answer should name the relationship and then state its consequence in the same direction as the source.
 
 ## The Formal Math & Models
 
-In formal terms, Prices Of Goods must be read through the exact language and constraints shown in the source. The prices of goods 3. Taxes, subsides and rationing
+Preserve this formal anchor exactly: In reality, the consumer is constrained by his/her money income and prices of the two commodities. If it is an equation, ranking, slope, condition, or named relationship, later practice should test that same structure rather than a looser paraphrase.
 
-| Source Detail | Meaning |
-|---|---|
-| Prices Of Goods | The focused concept being studied. |
-| Microeconomist | The consumers income 2. |
-| Source excerpt | The only authority for definitions and constraints. |
+## Source Evidence
 
-Pay close attention to the exact terminology the source uses to describe Prices Of Goods. The most common study error is paraphrasing too loosely — the exam will test the source's precise definitions, not general knowledge of the domain.
+| Page | Evidence |
+| --- | --- |
+| p. 30 | The consumer is a rational being who aims at maximizing his level of satisfaction for given income and prices of goods and services, which he wish to consume |
+| p. 41 | In reality, the consumer is constrained by his/her money income and prices of the two commodities |
+| p. 41 | In other words, individual choices are also affected by budget constraints that limit people’s ability to consume in light of prices they must pay for various goods and services |
+| p. 30 | The consumer is expected to make decisions that are consistent with his objective (Consumer’s preferences are consistent/transitive ) |
 
 ---
 
@@ -38,34 +39,34 @@ Pay close attention to the exact terminology the source uses to describe Prices 
 [
   {
     "type": "mcq",
-    "question": "Which statement best matches the source's treatment of Prices Of Goods?",
+    "question": "According to the source, which statement best explains Prices Of Goods?",
     "options": {
-      "A": "Determinants of the budget line \u2022 The budget line changes if one of the following things changes; 1.",
-      "B": "Prices Of Goods is a peripheral detail that does not affect core understanding of the topic.",
-      "C": "Prices Of Goods applies only in highly specialized edge cases not covered by the source.",
-      "D": "Prices Of Goods can be safely ignored without losing the main argument of the source."
+      "A": "The consumer is a rational being who aims at maximizing his level of satisfaction for given income and prices of goods and services, which he wish to consume",
+      "B": "Prices Of Goods can be ignored because it has no operational role in the cited source pages.",
+      "C": "Prices Of Goods reverses the source relationship by treating the cited constraint or comparison as irrelevant.",
+      "D": "Prices Of Goods is only a label and does not connect to any source definition, condition, ranking, equation, or example."
     },
     "answer": "A",
-    "explanation": "The source context directly connects Prices Of Goods to specific behavior, definitions, or structural rules described on page 46.",
-    "explanation_page": 46
+    "explanation": "The correct option restates the source-grounded fact for Prices Of Goods from page 30.",
+    "explanation_page": 30
   },
   {
     "type": "true_false",
-    "question": "The consumers income 2",
+    "question": "Prices Of Goods should be interpreted using the chapter's stated source constraints: In reality, the consumer is constrained by his/her money income and prices of the two commodities.",
     "answer": true,
-    "explanation": "This follows directly from the source's definition of Prices Of Goods on page 46.",
-    "explanation_page": 46
+    "explanation": "This follows from the cited source discussion of Prices Of Goods.",
+    "explanation_page": 41
   },
   {
     "type": "writing",
-    "question": "Explain Prices Of Goods in one precise paragraph. Include one specific consequence or implication drawn from the source on page 46.",
-    "answer": "A strong answer defines Prices Of Goods in the domain's own terms, explains its role or function, and anchors the explanation in the source definition from page 46.",
+    "question": "Explain Prices Of Goods in one precise paragraph using the source's wording and one consequence from the cited pages.",
+    "answer": "A strong answer defines Prices Of Goods, states the source-specific rule or relationship, and explains why that relationship matters in the chapter's consumer-choice model.",
     "required_keywords": [
-      "source",
-      "prices"
+      "prices",
+      "goods"
     ],
-    "explanation": "This checks whether the learner can translate the source wording into a precise, usable explanation of Prices Of Goods.",
-    "explanation_page": 46
+    "explanation": "This checks whether the learner can use the source facts for Prices Of Goods, not just recognize the term.",
+    "explanation_page": 30
   }
 ]
 ```

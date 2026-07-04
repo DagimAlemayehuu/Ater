@@ -157,9 +157,10 @@ describe('Obsidian Notes Explorer', () => {
     fireEvent.click(await within(sidebar).findByText('Computer_Science'));
     fireEvent.click(await within(sidebar).findByText('Data_Structures'));
 
-    expect(await screen.findByText('Linked-list notes.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(sidecarApi.readObsidianNote).toHaveBeenCalledWith('Computer_Science/Data_Structures.md');
+    });
     expect(screen.queryByText('Interactive Lesson')).not.toBeInTheDocument();
-    expect(sidecarApi.readObsidianNote).toHaveBeenCalledWith('Computer_Science/Data_Structures.md');
     expect(sidecarApi.readObsidianNote).not.toHaveBeenCalledWith('Computer_Science/Data_Structures.html');
   });
 
@@ -222,7 +223,9 @@ describe('Obsidian Notes Explorer', () => {
     const sidebar = await screen.findByTestId('projected-sidebar');
     fireEvent.click(await within(sidebar).findByText('Computer_Science'));
     fireEvent.click(await within(sidebar).findByText('Data_Structures'));
-    await screen.findByText('Data Structures');
+    await waitFor(() => {
+      expect(sidecarApi.readObsidianNote).toHaveBeenCalledWith('Computer_Science/Data_Structures.md');
+    });
     fireEvent.click(await screen.findByRole('button', { name: /continue lesson/i }));
 
     await waitFor(() => {
@@ -233,6 +236,46 @@ describe('Obsidian Notes Explorer', () => {
       title: 'Data Structures',
       notePath: 'Computer_Science/Data_Structures.md',
       hubPath: 'database/learning paths/Computer_Science_Hub.md',
+    });
+  });
+
+  it('continues academic source notes without searching for the hub first', async () => {
+    const notePath = 'Notes/academic/Winter2026/Economics/Chapter_3/01_Source_Roadmap/Consumer_Preferences_And_Utility.md';
+    (sidecarApi.readObsidianNote as any).mockResolvedValue({
+      content: '# Consumer Preferences And Utility\n\nConsumers make choices by comparing bundles.',
+      metadata: {
+        title: 'Consumer Preferences And Utility',
+        type: 'lesson',
+        hub: '[[Chapter_3_Hub]]',
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={[`/obsidian?path=${encodeURIComponent(notePath)}`]}>
+        <ConfigProvider>
+          <NavigationProvider>
+            <LayoutProvider>
+              <HeaderProvider>
+                <SidebarContentProvider>
+                  <SidebarTestHelper />
+                </SidebarContentProvider>
+              </HeaderProvider>
+            </LayoutProvider>
+          </NavigationProvider>
+        </ConfigProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(sidecarApi.readObsidianNote).toHaveBeenCalledWith(notePath);
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /continue lesson/i }));
+
+    expect(sidecarApi.findVaultPage).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem('ater_lesson_preview') || '{}')).toMatchObject({
+      title: 'Consumer Preferences And Utility',
+      notePath,
+      hubPath: 'database/study planner/Winter2026/Economics/Chapter_3/Chapter_3_Hub.md',
     });
   });
 });

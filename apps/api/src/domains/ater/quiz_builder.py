@@ -147,68 +147,120 @@ def select_dynamic_question_types(note_title: str, modality: str, source_snippet
         
     return selected
 
-def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict:
+def _strip_note_frontmatter(note_content: str) -> str:
+    text = str(note_content or "")
+    return re.sub(r"^---\s.*?---\s*", "", text, flags=re.DOTALL).strip()
+
+
+def _extract_note_fact(note_content: str, concept: str, fallback: str) -> str:
+    text = _strip_note_frontmatter(note_content)
+    text = re.sub(r"```interactive-quiz.*?```", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"#+\s*", " ", text)
+    text = re.sub(r"\|", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    concept_terms = [term for term in re.findall(r"[A-Za-z]{3,}", str(concept).lower())]
+    candidates = []
+    for raw in re.split(r"(?<=[.!?])\s+|\s{2,}", text):
+        sentence = raw.strip(" -")
+        if len(sentence) < 24:
+            continue
+        lowered = sentence.lower()
+        if "interactive-quiz" in lowered or lowered.startswith(("page evidence", "---")):
+            continue
+        score = sum(2 for term in concept_terms if term in lowered)
+        if re.search(r"[A-Za-z]\w*\s*[+*/=-]\s*[A-Za-z0-9]", sentence):
+            score += 4
+        if any(token in lowered for token in ["source", "equation", "slope", "rank", "affordable", "definition", "constraint", "relationship"]):
+            score += 2
+        candidates.append((score, sentence))
+    if candidates:
+        candidates.sort(key=lambda item: (-item[0], len(item[1])))
+        return candidates[0][1][:260].strip()
+    return fallback
+
+
+def _extract_note_equation(note_content: str) -> str:
+    text = _strip_note_frontmatter(note_content)
+    patterns = [
+        r"[A-Za-z][A-Za-z0-9_]*\s*[A-Za-z0-9_]*\s*[+]\s*[A-Za-z][A-Za-z0-9_]*\s*[A-Za-z0-9_]*\s*=\s*[A-Za-z0-9_]+",
+        r"[A-Za-z][A-Za-z0-9_]*\s*=\s*[^.\n|]{2,80}",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return re.sub(r"\s+", " ", match.group(0)).strip(" .|")
+    return ""
+
+
+def create_fallback_question(q_type: str, concept: str, note_title: str, note_content: str = "") -> dict:
+    grounded_fact = _extract_note_fact(
+        note_content,
+        concept,
+        f"The note identifies {concept} as a source-grounded concept within {note_title}.",
+    )
+    equation = _extract_note_equation(note_content)
     if q_type == "mcq":
         return {
             "type": "mcq",
-            "question": f"Which of the following statements best describes the core mechanism or operational significance of {concept} in the context of {note_title}?",
+            "question": f"Which statement is most directly supported by the source context for {concept}?",
             "options": {
-                "A": f"It acts as a primary driving mechanism to achieve strategic outcomes defined in the {note_title} framework.",
-                "B": "It has no operational relevance and is considered a secondary, passive concept.",
-                "C": f"It represents an external, ungrounded variable that operates outside of the {note_title} domain.",
-                "D": "It functions as a temporary measure that directly contradicts the stable principles of the unit."
+                "A": grounded_fact,
+                "B": f"{concept} is unrelated to the cited source context.",
+                "C": f"{concept} only matters outside {note_title}.",
+                "D": f"{concept} contradicts the source evidence rather than explaining it."
             },
             "answer": "A",
-            "explanation": f"The core definition and application of {concept} is a vital and active mechanism within the {note_title} framework."
+            "explanation": f"The correct answer is the statement grounded in the selected note's source evidence for {concept}."
         }
     elif q_type == "true_false":
         return {
             "type": "true_false",
-            "question": f"According to the source context of {note_title}, the concept of {concept} is a key operational mechanism.",
+            "question": f"According to the selected source context, this statement is relevant to {concept}: {grounded_fact}",
             "answer": True,
-            "explanation": f"{concept} plays an active, documented role in the primary text of {note_title}."
+            "explanation": f"The statement is drawn from the note context for {concept}."
         }
     elif q_type == "fill_in":
+        answer_terms = [w.lower() for w in re.findall(r"[A-Za-z]{5,}", grounded_fact)[:2]] or [concept.split()[0].lower()]
         return {
             "type": "fill_in",
-            "question": f"Fill in the missing mechanisms of {concept} in {note_title}.",
-            "textWithBlanks": f"Within {note_title}, {concept} functions as a core [[blank]] to achieve the desired [[blank]].",
-            "answer": ["mechanism", "objective"],
-            "explanation": f"The note explicitly defines {concept} as a functional mechanism aiming toward a core objective."
+            "question": f"Fill in the source-grounded terms for {concept}.",
+            "textWithBlanks": f"Source context: {re.sub(re.escape(answer_terms[0]), '[[blank]]', grounded_fact, count=1, flags=re.IGNORECASE)}",
+            "answer": answer_terms[:1],
+            "explanation": f"The missing term comes from the selected source context for {concept}."
         }
     elif q_type == "writing":
         return {
             "type": "writing",
-            "question": f"Explain the fundamental mechanism, strategic importance, and structural role of {concept} in the context of {note_title}.",
-            "answer": f"A comprehensive response defines {concept} exactly as described in the notes and maps its strategic importance to the primary themes of {note_title}.",
+            "question": f"Explain {concept} using this source evidence: {grounded_fact}",
+            "answer": f"A complete response restates the source evidence, defines {concept}, and explains the relationship or constraint described in {note_title}.",
             "required_keywords": [w.lower() for w in re.findall(r"[A-Za-z]{4,}", concept.lower())[:3]] or ["mechanism"],
-            "explanation": f"Verifies student capability to define and explain {concept} using precise academic terms."
+            "explanation": f"Verifies student capability to define and explain {concept} using the selected source context."
         }
     elif q_type == "matching":
         return {
             "type": "matching",
-            "question": f"Match the core sub-concepts and mechanisms of {concept} from {note_title} to their correct definitions.",
+            "question": f"Match the source-grounded parts of {concept} to their meanings.",
             "pairs": [
-                {"left": f"Primary {concept}", "right": f"The central operational definition of {concept} in {note_title}."},
-                {"left": f"Secondary {concept}", "right": f"The auxiliary support role of {concept} within the system."}
+                {"left": concept, "right": grounded_fact},
+                {"left": "Source evidence", "right": f"The cited note context used to justify an answer about {concept}."}
             ],
-            "explanation": f"Assesses matching and categorization of {concept} parts."
+            "explanation": f"Assesses whether the learner can connect {concept} to the selected source evidence."
         }
     elif q_type == "order":
         return {
             "type": "order",
-            "question": f"Arrange the typical operational phases or steps in the execution of {concept} (from {note_title}) in the correct sequence:",
+            "question": f"Arrange the reasoning sequence for answering a source-grounded question about {concept}:",
             "steps": [
-                "Step 2: Assessing resource constraints and tactical trade-offs.",
-                f"Step 1: Identifying the core objectives of {concept}.",
-                "Step 3: Direct application and monitoring of results."
+                f"Step 2: State the source fact: {grounded_fact}",
+                f"Step 1: Identify the concept being tested: {concept}.",
+                "Step 3: Explain the consequence or constraint without adding unsupported outside claims."
             ],
             "answer": [
-                f"Step 1: Identifying the core objectives of {concept}.",
-                "Step 2: Assessing resource constraints and tactical trade-offs.",
-                "Step 3: Direct application and monitoring of results."
+                f"Step 1: Identify the concept being tested: {concept}.",
+                f"Step 2: State the source fact: {grounded_fact}",
+                "Step 3: Explain the consequence or constraint without adding unsupported outside claims."
             ],
-            "explanation": f"Ensures the student can causally trace the sequential steps of {concept}."
+            "explanation": f"Ensures the student can reason from source evidence to explanation."
         }
     elif q_type in ("debug", "code"):
         return {
@@ -221,33 +273,41 @@ def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict
     elif q_type == "synthesis":
         return {
             "type": "synthesis",
-            "question": f"Synthesize a comprehensive strategic framework showing how {concept} (from {note_title}) interacts with the broader goals of {note_title}.",
-            "answer": f"A perfect synthesis outlines the direct relationship between {concept} and the secondary variables in the unit, highlighting the critical trade-offs and structural implications.",
+            "question": f"Synthesize how {concept} connects to another source-grounded idea in {note_title}, starting from: {grounded_fact}",
+            "answer": f"A strong synthesis preserves the source fact for {concept} and links it to a related definition, equation, comparison, or constraint from the same unit.",
             "required_keywords": [w.lower() for w in re.findall(r"[A-Za-z]{4,}", concept.lower())[:3]] or ["synthesis"],
-            "explanation": "Assesses higher-order conceptual synthesis and integration skills."
+            "explanation": "Assesses higher-order synthesis while staying grounded in the selected source note."
         }
     elif q_type == "calculation":
+        if equation:
+            return {
+                "type": "calculation",
+                "question": f"Use the source equation for {concept} to identify the relationship being modeled.",
+                "content": equation,
+                "answer": equation,
+                "explanation": f"The equation is taken from the selected note context; the task checks whether the learner preserves the source model before substituting numbers."
+            }
         return {
             "type": "calculation",
-            "question": f"Given a state capability factor of 0.8 and a focus weighting of 0.6 for {concept} in {note_title}, calculate the overall priority score.",
-            "content": "State Capability: 0.8\nFocus Weighting: 0.6",
-            "answer": "0.48",
-            "explanation": "The priority score is calculated by multiplying capability and focus weighting: 0.8 * 0.6 = 0.48."
+            "question": f"Identify the quantity or relationship that would need to be calculated for {concept} from the source context.",
+            "content": grounded_fact,
+            "answer": grounded_fact,
+            "explanation": f"No numeric substitution is invented; the fallback stays with the source relationship for {concept}."
         }
     elif q_type == "data_analysis":
         return {
             "type": "data_analysis",
-            "question": f"Interpret the following analytical dataset comparing {concept} metrics in {note_title}:",
-            "content": f"Comparative Performance of {concept}:\n- Baseline Metric: 0.5\n- Target Metric: 0.95",
-            "answer": "The target metric represents a substantial increase over baseline, validating the effectiveness.",
-            "explanation": f"Tests data-reading capabilities for {concept} comparison."
+            "question": f"Interpret the source evidence for {concept} and state what conclusion it supports.",
+            "content": equation or grounded_fact,
+            "answer": grounded_fact,
+            "explanation": f"Tests evidence interpretation using the selected source context for {concept}, without inventing external metrics."
         }
     elif q_type == "scenario":
         return {
             "type": "scenario",
-            "question": f"Consider a scenario where the principles of {concept} (from {note_title}) are fully applied to a strategic dispute. Predict the most likely outcome and explain.",
-            "answer": f"Applying {concept} provides a structured path for peaceful resolution by aligning shared objectives and resolving core operational differences.",
-            "explanation": f"Tests scenario analysis and application of {concept}."
+            "question": f"Apply {concept} to a new example while preserving this source constraint: {grounded_fact}",
+            "answer": f"A good scenario answer keeps the source relationship intact and applies it to the new example without changing the definition or equation.",
+            "explanation": f"Tests application of {concept} from source evidence rather than generic scenario writing."
         }
     elif q_type == "trace":
         return {
@@ -264,6 +324,33 @@ def create_fallback_question(q_type: str, concept: str, note_title: str) -> dict
             "required_keywords": [w.lower() for w in re.findall(r"[A-Za-z]{4,}", concept.lower())[:3]] or ["concept"],
             "explanation": f"Verifies basic understanding of {concept}."
         }
+
+def is_economics_practice_context(text: str) -> bool:
+    lowered = text.lower()
+    return any(token in lowered for token in [
+        "econ-", "economics", "consumer", "utility", "budget", "preference", "preferences",
+        "indifference", "marginal", "commodity", "commodities", "price", "income",
+        "demand", "supply", "mrs", "budget line", "cardinal", "ordinal",
+    ])
+
+def sanitize_question_distribution_for_context(raw_distribution: Dict[str, int], context: str) -> Dict[str, int]:
+    distribution = {str(k): int(v or 0) for k, v in raw_distribution.items()}
+    if not is_economics_practice_context(context):
+        return distribution
+
+    banned = {"code", "debug", "trace", "find_error"}
+    replacement_order = ["scenario", "calculation", "synthesis", "data_analysis", "writing"]
+    for banned_type in banned:
+        count = distribution.pop(banned_type, 0)
+        if count <= 0:
+            continue
+        for replacement in replacement_order:
+            if replacement in distribution:
+                distribution[replacement] += count
+                break
+        else:
+            distribution["scenario"] = distribution.get("scenario", 0) + count
+    return distribution
 
 def rate_candidate_quiz(validator, questions: List[dict], note_title: str, source_context: str) -> float:
     score = 0.0
@@ -525,7 +612,8 @@ async def generate_practice(
         raise Exception("No source material found for the selected concepts. Please ensure the atomic notes have content.")
     
     session_id = f"session_{int(time.time())}"
-    distribution = config.questionDistribution
+    distribution = sanitize_question_distribution_for_context(config.questionDistribution, f"{hub.get('title', '')}\n{full_context[:4000]}")
+    config.questionDistribution = distribution
     total_q = sum(distribution.values())
     if total_q <= 0:
         raise ValueError("Total requested questions is 0. Please ensure the question distribution specifies at least one question type with a count greater than 0.")
@@ -811,16 +899,24 @@ async def generate_practice(
             logger.warning(f"[Ater Service] Practice Builder: Shortfall detected for type '{q_type}'. Requested {count}, found {len(type_qs)}. Generating fallbacks.")
             fallback_pool = list(notes_to_process) if notes_to_process else []
             
-            while len(type_qs) < count:
+            attempts = 0
+            max_attempts = max(count * 6, 6)
+            while len(type_qs) < count and attempts < max_attempts:
+                attempts += 1
+                note_content_val = ""
                 if fallback_pool:
                     selected_note = random.choice(fallback_pool)
                     concept_val = selected_note.stem.replace("_", " ")
                     note_title_val = selected_note.stem.replace("_", " ")
+                    try:
+                        note_content_val = selected_note.read_text(encoding="utf-8")
+                    except Exception:
+                        note_content_val = ""
                 else:
                     concept_val = hub["title"]
                     note_title_val = hub["title"]
                     
-                fallback_q = create_fallback_question(q_type, concept_val, note_title_val)
+                fallback_q = create_fallback_question(q_type, concept_val, note_title_val, note_content=note_content_val)
                 fallback_q["id"] = len(processed_questions) + 1
                 
                 is_dup = False
@@ -831,6 +927,12 @@ async def generate_practice(
                 if not is_dup:
                     type_qs.append(fallback_q)
                     processed_questions.append(fallback_q)
+            while len(type_qs) < count:
+                fallback_q = create_fallback_question(q_type, hub["title"], hub["title"])
+                fallback_q["id"] = len(processed_questions) + 1
+                fallback_q["question"] = f"{fallback_q.get('question', '')} [{len(type_qs) + 1}]"
+                type_qs.append(fallback_q)
+                processed_questions.append(fallback_q)
         
         final_questions.extend(type_qs[:count])
     
