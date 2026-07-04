@@ -1,4 +1,3 @@
-/* global process, setTimeout, console */
 import { performance } from 'perf_hooks';
 
 // Simulate Tauri Store
