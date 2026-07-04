@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, realSupabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useConfig } from '@/lib/ConfigContext'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { validateActivationMachineBinding } from '@/lib/activationMachineBinding'
@@ -39,11 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false)
 
     // Dynamic Zero-Trust check: verify cloud status silently on startup if online
-    if (navigator.onLine && realSupabase) {
+    if (navigator.onLine) {
       try {
-        const { data: authData } = await realSupabase.auth.getUser()
+        const { data: authData } = await supabase.auth.getUser()
         if (authData?.user) {
-          const { data: profileData } = await realSupabase
+          const { data: profileData } = await supabase
             .from('profiles')
             .select('full_name, waitlist_status, is_approved, account_status')
             .eq('id', authData.user.id)
@@ -110,8 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let derivedName = cleanEmail.split('@')[0].replace(/[\._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
       // Live verification if real backend configuration exists
-      if (realSupabase) {
-        const liveSupabase = realSupabase
+      if (supabase) {
+        const liveSupabase = supabase
         console.log('[DRM] Live backend active. Checking waitlist credentials...');
         
         // 1. Sign in to check email & password
