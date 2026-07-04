@@ -73,6 +73,9 @@ class EmbeddingsLinker:
         """Loads tokenizer and ONNX inference session as a lazy-loaded Singleton."""
         if cls._session is None or cls._tokenizer is None:
             import onnxruntime as ort
+            if getattr(ort, "__spec__", None) is None:
+                from importlib.machinery import ModuleSpec
+                ort.__spec__ = ModuleSpec("onnxruntime", loader=None)
             from transformers import AutoTokenizer
             model_dir, model_path = cls._get_model_paths()
             if not model_path.exists():
