@@ -8,7 +8,7 @@ def test_artifact_pack_path_traversal(tmp_path):
     
     service = ArtifactService(vault_path=vault_root)
     
-    with pytest.raises(ValueError, match="Path traversal detected"):
+    with pytest.raises(ValueError, match="Path escapes vault"):
         service.get_artifact_pack_path(note_title="Test", note_path_rel="../../etc/passwd")
         
 def test_artifact_pack_path_valid(tmp_path):
@@ -32,4 +32,3 @@ def test_artifact_pack_path_valid(tmp_path):
     
     # Path should be inside vault root
     path.relative_to(vault_root)
-
