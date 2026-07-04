@@ -90,8 +90,10 @@ This section records the final manual cleanup pass after the Jules PR campaign. 
     - Tightened the ONNX embeddings test availability guard so it skips when either `transformers` or `onnxruntime` is mocked.
     - Fixed Windows backend CI issues by treating POSIX-style absolute paths as unsafe on Windows and making SQLite temp-file cleanup resilient to delayed handle release.
     - Stabilized the Obsidian E2E note-selection flow by using the file search box instead of relying on folder expansion timing.
+    - Stabilized the Obsidian unit test by waiting for note metadata/content before opening the shared lesson runtime.
   - Verification:
     - [x] `uv run pytest` from `apps/api` passed: 474 tests, 3 warnings.
+    - [x] `pnpm --filter @ater/desktop test` passed: 34 files, 136 tests.
     - [x] `pnpm --filter @ater/desktop typecheck`
     - [x] `pnpm --filter @ater/desktop test -- src/tests/sidecarApi.test.ts src/tests/PdfViewer.test.tsx src/tests/UnifiedSandboxViewer.test.tsx src/tests/app-sidebar.test.tsx`
     - [x] `pnpm --filter @ater/desktop lint`

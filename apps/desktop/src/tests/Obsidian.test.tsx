@@ -222,6 +222,7 @@ describe('Obsidian Notes Explorer', () => {
     const sidebar = await screen.findByTestId('projected-sidebar');
     fireEvent.click(await within(sidebar).findByText('Computer_Science'));
     fireEvent.click(await within(sidebar).findByText('Data_Structures'));
+    await screen.findByText('Data Structures');
     fireEvent.click(await screen.findByRole('button', { name: /continue lesson/i }));
 
     await waitFor(() => {
