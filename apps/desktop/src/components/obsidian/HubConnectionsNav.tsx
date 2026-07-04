@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { ChevronRight, Network } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { sidecarApi } from '@/lib/sidecarApi'
+import { toast } from 'sonner'
 
 export type NavNode = {
   label: string
@@ -68,7 +70,69 @@ export const HubConnectionsNav = React.memo(({
   onToggleCheckbox, 
   searchQuery
 }: HubConnectionsNavProps) => {
-  const activeNoteName = typeof activePath === 'string' ? activePath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '')?.toLowerCase() || '' : ''
+  const [tutorSession, setTutorSession] = useState<any | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchTutorSession = async () => {
+      const activeSessionId = localStorage.getItem('ater_active_session_id');
+      if (!activeSessionId) {
+        if (active) setTutorSession(null);
+        return;
+      }
+      try {
+        const session = await sidecarApi.getTutorStatus(activeSessionId);
+        if (active && session) {
+          setTutorSession(session);
+        }
+      } catch (err) {
+        console.error('Failed to fetch session progress for HubConnectionsNav:', err);
+      }
+    };
+    void fetchTutorSession();
+    return () => { active = false; };
+  }, [content, activePath]);
+
+  const getNoteStem = (p: string) => {
+    return p.split(/[/\\]/).pop()?.replace(/\.(md|pdf)$/i, '')?.replace(/_/g, ' ')?.toLowerCase() || '';
+  };
+
+  const completedStems = useMemo(() => {
+    return new Set(
+      (Array.isArray(tutorSession?.completed_notes) ? tutorSession.completed_notes : [])
+        .map((p: string) => getNoteStem(p))
+    );
+  }, [tutorSession?.completed_notes]);
+
+  const unlockedStems = useMemo(() => {
+    return new Set(
+      (Array.isArray(tutorSession?.active_note_unlocks) ? tutorSession.active_note_unlocks : [])
+        .map((p: string) => getNoteStem(p))
+    );
+  }, [tutorSession?.active_note_unlocks]);
+
+  const currentStem = useMemo(() => {
+    return activePath ? getNoteStem(activePath) : (tutorSession?.current_note_path ? getNoteStem(tutorSession.current_note_path) : '');
+  }, [activePath, tutorSession?.current_note_path]);
+
+  const getNodeStatus = (target: string | null): 'completed' | 'active' | 'unlocked' | 'locked' | 'current' => {
+    if (!target) return 'locked';
+    const stem = getNoteStem(target);
+
+    if (!tutorSession) {
+      return 'unlocked';
+    }
+
+    const inCurriculum = tutorSession?.curriculum?.some((p: string) => getNoteStem(p) === stem);
+    if (!inCurriculum) {
+      return 'unlocked';
+    }
+
+    if (completedStems.has(stem)) return 'completed';
+    if (stem === currentStem) return 'current';
+    if (unlockedStems.has(stem)) return 'unlocked';
+    return 'locked';
+  };
   
   const tree = useMemo(() => {
     const baseTree = parseHubTree(content);
@@ -123,7 +187,11 @@ export const HubConnectionsNav = React.memo(({
   };
 
   function renderNode(node: NavNode, idx: number): React.ReactNode {
-    const active = (typeof node.target === 'string' ? node.target.split(/[/\\]/).pop()?.replace('.md', '')?.replace('.pdf', '')?.toLowerCase() : '') === activeNoteName;
+    const status = getNodeStatus(node.target);
+    const completed = status === 'completed' || node.isChecked;
+    const active = status === 'current' || status === 'active';
+    const unlocked = status === 'unlocked';
+    const locked = status === 'locked';
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedNodes.has(node.label);
 
@@ -131,8 +199,11 @@ export const HubConnectionsNav = React.memo(({
       <div key={`${node.target ?? node.label}-${idx}`} className="flex flex-col">
         <div 
           className={cn(
-            "group flex items-center gap-1.5 py-1 px-3 rounded-[4px] cursor-pointer relative mx-1",
-            active ? "bg-accent text-foreground font-semibold shadow-sm" : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground"
+            "group flex items-center gap-1.5 py-1 px-3 rounded-[4px] relative mx-1 transition-all",
+            active && "bg-primary/10 text-foreground font-semibold shadow-sm ring-1 ring-primary/20",
+            completed && !active && "text-muted-foreground/55",
+            unlocked && !active && "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
+            locked && "opacity-45 select-none"
           )}
         >
           {node.depth > 0 && (
@@ -145,31 +216,42 @@ export const HubConnectionsNav = React.memo(({
 
           <div className="flex items-center gap-2 w-full" style={{marginLeft: node.depth * 14}}>
             <div 
-              className="w-4 h-4 shrink-0 flex items-center justify-center"
+              className="w-4 h-4 shrink-0 flex items-center justify-center cursor-pointer"
               onClick={(e) => {e.stopPropagation(); toggleNode(node.label);}}
             >
               {hasChildren ? (
-                <ChevronRight className={cn("w-3 h-3  text-muted-foreground/40", isExpanded ? "rotate-90" : "")} />
+                <ChevronRight className={cn("w-3 h-3 text-muted-foreground/40 transition-transform", isExpanded ? "rotate-90" : "")} />
               ) : null}
             </div>
 
             <input 
               type="checkbox" 
-              checked={node.isChecked} 
-              onChange={(e) => onToggleCheckbox(node.label, e.target.checked, node.target)}
-              aria-label={`Toggle check state for ${node.label}`}
+              checked={completed} 
+              readOnly
+              aria-label={`${completed ? 'Completed' : active ? 'Current' : locked ? 'Locked' : 'Upcoming'} lesson: ${node.label.replace(/_/g, ' ')}`}
               className={cn(
-                "h-3.5 w-3.5 shrink-0 appearance-none border border-border bg-bento-card rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3.5px] after:h-[7.5px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 cursor-pointer transition-all hover:border-foreground/20",
-                node.isChecked && "opacity-30"
+                "h-3.5 w-3.5 shrink-0 appearance-none border border-border bg-bento-card rounded-[4px] checked:bg-foreground/10 checked:border-foreground/20 relative after:content-[''] after:hidden checked:after:block after:absolute after:left-[4px] after:top-[0.5px] after:w-[3.5px] after:h-[7.5px] after:border-r-2 after:border-b-2 after:border-foreground/60 after:rotate-45 transition-all hover:border-foreground/20",
+                completed && "opacity-80",
+                active && "border-primary/70 bg-primary/10",
+                locked && "cursor-not-allowed opacity-20"
               )} 
             />
             
             {node.target ? (
               <button
-                onClick={() => onNavigate(node.target!)}
+                onClick={() => {
+                  if (locked) {
+                    toast.error("This lesson is locked. Complete your current lesson first.");
+                    return;
+                  }
+                  onNavigate(node.target!);
+                }}
                 className={cn(
-                  "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground ",
-                  node.isChecked && "line-through opacity-40"
+                  "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground font-medium",
+                  active && "text-foreground font-black",
+                  completed && !active && "text-muted-foreground/50 font-medium line-through",
+                  locked && "text-muted-foreground/35 cursor-not-allowed",
+                  unlocked && !active && !completed && "text-muted-foreground/70"
                 )}
               >
                 {node.label.replace(/_/g, ' ')}
@@ -177,7 +259,7 @@ export const HubConnectionsNav = React.memo(({
             ) : (
               <span 
                 onClick={() => toggleNode(node.label)}
-                className="text-[9px] font-black uppercase tracking-widest opacity-30 flex-1 select-none"
+                className="text-[9px] font-black uppercase tracking-widest opacity-30 flex-1 select-none cursor-pointer"
               >
                 {node.label.replace(/_/g, ' ')}
               </span>

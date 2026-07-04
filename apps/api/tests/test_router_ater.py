@@ -193,3 +193,52 @@ def test_delete_obsidian_item_exception(tmp_path, monkeypatch):
     assert response.status_code == 500
     assert response.json() == {"detail": "Mocked exception"}
     assert test_file.exists()
+
+
+# =====================================================================
+# Refine Source Learning Job Roadmap Tests
+# =====================================================================
+
+from unittest.mock import patch, AsyncMock
+
+def test_refine_source_learning_job_roadmap_missing_instruction(tmp_path):
+    headers = {"x-vault-path": str(tmp_path)}
+    response = client.post("/api/ater/source/jobs/srcjob_123/roadmap/refine", json={}, headers=headers)
+    assert response.status_code == 400
+    assert "instruction is required" in response.json()["detail"]
+
+@patch("src.domains.ai.factory.ModelFactory.get_model")
+@patch("src.api.routers.ater._source_job_service")
+def test_refine_source_learning_job_roadmap_success(mock_service_factory, mock_get_model, tmp_path):
+    headers = {"x-vault-path": str(tmp_path)}
+    
+    # Mock source job service and job
+    mock_service = mock_service_factory.return_value
+    mock_service.get_job.return_value = {
+        "job_id": "srcjob_123",
+        "topic": "Economics",
+        "domain": "Microeconomics",
+        "roadmap": [{"title": "Concept 1"}, {"title": "Concept 2"}]
+    }
+    mock_service.update_roadmap_titles.return_value = {
+        "job_id": "srcjob_123",
+        "roadmap": [{"title": "Concept 1"}, {"title": "New Concept 2"}]
+    }
+    
+    # Mock LLM response
+    mock_llm = AsyncMock()
+    mock_res = AsyncMock()
+    mock_res.content = '["Concept 1", "New Concept 2"]'
+    mock_llm.ainvoke.return_value = mock_res
+    mock_get_model.return_value = mock_llm
+    
+    payload = {
+        "instruction": "rename 2 to New Concept 2",
+        "current_titles": ["Concept 1", "Concept 2"]
+    }
+    
+    response = client.post("/api/ater/source/jobs/srcjob_123/roadmap/refine", json=payload, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["roadmap"] == [{"title": "Concept 1"}, {"title": "New Concept 2"}]
+    
+    mock_service.update_roadmap_titles.assert_called_once_with("srcjob_123", ["Concept 1", "New Concept 2"])

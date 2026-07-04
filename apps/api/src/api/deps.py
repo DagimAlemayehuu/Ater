@@ -1,4 +1,4 @@
-from fastapi import Header
+from fastapi import Header, Query
 from typing import Optional
 from pydantic import BaseModel
 
@@ -23,6 +23,7 @@ class AppSecrets(BaseModel):
     utility_key: Optional[str] = None
     utility_model: str = "gemini-1.5-flash-8b"
 
+    # Context paths
     vault_path: Optional[str] = None
     inbox_path: Optional[str] = None
     academic_path: str = "Notes"
@@ -42,6 +43,7 @@ def sanitize_api_key(key: Optional[str]) -> Optional[str]:
 
 async def get_app_secrets(
     x_ater_token: Optional[str] = Header(None),
+    sidecar_token: Optional[str] = Query(None),
     x_ai_provider: str = Header("google"),
     x_ai_key: Optional[str] = Header(None),
     x_ai_model: str = Header("gemini-2.0-flash"),
@@ -74,9 +76,10 @@ async def get_app_secrets(
     """
     import os
     from fastapi import HTTPException
+    effective_token = x_ater_token or sidecar_token
     expected_token = os.environ.get("ATER_SIDECAR_TOKEN")
     if expected_token:
-        if not x_ater_token or x_ater_token != expected_token:
+        if not effective_token or effective_token != expected_token:
             raise HTTPException(status_code=401, detail="ACCESS_DENIED: Invalid sidecar authentication token.")
 
     primary_provider = x_ai_provider.lower()

@@ -4,7 +4,7 @@ Audit scope: desktop app only, including `apps/desktop`, `apps/desktop/src-tauri
 
 Ignored scope: website and admin app.
 
-Status: final cleanup pass completed and verified through PR #91. This document records confirmed problems found during the audit, the fixes applied, and the remaining non-blocking cleanup work.
+Status: final cleanup pass completed, merged, and verified through PR #91. The repository has been cleaned back to a single active branch, `main`, synchronized with `origin/main` at `6b34553e`. This document records confirmed problems found during the audit, the fixes applied, and the remaining non-blocking cleanup work.
 
 ## Final Cleanup Update - 2026-07-04
 
@@ -113,9 +113,9 @@ This section records the final manual cleanup pass after the Jules PR campaign. 
   - These warnings are mostly existing `no-explicit-any`, fast-refresh, and hook dependency warnings.
   - They do not block the current lint command because the command exits `0`.
 
-- [ ] Root worktree still contains pre-existing dirty files and scratch scripts.
+- [x] Root worktree cleanup completed.
   - The final cleanup was done in an isolated temp worktree to avoid overwriting user/local changes.
-  - Recommended cleanup after merge: compare root-local changes against `origin/main`, then delete only confirmed scratch scripts.
+  - After PR #91 merged, the root worktree was reset to `origin/main`, untracked scratch files were removed, local non-main branches were deleted, remote feature branches were deleted, and `git status --short --branch` returned `## main...origin/main`.
 
 ## Continuation Update
 

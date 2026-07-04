@@ -24,9 +24,10 @@ interface UnifiedSandboxViewerProps {
   shielded?: boolean
   onClose?: () => void
   customArtifacts?: InteractiveArtifact[]
+  variant?: 'sidebar' | 'inline'
 }
 
-export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifacts }: UnifiedSandboxViewerProps) {
+export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifacts, variant = 'sidebar' }: UnifiedSandboxViewerProps) {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const { resolvedTheme } = useTheme()
@@ -444,23 +445,31 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
 
   const showOfflineWarning = !sandboxCode && activeChapter.sandboxSpec && (!isOnline || !isSidecarHealthy)
 
+  const isInline = variant === 'inline'
+
   return (
-    <aside className="flex h-full min-h-0 flex-col border-l border-border bg-bento-bg">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
+    <div className={cn(
+      isInline 
+        ? "flex flex-col border border-border bg-bento-panel rounded-[12px] overflow-hidden w-full shadow-sm"
+        : "flex h-full min-h-0 flex-col border-l border-border bg-bento-bg"
+    )}>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0">
-          <div className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground/50">Simulator Sandbox</div>
+          <div className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground/50">Interactive Lesson Note</div>
           <h3 className="truncate text-[13px] font-black uppercase tracking-wide text-foreground">{activeArtifact.title}</h3>
         </div>
-        <button
-          onClick={() => {
-            if (onClose) onClose()
-            else setPanelOpen(false)
-          }}
-          className="grid size-8 place-items-center rounded-[6px] text-muted-foreground/60 hover:bg-accent hover:text-foreground"
-          title="Collapse sandbox panel"
-        >
-          <PanelRightClose size={15} />
-        </button>
+        {!isInline && (
+          <button
+            onClick={() => {
+              if (onClose) onClose()
+              else setPanelOpen(false)
+            }}
+            className="grid size-8 place-items-center rounded-[6px] text-muted-foreground/60 hover:bg-accent hover:text-foreground"
+            title="Collapse sandbox panel"
+          >
+            <PanelRightClose size={15} />
+          </button>
+        )}
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
@@ -507,7 +516,7 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className={cn("min-h-0 flex-1 overflow-hidden", isInline ? "flex flex-col" : "")}>
         {mode === 'preview' ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="shrink-0 border-b border-border px-5 py-4 bg-muted/5">
@@ -517,7 +526,7 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
               <h4 className="mt-1 text-[15px] font-black uppercase tracking-wide text-foreground">{activeChapter.title}</h4>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-8 py-7 custom-scrollbar bg-background">
+            <div className={cn("min-h-0 flex-1 overflow-y-auto px-8 py-7 custom-scrollbar bg-background", isInline ? "max-h-[550px]" : "")}>
               <div className="mx-auto max-w-3xl space-y-6">
                 {/* 1. Explanation Text */}
                 {activeChapter.content ? (
@@ -624,6 +633,6 @@ export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifact
           Next <ChevronRight size={13} />
         </button>
       </div>
-    </aside>
+    </div>
   )
 }

@@ -1,23 +1,13 @@
 ---
-title: "Chapter_3_Hub"
-type: "Hub"
+title: "CHAPTER_THREE_Hub"
+type: "Learning Hub"
 generated_by: "ater_source_job"
 source_job_id: "srcjob_f4b691a8615e4d6e"
-learning_scope: "academic"
-semester: "Winter2026"
-course: "Economics"
-unit: "Chapter_3"
-chapter_title: "Chapter_3"
-status: "In Progress"
-current_lesson_path: "Notes/academic/Winter2026/Economics/Chapter_3/01_Source_Roadmap/Consumer_Preferences_And_Utility.md"
-chapters: ["[[Chapter_01_Source_Roadmap]]"]
 ---
 
-# CHAPTER THREE
+# CHAPTER THREE Hub
 
-[[Chapter_01_Source_Roadmap]]
-
-## Atomic Notes
+## Curriculum Map
 - [[Consumer_Preferences_And_Utility]]
 - [[Ordinal_Utility]]
 - [[Cardinal_Versus_Ordinal_Utility]]

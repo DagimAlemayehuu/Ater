@@ -255,6 +255,77 @@ async def update_source_learning_job_roadmap(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/ater/source/jobs/{job_id}/roadmap/refine")
+async def refine_source_learning_job_roadmap(
+    job_id: str,
+    payload: Dict[str, Any] = Body(...),
+    secrets: AppSecrets = Depends(get_app_secrets)
+):
+    instruction = str(payload.get("instruction") or "").strip()
+    current_titles = payload.get("current_titles") or []
+    if not instruction:
+        raise HTTPException(status_code=400, detail="instruction is required")
+    try:
+        from src.domains.ai.factory import ModelFactory
+        from langchain_core.messages import SystemMessage, HumanMessage
+        
+        service = _source_job_service(secrets)
+        job = service.get_job(job_id)
+        
+        roadmap_list = "\n".join(f"{idx+1}. {title}" for idx, title in enumerate(current_titles))
+        
+        system_prompt = (
+            "You are a master academic curriculum planner. Your goal is to update a learning roadmap "
+            "based on the student's conversational request. Make the requested edits logically.\n\n"
+            f"COURSE: {job.get('topic') or 'General'}\n"
+            f"DOMAIN: {job.get('domain') or 'General'}\n"
+            "Here is the list of current concepts in the roadmap:\n"
+            f"{roadmap_list}\n\n"
+            "Instructions:\n"
+            "1. Analyze the student's request carefully (e.g. rename, add, remove, re-order).\n"
+            "2. ONLY apply the specific changes requested. Do NOT rename, rephrase, clean up, or change any other concept titles that were not the target of the user request. All other titles must remain EXACTLY identical to the current list.\n"
+            "3. Output ONLY a valid JSON list of strings representing the updated roadmap concept titles in order. "
+            "Do not include any explanation or extra text. Output ONLY the JSON block. "
+            "Format: [\"Concept 1\", \"Concept 2\", ...]"
+        )
+        
+        user_message = f"User Request: {instruction}\n\nReturn the updated roadmap JSON list:"
+        
+        if not secrets.ai_key:
+            raise HTTPException(status_code=400, detail="AI API Key missing")
+
+        llm = ModelFactory.get_model(
+            provider=secrets.ai_provider or "google",
+            api_key=secrets.ai_key,
+            model_name=secrets.ai_model or "gemini-1.5-flash",
+            temperature=0.0,
+            base_url=secrets.ai_base_url,
+        )
+        
+        res = await llm.ainvoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message)
+        ])
+        
+        text_res = res.content.strip()
+        if "```" in text_res:
+            text_res = re.sub(r"```[a-zA-Z0-9-]*\n?", "", text_res).strip("`").strip()
+            
+        new_titles = json.loads(text_res)
+        if not isinstance(new_titles, list):
+            raise ValueError("LLM did not return a list")
+            
+        cleaned_titles = [str(title).strip() for title in new_titles if str(title).strip()]
+        if not cleaned_titles:
+            raise ValueError("Curriculum cannot be empty")
+            
+        updated_job = service.update_roadmap_titles(job_id, cleaned_titles)
+        return updated_job
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/ater/prompt/jobs")
 async def create_prompt_teacher_job(
     payload: Dict[str, Any] = Body(...),

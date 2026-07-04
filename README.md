@@ -4,6 +4,18 @@
 
 Ater is a local-first personal intelligence operating system designed as a high-density, secure, polyglot monorepo. It operates fully without internet connectivity for all core functions, utilizing external networks only when executing authorized AI tasks through the Gemini API. It connects a unified React + Tauri v2 Desktop client, a FastAPI Python sidecar, a remote Next.js Admin dashboard, and a Next.js waitlist landing page around a zero-trust Supabase PostgreSQL security system.
 
+## Current Repository State
+
+As of 2026-07-04, `main` is clean and synchronized with `origin/main` at `6b34553e` (`fix(security): finish remaining campaign cleanup`). The Jules cleanup campaign has been merged through PR #91, superseded PRs have been closed, local and remote feature branches have been removed, and the repository is back to a single active branch: `main`.
+
+The latest verified CI matrix passed:
+
+* Backend pytest on macOS, Ubuntu, and Windows.
+* Desktop React typecheck, tests, and production build on macOS, Ubuntu, and Windows.
+* Playwright E2E.
+* Rust cargo build/test on the default runner and Windows.
+* Vercel and Vercel Preview Comments.
+
 ---
 
 ## System Architecture & Integrated Data Flow
@@ -176,6 +188,13 @@ The Tauri desktop client interfaces with the native Rust system using specific t
 ---
 
 ## Monorepo Changelog
+
+### 2026-07-04 — Final Cleanup & Security Hardening
+*   **Campaign Cleanup Merged**: Consolidated the Jules cleanup campaign into `main` through PR #91 and removed stale local/remote branches.
+*   **Path Traversal Hardening**: Strengthened Python and Rust vault path containment, upload filename handling, chat attachment promotion, and Obsidian router path handling.
+*   **Desktop Runtime Stabilization**: Fixed sidecar URL resolution, checked response handling, mutation request locking, PDF/auth flows, Obsidian route stability, and feature-lock enforcement.
+*   **CI Green Across Matrix**: Verified backend, desktop React, E2E, Rust, Windows Rust, and Vercel gates.
+*   **Documentation Status**: `Problems.Md` now records completed fixes and remaining non-blocking audit items.
 
 ### 2026-05-28 — Ater v33.0 "LLM Optimization & Spaced Repetition"
 *   **2B LLM Engine Optimization**: Tuned local note-generation loops for lightweight offline execution using optimized 2B parameter models.

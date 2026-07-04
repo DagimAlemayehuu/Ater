@@ -237,6 +237,13 @@ export function LearningWorkspace({
     const targetStem = getNoteStem(target)
     const matchPath = tutorSession?.curriculum?.find((p: string) => getNoteStem(p) === targetStem) || target
     if (matchPath) {
+      if (tutorSession?.curriculum) {
+        const status = getNodeStatus(matchPath)
+        if (status === 'locked') {
+          toast.error("This lesson is locked. Complete your current lesson first.")
+          return
+        }
+      }
       setActivePractice(null)
       onPreviewChange({
         title: target.replace(/_/g, ' '),
@@ -579,19 +586,9 @@ export function LearningWorkspace({
               )}
               {!activePractice && (
               <header className="border-b border-border/50 pb-5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[8px] border border-border/60 bg-bento-panel text-muted-foreground">
-                    <FileText size={16} strokeWidth={1.7} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/50">
-                      Current Lesson
-                    </div>
-                    <h1 className="mt-1 break-words text-2xl font-black leading-tight tracking-normal text-foreground">
-                      {lessonTitle}
-                    </h1>
-                  </div>
-                </div>
+                <h1 className="break-words text-2xl font-black leading-tight tracking-normal text-foreground">
+                  {lessonTitle}
+                </h1>
               </header>
               )}
               {activePractice ? (

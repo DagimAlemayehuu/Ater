@@ -246,63 +246,15 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         const vaultPath = config?.obsidianVaultPath || '';
         const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
         const normalizedPath = path.replace(/\\/g, '/');
-        return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${firstPageRef.current}${filterStr}&theme=${resolvedTheme}`;
-    }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort]);
+        const tokenQuery = sidecarToken ? `&sidecar_token=${encodeURIComponent(sidecarToken)}` : '';
+        return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${firstPageRef.current}${filterStr}&theme=${resolvedTheme}${tokenQuery}`;
+    }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort, sidecarToken]);
 
-    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
     const [pdfError, setPdfError] = useState<string | null>(null);
-    const [isFetchingPdf, setIsFetchingPdf] = useState(false);
 
     useEffect(() => {
-        let isActive = true;
-        let currentObjectUrl: string | null = null;
-
-        const fetchPdf = async () => {
-            if (!backendUrl || !sidecarToken) return;
-
-            setIsFetchingPdf(true);
-            setPdfError(null);
-
-            try {
-                const headers: Record<string, string> = {};
-                if (sidecarToken) {
-                    headers['X-Ater-Token'] = sidecarToken;
-                }
-
-                const res = await fetch(backendUrl, { headers });
-                if (!res.ok) {
-                    if (res.status === 401) throw new Error('Authentication required (401 Unauthorized)');
-                    if (res.status === 404) throw new Error('PDF not found (404 Not Found)');
-                    throw new Error(`Failed to load PDF (${res.status} ${res.statusText})`);
-                }
-
-                const blob = await res.blob();
-                const objectUrl = URL.createObjectURL(blob);
-                currentObjectUrl = objectUrl;
-
-                if (isActive) {
-                    setPdfBlobUrl(objectUrl);
-                } else {
-                    URL.revokeObjectURL(objectUrl);
-                }
-            } catch (err: any) {
-                if (isActive) {
-                    setPdfError(err.message || 'Network error loading PDF');
-                }
-            } finally {
-                if (isActive) setIsFetchingPdf(false);
-            }
-        };
-
-        fetchPdf();
-
-        return () => {
-            isActive = false;
-            if (currentObjectUrl) {
-                URL.revokeObjectURL(currentObjectUrl);
-            }
-        };
-    }, [backendUrl, sidecarToken]);
+        setIframeLoaded(false);
+    }, [backendUrl]);
 
     const handleAskAI = () => {
         const pageContext = `Full page ${page}${pageCount ? ` of ${pageCount}` : ''} from "${title}"`;
@@ -344,7 +296,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                                     setExplainOpen(true);
                                     setFloatPos(null);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground border border-primary shadow-xl rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 transition-none animate-in fade-in zoom-in duration-100"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-bento-panel text-foreground border border-border shadow-2xl rounded-[6px] text-[9px] font-black uppercase tracking-widest hover:bg-muted transition-all duration-150 animate-in fade-in zoom-in duration-100"
                             >
                                 Explain More
                             </button>
@@ -419,25 +371,15 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             </div>
                         ) : (
                             <>
-                                {pdfError ? (
-                                    <div className="flex flex-col items-center justify-center w-full h-full p-6 text-center text-muted-foreground">
-                                        <div className="w-10 h-10 mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
-                                            <svg className="w-5 h-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                            </svg>
-                                        </div>
-                                        <h3 className="text-sm font-medium text-foreground mb-1">Failed to load PDF</h3>
-                                        <p className="text-xs">{pdfError}</p>
-                                    </div>
-                                ) : (!iframeLoaded || isFetchingPdf) ? (
-                                    <PanelLoader label={isFetchingPdf ? "Fetching PDF securely" : "Opening PDF"} />
+                                {(!iframeLoaded) ? (
+                                    <PanelLoader label="Loading engine..." />
                                 ) : null}
-                                {pdfBlobUrl && !pdfError && (
+                                {backendUrl && (
                                     <iframe 
                                         ref={iframeRef} 
-                                        src={pdfBlobUrl} 
+                                        src={backendUrl} 
                                         onLoad={handleIframeLoad}
-                                        className={`w-full h-full border-none overflow-hidden bg-card ${(!iframeLoaded || isFetchingPdf) ? 'invisible absolute' : ''}`}
+                                        className={`w-full h-full border-none overflow-hidden bg-card ${(!iframeLoaded) ? 'invisible absolute' : ''}`}
                                         title={title} 
                                         allowFullScreen 
                                     />

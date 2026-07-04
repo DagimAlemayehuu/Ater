@@ -1321,19 +1321,69 @@ class SourceLearningJobService:
         conn = self._connect()
         try:
             with conn:
-                rows = conn.execute(
-                    "SELECT id FROM concept_graph_nodes WHERE job_id = ? ORDER BY teaching_order",
+                existing_nodes = conn.execute(
+                    "SELECT * FROM concept_graph_nodes WHERE job_id = ? ORDER BY teaching_order",
                     (job_id,),
                 ).fetchall()
-                if not rows:
+                if not existing_nodes:
                     raise ValueError(f"Source learning job not found or has no roadmap: {job_id}")
-                for idx, row in enumerate(rows):
-                    if idx >= len(cleaned_titles):
-                        break
+                
+                new_nodes = []
+                # 1. Update existing and insert new
+                for idx, title in enumerate(cleaned_titles):
+                    if idx < len(existing_nodes):
+                        node = existing_nodes[idx]
+                        node_id = node["id"]
+                        conn.execute(
+                            "UPDATE concept_graph_nodes SET title = ?, teaching_order = ? WHERE id = ?",
+                            (title, idx, node_id),
+                        )
+                        new_nodes.append(node_id)
+                    else:
+                        ref_node = existing_nodes[-1]
+                        import uuid
+                        new_node_id = f"node_{job_id}_{uuid.uuid4().hex[:8]}"
+                        conn.execute(
+                            "INSERT INTO concept_graph_nodes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            (
+                                new_node_id,
+                                job_id,
+                                title,
+                                ref_node["domain"],
+                                ref_node["modality"],
+                                ref_node["source_pages"],
+                                ref_node["source_excerpts"],
+                                ref_node["objective_ids"],
+                                idx,
+                                ref_node["warnings"]
+                            )
+                        )
+                        new_nodes.append(new_node_id)
+                
+                # 2. Delete extra nodes
+                if len(existing_nodes) > len(cleaned_titles):
+                    extra_node_ids = [node["id"] for node in existing_nodes[len(cleaned_titles):]]
+                    for extra_id in extra_node_ids:
+                        conn.execute(
+                            "DELETE FROM concept_graph_nodes WHERE id = ?",
+                            (extra_id,),
+                        )
+                
+                # 3. Recreate edges
+                conn.execute(
+                    "DELETE FROM concept_graph_edges WHERE job_id = ?",
+                    (job_id,),
+                )
+                for idx in range(len(new_nodes) - 1):
+                    from_id = new_nodes[idx]
+                    to_id = new_nodes[idx + 1]
+                    edge_id = f"edge_{job_id}_{from_id}_{to_id}"
                     conn.execute(
-                        "UPDATE concept_graph_nodes SET title = ? WHERE id = ?",
-                        (cleaned_titles[idx], row["id"]),
+                        "INSERT INTO concept_graph_edges VALUES (?, ?, ?, ?, ?)",
+                        (edge_id, job_id, from_id, to_id, "prerequisite"),
                     )
+                
+                # 4. Update job timestamp
                 conn.execute(
                     "UPDATE source_learning_jobs SET updated_at = ? WHERE job_id = ?",
                     (datetime.now().isoformat(), job_id),

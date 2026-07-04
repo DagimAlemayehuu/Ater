@@ -1818,7 +1818,7 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                         data-tour="explain-btn"
                         onMouseDown={e => e.preventDefault()}
                         onClick={handleClickExplain}
-                        className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 bg-background border border-border/60 shadow-lg rounded-[8px] text-[10px] font-black uppercase tracking-widest text-foreground/70 hover:text-foreground hover:border-foreground/30 hover:bg-muted/10 transition-none"
+                        className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 bg-bento-panel text-foreground border border-border shadow-2xl rounded-[6px] text-[9px] font-black uppercase tracking-widest hover:bg-muted transition-all duration-150"
                         style={{
                             left: Math.max(0, floatPos.x - 60),
                             top: Math.max(0, floatPos.y),

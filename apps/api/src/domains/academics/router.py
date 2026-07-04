@@ -60,7 +60,17 @@ async def get_academics_dashboard(secrets: AppSecrets = Depends(get_app_secrets)
             files = folder_path.rglob("*.md") if folder_name == "study planner" else folder_path.glob("*.md")
             for f in files:
                 if f.name.startswith("."): continue
-                data[key].append(get_note_data(f, vault_root))
+                note_data = get_note_data(f, vault_root)
+                if folder_name == "study planner":
+                    # Exclude property option markdown files
+                    rel_path = f.relative_to(folder_path)
+                    parts = rel_path.parts
+                    if len(parts) > 1 and parts[0] in ["status", "confidence", "type", "priority", "difficulty"]:
+                        continue
+                    # Hubs must have type: "Hub" or "Learning Hub"
+                    if note_data.get("type") not in ["Hub", "Learning Hub"]:
+                        continue
+                data[key].append(note_data)
             
     return data
 

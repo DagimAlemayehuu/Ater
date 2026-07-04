@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Search, Trash2, BookOpen, Plus, ChevronRight, Upload, Play, BookOpenCheck, Send, ArrowLeft } from 'lucide-react'
+import { Search, Trash2, BookOpen, Plus, ChevronRight, Upload, Play, BookOpenCheck, Send, ArrowLeft, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { differenceInDays, startOfDay } from 'date-fns'
 import { stripWL, getVal, gradeColorClass, getDaysUntil, wrapWL, cleanTitle, calcGPA } from './utils'
@@ -23,6 +23,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   const [activeRoadmap, setActiveRoadmap] = useState<any | null>(null)
   const [activePreview, setActivePreview] = useState<any | null>(null)
   const [activeTutorSession, setActiveTutorSession] = useState<any | null>(null)
+  const [showAddHubModal, setShowAddHubModal] = useState(false)
 
   const buildRoadmapMarkdown = (sourceJob: any, hubTitle: string) => {
     const placement = sourceJob.placement || {}
@@ -94,21 +95,33 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
     const courseTitleNorm = String(course.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
     const courseAssignments = assignments.filter(a => {
       const aCourse = stripWL(getVal(a, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-      return aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse);
+      return aCourse && (aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse));
     });
     const pending = courseAssignments.filter(a => !a.done && a.done !== 'true')
     const done    = courseAssignments.filter(a => a.done === true || a.done === 'true')
 
     const courseExams    = exams.filter(e => {
       const eCourse = stripWL(getVal(e, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-      return eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse);
+      return eCourse && (eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse));
     });
     const upcomingExams  = courseExams.filter(e => e.date && new Date(e.date) >= now).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     const nextExam       = upcomingExams[0]
 
+    const getUnitNumber = (item: any): number => {
+      const titleStr = String(item.unit || item.title || item.id || '');
+      const match = titleStr.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 99999;
+    };
+
     const courseHubs  = hubs.filter(h => {
       const hCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-      return hCourse.includes(courseTitleNorm) || courseTitleNorm.includes(hCourse);
+      return hCourse && (hCourse.includes(courseTitleNorm) || courseTitleNorm.includes(hCourse));
+    });
+    const sortedCourseHubs = [...courseHubs].sort((a, b) => {
+      const numA = getUnitNumber(a);
+      const numB = getUnitNumber(b);
+      if (numA !== numB) return numA - numB;
+      return String(a.title || a.id).localeCompare(String(b.title || b.id));
     });
     const doneHubs    = courseHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 
@@ -133,6 +146,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
           setChapterName('')
           toast.success('Hub created')
           onRefresh()
+          setShowAddHubModal(false)
           return
         }
         const fileName = selected.split(/[\\/]/).pop() || `${name}.pdf`
@@ -153,6 +167,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
           hubTitle: name,
           titles: (sourceJob.roadmap || []).map((item: any) => item.title).filter(Boolean),
         })
+        setShowAddHubModal(false)
       } catch (err: any) {
         toast.error(err.message || 'Chapter setup failed')
       } finally {
@@ -256,32 +271,49 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
     const handleRoadmapSend = async () => {
       const text = roadmapInput.trim()
       if (!text) return
-      const renameMatch = text.match(/^rename\s+(\d+)\s+(?:to\s+)?(.+)$/i)
-      const addMatch = text.match(/^add\s+(.+)$/i)
-      const removeMatch = text.match(/^remove\s+(\d+)$/i)
       if (/^(confirm|start|start lesson|confirm roadmap)$/i.test(text)) {
         setRoadmapInput('')
         await openSourceLesson()
         return
       }
-      if (renameMatch) {
-        const index = Number(renameMatch[1]) - 1
-        updateRoadmapTitle(index, renameMatch[2])
+
+      setChapterBusy(true)
+      try {
+        const jobId = activeRoadmap?.sourceJob?.job_id
+        if (!jobId) return
+        const updatedJob = await sidecarApi.refineSourceLearningJobRoadmap(jobId, text, activeRoadmap.titles)
         setRoadmapInput('')
-        return
+        setActiveRoadmap((current: any) => {
+          if (!current) return current
+          return {
+            ...current,
+            sourceJob: updatedJob,
+            titles: (updatedJob.roadmap || []).map((item: any) => item.title).filter(Boolean),
+          }
+        })
+        toast.success('Roadmap updated')
+      } catch (err: any) {
+        console.error('[Roadmap Refinement] Error refining roadmap:', err)
+        const renameMatch = text.match(/^rename\s+(\d+)\s+(?:to\s+)?(.+)$/i)
+        const addMatch = text.match(/^add\s+(.+)$/i)
+        const removeMatch = text.match(/^remove\s+(\d+)$/i)
+        if (renameMatch) {
+          const index = Number(renameMatch[1]) - 1
+          updateRoadmapTitle(index, renameMatch[2])
+          setRoadmapInput('')
+        } else if (addMatch) {
+          setActiveRoadmap((current: any) => current ? { ...current, titles: [...current.titles, addMatch[1]] } : current)
+          setRoadmapInput('')
+        } else if (removeMatch) {
+          const index = Number(removeMatch[1]) - 1
+          setActiveRoadmap((current: any) => current ? { ...current, titles: current.titles.filter((_: string, idx: number) => idx !== index) } : current)
+          setRoadmapInput('')
+        } else {
+          toast.error(err.message || 'Failed to update roadmap')
+        }
+      } finally {
+        setChapterBusy(false)
       }
-      if (addMatch) {
-        setActiveRoadmap((current: any) => current ? { ...current, titles: [...current.titles, addMatch[1]] } : current)
-        setRoadmapInput('')
-        return
-      }
-      if (removeMatch) {
-        const index = Number(removeMatch[1]) - 1
-        setActiveRoadmap((current: any) => current ? { ...current, titles: current.titles.filter((_: string, idx: number) => idx !== index) } : current)
-        setRoadmapInput('')
-        return
-      }
-      toast.info('Use: rename 2 to New Title, add Concept, remove 3, or confirm')
     }
 
     if (activePreview) {
@@ -333,6 +365,16 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <AterMarkdown content={buildRoadmapMarkdown(sourceJob, activeRoadmap.hubTitle)} />
               </div>
+              <div className="border-t border-border/30 pt-4 mt-2 flex justify-end">
+                <button
+                  onClick={() => void openSourceLesson()}
+                  disabled={chapterBusy}
+                  className="px-5 py-2.5 bg-bento-item border border-border text-foreground hover:bg-bento-item/80 font-bold text-[10px] uppercase tracking-widest rounded-[6px] flex items-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  <BookOpenCheck size={14} />
+                  {chapterBusy ? 'Starting lesson...' : 'Confirm and Start First Lesson'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -347,8 +389,8 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
                     void handleRoadmapSend()
                   }
                 }}
-                placeholder=""
-                className="min-h-[42px] max-h-28 flex-1 resize-none bg-bento-card border border-border rounded-[8px] px-3 py-3 text-[12px] font-bold focus:outline-none focus:border-foreground/30"
+                placeholder="Talk to the AI to refine your roadmap (e.g. 'rename 2 to New Title', 'remove 3', 'add Concept', or ask for custom adjustments)..."
+                className="min-h-[42px] max-h-28 flex-1 resize-none bg-bento-card border border-border rounded-[8px] px-3 py-3 text-[12px] font-bold focus:outline-none focus:border-foreground/30 placeholder:text-muted-foreground/40"
               />
               <button
                 onClick={() => void handleRoadmapSend()}
@@ -420,7 +462,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
               <div className="h-full bg-foreground/70" style={{ width: `${courseHubs.length > 0 ? (doneHubs / courseHubs.length) * 100 : 0}%` }} />
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {courseHubs.slice(0, 6).map((hub, idx) => {
+              {sortedCourseHubs.slice(0, 6).map((hub, idx) => {
                 const isDone = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
                 const sourceJobId = stripWL(getVal(hub, 'source_job_id', 'Source Job ID', 'sourceJobId'))
                 return (
@@ -473,24 +515,64 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
           </section>
         )}
 
-        <section className="p-4 border border-border bg-bento-card rounded-[8px] space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeader title="Add Hub" />
-            <button
-              onClick={startAcademicChapter}
-              disabled={chapterBusy}
-              className="flex items-center gap-1.5 px-3 py-2 text-[8px] font-black uppercase tracking-widest border border-border bg-bento-item/60 rounded-[6px] text-foreground hover:bg-bento-item disabled:opacity-50"
-            >
-              <Upload size={11} /> {chapterBusy ? 'Creating...' : 'Add New Hub'}
-            </button>
+        <div className="flex justify-start pt-2">
+          <button
+            onClick={() => {
+              setChapterName('')
+              setShowAddHubModal(true)
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-all"
+          >
+            <Plus size={10} /> Add Study Hub
+          </button>
+        </div>
+
+        {showAddHubModal && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-bento-panel border border-border/40 rounded-[10px] shadow-2xl flex flex-col overflow-hidden">
+              <div className="h-12 shrink-0 border-b border-border/40 flex items-center justify-between px-4">
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-foreground">Create Study Hub</h3>
+                <button
+                  onClick={() => setShowAddHubModal(false)}
+                  className="size-8 border border-border/40 hover:border-foreground/20 hover:bg-bento-item rounded-[6px] flex items-center justify-center transition-all"
+                  aria-label="Close"
+                >
+                  <X size={14} className="text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+              
+              <div className="p-6 flex flex-col gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Chapter Name</label>
+                  <input
+                    value={chapterName}
+                    onChange={e => setChapterName(e.target.value)}
+                    placeholder="e.g. Chapter 3: Dynamic Routing"
+                    className="w-full bg-background/40 border border-border rounded-[6px] px-3 py-2.5 text-[12px] font-bold focus:outline-none focus:border-foreground/30 text-foreground"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && chapterName.trim() && !chapterBusy) {
+                        e.preventDefault();
+                        void startAcademicChapter();
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-2 mt-2">
+                  <button
+                    onClick={() => void startAcademicChapter()}
+                    disabled={!chapterName.trim() || chapterBusy}
+                    className="w-full h-10 flex items-center justify-center gap-1.5 border border-border bg-bento-item/50 rounded-[6px] text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-bento-item disabled:opacity-50 transition-all cursor-pointer"
+                  >
+                    <Upload size={12} />
+                    {chapterBusy ? 'Creating Hub...' : 'Upload PDF & Generate'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <input
-            value={chapterName}
-            onChange={e => setChapterName(e.target.value)}
-            placeholder="Hub name"
-            className="w-full bg-background/40 border border-border rounded-[6px] px-3 py-2 text-[12px] font-bold focus:outline-none focus:border-foreground/30"
-          />
-        </section>
+        )}
       </div>
     )
   }
@@ -551,18 +633,18 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
             const courseTitleNorm = String(course.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
             const cAssign     = assignments.filter(a => {
               const aCourse = stripWL(getVal(a, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-              return aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse);
+              return aCourse && (aCourse.includes(courseTitleNorm) || courseTitleNorm.includes(aCourse));
             });
             const pendingCt   = cAssign.filter(a => !a.done).length
             const cExams      = exams.filter(e => {
               const eCourse = stripWL(getVal(e, 'Course', 'course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-              return eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse);
+              return eCourse && (eCourse.includes(courseTitleNorm) || courseTitleNorm.includes(eCourse));
             });
             const nextEx      = cExams.filter(e => e.date).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
             const daysToExam  = nextEx?.date ? differenceInDays(new Date(nextEx.date), now) : null
             const cHubs       = hubs.filter(h => {
               const hCourse = stripWL(getVal(h, 'course', 'Course')).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-              return hCourse.includes(courseTitleNorm) || courseTitleNorm.includes(hCourse);
+              return hCourse && (hCourse.includes(courseTitleNorm) || courseTitleNorm.includes(hCourse));
             });
             const doneH       = cHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
 

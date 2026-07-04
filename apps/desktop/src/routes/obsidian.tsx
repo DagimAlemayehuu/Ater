@@ -86,6 +86,7 @@ interface FileTreeItemProps {
   onDrop: (e: React.DragEvent, targetPath: string | null) => void
   onDragEnd: () => void
   renderTree: (nodes: FileNode[], level: number) => React.ReactNode
+  lockedNotes?: Set<string>
 }
 
 const FileTreeItem = React.memo(({
@@ -116,30 +117,40 @@ const FileTreeItem = React.memo(({
   onDragLeave,
   onDrop,
   onDragEnd,
-  renderTree
+  renderTree,
+  lockedNotes
 }: FileTreeItemProps) => {
   const isExpanded = expandedFolders.has(node.path) || searchQuery !== ''
   const isSelected = selectedPath === node.path
   const isRenaming = renamingPath === node.path
+  const isLocked = !node.isFolder && lockedNotes?.has(String(node.path).replace(/\\/g, '/').toLowerCase())
 
   return (
     <div
      className="flex flex-col"
-     onDragOver={(e) => onDragOver(e, node.path)}
-     onDragLeave={(e) => onDragLeave(e, node.path)}
+     onDragOver={(e) => !isLocked && onDragOver(e, node.path)}
+     onDragLeave={(e) => !isLocked && onDragLeave(e, node.path)}
      onDragEnd={onDragEnd}
-     onDrop={(e) => onDrop(e, node.path)}
+     onDrop={(e) => !isLocked && onDrop(e, node.path)}
     >
       <div
-        draggable
+        draggable={!isLocked}
         data-tour={!node.isFolder ? 'obsidian-file-item' : undefined}
-        onDragStart={(e) => onDragStart(e, node.path)}
-        onClick={() => node.isFolder ? onToggleFolder(node.path) : onSelectFile(node.path)}
+        onDragStart={(e) => !isLocked && onDragStart(e, node.path)}
+        onClick={() => {
+          if (isLocked) {
+            toast.error("This lesson is locked. Complete your current lesson first.")
+            return
+          }
+          node.isFolder ? onToggleFolder(node.path) : onSelectFile(node.path)
+        }}
         className={cn(
           "flex items-center gap-1.5 py-1 cursor-pointer px-2 group relative rounded-[4px] mx-1",
           isSelected
             ? "bg-bento-item text-foreground font-semibold shadow-sm"
-            : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
+            : isLocked
+              ? "text-muted-foreground/30 opacity-40 cursor-not-allowed"
+              : "hover:bg-foreground/[0.03] text-muted-foreground hover:text-foreground",
           dragOverPath === node.path && "bg-bento-item/50 ring-1 ring-[#242426] ring-inset",
           draggedPath === node.path && "opacity-40 grayscale"
         )}
@@ -764,6 +775,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [activePlan, setActivePlan] = useState<string | null>(null)
  const [planData, setPlanData] = useState<any | null>(null)
  const [sessionId, setSessionId] = useState<string | null>(null)
+ const [lockedNotes, setLockedNotes] = useState<Set<string>>(new Set())
  const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
  const [currentBatch, setCurrentBatch] = useState<number>(0)
  const [totalBatches, setTotalBatches] = useState<number>(0)
@@ -1027,6 +1039,39 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 }
 
+  useEffect(() => {
+    let active = true
+    const fetchSessionLockState = async () => {
+      const activeSessionId = localStorage.getItem('ater_active_session_id')
+      if (!activeSessionId) {
+        if (active) setLockedNotes(new Set())
+        return
+      }
+      try {
+        const session = await sidecarApi.getTutorStatus(activeSessionId)
+        if (!session || !session.curriculum || !active) return
+
+        const normalize = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
+        const completed = new Set((session.completed_notes || []).map(normalize))
+        const unlocked = new Set((session.active_note_unlocks || []).map(normalize))
+        const current = normalize(session.current_note_path || '')
+
+        const lockedSet = new Set<string>()
+        session.curriculum.forEach((p: string) => {
+          const normP = normalize(p)
+          if (!completed.has(normP) && !unlocked.has(normP) && normP !== current) {
+            lockedSet.add(normP)
+          }
+        })
+        if (active) setLockedNotes(lockedSet)
+      } catch (err) {
+        console.error('Failed to fetch locks for tree view:', err)
+      }
+    }
+    void fetchSessionLockState()
+    return () => { active = false }
+  }, [selectedPath, location.search])
+
   // --- Sync & Polling ---
   useEffect(() => {
     if (location.pathname !== '/obsidian') return
@@ -1206,7 +1251,47 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  }
 }, [renamingPath, newItemName, fetchFiles, selectedPath])
 
+const checkLockState = async (path: string): Promise<boolean> => {
+  const activeSessionId = localStorage.getItem('ater_active_session_id')
+  if (!activeSessionId) return false
+
+  try {
+    const session = await sidecarApi.getTutorStatus(activeSessionId)
+    if (!session || !session.curriculum) return false
+
+    const normalize = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
+    const targetPath = normalize(path)
+
+    const inCurriculum = session.curriculum.some((p: string) => normalize(p) === targetPath)
+    if (!inCurriculum) return false
+
+    const completed = new Set((session.completed_notes || []).map(normalize))
+    const unlocked = new Set((session.active_note_unlocks || []).map(normalize))
+    const current = normalize(session.current_note_path || '')
+
+    if (completed.has(targetPath) || unlocked.has(targetPath) || targetPath === current) {
+      return false
+    }
+
+    return true // Locked
+  } catch (err) {
+    console.error('Error verifying lock status:', err)
+    return false
+  }
+}
+
 const selectFile = useCallback(async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
+    // Lock validation
+    try {
+      const isLocked = await checkLockState(path)
+      if (isLocked) {
+        toast.error("This lesson is locked. Complete your current lesson first.")
+        return
+      }
+    } catch (err) {
+      console.error("Lock check error:", err)
+    }
+
     const norm = String(path).toLowerCase();
     const cleanItemName = path.split(/[/\\]/).pop()?.replace('.md', '') || '';
     if (norm.includes('database/courses/')) {
@@ -1911,6 +1996,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         }
       }}
       renderTree={renderTree}
+      lockedNotes={lockedNotes}
     />
   ));
 
@@ -1951,7 +2037,8 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   handleRenameItem,
   handleCreateItem,
   handleDrop,
-  files
+  files,
+  lockedNotes
 ]);
 
   const selectedIsPdf = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')

@@ -254,6 +254,7 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
       difficulty: ['Easy', 'Medium', 'Hard', 'Very Hard'],
       confidence: ['Low', 'Medium', 'High', 'Expert'],
       'academic level': ['High School', 'Undergraduate', "Master's", 'PhD'],
+      unit: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'],
     }
 
     const loadOptions = async () => {

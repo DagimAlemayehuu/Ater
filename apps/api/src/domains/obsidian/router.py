@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Dict, Any, Optional
 import asyncio
 import json
@@ -1137,6 +1137,7 @@ async def get_pdf_viewer(
     page: int = 1,
     filter_pages: Optional[str] = None,
     theme: str = "light",
+    sidecar_token: Optional[str] = Query(None),
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     """Returns an HTML wrapper for the PDF that handles selection and scrolling locks using PDF.js."""
@@ -1155,6 +1156,10 @@ async def get_pdf_viewer(
         resolved_str = resolved_str[1:]
         
     auth_query = f"?vault_path={quote(effective_vault_path)}" if effective_vault_path else ""
+    effective_token = sidecar_token
+    if effective_token:
+        auth_query += f"&sidecar_token={quote(effective_token)}" if auth_query else f"?sidecar_token={quote(effective_token)}"
+        
     # Ensure the path is URL-encoded so spaces do not break pdf.js fetch requests
     pdf_src = f"/api/obsidian/serve/{quote(resolved_str)}{auth_query}"
     
@@ -1302,6 +1307,10 @@ async def get_pdf_viewer(
             }}
 
             async function renderPage(num) {{
+                if (!pdfDoc) {{
+                    pageNum = num;
+                    return;
+                }}
                 try {{
                     const page = await pdfDoc.getPage(num);
                     const baseViewportRef = page.getViewport({{ scale: 1.0 }});

@@ -2545,6 +2545,25 @@ export const sidecarApi = {
             throw err;
         }
     },
+    refineSourceLearningJobRoadmap: async (jobId: string, instruction: string, currentTitles: string[]) => {
+        enforceFeatureLock('ai-features');
+        try {
+            const headers = await getBaseHeaders('application/json');
+            const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/roadmap/refine`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ instruction, current_titles: currentTitles })
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || `Failed to refine source roadmap (HTTP ${res.status})`);
+            }
+            return await checkedJson(res);
+        } catch (err: any) {
+            console.error('[Tauri Native RAG] refineSourceLearningJobRoadmap failed:', err);
+            throw err;
+        }
+    },
     createAcademicChapterHub: async (payload: { chapter_title: string; semester: string; course: string }) => {
         try {
             const headers = await getBaseHeaders('application/json');

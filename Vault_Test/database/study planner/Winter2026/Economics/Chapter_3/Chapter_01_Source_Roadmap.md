@@ -60,4 +60,3 @@ source_job_id: "srcjob_f4b691a8615e4d6e"
 - [[Prices_Of_Goods]]
 - [[Taxes,_Subsides_And_Rationing]]
 - [[Equilibrium_Of_The_Consumer]]
-- [[Optimal_Choice]]

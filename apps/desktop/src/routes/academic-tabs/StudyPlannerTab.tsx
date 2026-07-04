@@ -42,11 +42,38 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
     return items
   }, [allHubs, filter, search])
 
+  const getUnitNumber = (item: any): number => {
+    const titleStr = String(item.unit || item.title || item.id || '');
+    const match = titleStr.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 99999;
+  };
+
+  const sortHubsByUnit = (hubsList: any[]) => {
+    return [...hubsList].sort((a, b) => {
+      const numA = getUnitNumber(a);
+      const numB = getUnitNumber(b);
+      if (numA !== numB) return numA - numB;
+      return String(a.title || a.id).localeCompare(String(b.title || b.id));
+    });
+  };
+
   const groups = useMemo(() => {
-    if (groupMode === 'none') return { All: filtered }
-    if (groupMode === 'course') return groupBy(filtered, h => cleanTitle(stripWL(getVal(h, 'course', 'Course'))) || 'Uncategorized')
-    if (groupMode === 'status') return groupBy(filtered, h => cleanTitle(stripWL(getVal(h, 'status', 'Status'))) || 'No Status')
-    return { All: filtered }
+    let result: Record<string, any[]> = {}
+    if (groupMode === 'none') {
+      result = { All: filtered }
+    } else if (groupMode === 'course') {
+      result = groupBy(filtered, h => cleanTitle(stripWL(getVal(h, 'course', 'Course'))) || 'Uncategorized')
+    } else if (groupMode === 'status') {
+      result = groupBy(filtered, h => cleanTitle(stripWL(getVal(h, 'status', 'Status'))) || 'No Status')
+    } else {
+      result = { All: filtered }
+    }
+
+    const sortedResult: Record<string, any[]> = {}
+    for (const [key, list] of Object.entries(result)) {
+      sortedResult[key] = sortHubsByUnit(list)
+    }
+    return sortedResult
   }, [filtered, groupMode])
 
   const totalDone    = allHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
@@ -102,11 +129,13 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <BigPropertyCard label="Status" value={getVal(hub, 'status', 'Status') || 'Active'}
             schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { status: v })} />
           <BigPropertyCard label="Course" value={getVal(hub, 'course', 'Course')}
             schema={{ type: 'relation', source: 'database/courses' }} onUpdate={v => onUpdate(DB_ID, hub.id, { course: v })} />
+          <BigPropertyCard label="Unit" value={getVal(hub, 'unit', 'Unit') || ''}
+            schema={{ type: 'select' }} onUpdate={v => onUpdate(DB_ID, hub.id, { unit: v })} />
           <StatCard label="Study Time" value={studyTime > 0 ? `${Math.round(studyTime / 60)}m` : '--'} />
           <StatCard label="Practice Accuracy" value={accuracy !== null ? `${accuracy}%` : '--'} />
         </div>

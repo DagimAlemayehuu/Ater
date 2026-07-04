@@ -1285,7 +1285,7 @@ export const PracticeConfigCard = ({ payload }: { payload: any }) => {
 // --- Interactive Sandbox Block ---
 export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
     const { 
-        title = 'Interactive Sandbox', 
+        title = 'Data Visualizer', 
         type = 'math-plotter', 
         equation = 'sine',
         sliders = [],
@@ -1295,29 +1295,14 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
         links = []
     } = payload;
 
-    // 1. Math Plotter State
-    const [sliderVals, setSliderVals] = useState<Record<string, number>>(() => {
-        const initial: Record<string, number> = {};
+    // 1. Math Plotter static values
+    const sliderVals = React.useMemo(() => {
+        const vals: Record<string, number> = {};
         (sliders || []).forEach((s: any) => {
-            initial[s.name] = s.default !== undefined ? s.default : (s.min + s.max) / 2;
+            vals[s.name] = s.default !== undefined ? s.default : (s.min + s.max) / 2;
         });
-        return initial;
-    });
-
-    const handleSliderChange = (name: string, val: number) => {
-        setSliderVals(prev => ({ ...prev, [name]: val }));
-    };
-
-    // 2. Table Explorer State
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sortKey, setSortKey] = useState<string | null>(null);
-    const [sortAsc, setSortAsc] = useState(true);
-    const [expandedRow, setExpandedRow] = useState<number | null>(null);
-
-    // 3. Node Graph State
-    const [activeNode, setActiveNode] = useState<string | null>(null);
-    const [propagationStep, setPropagationStep] = useState<number>(-1);
-    const [isPropagating, setIsPropagating] = useState(false);
+        return vals;
+    }, [sliders]);
 
     // Dynamic wave / math calculation
     const pointsPath = React.useMemo(() => {
@@ -1360,56 +1345,6 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
         return pts.join(' ');
     }, [type, equation, sliderVals]);
 
-    // Sorting and filtering table rows
-    const filteredRows = React.useMemo(() => {
-        if (type !== 'table-explorer') return [];
-        let result = [...(rows || [])];
-
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            result = result.filter(row => 
-                Object.values(row).some(val => String(val).toLowerCase().includes(q))
-            );
-        }
-
-        if (sortKey) {
-            result.sort((a, b) => {
-                const valA = a[sortKey];
-                const valB = b[sortKey];
-                if (valA === undefined) return 1;
-                if (valB === undefined) return -1;
-
-                if (typeof valA === 'number' && typeof valB === 'number') {
-                    return sortAsc ? valA - valB : valB - valA;
-                }
-                const strA = String(valA).toLowerCase();
-                const strB = String(valB).toLowerCase();
-                return sortAsc ? strA.localeCompare(strB) : strB.localeCompare(strA);
-            });
-        }
-
-        return result;
-    }, [type, rows, searchQuery, sortKey, sortAsc]);
-
-    // Trigger Node Graph flow propagation simulation
-    const runPropagation = () => {
-        if (isPropagating || !activeNode) return;
-        setIsPropagating(true);
-        setPropagationStep(0);
-
-        let current = 0;
-        const interval = setInterval(() => {
-            current += 1;
-            if (current > 3) {
-                clearInterval(interval);
-                setIsPropagating(false);
-                setPropagationStep(-1);
-            } else {
-                setPropagationStep(current);
-            }
-        }, 600);
-    };
-
     return (
         <div className="p-5 border border-border bg-bento-panel my-4 rounded-[12px] shadow-sm select-none">
             {/* Header */}
@@ -1420,9 +1355,6 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                         {title}
                     </span>
                 </div>
-                <Badge variant="outline" className="rounded-[12px] font-bold text-[8px] uppercase tracking-wider border-border bg-muted/20 text-muted-foreground">
-                    Interactive
-                </Badge>
             </div>
 
             {/* Render math plotter */}
@@ -1457,50 +1389,12 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                             f(x): {equation}
                         </div>
                     </div>
-
-                    {/* Sliders Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {(sliders || []).map((s: any) => {
-                            const val = sliderVals[s.name] !== undefined ? sliderVals[s.name] : s.default;
-                            return (
-                                <div key={s.name} className="space-y-1.5 p-3 border border-border/50 bg-background/30 rounded-[8px]">
-                                    <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-wider text-muted-foreground">
-                                        <span>{s.label}</span>
-                                        <span className="font-mono text-foreground font-bold">{val.toFixed(2)}</span>
-                                    </div>
-                                    <input 
-                                        type="range" 
-                                        min={s.min} 
-                                        max={s.max} 
-                                        step={s.step} 
-                                        value={val}
-                                        onChange={(e) => handleSliderChange(s.name, parseFloat(e.target.value))}
-                                        className="w-full accent-primary bg-muted/20 h-1 rounded-lg cursor-pointer"
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
                 </div>
             )}
 
             {/* Render table explorer */}
             {type === 'table-explorer' && (
                 <div className="space-y-4">
-                    {/* Toolbar */}
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
-                            <input 
-                                type="text"
-                                placeholder="Search table..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-background border border-border/60 rounded-[8px] py-1.5 pl-9 pr-3 text-xs text-foreground focus:outline-none focus:border-border/85"
-                            />
-                        </div>
-                    </div>
-
                     {/* Table Container */}
                     <div className="border border-border/60 rounded-[8px] overflow-hidden bg-background">
                         <div className="overflow-x-auto custom-scrollbar">
@@ -1510,77 +1404,30 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                                         {(headers || []).map((h: string) => (
                                             <th 
                                                 key={h}
-                                                onClick={() => {
-                                                    if (sortKey === h) setSortAsc(!sortAsc);
-                                                    else { setSortKey(h); setSortAsc(true); }
-                                                }}
-                                                className="p-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground/80 cursor-pointer hover:text-foreground select-none"
+                                                className="p-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground/80"
                                             >
-                                                <div className="flex items-center gap-1">
-                                                    {h.replace(/_/g, ' ')}
-                                                    {sortKey === h && (sortAsc ? '↑' : '↓')}
-                                                </div>
+                                                {h.replace(/_/g, ' ')}
                                             </th>
                                         ))}
-                                        <th className="p-3 text-[9px] font-black uppercase text-muted-foreground/85 w-12" />
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/40 text-[11px]">
-                                    {filteredRows.map((row: any, i: number) => {
-                                        const isOpen = expandedRow === i;
+                                    {(rows || []).map((row: any, i: number) => {
                                         return (
-                                            <React.Fragment key={i}>
-                                                <tr 
-                                                    onClick={() => setExpandedRow(isOpen ? null : i)}
-                                                    className={cn(
-                                                        "hover:bg-muted/5 cursor-pointer transition-colors",
-                                                        isOpen ? "bg-muted/10" : ""
-                                                    )}
-                                                >
-                                                    {(headers || []).map((h: string) => (
-                                                        <td key={h} className="p-3 font-semibold text-foreground/80">
-                                                            {typeof row[h] === 'boolean' 
-                                                                ? (row[h] ? 'Yes' : 'No') 
-                                                                : String(row[h] || '')}
-                                                        </td>
-                                                    ))}
-                                                    <td className="p-3 text-right">
-                                                        <span className="text-[10px] text-muted-foreground/40 font-black">
-                                                            {isOpen ? 'Close' : 'Inspect'}
-                                                        </span>
+                                            <tr 
+                                                key={i}
+                                                className="hover:bg-muted/5 transition-colors"
+                                            >
+                                                {(headers || []).map((h: string) => (
+                                                    <td key={h} className="p-3 font-semibold text-foreground/80">
+                                                        {typeof row[h] === 'boolean' 
+                                                            ? (row[h] ? 'Yes' : 'No') 
+                                                            : String(row[h] || '')}
                                                     </td>
-                                                </tr>
-                                                {isOpen && (
-                                                    <tr>
-                                                        <td colSpan={(headers || []).length + 1} className="p-4 bg-muted/5 border-t border-b border-border/30">
-                                                            <div className="space-y-2 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                                                                <div className="text-[9px] font-black text-foreground mb-1">Row Details</div>
-                                                                {Object.entries(row)
-                                                                    .filter(([key]) => !(headers || []).includes(key))
-                                                                    .map(([key, val]) => (
-                                                                        <div key={key} className="flex justify-between py-1 border-b border-border/10">
-                                                                            <span className="text-muted-foreground">{key.replace(/_/g, ' ')}</span>
-                                                                            <span className="text-foreground font-bold font-mono">{String(val)}</span>
-                                                                        </div>
-                                                                    ))
-                                                                }
-                                                                {Object.entries(row).filter(([key]) => !(headers || []).includes(key)).length === 0 && (
-                                                                    <div className="text-muted-foreground/50 py-1 lowercase">No additional metadata found.</div>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
+                                                ))}
+                                            </tr>
                                         );
                                     })}
-                                    {filteredRows.length === 0 && (
-                                        <tr>
-                                            <td colSpan={(headers || []).length + 1} className="p-8 text-center text-muted-foreground/40 font-bold uppercase tracking-widest text-[9px]">
-                                                No results match search query
-                                            </td>
-                                        </tr>
-                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -1591,7 +1438,7 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
             {/* Render node graph */}
             {type === 'node-graph' && (
                 <div className="space-y-4">
-                    {/* SVG Interactive Canvas */}
+                    {/* SVG Canvas */}
                     <div className="relative h-60 bg-background border border-border/60 rounded-[8px] overflow-hidden flex items-center justify-center">
                         <svg className="w-full h-full" viewBox="0 0 400 240">
                             {/* Lines / Edges */}
@@ -1600,54 +1447,36 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                                 const targetNode = (nodes || []).find((n: any) => n.id === link.target);
                                 if (!sourceNode || !targetNode) return null;
 
-                                const isActiveLink = activeNode === link.source || activeNode === link.target;
-                                const isFlowing = isPropagating && activeNode === link.source;
-
                                 return (
-                                    <g key={idx}>
-                                        <line 
-                                            x1={sourceNode.x} 
-                                            y1={sourceNode.y} 
-                                            x2={targetNode.x} 
-                                            y2={targetNode.y} 
-                                            stroke={isActiveLink ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)'} 
-                                            strokeWidth={isActiveLink ? 1.5 : 1}
-                                            className="transition-all duration-300"
-                                        />
-                                        {isFlowing && (
-                                            <circle r="3" fill="#f59e0b" className="animate-pulse">
-                                                <animateMotion 
-                                                    dur="1s" 
-                                                    repeatCount="indefinite" 
-                                                    path={`M ${sourceNode.x} ${sourceNode.y} L ${targetNode.x} ${targetNode.y}`}
-                                                />
-                                            </circle>
-                                        )}
-                                    </g>
+                                    <line 
+                                        key={idx}
+                                        x1={sourceNode.x} 
+                                        y1={sourceNode.y} 
+                                        x2={targetNode.x} 
+                                        y2={targetNode.y} 
+                                        stroke="rgba(255, 255, 255, 0.08)" 
+                                        strokeWidth={1}
+                                    />
                                 );
                             })}
 
                             {/* Node Circles */}
                             {(nodes || []).map((node: any) => {
-                                const isActive = activeNode === node.id;
                                 return (
                                     <g 
                                         key={node.id} 
                                         transform={`translate(${node.x}, ${node.y})`}
-                                        onClick={() => setActiveNode(isActive ? null : node.id)}
-                                        className="cursor-pointer group"
                                     >
                                         <circle 
-                                            r={isActive ? 12 : 8} 
-                                            fill={isActive ? '#f59e0b' : '#1f1f22'} 
-                                            stroke={isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.2)'}
-                                            strokeWidth={isActive ? 2 : 1}
-                                            className="transition-all duration-300 filter group-hover:brightness-125"
+                                            r={8} 
+                                            fill="#1f1f22" 
+                                            stroke="rgba(255, 255, 255, 0.2)" 
+                                            strokeWidth={1}
                                         />
                                         <text 
                                             y="22" 
                                             textAnchor="middle" 
-                                            fill={isActive ? '#ffffff' : '#a1a1aa'} 
+                                            fill="#a1a1aa" 
                                             className="text-[9px] font-bold font-sans uppercase select-none pointer-events-none tracking-wider"
                                         >
                                             {node.label}
@@ -1656,20 +1485,6 @@ export const InteractiveSandboxBlock = ({ payload }: { payload: any }) => {
                                 );
                             })}
                         </svg>
-
-                        {/* Interactive HUD overlay inside graph */}
-                        <div className="absolute top-2 left-2 flex flex-col gap-1 text-[9px] font-mono text-muted-foreground/60 uppercase">
-                            <div>Selected Node: <span className="text-foreground font-bold">{activeNode || 'None'}</span></div>
-                            {activeNode && (
-                                <button 
-                                    onClick={runPropagation}
-                                    disabled={isPropagating}
-                                    className="px-2 py-0.5 mt-1 border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 hover:text-background rounded-[4px] uppercase text-[8px] font-black tracking-widest transition-all w-24 text-center disabled:opacity-40"
-                                >
-                                    {isPropagating ? 'Flowing...' : 'Test Flow'}
-                                </button>
-                            )}
-                        </div>
                     </div>
                 </div>
             )}

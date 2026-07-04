@@ -732,7 +732,7 @@ export function PracticeSession({
               <Button
                 variant="ghost"
                 onClick={handleExplainMore}
-                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-border bg-bento-item hover:border-foreground/60 text-foreground/70 hover:text-foreground rounded-[8px] flex items-center gap-2 transition-colors duration-150"
+                className="h-10 px-4 text-[10px] font-black uppercase tracking-widest border border-border bg-bento-card hover:bg-muted text-foreground rounded-[6px] flex items-center gap-2 transition-all duration-150"
                 title="Get a detailed lesson on this question's concept"
               >
                 <BookOpen size={12} />

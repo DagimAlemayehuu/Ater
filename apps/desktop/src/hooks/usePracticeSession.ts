@@ -421,19 +421,41 @@ export function usePracticeSession() {
     if (ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0)) return;
 
     const objective = isObjectiveQuestion(currentQuestion);
-    const localCorrect = objective ? gradeLocally(currentQuestion, ans) : gradeOpenEndedLocally(currentQuestion, ans);
     const resolvedUserAnswer = formatAnswerValue(resolveSelectedAnswer(currentQuestion, ans));
 
     setIsSubmitting(true);
     try {
-      const explanation = buildLocalExplanation(currentQuestion, ans, localCorrect);
-      if (!sessionPath) {
-        setScores(prev => ({ ...prev, [currentQuestion.id]: localCorrect }));
-        setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
-        setStreak(prev => localCorrect ? prev + 1 : 0);
+      let isCorrect = false;
+      let explanation = "";
+
+      if (objective) {
+        isCorrect = gradeLocally(currentQuestion, ans);
+        explanation = buildLocalExplanation(currentQuestion, ans, isCorrect);
+      } else {
+        try {
+          const aiRes = await sidecarApi.explainQuestion({
+            question: currentQuestion.question,
+            type: currentQuestion.type,
+            answer: formatAnswerValue(currentQuestion.answer),
+            explanation: currentQuestion.explanation || "",
+            context: (currentQuestion as any).content || (currentQuestion as any).codeSnippet || "",
+            userAnswer: resolvedUserAnswer,
+            note_path: currentQuestion.note_id || notePath,
+          });
+          isCorrect = aiRes.is_correct;
+          explanation = aiRes.lesson || aiRes.explanation || "";
+        } catch (err) {
+          console.error("AI grading failed, using local fallback:", err);
+          isCorrect = gradeOpenEndedLocally(currentQuestion, ans);
+          explanation = buildLocalExplanation(currentQuestion, ans, isCorrect);
+        }
       }
 
-      const isCorrect = localCorrect;
+      if (!sessionPath) {
+        setScores(prev => ({ ...prev, [currentQuestion.id]: isCorrect }));
+        setRevealedStates(prev => ({ ...prev, [currentQuestionIdx]: true }));
+        setStreak(prev => isCorrect ? prev + 1 : 0);
+      }
 
       // Store explanation in question hints so the UI can render it
       setQuestionHint(prev => ({ ...prev, [currentQuestion.id]: explanation }));

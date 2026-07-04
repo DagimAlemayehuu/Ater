@@ -17,12 +17,12 @@ const INLINE_MARKDOWN_COMPONENTS = {
   p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
 };
 
-export const MarkdownBlock = React.memo(({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
+export const MarkdownBlock = React.memo(({ content, variant = 'block', className }: { content: string; variant?: 'block' | 'inline'; className?: string }) => {
   if (variant === 'inline') {
     return (
       <AterMarkdown
         content={content}
-        className="inline-block align-baseline text-[13px] text-foreground/90"
+        className={cn("inline-block align-baseline text-[13px] text-foreground/90", className)}
         components={INLINE_MARKDOWN_COMPONENTS}
       />
     );
@@ -30,7 +30,7 @@ export const MarkdownBlock = React.memo(({ content, variant = 'block' }: { conte
   return (
     <AterMarkdown
       content={content}
-      className="block w-full text-[13px] text-foreground/90 whitespace-pre-wrap break-words"
+      className={cn("block w-full text-[13px] text-foreground/90 whitespace-pre-wrap break-words", className)}
     />
   );
 });
@@ -218,6 +218,13 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
       const currentQId = String(currentQ.id);
       if (isCorrect === false && fetchedDiagnosticQId !== currentQId) {
         setFetchedDiagnosticQId(currentQId);
+
+        const objective = ['mcq', 'true_false', 'fill_in', 'matching', 'order'].includes(currentQ.type);
+        if (!objective && session.questionHint[currentQId]) {
+          setDiagnosticFeedback(session.questionHint[currentQId]);
+          return;
+        }
+
         setDiagnosticLoading(true);
         setDiagnosticFeedback(null);
 
@@ -255,7 +262,7 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
         });
       }
     }
-  }, [isRevealed, currentQ, scores, fetchedDiagnosticQId, userAnswers, notePath]);
+  }, [isRevealed, currentQ, scores, fetchedDiagnosticQId, userAnswers, notePath, session.questionHint]);
 
 
 
@@ -693,19 +700,22 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
                   )}
 
                   {(diagnosticLoading || diagnosticFeedback) && (
-                    <div className="space-y-1 pt-3 border-t border-border/40 mt-3 animate-in fade-in duration-300">
-                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500 flex items-center gap-1.5 font-bold">
-                        <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <div className="space-y-1.5 pt-4 border-t border-border/40 mt-4 animate-in fade-in duration-300">
+                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/60 flex items-center gap-1.5">
+                        <span className="size-1.5 rounded-full bg-foreground/40 animate-pulse" />
                         <span>Active Mistake Diagnostic</span>
                       </div>
-                      <div className="text-xs font-medium leading-relaxed text-foreground/80 border border-amber-500/20 bg-amber-500/5 p-3.5 rounded-[8px] mt-1">
+                      <div className="text-xs font-medium leading-relaxed text-foreground/85 border border-border/50 bg-bento-panel p-4 rounded-[8px] mt-1.5">
                         {diagnosticLoading ? (
-                          <div className="flex items-center gap-2 text-muted-foreground/60 text-[10px] font-black uppercase tracking-widest py-1">
-                            <Loader2 size={12} className="animate-spin text-amber-500" />
+                          <div className="flex items-center gap-2 text-muted-foreground/60 text-[10px] font-black uppercase tracking-widest py-2">
+                            <Loader2 size={12} className="animate-spin text-muted-foreground/50" />
                             <span>Diagnosing misconception...</span>
                           </div>
                         ) : (
-                          <MarkdownBlock content={diagnosticFeedback || ''} />
+                          <MarkdownBlock 
+                            content={diagnosticFeedback || ''} 
+                            className="prose-h1:!text-[13px] prose-h2:!text-[11px] prose-h3:!text-[10px] prose-headings:!font-black prose-headings:!uppercase prose-headings:!tracking-widest prose-headings:!mt-4 prose-headings:!mb-1.5 prose-p:!mb-3 prose-p:!leading-relaxed"
+                          />
                         )}
                       </div>
                     </div>
