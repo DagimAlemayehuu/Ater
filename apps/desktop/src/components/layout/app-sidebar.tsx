@@ -48,42 +48,6 @@ export function AppSidebar() {
     };
   }, []);
 
-  // Track active conversation title for expanded view
-  const [activeConvTitle, setActiveConvTitle] = useState<string | null>(null);
-
-  useEffect(() => {
-    const updateActiveConv = () => {
-      try {
-        const savedConvs = localStorage.getItem('ater_oracle_conversations');
-        const activeId = localStorage.getItem('ater_oracle_active_conversation_id');
-        if (savedConvs && activeId) {
-          const convs = JSON.parse(savedConvs);
-          const active = convs.find((c: any) => c.id === activeId);
-          if (active && active.messages && active.messages.length > 0) {
-            setActiveConvTitle(active.title || 'New Chat');
-            return;
-          }
-        }
-        setActiveConvTitle(null);
-      } catch {
-        setActiveConvTitle(null);
-      }
-    };
-
-    updateActiveConv();
-    window.addEventListener('storage', updateActiveConv);
-    window.addEventListener('ater-new-chat', updateActiveConv);
-    window.addEventListener('ater-clear-chat', updateActiveConv);
-    const interval = setInterval(updateActiveConv, 2000);
-
-    return () => {
-      window.removeEventListener('storage', updateActiveConv);
-      window.removeEventListener('ater-new-chat', updateActiveConv);
-      window.removeEventListener('ater-clear-chat', updateActiveConv);
-      clearInterval(interval);
-    };
-  }, []);
-
   const handleNewChatClick = () => {
     navigate('/agents?tab=ater');
     setTimeout(() => {
