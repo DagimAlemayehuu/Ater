@@ -37,12 +37,15 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const { resolvedTheme } = useTheme();
     const [page, setPage] = useState(initialPage);
     const [sidecarPort, setSidecarPort] = useState<number>(8765);
+    const [sidecarToken, setSidecarToken] = useState<string>('');
 
     useEffect(() => {
         const fetchPort = async () => {
             try {
                 const activePort = await invoke<number>('get_sidecar_port');
                 setSidecarPort(activePort);
+                const token = await invoke<string>('get_sidecar_token');
+                setSidecarToken(token);
                 console.info(`[PdfViewer] Dynamically resolved sidecar port: ${activePort}`);
             } catch (e) {
                 console.error("[PdfViewer] Failed to get dynamic sidecar port from Tauri, falling back to 8765:", e);
@@ -239,12 +242,67 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     // resolvedTheme is fetched dynamically from useTheme context
 
     // Memoize URL to prevent reloads when jumping between waypoints in the same file
-    const pdfUrl = useMemo(() => {
+    const backendUrl = useMemo(() => {
         const vaultPath = config?.obsidianVaultPath || '';
         const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
         const normalizedPath = path.replace(/\\/g, '/');
         return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${firstPageRef.current}${filterStr}&theme=${resolvedTheme}`;
     }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort]);
+
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+    const [pdfError, setPdfError] = useState<string | null>(null);
+    const [isFetchingPdf, setIsFetchingPdf] = useState(false);
+
+    useEffect(() => {
+        let isActive = true;
+        let currentObjectUrl: string | null = null;
+
+        const fetchPdf = async () => {
+            if (!backendUrl || !sidecarToken) return;
+
+            setIsFetchingPdf(true);
+            setPdfError(null);
+
+            try {
+                const headers: Record<string, string> = {};
+                if (sidecarToken) {
+                    headers['X-Ater-Token'] = sidecarToken;
+                }
+
+                const res = await fetch(backendUrl, { headers });
+                if (!res.ok) {
+                    if (res.status === 401) throw new Error('Authentication required (401 Unauthorized)');
+                    if (res.status === 404) throw new Error('PDF not found (404 Not Found)');
+                    throw new Error(`Failed to load PDF (${res.status} ${res.statusText})`);
+                }
+
+                const blob = await res.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                currentObjectUrl = objectUrl;
+
+                if (isActive) {
+                    setPdfBlobUrl(objectUrl);
+                } else {
+                    URL.revokeObjectURL(objectUrl);
+                }
+            } catch (err: any) {
+                if (isActive) {
+                    setPdfError(err.message || 'Network error loading PDF');
+                }
+            } finally {
+                if (isActive) setIsFetchingPdf(false);
+            }
+        };
+
+        fetchPdf();
+
+        return () => {
+            isActive = false;
+            if (currentObjectUrl) {
+                URL.revokeObjectURL(currentObjectUrl);
+            }
+        };
+    }, [backendUrl, sidecarToken]);
 
     const handleAskAI = () => {
         const pageContext = `Full page ${page}${pageCount ? ` of ${pageCount}` : ''} from "${title}"`;
@@ -361,15 +419,29 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             </div>
                         ) : (
                             <>
-                                {!iframeLoaded && <PanelLoader label="Opening PDF" />}
-                                <iframe 
-                                    ref={iframeRef} 
-                                    src={pdfUrl} 
-                                    onLoad={handleIframeLoad}
-                                    className="w-full h-full border-none overflow-hidden bg-card" 
-                                    title={title} 
-                                    allowFullScreen 
-                                />
+                                {pdfError ? (
+                                    <div className="flex flex-col items-center justify-center w-full h-full p-6 text-center text-muted-foreground">
+                                        <div className="w-10 h-10 mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+                                            <svg className="w-5 h-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                        </div>
+                                        <h3 className="text-sm font-medium text-foreground mb-1">Failed to load PDF</h3>
+                                        <p className="text-xs">{pdfError}</p>
+                                    </div>
+                                ) : (!iframeLoaded || isFetchingPdf) ? (
+                                    <PanelLoader label={isFetchingPdf ? "Fetching PDF securely" : "Opening PDF"} />
+                                ) : null}
+                                {pdfBlobUrl && !pdfError && (
+                                    <iframe 
+                                        ref={iframeRef} 
+                                        src={pdfBlobUrl} 
+                                        onLoad={handleIframeLoad}
+                                        className={`w-full h-full border-none overflow-hidden bg-card ${(!iframeLoaded || isFetchingPdf) ? 'invisible absolute' : ''}`}
+                                        title={title} 
+                                        allowFullScreen 
+                                    />
+                                )}
                             </>
                         )}
                     </div>

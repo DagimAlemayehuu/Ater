@@ -224,8 +224,8 @@ class ArtifactService:
         if not self.vault_path:
             raise ValueError("Vault path is not set")
             
-        from src.domains.ater.learning_object import get_artifact_pack_path as lo_get_artifact_pack_path
         from src.domains.ater.learning_object import normalize_title
+        from src.utils.vault_path import resolve_vault_path
         import shutil
         import logging
         logger = logging.getLogger("Ater")
@@ -233,8 +233,17 @@ class ArtifactService:
         norm_title = normalize_title(note_title)
         
         if note_path_rel:
-            new_rel = lo_get_artifact_pack_path(note_path_rel)
-            new_path = self.vault_path / new_rel
+            # First, safely resolve the note path to prevent traversal
+            resolved_note = resolve_vault_path(self.vault_path, note_path_rel)
+            
+            # Compute new path based on resolved note path
+            new_path = (resolved_note.parent / "artifacts" / f"{norm_title}.artifacts.json").resolve()
+            
+            # Verify containment of the resulting artifact path
+            try:
+                new_path.relative_to(self.vault_path.resolve())
+            except ValueError:
+                raise ValueError(f"Artifact path traversal detected for note_path: {note_path_rel}")
             
             if new_path.exists():
                 return new_path
