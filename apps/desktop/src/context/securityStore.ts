@@ -24,10 +24,12 @@ interface SecurityState {
   isChecking: boolean
   lastChecked: Date | null
   creditBalance: number
+  isOnlineListenerRegistered: boolean
   initializeSecurity: () => Promise<void>
   checkOnlineLockout: () => Promise<void>
   isFeatureLocked: (feature: string) => boolean
   setSecurityState: (state: Partial<SecurityState>) => void
+  cleanup: () => void
 }
 
 export const useSecurityStore = create<SecurityState>((set, get) => ({
@@ -36,7 +38,15 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   isChecking: false,
   lastChecked: null,
   creditBalance: 20,
+  isOnlineListenerRegistered: false,
   setSecurityState: (state) => set(state),
+  cleanup: () => {
+    const { isOnlineListenerRegistered } = get()
+    if (isOnlineListenerRegistered) {
+      window.removeEventListener('online', get().checkOnlineLockout)
+      set({ isOnlineListenerRegistered: false })
+    }
+  },
 
   initializeSecurity: async () => {
     set({ isChecking: true })
@@ -63,9 +73,10 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       }
 
       // Sync remote status immediately upon internet connection restoration
-      window.addEventListener('online', () => {
-        get().checkOnlineLockout().catch(() => {})
-      })
+      if (!get().isOnlineListenerRegistered) {
+        window.addEventListener('online', get().checkOnlineLockout)
+        set({ isOnlineListenerRegistered: true })
+      }
     } catch (err) {
       console.error('[Security System] Failed to load security footprint:', err)
       set({ status: 'LeaseExpired' })
