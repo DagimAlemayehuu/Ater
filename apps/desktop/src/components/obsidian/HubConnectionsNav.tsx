@@ -32,7 +32,7 @@ export function parseHubTree(content: string): NavNode[] {
       ? (wm[2] || wm[1]).trim().split(/[/\\]/).pop() || wm[1]
       : text.replace(/\[x\]|\[ \]/ig, '').replace(/\*\*/g, '').trim()
 
-    label = label.replace(/^[\s🔒🔐🔓🔑]+/g, '').trim()
+    label = label.replace(/^[\s🔒🔐🔓🔑]+/gu, '').trim()
 
     const isChecked = typeof text === 'string' && text.toLowerCase().startsWith('[x]')
     const node: NavNode = {label, target, depth: 0, children: [], isChecked}
