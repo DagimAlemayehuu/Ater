@@ -2335,7 +2335,12 @@ async def generate_artifacts_endpoint(
         raise HTTPException(status_code=400, detail="note_title and note_path are required")
 
     # Read frontmatter and content of note
-    full_note_path = Path(secrets.vault_path) / note_path_rel
+    from src.utils.vault_path import resolve_vault_path
+    try:
+        full_note_path = resolve_vault_path(secrets.vault_path, note_path_rel)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
     if not full_note_path.exists():
         raise HTTPException(status_code=404, detail=f"Note file not found: {note_path_rel}")
 
@@ -2367,6 +2372,8 @@ async def generate_artifacts_endpoint(
             content=post.content
         )
         return pack
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         import traceback
         logger.error(f"[ArtifactRouter] Error generating artifacts: {e}\n{traceback.format_exc()}")
@@ -2421,6 +2428,8 @@ async def pin_artifact_endpoint(
             pinned_types=list(pinned_types)
         )
         return pack
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
