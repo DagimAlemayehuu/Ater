@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* global setTimeout, console */
 import { performance } from 'perf_hooks';
 
 // Simulate Tauri Store
@@ -37,7 +39,7 @@ async function runBenchmark() {
     for (const key of Object.keys(entries)) {
       const val = entries[key];
       if (val === undefined) {
-        try { await store.delete(key); } catch {}
+        try { await store.delete(key); } catch { /* intentionally empty */ }
       } else {
         await store.set(key, val);
       }
@@ -53,7 +55,7 @@ async function runBenchmark() {
     await Promise.all(Object.keys(entries).map(async (key) => {
       const val = entries[key];
       if (val === undefined) {
-        try { await store.delete(key); } catch {}
+        try { await store.delete(key); } catch { /* intentionally empty */ }
       } else {
         await store.set(key, val);
       }

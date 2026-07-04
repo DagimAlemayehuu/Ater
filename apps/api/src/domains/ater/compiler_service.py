@@ -5,6 +5,8 @@ from pathlib import Path
 import frontmatter
 import markdown2
 
+from src.utils.vault_path import resolve_vault_path
+
 def normalize_title(title: str) -> str:
     """Normalizes titles by replacing spaces/underscores with a single underscore,
     and capitalizing the first letter of each word (TitleCase)."""
@@ -154,11 +156,7 @@ class AterLessonCompiler:
 
     def parse_note(self, note_path: Path) -> tuple[dict, dict]:
         """Parses the Markdown content of an Atomic Note and extracts its four canonical sections."""
-        note_path = Path(note_path)
-        if not note_path.is_absolute():
-            note_path = (self.vault_path / note_path).resolve()
-        else:
-            note_path = note_path.resolve()
+        note_path = resolve_vault_path(self.vault_path, note_path)
 
         if not note_path.exists():
             raise FileNotFoundError(f"Note file not found: {note_path}")
@@ -1597,15 +1595,12 @@ class AterLessonCompiler:
 
     def compile_lesson(self, note_path: Path, variant: str) -> Path:
         """Runs the compile and writes the HTML output to lessons/ subdirectory relative to the note."""
-        note_path = Path(note_path)
-        if not note_path.is_absolute():
-            note_path = (self.vault_path / note_path).resolve()
-        else:
-            note_path = note_path.resolve()
+        note_path = resolve_vault_path(self.vault_path, note_path)
         html = self.compile_to_html(note_path, variant)
 
         
         lessons_dir = note_path.parent / "lessons"
+        lessons_dir = resolve_vault_path(self.vault_path, lessons_dir)
         lessons_dir.mkdir(parents=True, exist_ok=True)
         
         output_filename = f"{normalize_title(note_path.stem)}.{variant}.html"
