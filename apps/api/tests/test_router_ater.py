@@ -210,7 +210,7 @@ def test_refine_source_learning_job_roadmap_missing_instruction(tmp_path):
 @patch("src.domains.ai.factory.ModelFactory.get_model")
 @patch("src.api.routers.ater._source_job_service")
 def test_refine_source_learning_job_roadmap_success(mock_service_factory, mock_get_model, tmp_path):
-    headers = {"x-vault-path": str(tmp_path)}
+    headers = {"x-vault-path": str(tmp_path), "x-ai-key": "fake-key"}
     
     # Mock source job service and job
     mock_service = mock_service_factory.return_value

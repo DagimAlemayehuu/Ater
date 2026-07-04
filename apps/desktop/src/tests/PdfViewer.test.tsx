@@ -61,93 +61,11 @@ describe('PdfViewer', () => {
       expect(invoke).toHaveBeenCalledWith('get_sidecar_token');
     });
 
-    // Wait for fetch to be called
-    await waitFor(() => {
-      const fetchCalls = globalFetch.mock.calls;
-      const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
-      expect(pdfFetch).toBeTruthy();
-    });
-
-    const fetchCalls = globalFetch.mock.calls;
-    const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
-    expect(pdfFetch).toBeTruthy();
-    
-    const [url, options] = pdfFetch as any[];
-
-    // Note: React state batches updates but `fetchPort` might resolve after initial render.
-    // Allow either the initial default port or the dynamically resolved port in the test.
-    expect(url).toMatch(/http:\/\/127\.0\.0\.1:(8000|8765)\/api\/obsidian\/viewer\/test\.pdf/);
-    expect(options.headers['X-Ater-Token']).toBe('test-token-123');
-
-    // Wait for iframe to be rendered with the object URL
     await waitFor(() => {
       const iframe = screen.getByTitle('Test PDF') as HTMLIFrameElement;
-      expect(iframe.src).toBe('blob:http://localhost/test-blob-url');
+      expect(iframe).toBeInTheDocument();
+      expect(iframe.src).toMatch(/http:\/\/127\.0\.0\.1:(8000|8765)\/api\/obsidian\/viewer\/test\.pdf\?/);
+      expect(iframe.src).toContain('sidecar_token=test-token-123');
     });
-  });
-
-  it('shows error state on 401 response and does not crash', async () => {
-    globalFetch.mockImplementation(async (url: string) => {
-      if (url.includes('pdf-metadata')) {
-        return {
-          ok: true,
-          json: async () => ({ page_count: 1 }),
-          text: async () => ''
-        };
-      }
-      return {
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        text: async () => ''
-      };
-    });
-
-    render(<PdfViewer path="test.pdf" title="Test PDF" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load PDF')).toBeInTheDocument();
-      expect(screen.getByText('Authentication required (401 Unauthorized)')).toBeInTheDocument();
-    });
-    
-    // Ensure iframe is not rendered
-    expect(screen.queryByTitle('Test PDF')).not.toBeInTheDocument();
-  });
-
-  it('shows error state on 404 response', async () => {
-    globalFetch.mockImplementation(async (url: string) => {
-      if (url.includes('pdf-metadata')) {
-        return {
-          ok: true,
-          json: async () => ({ page_count: 1 }),
-          text: async () => ''
-        };
-      }
-      return {
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        text: async () => ''
-      };
-    });
-
-    render(<PdfViewer path="test.pdf" title="Test PDF" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load PDF')).toBeInTheDocument();
-      expect(screen.getByText('PDF not found (404 Not Found)')).toBeInTheDocument();
-    });
-  });
-
-  it('revokes object URL on unmount', async () => {
-    const { unmount } = render(<PdfViewer path="test.pdf" title="Test PDF" />);
-
-    await waitFor(() => {
-      expect(globalCreateObjectURL).toHaveBeenCalled();
-    });
-
-    unmount();
-
-    expect(globalRevokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/test-blob-url');
   });
 });
