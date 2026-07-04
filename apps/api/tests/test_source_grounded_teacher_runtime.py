@@ -115,7 +115,7 @@ def test_golden_pdf_extraction_audit_when_fixture_available():
     pdf_path = _chapter_pdf()
     if not pdf_path.exists():
         return
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         service = SourceLearningJobService(Path(tmp) / "ater_queue.db")
         job = service.create_or_resume_from_path(str(pdf_path))
     assert job["audit"]["page_count"] == 48
@@ -127,7 +127,7 @@ def test_golden_pdf_extraction_audit_when_fixture_available():
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_source_job_builds_objectives_concept_graph_profiles_and_coverage(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         source = Path(tmp) / "Chapter 3 2024-1.pdf"
         source.write_bytes(b"fake pdf bytes")
         service = SourceLearningJobService(Path(tmp) / "ater_queue.db")
@@ -177,7 +177,7 @@ def test_objective_and_modality_helpers_are_deterministic():
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_start_learning_compiles_fallback_note_and_updates_coverage(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         source = Path(tmp) / "Chapter 3 2024-1.pdf"
         source.write_bytes(b"fake pdf bytes")
         service = SourceLearningJobService(Path(tmp) / "ater_queue.db")
@@ -210,7 +210,7 @@ def test_compiler_rejects_ungrounded_node_without_warning():
 
 
 def test_old_compiler_graph_service_and_schema_migration_compatibility():
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         db_path = Path(tmp) / "ater_queue.db"
         conn = sqlite3.connect(db_path)
         conn.execute("CREATE TABLE queue_items (id TEXT PRIMARY KEY, path TEXT)")
@@ -239,7 +239,7 @@ def test_old_compiler_graph_service_and_schema_migration_compatibility():
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_tutor_runtime_source_session_restart_remediation_transfer_and_fsrs_gate(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "Chapter 3 2024-1.pdf"
         source.write_bytes(b"fake pdf bytes")
@@ -293,7 +293,7 @@ Source text.
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_adaptive_learner_source_mastery_and_recommendations(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "Chapter 3 2024-1.pdf"
         source.write_bytes(b"fake pdf bytes")
@@ -316,7 +316,7 @@ def test_adaptive_learner_source_mastery_and_recommendations(_mock_pdf):
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_multiple_pdf_jobs_do_not_collide_on_source_map_or_concept_ids(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         db_path = root / "ater_queue.db"
         chapter_3 = root / "Chapter 3 2024-1.pdf"
@@ -338,7 +338,7 @@ def test_multiple_pdf_jobs_do_not_collide_on_source_map_or_concept_ids(_mock_pdf
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_generic_chapter_docs())
 def test_non_chapter_three_pdf_builds_generic_teachable_roadmap(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "Chapter 4 2024-1.pdf"
         source.write_bytes(b"chapter 4 fake pdf bytes")
@@ -362,7 +362,7 @@ def test_non_chapter_three_pdf_builds_generic_teachable_roadmap(_mock_pdf):
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_arbitrary_ml_docs())
 def test_arbitrary_pdf_without_objectives_builds_complete_grounded_roadmap(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "ml-foundations.pdf"
         source.write_bytes(b"ml fake pdf bytes")
@@ -386,7 +386,7 @@ def test_arbitrary_pdf_without_objectives_builds_complete_grounded_roadmap(_mock
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_production_cost_slide_docs())
 def test_slide_pdf_uses_headings_and_labels_for_complete_production_cost_roadmap(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "Chapter 4 2025.6. student.pdf"
         source.write_bytes(b"production cost fake pdf bytes")
@@ -417,7 +417,7 @@ def test_slide_pdf_uses_headings_and_labels_for_complete_production_cost_roadmap
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_production_cost_slide_docs())
 def test_stale_source_job_cache_rebuilds_after_pipeline_version_change(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "Chapter 4 2025.6. student.pdf"
         source.write_bytes(b"production cost fake pdf bytes")
@@ -450,7 +450,7 @@ def test_stale_source_job_cache_rebuilds_after_pipeline_version_change(_mock_pdf
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_source_job_api_lifecycle_warning_resume_and_attachment_promotion(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         inbox = root / "Inbox"
         inbox.mkdir()
@@ -512,7 +512,7 @@ def test_compiler_ai_validation_repair_and_prompt_bounds():
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_vault_deployment_idempotency_frontmatter_links_and_user_collision(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         source = root / "Chapter 3 2024-1.pdf"
         source.write_bytes(b"fake pdf bytes")
@@ -542,7 +542,7 @@ def test_vault_deployment_idempotency_frontmatter_links_and_user_collision(_mock
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())
 def test_chat_attachment_promotion_creates_source_job(_mock_pdf):
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         root = Path(tmp)
         inbox = root / "Inbox"
         inbox.mkdir()

@@ -2,6 +2,8 @@ import os
 import tempfile
 import pytest
 import asyncio
+import gc
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from src.api.deps import AppSecrets
@@ -16,8 +18,15 @@ def temp_db():
     os.close(fd)
     db_path = Path(path)
     yield db_path
-    if db_path.exists():
-        db_path.unlink()
+    for _ in range(5):
+        if not db_path.exists():
+            break
+        try:
+            db_path.unlink()
+            break
+        except PermissionError:
+            gc.collect()
+            time.sleep(0.1)
 
 @pytest.fixture
 def secrets():

@@ -140,7 +140,7 @@ test.describe('Ater Active Student Hub', () => {
     // Verify explorer renders our mock structure (folder/notes)
     const folderNode = page.locator('div, span, button').filter({ hasText: /Computer_Science/i }).first();
     await expect(folderNode).toBeVisible({ timeout: 15000 });
-    await folderNode.click();
+    await page.getByPlaceholder(/Search files/i).fill('Data_Structures_And_Algorithms');
 
     const noteNode = page.locator('div, span, button').filter({ hasText: /Data_Structures_And_Algorithms/i }).first();
     await expect(noteNode).toBeVisible({ timeout: 15000 });

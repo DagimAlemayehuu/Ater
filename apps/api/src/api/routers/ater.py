@@ -1142,6 +1142,10 @@ async def delete_practice_session(
 def resolve_note_path(note_id: str, vault_path: Path) -> Optional[str]:
     if not note_id:
         return None
+    if note_id.startswith(("/", "\\")):
+        p_abs = Path(note_id)
+        if not p_abs.is_absolute():
+            return None
     p = Path(note_id)
     if p.is_absolute():
         try:
