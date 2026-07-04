@@ -1,0 +1,11 @@
+--- apps/desktop/src/components/obsidian/PdfViewer.tsx
++++ apps/desktop/src/components/obsidian/PdfViewer.tsx
+@@ -256,7 +256,7 @@
+         let currentObjectUrl: string | null = null;
+ 
+         const fetchPdf = async () => {
+-            if (!backendUrl) return;
++            if (!backendUrl || !sidecarToken) return;
+ 
+             setIsFetchingPdf(true);
+             setPdfError(null);

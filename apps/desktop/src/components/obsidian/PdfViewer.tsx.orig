@@ -258,7 +258,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
         let currentObjectUrl: string | null = null;
 
         const fetchPdf = async () => {
-            if (!backendUrl || !sidecarToken) return;
+            if (!backendUrl) return;
 
             setIsFetchingPdf(true);
             setPdfError(null);
