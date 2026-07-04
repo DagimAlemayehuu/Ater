@@ -848,6 +848,9 @@ async def get_property_options(source: str, secrets: AppSecrets = Depends(get_ap
         
     return {"options": sorted(options)}
 
+def sanitize_property_option_name(name: str) -> str:
+    return "".join([c for c in name if c.isalnum() or c in (' ', '-', '_')]).strip()
+
 @router.post("/vault/options")
 async def create_property_option(req: CreateOptionRequest, secrets: AppSecrets = Depends(get_app_secrets)):
     """
@@ -865,7 +868,7 @@ async def create_property_option(req: CreateOptionRequest, secrets: AppSecrets =
         source_path.mkdir(parents=True, exist_ok=True)
         
     # Sanitize name for filename
-    safe_name = "".join([c for c in req.name if c.isalnum() or c in (' ', '-', '_')]).strip()
+    safe_name = sanitize_property_option_name(req.name)
     if not safe_name:
         raise HTTPException(status_code=400, detail="Invalid name")
         
@@ -888,8 +891,13 @@ async def update_property_option(req: CreateOptionRequest, old_name: str, secret
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    old_file = source_path / f"{old_name}.md"
-    new_file = source_path / f"{req.name}.md"
+    safe_old_name = sanitize_property_option_name(old_name)
+    safe_new_name = sanitize_property_option_name(req.name)
+    if not safe_old_name or not safe_new_name:
+        raise HTTPException(status_code=400, detail="Invalid name")
+
+    old_file = source_path / f"{safe_old_name}.md"
+    new_file = source_path / f"{safe_new_name}.md"
     
     if old_file.exists():
         old_file.rename(new_file)
@@ -909,7 +917,11 @@ async def delete_property_option(source: str, name: str, secrets: AppSecrets = D
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    md_file = source_path / f"{name}.md"
+    safe_name = sanitize_property_option_name(name)
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid name")
+
+    md_file = source_path / f"{safe_name}.md"
     
     if md_file.exists():
         md_file.unlink()

@@ -31,6 +31,8 @@ def setup_vault(tmp_path):
     
     yield vault_dir
 
+    app.dependency_overrides.clear()
+
 def test_list_vault_databases(setup_vault):
     # Create a dummy database dir
     (setup_vault / "database" / "TestDB").mkdir()
@@ -72,6 +74,34 @@ def test_path_traversal_create_option(setup_vault):
         json={"source": "../escaped_dir", "name": "test"}
     )
     assert response.status_code in (400, 404)
+
+def test_safe_name_used_in_update_option(setup_vault):
+    options_dir = setup_vault / "options_dir"
+    options_dir.mkdir()
+    (options_dir / "badname.md").write_text("---\ntitle: bad/name\n---")
+
+    response = client.patch(
+        "/api/vault/options",
+        params={"old_name": "bad/name"},
+        json={"source": "options_dir", "name": "../renamed"}
+    )
+
+    assert response.status_code == 200
+    assert not (setup_vault / "renamed.md").exists()
+    assert (options_dir / "renamed.md").exists()
+
+def test_safe_name_used_in_delete_option(setup_vault):
+    options_dir = setup_vault / "options_dir"
+    options_dir.mkdir()
+    (options_dir / "badname.md").write_text("---\ntitle: bad/name\n---")
+
+    response = client.delete(
+        "/api/vault/options",
+        params={"source": "options_dir", "name": "bad/name"}
+    )
+
+    assert response.status_code == 200
+    assert not (options_dir / "badname.md").exists()
     
 def test_archive_path_case(setup_vault):
     # Create a DB folder to be deleted
