@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 from datetime import datetime
 
+from src.utils.vault_path import resolve_vault_path
+
 logger = logging.getLogger("Ater")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -407,7 +409,7 @@ class VaultWriter:
         Parses a vault .md file back into a list of question dicts
         suitable for the practice session engine.
         """
-        p = Path(vault_path_str)
+        p = resolve_vault_path(vault_path_str, self.vault_path)
         if not p.exists():
             return []
         content = p.read_text(encoding="utf-8")
