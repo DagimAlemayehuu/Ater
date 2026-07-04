@@ -74,3 +74,11 @@ vi.mock('recharts', async (importOriginal) => {
   };
 });
 
+// Mock ResizeObserver
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.ResizeObserver = MockResizeObserver;
+

@@ -266,52 +266,45 @@ import type { SchemaProperty } from './types'
 
 export const DEFAULT_SCHEMAS: Record<string, Record<string, SchemaProperty>> = {
   years: {
+    Program: { type: 'relation', source: 'database/programs' },
     Status: { type: 'select', source: 'database/years/status' },
-    'Academic Level': { type: 'select', source: 'database/years/academic level' },
     'Current Year': { type: 'bool' },
-    Program: { type: 'relation', source: 'database/programs' }
+    'Target Credits': { type: 'number' },
+    'Earned Credits': { type: 'number' },
+    'Cumulative GPA': { type: 'number' }
   },
   semesters: {
-    Status: { type: 'select', source: 'database/semesters/status' },
     Year: { type: 'relation', source: 'database/years' },
-    Season: { type: 'select', source: 'database/semesters/season' }
+    Status: { type: 'select', source: 'database/semesters/status' }
   },
   courses: {
-    Status: { type: 'select', source: 'database/courses/status' },
     Semester: { type: 'relation', source: 'database/semesters' },
-    Grade: { type: 'select', source: 'database/courses/grade' },
+    Status: { type: 'select', source: 'database/courses/status' },
     Credits: { type: 'number' },
-    Professor: { type: 'select', source: 'database/courses/professor' },
-    Difficulty: { type: 'select', source: 'database/courses/difficulty' },
-    Location: { type: 'str' },
-    Schedule: { type: 'str' },
+    Grade: { type: 'select', source: 'database/courses/grade' },
+    Professor: { type: 'str' },
+    Difficulty: { type: 'select', source: 'database/courses/difficulty' }
   },
   assignments: {
+    Course: { type: 'relation', source: 'database/courses' },
     Status: { type: 'select', source: 'database/assignments/status' },
     Priority: { type: 'select', source: 'database/assignments/priority' },
-    Course: { type: 'relation', source: 'database/courses' },
     Type: { type: 'select', source: 'database/assignments/type' },
     due_date: { type: 'date' },
-    'Estimated Hours': { type: 'number' },
     Grade: { type: 'str' }
   },
   exams: {
-    Status: { type: 'str' },
     Course: { type: 'relation', source: 'database/courses' },
+    Status: { type: 'select', source: 'database/exams/status' },
     Type: { type: 'select', source: 'database/exams/type' },
     date: { type: 'date' },
-    Time: { type: 'str' },
-    Location: { type: 'str' },
     Grade: { type: 'str' },
     'Confidence Level': { type: 'select', source: 'database/exams/confidence' }
   },
   'study planner': {
-    Status: { type: 'select', source: 'database/study planner/status' },
     Course: { type: 'relation', source: 'database/courses' },
-    Type: { type: 'select', source: 'database/study planner/type' },
+    Status: { type: 'select', source: 'database/study planner/status' },
     due_date: { type: 'date' },
-    'Target Hours': { type: 'number' },
-    'Actual Hours': { type: 'number' },
     'Confidence Level': { type: 'select', source: 'database/study planner/confidence' }
   }
 }

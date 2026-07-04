@@ -84,6 +84,14 @@ let syncTotal = 0
 let syncStatus = 'idle'
 
 const optionsCache = new Map<string, any>()
+
+let cachedTutorStatus: any = null;
+let cachedTutorStatusPromise: Promise<any> | null = null;
+
+export function invalidateTutorStatusCache() {
+    cachedTutorStatus = null;
+    cachedTutorStatusPromise = null;
+}
 const sidecarRequestLocks = new Map<string, Promise<void>>()
 
 async function normalizeVaultIpcPath(path: string): Promise<string> {
@@ -1959,6 +1967,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to start tutor session (HTTP ${res.status})`);
             }
+            invalidateTutorStatusCache();
             return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startTutorSession failed:', err);
@@ -1990,6 +1999,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to submit tutor answer (HTTP ${res.status})`);
             }
+            invalidateTutorStatusCache();
             return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitTutorAnswer failed:', err);
@@ -2135,6 +2145,9 @@ export const sidecarApi = {
             return null;
         }
     },
+    getTutorStatusSync: () => {
+        return cachedTutorStatus;
+    },
     getTutorStatus: async (session_id: string) => {
         if (isSimulationMode()) {
             return {
@@ -2148,22 +2161,31 @@ export const sidecarApi = {
                 curriculum: ['mock_note.md']
             };
         }
-        try {
-            const headers = await getBaseHeaders();
-
-            const res = await checkedFetch(`/api/ater/tutor/status?session_id=${encodeURIComponent(session_id)}`, {
-                method: 'GET',
-                headers
-            });
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(errText || `Failed to get tutor status (HTTP ${res.status})`);
-            }
-            return await checkedJson(res);
-        } catch (err: any) {
-            console.error('[Tauri Native RAG] getTutorStatus failed:', err);
-            throw err;
+        if (cachedTutorStatusPromise) {
+            return cachedTutorStatusPromise;
         }
+        cachedTutorStatusPromise = (async () => {
+            try {
+                const headers = await getBaseHeaders();
+
+                const res = await checkedFetch(`/api/ater/tutor/status?session_id=${encodeURIComponent(session_id)}`, {
+                    method: 'GET',
+                    headers
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || `Failed to get tutor status (HTTP ${res.status})`);
+                }
+                const data = await checkedJson(res);
+                cachedTutorStatus = data;
+                return data;
+            } catch (err: any) {
+                cachedTutorStatusPromise = null;
+                console.error('[Tauri Native RAG] getTutorStatus failed:', err);
+                throw err;
+            }
+        })();
+        return cachedTutorStatusPromise;
     },
     advanceTutorSession: async (payload: { session_id: string }): Promise<{ can_advance: boolean; session: any; message?: string }> => {
         if (isSimulationMode()) {
@@ -2194,6 +2216,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to advance tutor session (HTTP ${res.status})`);
             }
+            invalidateTutorStatusCache();
             const data = await res.json();
             return {
                 can_advance: !!data.can_advance,
@@ -2226,6 +2249,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to submit transfer answer (HTTP ${res.status})`);
             }
+            invalidateTutorStatusCache();
             return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitTransferAnswer failed:', err);

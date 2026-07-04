@@ -24,6 +24,13 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   const [activePreview, setActivePreview] = useState<any | null>(null)
   const [activeTutorSession, setActiveTutorSession] = useState<any | null>(null)
   const [showAddHubModal, setShowAddHubModal] = useState(false)
+  const [vaultFiles, setVaultFiles] = useState<any[]>([])
+
+  useEffect(() => {
+    sidecarApi.listObsidianFiles()
+      .then(res => setVaultFiles(res?.files || []))
+      .catch(() => {})
+  }, [data])
 
   const buildRoadmapMarkdown = (sourceJob: any, hubTitle: string) => {
     const placement = sourceJob.placement || {}
@@ -124,6 +131,9 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
       return String(a.title || a.id).localeCompare(String(b.title || b.id));
     });
     const doneHubs    = courseHubs.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).length
+    const courseNotes = courseTitleNorm
+      ? vaultFiles.filter(f => !f.is_dir && f.path.toLowerCase().endsWith('.md') && f.path.toLowerCase().replace(/_/g, ' ').includes(courseTitleNorm))
+      : []
 
     const startAcademicChapter = async () => {
       const name = chapterName.trim()
@@ -421,7 +431,6 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => onOpenNote(course.path || `database/courses/${course.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10" title="Open Note"><BookOpen size={14} /></button>
             <button onClick={() => { onDelete('courses', selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 size={14} /></button>
           </div>
         </div>
@@ -441,11 +450,12 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <StatCard label="Credits"     value={credits || '--'} />
           <StatCard label="Assignments" value={`${done.length}/${courseAssignments.length}`} sub="completed" />
-          <StatCard label="Hubs"        value={`${doneHubs}/${courseHubs.length}`} sub="studied" />
           <StatCard label="Exams"       value={courseExams.length} />
+          <StatCard label="Hubs"        value={`${doneHubs}/${courseHubs.length}`} sub="studied" />
+          <StatCard label="Atomic Notes" value={courseNotes.length} />
         </div>
 
         {/* Hub progress */}
@@ -521,9 +531,9 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
               setChapterName('')
               setShowAddHubModal(true)
             }}
-            className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-all"
+            className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans"
           >
-            <Plus size={10} /> Add Study Hub
+            + ADD STUDY HUB
           </button>
         </div>
 
@@ -600,8 +610,8 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         </div>
         <button onClick={() => setAddingCourse(true)}
           data-tour="course-add"
-          className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-colors">
-          <Plus size={10} /> Add
+          className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans">
+          + ADD
         </button>
       </div>
 

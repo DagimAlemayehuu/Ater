@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X } from 'lucide-react'
+import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X, Network } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { differenceInDays, startOfDay, addDays, isSameDay, startOfWeek, format } from 'date-fns'
@@ -34,9 +34,10 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [notebooks, setNotebooks]               = useState<any[]>([])
   const [sidecarPort, setSidecarPort]           = useState<number>(8765)
   const [sidecarToken, setSidecarToken]         = useState<string>('')
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null)
   
   // Tab control state
-  const [leftBottomTab, setLeftBottomTab]       = useState<'courses' | 'planner' | 'practice'>('courses')
+  const [leftBottomTab, setLeftBottomTab]       = useState<'courses' | 'planner' | 'practice' | 'notebooklm'>('courses')
   const [activeCoursesTab, setActiveCoursesTab] = useState<'hubs' | 'inbox' | 'pdf'>('hubs')
   const [inboxFiles, setInboxFiles]             = useState<any[]>([])
   const [pdfFiles, setPdfFiles]                 = useState<any[]>([])
@@ -61,6 +62,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
   // Practice search/sort states
   const [practiceSearch, setPracticeSearch]     = useState('')
+  const [notebooksSearch, setNotebooksSearch]   = useState('')
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quickHubName, setQuickHubName]         = useState('')
   const [isAddingHub, setIsAddingHub]           = useState(false)
@@ -158,6 +160,36 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     fetchNotebooks()
   }, [sidecarPort, sidecarToken])
 
+  const handleCreateNotebook = async () => {
+    const title = window.prompt('Enter new notebook title:')
+    if (!title || !title.trim()) return
+    try {
+      const res = await fetch(`http://127.0.0.1:${sidecarPort}/api/notebooklm/notebooks`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Ater-Token': sidecarToken 
+        },
+        body: JSON.stringify({ title: title.trim() })
+      })
+      if (res.ok) {
+        toast.success('Notebook created successfully')
+        const listRes = await fetch(`http://127.0.0.1:${sidecarPort}/api/notebooklm/notebooks`, {
+          headers: { 'X-Ater-Token': sidecarToken }
+        })
+        if (listRes.ok) {
+          const listData = await listRes.json()
+          setNotebooks(listData || [])
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        toast.error('Failed to create notebook: ' + (errData.detail || res.statusText))
+      }
+    } catch (err: any) {
+      toast.error('Failed to create notebook: ' + err.message)
+    }
+  }
+
   const years     = data.years     || []
   const semesters = data.semesters || []
   const courses   = data.courses   || []
@@ -206,7 +238,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     ]
   }, [data, storeHistory, apiStudyHistory])
 
-  const sorted = useMemo(() => [...years].sort((a, b) => getYearOrder(a?.title || '') - getYearOrder(b?.title || '')), [years])
+  const sorted = useMemo(() => {
+    return [...years].sort((a, b) => {
+      const aTitle = cleanTitle(a?.title || getVal(a, 'title'));
+      const bTitle = cleanTitle(b?.title || getVal(b, 'title'));
+      return getYearOrder(aTitle) - getYearOrder(bTitle);
+    });
+  }, [years])
 
   const activeYear = years.find(y => getBoolVal(y, 'Current Year', 'current_year') || stripWL(getVal(y, 'Status', 'status')).toLowerCase().includes('active')) || years[0]
   const activeProgram = cleanTitle(stripWL(getVal(activeYear, 'Program', 'program')))
@@ -246,6 +284,82 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
       const bi = order.findIndex(o => String(b.title || '').includes(o))
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
     }), [semesters, selectedYear])
+
+  // ─── Filter, Sort & Search Listings for Bottom Left container ───
+  const displayedCourses = useMemo(() => {
+    let list = courses
+    
+    if (coursesSearch.trim()) {
+      const q = coursesSearch.toLowerCase()
+      list = list.filter(c => cleanTitle(c.title).toLowerCase().includes(q))
+    }
+    
+    if (coursesFilter !== 'All') {
+      list = list.filter(c => {
+        const sem = stripWL(getVal(c, 'Semester', 'semester'))
+        return sem.toLowerCase() === coursesFilter.toLowerCase()
+      })
+    }
+    
+    list = [...list].sort((a, b) => {
+      if (coursesSort === 'credits') {
+        const credA = parseFloat(getVal(a, 'Credits', 'credits')) || 0
+        const credB = parseFloat(getVal(b, 'Credits', 'credits')) || 0
+        return credB - credA
+      }
+      if (coursesSort === 'grade') {
+        const gradeA = stripWL(getVal(a, 'Grade', 'grade')) || 'F'
+        const gradeB = stripWL(getVal(b, 'Grade', 'grade')) || 'F'
+        return gradeA.localeCompare(gradeB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+    
+    return list
+  }, [courses, coursesSearch, coursesFilter, coursesSort])
+
+  const displayedHubs = useMemo(() => {
+    let list = hubs
+    
+    if (plannerSearch.trim()) {
+      const q = plannerSearch.toLowerCase()
+      list = list.filter(h => cleanTitle(h.title).toLowerCase().includes(q))
+    }
+    
+    if (plannerFilter === 'Active') {
+      list = list.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    } else if (plannerFilter === 'Completed') {
+      list = list.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    }
+    
+    list = [...list].sort((a, b) => {
+      if (plannerSort === 'unit') {
+        const unitA = getVal(a, 'unit', 'Unit') || ''
+        const unitB = getVal(b, 'unit', 'Unit') || ''
+        return unitA.localeCompare(unitB)
+      }
+      if (plannerSort === 'course') {
+        const courseA = stripWL(getVal(a, 'course', 'Course')) || ''
+        const courseB = stripWL(getVal(b, 'course', 'Course')) || ''
+        return courseA.localeCompare(courseB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+    
+    return list
+  }, [hubs, plannerSearch, plannerFilter, plannerSort])
+
+  const displayedPractices = useMemo(() => {
+    let list = apiStudyHistory?.practice || []
+    if (practiceSearch.trim()) {
+      const q = practiceSearch.toLowerCase()
+      list = list.filter((p: any) => {
+        const title = p.title || p.note_path?.split('/').pop()?.replace('.md', '') || 'Practice Session'
+        return title.toLowerCase().includes(q)
+      })
+    }
+    return list
+  }, [apiStudyHistory?.practice, practiceSearch])
 
   // ── Scaffold new program ──────────────────────────────────────────────────
   const handleScaffold = async (name: string, numYears: number, level: string, currentIdx: number) => {
@@ -306,10 +420,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => onOpenNote(sem.path || `database/semesters/${sem.id}.md`)}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/10" title="Open Note">
-              <BookOpen size={13} />
-            </button>
             <button onClick={() => { onDelete('semesters', selectedSemId); setSelectedSemId(null) }}
               className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
               <Trash2 size={13} />
@@ -341,8 +451,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="flex items-center justify-between">
             <SectionHeader title="Courses" count={semCourses.length} />
             <button onClick={() => setAddingCourse(true)}
-              className="flex items-center gap-1 px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
-              <Plus size={8} /> Add
+              className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans">
+              + ADD
             </button>
           </div>
           {addingCourse && (
@@ -400,26 +510,22 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
             <EditableTitle value={selectedYear.title} className="text-2xl font-black uppercase tracking-tighter mb-1"
               onSave={v => onUpdate('years', selectedYear.id, { title: v })} />
             <span className="text-[10px] font-black uppercase tracking-widest text-foreground/50">
-              {activeProgram} · {cleanTitle(level)}
+              {activeProgram}
             </span>
           </div>
           <div className="flex items-center gap-2">
             {!isCurrentYear && (
               <button onClick={() => handleSetCurrentYear(selectedYearId)}
-                className="px-3 py-1.5 border border-border bg-bento-item/50 rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-bento-item transition-colors">
-                Set Active
+                className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans">
+                SET ACTIVE
               </button>
             )}
             {derived === 'Completed' && !currentStatus.toLowerCase().includes('complet') && (
               <button onClick={() => onUpdate('years', selectedYearId, { Status: '[[Completed]]' })}
-                className="px-3 py-1.5 bg-bento-item/50 border border-border rounded-[4px] text-[8px] font-black uppercase text-foreground hover:bg-bento-item transition-colors">
-                Mark Complete
+                className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans">
+                MARK COMPLETE
               </button>
             )}
-            <button onClick={() => onOpenNote(selectedYear.path || `database/years/${selectedYear.id}.md`)}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-bento-item/50 rounded-[4px] transition-colors">
-              <BookOpen size={13} />
-            </button>
             <button onClick={() => { onDelete('years', selectedYearId); setSelectedYearId(null) }}
               className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors">
               <Trash2 size={13} />
@@ -449,8 +555,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           <div className="flex items-center justify-between">
             <SectionHeader title="Semesters" count={relatedSemesters.length} />
             <button onClick={() => setAddingSem(true)}
-              className="flex items-center gap-1 px-2 py-1 text-foreground border border-border bg-background text-[8px] font-black uppercase hover:border-foreground/50">
-              <Plus size={8} /> Add
+              className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans">
+              + ADD
             </button>
           </div>
           {addingSem && (
@@ -538,81 +644,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
   const pendingAssignments = assignments.filter(a => !(a.done === true || a.done === 'true')).slice(0, 5)
 
-  // ─── Filter, Sort & Search Listings for Bottom Left container ───
-  const displayedCourses = useMemo(() => {
-    let list = courses
-    
-    if (coursesSearch.trim()) {
-      const q = coursesSearch.toLowerCase()
-      list = list.filter(c => cleanTitle(c.title).toLowerCase().includes(q))
-    }
-    
-    if (coursesFilter !== 'All') {
-      list = list.filter(c => {
-        const sem = stripWL(getVal(c, 'Semester', 'semester'))
-        return sem.toLowerCase() === coursesFilter.toLowerCase()
-      })
-    }
-    
-    list = [...list].sort((a, b) => {
-      if (coursesSort === 'credits') {
-        const credA = parseFloat(getVal(a, 'Credits', 'credits')) || 0
-        const credB = parseFloat(getVal(b, 'Credits', 'credits')) || 0
-        return credB - credA
-      }
-      if (coursesSort === 'grade') {
-        const gradeA = stripWL(getVal(a, 'Grade', 'grade')) || 'F'
-        const gradeB = stripWL(getVal(b, 'Grade', 'grade')) || 'F'
-        return gradeA.localeCompare(gradeB)
-      }
-      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
-    })
-    
-    return list
-  }, [courses, coursesSearch, coursesFilter, coursesSort])
-
-  const displayedHubs = useMemo(() => {
-    let list = hubs
-    
-    if (plannerSearch.trim()) {
-      const q = plannerSearch.toLowerCase()
-      list = list.filter(h => cleanTitle(h.title).toLowerCase().includes(q))
-    }
-    
-    if (plannerFilter === 'Active') {
-      list = list.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
-    } else if (plannerFilter === 'Completed') {
-      list = list.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
-    }
-    
-    list = [...list].sort((a, b) => {
-      if (plannerSort === 'unit') {
-        const unitA = getVal(a, 'unit', 'Unit') || ''
-        const unitB = getVal(b, 'unit', 'Unit') || ''
-        return unitA.localeCompare(unitB)
-      }
-      if (plannerSort === 'course') {
-        const courseA = stripWL(getVal(a, 'course', 'Course')) || ''
-        const courseB = stripWL(getVal(b, 'course', 'Course')) || ''
-        return courseA.localeCompare(courseB)
-      }
-      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
-    })
-    
-    return list
-  }, [hubs, plannerSearch, plannerFilter, plannerSort])
-
-  const displayedPractices = useMemo(() => {
-    let list = apiStudyHistory?.practice || []
-    if (practiceSearch.trim()) {
-      const q = practiceSearch.toLowerCase()
-      list = list.filter((p: any) => {
-        const title = p.title || p.note_path?.split('/').pop()?.replace('.md', '') || 'Practice Session'
-        return title.toLowerCase().includes(q)
-      })
-    }
-    return list
-  }, [apiStudyHistory?.practice, practiceSearch])
   const activeHubs = hubs.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet')).slice(0, 5)
   const upcomingExams = exams
     .filter(e => {
@@ -622,69 +653,90 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 4)
 
+  const getDaySummary = (day: Date) => {
+    const dayEvents = calendarEvents.filter(e => e._date && isSameDay(new Date(e._date), day))
+    
+    const examsList = dayEvents.filter(e => e._type === 'Exam')
+    const assignmentsList = dayEvents.filter(e => e._type === 'Assignment')
+    const sessionsList = dayEvents.filter(e => e._type === 'Study Session' || e._type === 'Study')
+    const practiceList = dayEvents.filter(e => e._type === 'Practice')
+    const notesList = dayEvents.filter(e => e._type === 'Note Visit')
+
+    return {
+      exams: examsList,
+      assignments: assignmentsList,
+      sessions: sessionsList,
+      practices: practiceList,
+      notes: notesList,
+      total: dayEvents.length
+    }
+  }
+
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar p-8 pb-16 space-y-6">
+    <div className="h-full overflow-hidden flex flex-col p-8 space-y-6 select-none">
         {programYears.length === 0 || showSetup ? (
-          <>
+          <div className="flex-1 overflow-y-auto pr-1">
             {showSetup && <button onClick={() => setShowSetup(false)} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-6 transition-colors">← Back to Overview</button>}
             <ProgramSetupForm onScaffold={(n, y, l, c) => { handleScaffold(n, y, l, c); setShowSetup(false) }} />
-          </>
+          </div>
         ) : (
-          <div className="space-y-6">
+          <div className="flex-1 min-h-0 flex flex-col space-y-6">
             {/* Program Header */}
-            <div className="flex flex-col gap-2.5">
-              {/* Row 1: Program Name and Year Pills */}
-              <div className="flex items-center gap-6 flex-wrap">
-                <div className="min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-1 leading-none">Academic Program</p>
-                  <h1 className="text-3xl font-black uppercase tracking-tight text-foreground leading-none">{activeProgram || 'Your Program'}</h1>
-                </div>
-                
-                {/* Year Pills (aligned inline with program name) */}
-                <div className="flex items-center gap-2 pt-3 flex-wrap">
-                  {programYears.map((y, idx) => {
-                    const status = stripWL(getVal(y, 'Status', 'status'))
-                    const isDone = status.toLowerCase().includes('complet')
-                    const isActive = getBoolVal(y, 'Current Year', 'current_year')
-                    return (
-                      <button 
-                        key={idx} 
-                        onClick={() => setSelectedYearId(y.id)}
-                        className={cn('px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer font-sans h-7',
-                          isActive 
-                           ? 'border-foreground/35 bg-bento-item text-foreground ring-1 ring-inset ring-foreground/5' 
-                           : 'border-border/40 bg-bento-card text-muted-foreground/55 hover:text-foreground hover:bg-bento-item/20')}
-                      >
-                        <span>{cleanTitle(y.title)}</span>
-                        {isActive && <div className="w-1.5 h-1.5 bg-foreground rounded-full" />}
-                        {isDone && <CheckCircle size={9} className="text-foreground/70" />}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Edit Program Button */}
-                <button 
-                  onClick={() => setShowSetup(true)}
-                  className="ml-auto h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans"
-                >
-                  Edit Program
-                </button>
+            <div className="flex flex-col gap-2">
+              {/* Row 1: Years Tabs (placed above Program Name, styled smaller) */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {programYears.map((y, idx) => {
+                  const status = stripWL(getVal(y, 'Status', 'status'))
+                  const isDone = status.toLowerCase().includes('complet')
+                  const isActive = getBoolVal(y, 'Current Year', 'current_year')
+                  return (
+                    <button 
+                      key={idx} 
+                      onClick={() => setSelectedYearId(y.id)}
+                      className={cn('px-2 py-0.5 text-[7.5px] font-black uppercase tracking-widest border rounded-[4px] transition-all flex items-center gap-1 cursor-pointer font-sans h-5',
+                        isActive 
+                         ? 'border-foreground/35 bg-bento-item text-foreground ring-1 ring-inset ring-foreground/5' 
+                         : 'border-border/40 bg-bento-card text-muted-foreground/55 hover:text-foreground hover:bg-bento-item/20')}
+                    >
+                      <span>{cleanTitle(y.title)}</span>
+                      {isActive && <div className="w-0.5 h-0.5 bg-foreground rounded-full" />}
+                      {isDone && <CheckCircle size={7} className="text-foreground/70" />}
+                    </button>
+                  )
+                })}
               </div>
 
-              {/* Row 2: Academic Level (Undergraduate) and Active Status Buttons */}
-              <div className="flex items-center gap-4 flex-wrap border-t border-border/20 pt-2.5">
-                <span className="text-[12px] font-black uppercase tracking-wider text-muted-foreground/80 font-sans leading-none">
-                  {cleanTitle(getVal(activeYear, 'Academic Level', 'academic_level')) || 'Undergraduate'}
-                </span>
+              {/* Row 2: Program Title and Actions (Graph View & Edit Program) */}
+              <div className="flex items-center justify-between gap-6 flex-wrap w-full">
+                <h1 className="text-3xl font-black uppercase tracking-tight text-foreground leading-none">{activeProgram || 'Your Program'}</h1>
                 
-                <div className="w-px h-4 bg-border/30 mx-1" />
+                <div className="flex items-center gap-2">
+                  {/* Graph View Button */}
+                  <button
+                    onClick={() => navigate('/obsidian?graph=1')}
+                    className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans flex items-center gap-1.5"
+                  >
+                    <Network size={10} />
+                    Graph View
+                  </button>
 
+                  {/* Edit Program Button */}
+                  <button 
+                    onClick={() => setShowSetup(true)}
+                    className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans"
+                  >
+                    Edit Program
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 3: Active Status Details (placed in Undergraduate position, styled a little smaller) */}
+              <div className="flex items-center gap-2 flex-wrap pt-0.5">
                 {/* Active Year button */}
                 {activeYear && (
                   <button 
                     onClick={() => setSelectedYearId(activeYear.id)}
-                    className="px-3.5 py-1.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[9.5px] font-black uppercase tracking-wider rounded-[6px] text-foreground transition-all flex items-center gap-1.5 h-7 font-sans"
+                    className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center gap-1 h-5 font-sans"
                   >
                     <span className="text-muted-foreground/50">Year:</span>
                     <span>{cleanTitle(activeYear.title)}</span>
@@ -695,7 +747,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 {activeSem && (
                   <button 
                     onClick={() => setSelectedSemId(activeSem.id)}
-                    className="px-3.5 py-1.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[9.5px] font-black uppercase tracking-wider rounded-[6px] text-foreground transition-all flex items-center gap-1.5 h-7 font-sans"
+                    className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center gap-1 h-5 font-sans"
                   >
                     <span className="text-muted-foreground/50">Sem:</span>
                     <span>{cleanTitle(activeSem.title)}</span>
@@ -703,7 +755,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 )}
 
                 {/* Cumulative GPA button */}
-                <div className="px-3.5 py-1.5 border border-border/50 bg-bento-card/30 text-[9.5px] font-black uppercase tracking-wider rounded-[6px] text-foreground flex items-center gap-1.5 h-7 font-sans select-none">
+                <div className="px-2 py-0.5 border border-border/50 bg-bento-card/30 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground flex items-center gap-1 h-5 font-sans select-none">
                   <span className="text-muted-foreground/50">GPA:</span>
                   <span>{getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'}</span>
                 </div>
@@ -711,13 +763,12 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
             </div>
 
             {/* Comprehensive Academic Life Hub Grid */}
-            <div className="grid grid-cols-3 gap-6 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 items-stretch">
               {/* Left Column: Calendar & Planner */}
-              <div className="col-span-2 flex flex-col gap-6">
+              <div className="col-span-1 lg:col-span-2 flex flex-col gap-6 h-full min-h-0">
                 {/* Week Calendar */}
                 <section className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <SectionHeader title="Weekly Calendar" />
+                  <div className="flex justify-end items-center mb-2">
                     <div className="flex items-center gap-2">
                       <div className="flex items-center p-1 bg-muted/20 rounded-[6px] border border-border/40">
                         <button 
@@ -743,7 +794,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       </div>
                       <button 
                         onClick={() => navigate('/calendar')} 
-                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans pl-2"
+                        className="px-2.5 h-7 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer ml-1"
                       >
                         Open Full Calendar →
                       </button>
@@ -772,10 +823,14 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       const extraCount = dayEvents.length - maxVisible;
 
                       return (
-                        <div key={dayIdx} className={cn("p-3 border rounded-[8px] flex flex-col gap-2 min-w-0 transition-all",
-                          isTodayDay 
-                            ? "bg-foreground/5 border-foreground/35 ring-1 ring-inset ring-foreground/10" 
-                            : "bg-bento-card border-border hover:bg-bento-item/10")}>
+                        <div 
+                          key={dayIdx} 
+                          onClick={() => setSelectedCalendarDay(day)}
+                          className={cn("p-3 border rounded-[8px] flex flex-col gap-2 min-w-0 transition-all cursor-pointer",
+                            isTodayDay 
+                              ? "bg-foreground/5 border-foreground/35 ring-1 ring-inset ring-foreground/10" 
+                              : "bg-bento-card border-border hover:bg-bento-item/15 hover:border-border/80")}
+                        >
                           <div className="flex justify-between items-baseline shrink-0">
                             <span className={cn("text-[8px] font-black uppercase tracking-widest", isTodayDay ? "text-foreground" : "text-muted-foreground/45")}>
                               {format(day, 'EEE')}
@@ -792,7 +847,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                               return (
                                 <div 
                                   key={idx} 
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     const evAny = ev as any
                                     if (evAny._type === 'Assignment') navigateTo('ASSIGNMENTS', evAny.id);
                                     else if (evAny._type === 'Exam') navigateTo('EXAMS', evAny.id);
@@ -836,7 +892,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 </section>
 
                 {/* Courses, Planner & Practice Tabbed Card */}
-                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col h-[350px] space-y-3">
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col flex-1 min-h-0 space-y-3">
                   {/* Tabs Header */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
                     <div className="flex gap-3">
@@ -867,20 +923,46 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       >
                         Practice
                       </button>
+                      <button 
+                        onClick={() => setLeftBottomTab('notebooklm')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          leftBottomTab === 'notebooklm' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        NotebookLM
+                      </button>
                     </div>
                     
                     {leftBottomTab === 'courses' && (
-                      <button onClick={() => navigateTo('COURSES')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
+                      <button 
+                        onClick={() => navigateTo('COURSES')} 
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                      >
                         All →
                       </button>
                     )}
                     {leftBottomTab === 'planner' && (
-                      <button onClick={() => onOpenNote ? onOpenNote('database/study planner') : navigate('/obsidian?path=database/study planner')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
+                      <button 
+                        onClick={() => navigateTo('PLANNER')} 
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                      >
                         All →
                       </button>
                     )}
                     {leftBottomTab === 'practice' && (
-                      <button onClick={() => navigateTo('PRACTICE')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans">
+                      <button 
+                        onClick={() => navigateTo('PRACTICE')} 
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                      >
+                        All →
+                      </button>
+                    )}
+                    {leftBottomTab === 'notebooklm' && (
+                      <button 
+                        onClick={() => navigate('/notebooks')} 
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                      >
                         All →
                       </button>
                     )}
@@ -994,6 +1076,28 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         </button>
                       </>
                     )}
+
+                    {leftBottomTab === 'notebooklm' && (
+                      <>
+                        <div className="flex-1 min-w-[120px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={notebooksSearch}
+                            onChange={e => setNotebooksSearch(e.target.value)}
+                            placeholder="Search Notebooks..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <button 
+                          onClick={handleCreateNotebook}
+                          className="px-2.5 py-0.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[4px] flex items-center gap-1 transition-all font-sans"
+                        >
+                          <Plus size={9} /> Create
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {/* Tab Body (Scrollable) */}
@@ -1066,7 +1170,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         {displayedCourses.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No courses match filter</p>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {displayedCourses.map((c, idx) => {
                               const grade       = stripWL(getVal(c, 'Grade', 'grade'))
                               const credits     = getVal(c, 'Credits', 'credits')
@@ -1190,7 +1294,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         {displayedHubs.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No hubs match filter</p>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {displayedHubs.map((hub, idx) => {
                               return (
                                 <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
@@ -1225,7 +1329,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         {displayedPractices.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No practice history</p>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {displayedPractices.map((p, idx) => {
                               const score = p.score || 0
                               const total = p.total_questions || p.totalQuestions || 0
@@ -1267,14 +1371,44 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         )}
                       </div>
                     )}
+
+                    {leftBottomTab === 'notebooklm' && (() => {
+                      const filteredNotebooks = notebooks.filter(nb => 
+                        cleanTitle(nb.title || '').toLowerCase().includes(notebooksSearch.toLowerCase())
+                      );
+                      return (
+                        <div className="flex-grow flex flex-col gap-3 font-sans">
+                          {filteredNotebooks.length === 0 ? (
+                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No notebooks found</p>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-2">
+                              {filteredNotebooks.map((nb, idx) => {
+                                return (
+                                  <div key={idx} onClick={() => navigate('/notebooks')}
+                                    className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-[10px] font-black uppercase truncate text-foreground/90 font-sans">{cleanTitle(nb.title)}</span>
+                                      <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5 font-sans">
+                                        {nb.sources_count || nb.sources?.length || 0} sources
+                                      </span>
+                                    </div>
+                                    <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors shrink-0 animate-none" />
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </section>
               </div>
 
               {/* Right Column: Courses, Combined Tasks & Exams */}
-              <div className="col-span-1 flex flex-col gap-6">
+              <div className="col-span-1 lg:col-span-1 flex flex-col gap-6 h-full min-h-0">
                 {/* Upper Right Hub/Inbox/PDF Tabbed Interface */}
-                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col h-[270px] space-y-3">
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col h-[220px] shrink-0 space-y-3">
                   {/* Tabs Header */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
                     <div className="flex gap-3">
@@ -1315,7 +1449,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         {hubs.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No study hubs</p>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {hubs.map((hub, idx) => {
                               const isDone = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
                               return (
@@ -1336,7 +1470,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         {inboxFiles.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">Inbox is empty</p>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {inboxFiles.map((file, idx) => {
                               const filename = file.name || file.path?.split('/').pop() || 'Untitled'
                               return (
@@ -1357,7 +1491,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         {pdfFiles.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No PDFs in vault</p>
                         ) : (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {pdfFiles.map((file, idx) => {
                               const filename = file.name || file.path?.split('/').pop() || 'Untitled'
                               return (
@@ -1375,8 +1509,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   </div>
                 </section>
 
-                {/* Combined Tasks, Exams & NotebookLM Card */}
-                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex-1 flex flex-col space-y-4 min-h-[250px]">
+                {/* Combined Assignments & Exams Card */}
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col space-y-4 flex-1 min-h-0">
                   {/* Tabs Header */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2">
                     <div className="flex gap-3">
@@ -1387,7 +1521,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                             ? "text-foreground border-foreground" 
                             : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
-                        Tasks
+                        Assignments
                       </button>
                       <button 
                         onClick={() => setSidebarTab('exams')}
@@ -1398,20 +1532,11 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       >
                         Exams
                       </button>
-                      <button 
-                        onClick={() => setSidebarTab('notebooklm')}
-                        className={cn("text-[9px] font-black uppercase tracking-wider transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          sidebarTab === 'notebooklm' 
-                            ? "text-foreground border-foreground" 
-                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-                      >
-                        NotebookLM
-                      </button>
                     </div>
                     {sidebarTab === 'assignments' && (
                       <button 
                         onClick={() => navigateTo('ASSIGNMENTS')} 
-                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
                       >
                         Open →
                       </button>
@@ -1419,15 +1544,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                     {sidebarTab === 'exams' && (
                       <button 
                         onClick={() => navigateTo('EXAMS')} 
-                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
-                      >
-                        Open →
-                      </button>
-                    )}
-                    {sidebarTab === 'notebooklm' && (
-                      <button 
-                        onClick={() => navigate('/notebooks')} 
-                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors font-sans"
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
                       >
                         Open →
                       </button>
@@ -1435,7 +1552,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   </div>
 
                   {/* Tab Body */}
-                  <div className="h-[135px] overflow-y-auto custom-scrollbar-mini pr-1 pt-2">
+                  <div className="flex-grow overflow-y-auto custom-scrollbar-mini pr-1 pt-2">
                     {sidebarTab === 'assignments' && (
                       <div>
                         {pendingAssignments.length === 0 ? (
@@ -1506,37 +1623,122 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         )}
                       </div>
                     )}
-
-                    {sidebarTab === 'notebooklm' && (
-                      <div>
-                        {notebooks.length === 0 ? (
-                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No notebooks found</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {notebooks.slice(0, 4).map((nb, idx) => {
-                              return (
-                                <div key={idx} onClick={() => navigate('/notebooks')}
-                                  className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(nb.title)}</span>
-                                    <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5">
-                                      {nb.sources_count || nb.sources?.length || 0} sources
-                                    </span>
-                                  </div>
-                                  <ChevronRight size={10} className="text-muted-foreground/30 shrink-0" />
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </section>
               </div>
             </div>
           </div>
         )}
+
+        {selectedCalendarDay && (() => {
+          const summary = getDaySummary(selectedCalendarDay)
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
+              {/* Backdrop close area */}
+              <div className="absolute inset-0" onClick={() => setSelectedCalendarDay(null)} />
+              
+              <div className="bg-bento-panel border border-border/40 shadow-xl rounded-[16px] max-w-md w-full p-6 space-y-5 relative z-10 select-none animate-in zoom-in-95 duration-200">
+                {/* Header */}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mb-1">Day View</p>
+                    <h2 className="text-xl font-black uppercase tracking-tight text-foreground">
+                      {format(selectedCalendarDay, 'EEEE, MMM d')}
+                    </h2>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedCalendarDay(null)}
+                    className="p-1.5 hover:bg-muted/20 border border-transparent hover:border-border/30 rounded-[8px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+
+                {/* Counts Overview Grid */}
+                <div className="grid grid-cols-5 gap-2 border-b border-border/20 pb-4">
+                  {[
+                    { label: 'Exams', count: summary.exams.length, color: 'text-orange-500 bg-orange-500/10' },
+                    { label: 'Tasks', count: summary.assignments.length, color: 'text-blue-500 bg-blue-500/10' },
+                    { label: 'Study', count: summary.sessions.length, color: 'text-emerald-500 bg-emerald-500/10' },
+                    { label: 'Practice', count: summary.practices.length, color: 'text-purple-500 bg-purple-500/10' },
+                    { label: 'Notes', count: summary.notes.length, color: 'text-pink-500 bg-pink-500/10' }
+                  ].map((cat, idx) => (
+                    <div key={idx} className="flex flex-col items-center p-2 rounded-[8px] bg-bento-card border border-border/30">
+                      <span className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-wider mb-1">
+                        {cat.label}
+                      </span>
+                      <span className={cn("text-base font-black px-2 py-0.5 rounded-[4px]", cat.color)}>
+                        {cat.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Events Detail List */}
+                <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                  {summary.total === 0 ? (
+                    <div className="py-12 flex flex-col items-center gap-2 opacity-35">
+                      <Calendar size={28} strokeWidth={1} className="text-muted-foreground" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">No events scheduled</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Render categories if they have events */}
+                      {[
+                        { title: 'Exams', list: summary.exams, type: 'Exam' },
+                        { title: 'Assignments', list: summary.assignments, type: 'Assignment' },
+                        { title: 'Study Sessions', list: summary.sessions, type: 'Study Session' },
+                        { title: 'Practice', list: summary.practices, type: 'Practice' },
+                        { title: 'Notes Visited', list: summary.notes, type: 'Note Visit' }
+                      ].map((group, gIdx) => {
+                        if (group.list.length === 0) return null;
+                        return (
+                          <div key={gIdx} className="space-y-1.5">
+                            <h4 className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 pl-1">
+                              {group.title}
+                            </h4>
+                            <div className="space-y-1">
+                              {group.list.map((ev, evIdx) => {
+                                const style = EVENT_COLORS[ev._type] || EVENT_COLORS['Note Visit']
+                                const isClickable = ev._type === 'Assignment' || ev._type === 'Exam' || ev._type === 'Note Visit' || ev._type === 'Study' || ev._type === 'Study Session'
+                                return (
+                                  <div
+                                    key={evIdx}
+                                    onClick={() => {
+                                      if (!isClickable) return;
+                                      setSelectedCalendarDay(null);
+                                      const evAny = ev as any;
+                                      if (evAny._type === 'Assignment') navigateTo('ASSIGNMENTS', evAny.id);
+                                      else if (evAny._type === 'Exam') navigateTo('EXAMS', evAny.id);
+                                      else if (evAny._type === 'Note Visit' && evAny.id) onOpenNote(evAny.id);
+                                      else if (evAny._type === 'Study' && evAny.notePath) onOpenNote(evAny.notePath);
+                                      else if (evAny._type === 'Study Session' && evAny.hub_id) {
+                                        const sHub = (data.study_sessions || []).find(h => h.id === evAny.hub_id);
+                                        onOpenNote(sHub?.path || `database/study planner/${evAny.hub_id}.md`);
+                                      }
+                                    }}
+                                    className={cn(
+                                      "flex items-center justify-between p-2.5 rounded-[8px] border text-xs transition-all",
+                                      style.bg, style.border, style.text,
+                                      isClickable ? "cursor-pointer hover:bg-opacity-80 active:scale-[0.98]" : ""
+                                    )}
+                                  >
+                                    <span className="font-semibold truncate max-w-[280px]">{cleanTitle(ev.title)}</span>
+                                     {(ev as any).done && <CheckCircle size={12} className="shrink-0 opacity-80" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
     </div>
   )
 }

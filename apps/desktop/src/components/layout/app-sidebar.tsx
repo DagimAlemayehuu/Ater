@@ -183,13 +183,7 @@ export function AppSidebar() {
 
 
 
-          <NavLink
-            to="/obsidian"
-            className={({ isActive }) => wideLinkClass(isActive)}
-          >
-            <Book size={15} className="shrink-0 text-muted-foreground" />
-            <span>Knowledge Base</span>
-          </NavLink>
+
 
           <NavLink
             to="/notebooks"

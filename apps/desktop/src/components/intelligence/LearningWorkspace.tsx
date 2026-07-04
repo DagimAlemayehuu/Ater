@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Check, ChevronRight, Circle, Loader2, Map, FileText, Info } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, Circle, Loader2, Map, FileText, Info, X } from 'lucide-react'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { cn } from '@/lib/utils'
 import { getSimpleLessonPath } from '@/lib/lessonRoadmap'
@@ -25,6 +25,10 @@ interface LearningWorkspaceProps {
   onClose: () => void
   isGenerating?: boolean
   generatingStatus?: string | null
+  onWikiLinkClick?: (link: string, page?: number) => void
+  onUpdateProperty?: (name: string, value: any) => void
+  onDeleteProperty?: (name: string) => void
+  onAddProperty?: (name: string, type: string) => void
 }
 
 const titleFromPath = (path?: string) => {
@@ -44,11 +48,19 @@ export function LearningWorkspace({
   onClose,
   isGenerating = false,
   generatingStatus = null,
+  onWikiLinkClick,
+  onUpdateProperty,
+  onDeleteProperty,
+  onAddProperty,
 }: LearningWorkspaceProps) {
   const [content, setContent] = useState<string>('')
   const [loadedContentPath, setLoadedContentPath] = useState<string | null>(null)
   const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const [showProperties, setShowProperties] = useState<boolean>(false)
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [isAddingProperty, setIsAddingProperty] = useState(false)
+  const [newPropertyName, setNewPropertyName] = useState('')
   const [loading, setLoading] = useState<boolean>(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [hubContent, setHubContent] = useState<string>('')
@@ -523,9 +535,9 @@ export function LearningWorkspace({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 bg-bento-bg">
+    <div className="flex h-full min-h-0 flex-1 bg-transparent">
       {/* Main Area */}
-      <main className="min-w-0 flex-1 flex flex-col min-h-0 bg-bento-bg">
+      <main className="min-w-0 flex-1 flex flex-col min-h-0 bg-transparent">
         {isGenerating ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bento-panel select-none">
             <div className="mb-6">
@@ -562,25 +574,134 @@ export function LearningWorkspace({
           <div ref={lessonScrollRef} className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar p-8">
             <div className={cn("mx-auto w-full space-y-6", activePractice ? "max-w-6xl" : "max-w-3xl")}>
               {!activePractice && showProperties && Object.keys(noteMetadata).length > 0 && (
-                <div className="bg-bento-panel border border-border/50 rounded-[12px] p-4 text-xs space-y-2 select-none">
+                <div className="bg-bento-panel border border-border/50 rounded-[12px] p-4 text-xs select-none">
                   <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Properties</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {Object.entries(noteMetadata).map(([key, val]) => {
-                      if (typeof val === 'object' && val !== null) {
-                        return (
-                          <div key={key} className="flex flex-col gap-0.5 bg-bento-card border border-border/40 rounded-[8px] p-2">
-                            <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black">{key.replace(/[_-]/g, ' ')}</span>
-                            <span className="text-foreground font-medium truncate">{JSON.stringify(val)}</span>
-                          </div>
-                        )
-                      }
+                      if (['title', 'position', 'frontmatter'].includes(key.toLowerCase())) return null;
+                      const valStr = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val);
+                      const isWL = typeof val === 'string' && valStr.includes('[[');
+                      
                       return (
-                        <div key={key} className="flex flex-col gap-0.5 bg-bento-card border border-border/40 rounded-[8px] p-2">
-                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black">{key.replace(/[_-]/g, ' ')}</span>
-                          <span className="text-foreground font-medium truncate">{String(val)}</span>
+                        <div key={key} className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/10 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground flex items-center gap-1.5 h-5 font-sans">
+                          <span className="text-muted-foreground/60">{key.replace(/[_-]/g, ' ')}:</span>
+                          {editingKey === key ? (
+                            <input
+                              autoFocus
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() => {
+                                if (onUpdateProperty) onUpdateProperty(key, editValue)
+                                setEditingKey(null)
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  if (onUpdateProperty) onUpdateProperty(key, editValue)
+                                  setEditingKey(null)
+                                }
+                              }}
+                              className="bg-transparent border-none p-0 text-[7.5px] font-black uppercase focus:ring-0 text-primary w-24 h-4"
+                            />
+                          ) : (
+                            <div
+                              onClick={() => {
+                                if (typeof val !== 'boolean' && !isWL) {
+                                  setEditingKey(key)
+                                  setEditValue(valStr)
+                                }
+                              }}
+                              className={cn(typeof val !== 'boolean' && !isWL ? "cursor-text" : "cursor-pointer", "flex items-center gap-1")}
+                            >
+                              {isWL ? (
+                                <div className="flex items-center gap-1">
+                                  {(valStr.match(/\[\[(.*?)\]\]/g) || []).map((link, i) => {
+                                    const clean = link.replace(/[\[\]]/g, '').split('|')[0].trim()
+                                    const label = link.replace(/[\[\]]/g, '').split('|')[1] || clean.split(/[/\\]/).pop()
+                                    return (
+                                      <button
+                                        key={i}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (clean && onWikiLinkClick) onWikiLinkClick(clean)
+                                        }}
+                                        className="text-primary hover:underline font-black uppercase text-[7.5px]"
+                                      >
+                                        {label}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              ) : typeof val === 'boolean' ? (
+                                <input
+                                  type="checkbox"
+                                  checked={val}
+                                  onChange={(e) => {
+                                    if (onUpdateProperty) onUpdateProperty(key, e.target.checked)
+                                  }}
+                                  className="h-2.5 w-2.5 rounded-[3px] border-border bg-bento-card focus:ring-0"
+                                />
+                              ) : (
+                                <span>{valStr}</span>
+                              )}
+                            </div>
+                          )}
+                          {onDeleteProperty && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onDeleteProperty(key)
+                              }}
+                              className="text-muted-foreground/45 hover:text-destructive transition-colors ml-0.5"
+                            >
+                              <X size={8} />
+                            </button>
+                          )}
                         </div>
                       )
                     })}
+                    
+                    {/* Add property inline trigger */}
+                    {isAddingProperty ? (
+                      <div className="flex items-center gap-1.5 h-5">
+                        <input
+                          autoFocus
+                          value={newPropertyName}
+                          onChange={(e) => setNewPropertyName(e.target.value)}
+                          placeholder="NAME"
+                          className="bg-transparent border-b border-border/50 text-[7.5px] font-black uppercase tracking-widest placeholder:text-muted-foreground/10 focus:border-primary focus:ring-0 w-16 h-4"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newPropertyName) {
+                              if (onAddProperty) onAddProperty(newPropertyName, 'text')
+                              setNewPropertyName('')
+                              setIsAddingProperty(false)
+                            }
+                            if (e.key === 'Escape') setIsAddingProperty(false)
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (newPropertyName && onAddProperty) onAddProperty(newPropertyName, 'text')
+                            setNewPropertyName('')
+                            setIsAddingProperty(false)
+                          }}
+                          className="text-[7.5px] font-black uppercase text-primary"
+                        >
+                          Add
+                        </button>
+                        <button onClick={() => setIsAddingProperty(false)} className="text-[7.5px] font-black uppercase text-muted-foreground/40">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      onAddProperty && (
+                        <button
+                          onClick={() => setIsAddingProperty(true)}
+                          className="px-2 py-0.5 border border-dashed border-border/50 hover:border-foreground/30 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-muted-foreground/60 hover:text-foreground transition-all flex items-center justify-center h-5 font-sans"
+                        >
+                          + Add Property
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
               )}
@@ -711,9 +832,22 @@ export function LearningWorkspace({
             return (
               <div className="p-4 pb-1 shrink-0">
                 <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>
-                <div className="w-full flex items-center justify-between bg-bento-item border border-border rounded-[12px] p-3 text-sm text-left">
-                  <span className="truncate text-foreground font-medium">{clean.replace(/[_-]/g, ' ')}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPreviewChange({
+                      title: clean.replace(/[_-]/g, ' '),
+                      lessonPath: hubName,
+                      notePath: hubName,
+                      hubPath: hubName,
+                      previewUrl: '',
+                    })
+                  }}
+                  className="w-full flex items-center justify-between bg-bento-item hover:bg-bento-item/85 active:scale-[0.98] border border-border rounded-[12px] p-3 text-sm text-left transition-all cursor-pointer font-sans"
+                >
+                  <span className="truncate text-foreground font-semibold">{clean.replace(/[_-]/g, ' ')}</span>
+                  <ChevronRight size={14} className="text-muted-foreground/50 shrink-0" />
+                </button>
               </div>
             );
           })()}

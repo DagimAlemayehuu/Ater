@@ -8,7 +8,7 @@ import {
  ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
   Plus, ArrowLeft, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
   Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
-  Activity, Play, SkipForward, MapPin, BookOpenCheck
+  Activity, Play, SkipForward, MapPin
 } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
@@ -22,7 +22,8 @@ import { PdfViewer } from '@/components/obsidian/PdfViewer'
 import { ObsidianGraphView } from '@/components/obsidian/ObsidianGraphView'
 import { ObsidianEditor } from '@/components/obsidian/ObsidianEditor'
 import { NoteProperties } from '@/components/obsidian/NoteProperties'
-import { HubConnectionsNav, parseHubTree } from '@/components/obsidian/HubConnectionsNav'
+import { LearningWorkspace } from '@/components/intelligence/LearningWorkspace'
+import { parseHubTree } from '@/components/obsidian/HubConnectionsNav'
 import { KnowledgeFooter } from '@/components/obsidian/KnowledgeFooter'
 import { useLayout } from '@/context/layout-provider'
 import { useNavigation } from '@/context/navigation-context'
@@ -269,7 +270,7 @@ function normalizeFile(f: any) {
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
-  const [, setSearchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const isMountedRef = useRef(true)
   useEffect(() => {
     isMountedRef.current = true
@@ -290,7 +291,9 @@ export default function ObsidianVaultPage() {
 
   // --- Layout State ---
 
-  const [showGraphView, setShowGraphView] = useState(false)
+  const [showGraphView, setShowGraphView] = useState(() => searchParams.get('graph') === '1')
+
+
   const [sidebarTab, setSidebarTab] = useState<'explorer' | 'hubs' | 'pdfs'>('explorer')
   const [hubs, setHubs] = useState<any[]>([])
   const [loadingHubs, setLoadingHubs] = useState(false)
@@ -305,7 +308,22 @@ export default function ObsidianVaultPage() {
  const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
 const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
-  const noteContentRef = useRef('')
+   const noteContentRef = useRef('')
+
+  useEffect(() => {
+    const isGraph = searchParams.get('graph') === '1';
+    if (isGraph !== showGraphView) {
+      setShowGraphView(isGraph);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const isGraph = searchParams.get('graph') === '1' || showGraphView;
+    const hasPath = !!searchParams.get('path') || !!selectedPath;
+    if (!hasPath && !isGraph && isMountedRef.current) {
+      navigate('/academic');
+    }
+  }, [selectedPath, searchParams, showGraphView, navigate]);
 
   const {
     artifacts,
@@ -688,53 +706,40 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   // --- Sidebar Resize State ---
   const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isResizing, setIsResizing] = useState(false)
-  const [connectionsWidth, setConnectionsWidth] = useState(240)
-  const [isResizingConnections, setIsResizingConnections] = useState(false)
 
- const startResizing = (e: React.MouseEvent) => {
- e.preventDefault()
- setIsResizing(true)
-}
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
 
- const startResizingConnections = (e: React.MouseEvent) => {
- e.preventDefault()
- setIsResizingConnections(true)
-}
+  // --- Navigation Listener ---
+  useEffect(() => {
+    const entry = history[currentIndex];
+    if (entry && entry.type === 'file' && entry.path !== selectedPath) {
+      selectFile(entry.path, entry.metadata?.page || 1, true, entry.metadata?.filterPages || []);
+    }
+  }, [currentIndex]);
 
- // --- Navigation Listener ---
- useEffect(() => {
-   const entry = history[currentIndex];
-   if (entry && entry.type === 'file' && entry.path !== selectedPath) {
-     selectFile(entry.path, entry.metadata?.page || 1, true, entry.metadata?.filterPages || []);
-   }
- }, [currentIndex]);
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = Math.max(160, Math.min(window.innerWidth * 0.4, e.clientX))
+        setSidebarWidth(newWidth)
+      }
+    }
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
 
- useEffect(() => {
-  const handleMouseMove = (e: MouseEvent) => {
-  if (isResizing) {
-  const newWidth = Math.max(160, Math.min(window.innerWidth * 0.4, e.clientX))
-  setSidebarWidth(newWidth)
-} else if (isResizingConnections) {
-  // Calculate based on explorer width
-  const xOffset = !isFullscreen ? sidebarWidth : 0
-  const newWidth = Math.max(160, Math.min(window.innerWidth * 0.3, e.clientX - xOffset))
-  setConnectionsWidth(newWidth)
-}
-}
-  const handleMouseUp = () => {
-  setIsResizing(false)
-  setIsResizingConnections(false)
-}
-
-  if (isResizing || isResizingConnections) {
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('mouseup', handleMouseUp)
-}
-  return () => {
-  window.removeEventListener('mousemove', handleMouseMove)
-  window.removeEventListener('mouseup', handleMouseUp)
-}
-}, [isResizing, isResizingConnections, sidebarWidth, isFullscreen])
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing])
 
 
  const handleSRSRating = async (rating: number) => {
@@ -1267,6 +1272,47 @@ const academicHubPathFromNote = (notePath: string, hubName: string): string => {
   return `database/study planner/${match[1]}/${match[2]}/${match[3]}/${hubName.replace(/\.md$/i, '')}.md`
 }
 
+const [activeTutorSession, setActiveTutorSession] = useState<any | null>(null)
+
+const activePreview = useMemo(() => {
+  if (!selectedPath) return null;
+  const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub;
+  const hubValue = Array.isArray(rawHub) ? rawHub[0] : rawHub;
+  const hubName = String(hubValue || '').replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim().replace(/\.md$/i, '');
+  let resolvedHubPath = '';
+  if (hubName) {
+    resolvedHubPath = academicHubPathFromNote(selectedPath, hubName) || '';
+  }
+  const isHub = selectedPath.toLowerCase().includes('_hub.md') || String(noteMetadata?.type || '').toLowerCase() === 'hub';
+  return {
+    title: cleanTitle(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '') || 'Lesson'),
+    lessonPath: isHub ? selectedPath : resolvedHubPath,
+    notePath: selectedPath,
+    hubPath: isHub ? selectedPath : resolvedHubPath,
+    previewUrl: '',
+  };
+}, [selectedPath, noteMetadata]);
+
+const isLessonNote = useMemo(() => {
+  if (!selectedPath) return false;
+  const pathLower = selectedPath.toLowerCase();
+  const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub;
+  const isHub = pathLower.includes('_hub.md') || String(noteMetadata?.type || '').toLowerCase() === 'hub';
+  return !!(isHub || rawHub);
+}, [selectedPath, noteMetadata]);
+
+const [isLessonActive, setIsLessonActive] = useState(false);
+
+useEffect(() => {
+  const isPanelOpen = localStorage.getItem('ater_lesson_panel_open') === 'true';
+  const activeNotePath = localStorage.getItem('ater_study_active_note_path');
+  if (isPanelOpen && activeNotePath === selectedPath && isLessonNote) {
+    setIsLessonActive(true);
+  } else {
+    setIsLessonActive(false);
+  }
+}, [selectedPath, isLessonNote]);
+
 const checkLockState = async (path: string): Promise<boolean> => {
   const targetPath = normalizeVaultPath(path)
   if (lockedNotes.has(targetPath)) return true
@@ -1556,17 +1602,58 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   }
 
   const openSelectedInLessonRuntime = useCallback(async () => {
-    if (!selectedPath || selectedPath.toLowerCase().endsWith('.pdf') || isTemporaryLessonPath(selectedPath)) {
-      toast.error('Select an atomic lesson note first.')
+    let targetPath = selectedPath;
+
+    // Resolve the last atomic note from the active tutor session
+    const activeSessionId = localStorage.getItem('ater_active_session_id');
+    if (activeSessionId) {
+      const session = sidecarApi.getTutorStatusSync();
+      if (session) {
+        const normalize = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase();
+        const completed = new Set((session.completed_notes || []).map(normalize));
+        const unlocked = new Set((session.active_note_unlocks || []).map(normalize));
+        const current = normalize(session.current_note_path || '');
+
+        let lastUnlocked = session.current_note_path || '';
+        if (!lastUnlocked && session.curriculum) {
+          for (let i = session.curriculum.length - 1; i >= 0; i--) {
+            const note = session.curriculum[i];
+            const normNote = normalize(note);
+            if (completed.has(normNote) || unlocked.has(normNote) || normNote === current) {
+              lastUnlocked = note;
+              break;
+            }
+          }
+        }
+        if (lastUnlocked) {
+          targetPath = lastUnlocked;
+        }
+      }
+    }
+
+    if (!targetPath || targetPath.toLowerCase().endsWith('.pdf') || isTemporaryLessonPath(targetPath)) {
+      toast.error('Select an active tutor session or open an atomic lesson note first.')
       return
     }
 
+    let targetMetadata = noteMetadata;
+    if (targetPath !== selectedPath) {
+      try {
+        const noteRes = await sidecarApi.readObsidianNote(targetPath);
+        if (noteRes && noteRes.metadata) {
+          targetMetadata = noteRes.metadata;
+        }
+      } catch (err) {
+        console.error('Failed to read note metadata for targetPath:', err);
+      }
+    }
+
     let hubPath = ''
-    const rawHub = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.concept_hub
-    const isHubNote = selectedPath.toLowerCase().includes('_hub.md') || String(noteMetadata?.type || '').toLowerCase() === 'hub'
+    const rawHub = targetMetadata?.hub || targetMetadata?.Hub || targetMetadata?.concept_hub
+    const isHubNote = targetPath.toLowerCase().includes('_hub.md') || String(targetMetadata?.type || '').toLowerCase() === 'hub'
 
     if (isHubNote) {
-      hubPath = selectedPath
+      hubPath = targetPath
     } else if (rawHub) {
       const hubValue = Array.isArray(rawHub) ? rawHub[0] : rawHub
       const hubName = String(hubValue || '')
@@ -1577,7 +1664,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         .replace(/\.md$/i, '')
 
       if (hubName) {
-        const academicHubPath = academicHubPathFromNote(selectedPath, hubName)
+        const academicHubPath = academicHubPathFromNote(targetPath, hubName)
         if (academicHubPath) {
           hubPath = academicHubPath
         } else {
@@ -1593,22 +1680,24 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       }
     }
 
-    const title = cleanTitle(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson')
+    const title = cleanTitle(targetMetadata?.title || targetMetadata?.Title || targetPath.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson')
     const preview = {
       title,
-      lessonPath: selectedPath,
-      notePath: selectedPath,
+      lessonPath: targetPath,
+      notePath: targetPath,
       hubPath,
       previewUrl: '',
     }
 
     localStorage.setItem('ater_lesson_preview', JSON.stringify(preview))
     localStorage.setItem('ater_lesson_panel_open', JSON.stringify(true))
-    localStorage.setItem('ater_study_active_note_path', selectedPath)
-    localStorage.setItem('ater_canonical_lesson_path', selectedPath)
-    localStorage.setItem('ater_original_note_path', selectedPath)
-    navigate('/agents?tab=ater')
-  }, [navigate, noteMetadata, selectedPath])
+    localStorage.setItem('ater_study_active_note_path', targetPath)
+    localStorage.setItem('ater_canonical_lesson_path', targetPath)
+    localStorage.setItem('ater_original_note_path', targetPath)
+    setSelectedPath(targetPath)
+    setSearchParams({ path: targetPath })
+    setIsLessonActive(true)
+  }, [setSearchParams, noteMetadata, selectedPath])
 
   const fetchHubs = async () => {
     setLoadingHubs(true)
@@ -2820,7 +2909,10 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         {/* Graph Header Bar */}
         <div className="p-4 border-b border-border/10 flex items-center justify-between shrink-0 select-none">
           <button
-            onClick={() => setShowGraphView(false)}
+            onClick={() => {
+              setShowGraphView(false);
+              navigate('/academic');
+            }}
             className="text-[9px] font-black uppercase tracking-widest hover:text-foreground text-muted-foreground bg-muted/10 border border-border/40 px-2.5 py-1 rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <ArrowLeft size={10} /> Back to Dashboard
@@ -2848,7 +2940,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         ) : (
           <div className={cn(
             "mx-auto w-full max-w-full relative flex-1 flex flex-col min-h-0",
-            selectedIsPdf ? "px-4 pt-3 pb-0 overflow-hidden" : "py-4 px-6 h-full"
+            selectedIsPdf ? "px-4 pt-3 pb-0 overflow-hidden" : "py-4 px-6 h-full bg-transparent"
           )}>
             {loadingNote && (
               <PanelLoader label="Loading Document" />
@@ -2883,84 +2975,107 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
 
             {/* Note details */}
             {!selectedIsPdf ? (
-              <div className="editor-content w-full flex-1 flex flex-col min-h-0">
-                <div className="shrink-0">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <h1 className="min-w-0 text-[32px] font-bold text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
-                      {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
-                    </h1>
-                    {!isTemporaryLessonPath(selectedPath) && (
-                      <button
-                        type="button"
-                        onClick={() => void openSelectedInLessonRuntime()}
-                        className="h-9 shrink-0 rounded-[8px] border border-border bg-bento-item px-4 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-muted/50 transition-colors flex items-center gap-2"
-                      >
-                        <BookOpenCheck size={13} />
-                        Continue Lesson
-                      </button>
+              isLessonActive && !isEditing ? (
+                <div className="editor-content w-full flex-1 flex flex-col min-h-0">
+                  <LearningWorkspace
+                    preview={activePreview!}
+                    tutorSession={activeTutorSession}
+                    onTutorSessionChange={setActiveTutorSession}
+                    onPreviewChange={(p) => {
+                      if (p?.notePath) {
+                        setSelectedPath(p.notePath)
+                        setSearchParams({ path: p.notePath })
+                      }
+                    }}
+                    onClose={() => {
+                      localStorage.setItem('ater_lesson_panel_open', 'false')
+                      setIsLessonActive(false)
+                    }}
+                    onWikiLinkClick={handleWikiLinkClick}
+                    onUpdateProperty={handleUpdateProperty}
+                    onDeleteProperty={handleDeleteProperty}
+                    onAddProperty={handleAddProperty}
+                  />
+                </div>
+              ) : (
+                <div className="editor-content w-full flex-1 flex flex-col min-h-0">
+                  <div className="shrink-0">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <h1 className="min-w-0 text-[32px] font-bold text-foreground tracking-tight leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: '28px' }}>
+                        {(noteMetadata?.title || noteMetadata?.Title || selectedPath.split(/[/\\]/).pop()?.replace('.md', '').replace('.pdf', '') || '').replace(/_/g, ' ')}
+                      </h1>
+                      {!isTemporaryLessonPath(selectedPath) && (
+                        <button
+                          type="button"
+                          onClick={() => void openSelectedInLessonRuntime()}
+                          className="h-9 shrink-0 rounded-[8px] border border-border bg-bento-item px-4 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-muted/50 transition-colors flex items-center gap-2"
+                        >
+                          Continue Lesson
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Metadata Pills */}
+                    <div className="flex items-center gap-2 mb-6 border-b border-border pb-6">
+                      {noteMetadata?.semester && (
+                        <button className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans gap-1">
+                          <Calendar size={10} />
+                          {cleanTitle(noteMetadata.semester)}
+                        </button>
+                      )}
+                      {noteMetadata?.course && (
+                        <button className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans gap-1">
+                          <GraduationCap size={10} />
+                          {cleanTitle(noteMetadata.course)}
+                        </button>
+                      )}
+                      {noteMetadata?.unit && (
+                        <button className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans gap-1">
+                          <Hash size={10} />
+                          UNIT {cleanTitle(noteMetadata.unit)}
+                        </button>
+                      )}
+                    </div>
+
+                    {config?.showProperties && (
+                      <NoteProperties
+                        metadata={noteMetadata}
+                        onNavigate={handleWikiLinkClick}
+                        onAddProperty={handleAddProperty}
+                        onUpdateProperty={handleUpdateProperty}
+                        onDeleteProperty={handleDeleteProperty}
+                      />
                     )}
                   </div>
 
-                  {/* Metadata Pills */}
-                  <div className="flex items-center gap-2 mb-6 border-b border-border pb-6">
-                    {noteMetadata?.semester && (
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {cleanTitle(noteMetadata.semester)}
-                      </button>
-                    )}
-                    {noteMetadata?.course && (
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
-                        <GraduationCap className="w-3.5 h-3.5" />
-                        {cleanTitle(noteMetadata.course)}
-                      </button>
-                    )}
-                    {noteMetadata?.unit && (
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-bento-item transition-colors text-xs font-medium">
-                        <Hash className="w-3.5 h-3.5" />
-                        Unit {cleanTitle(noteMetadata.unit)}
-                      </button>
+                  <div className="flex-1 min-h-0">
+                    {isEditing ? (
+                      <ObsidianEditor
+                        value={editedContent}
+                        onChange={setEditedContent}
+                        onKeyDown={(e) => {
+                          if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                            e.preventDefault()
+                            handleSaveNote()
+                          }
+                        }}
+                        noteList={noteList}
+                      />
+                    ) : (
+                      <MarkdownViewer
+                        key={selectedPath}
+                        content={noteContent}
+                        onNavigate={handleWikiLinkClick}
+                        path={selectedPath || undefined}
+                        noteMode={String(noteMetadata?.mode || '')}
+                        noteTitle={String(noteMetadata?.title || '')}
+                        noteCourse={String(noteMetadata?.course || '')}
+                      />
                     )}
                   </div>
 
-                  {config?.showProperties && (
-                    <NoteProperties
-                      metadata={noteMetadata}
-                      onNavigate={handleWikiLinkClick}
-                      onAddProperty={handleAddProperty}
-                      onUpdateProperty={handleUpdateProperty}
-                      onDeleteProperty={handleDeleteProperty}
-                    />
-                  )}
                 </div>
-
-                <div className="flex-1 min-h-0">
-                  {isEditing ? (
-                    <ObsidianEditor
-                      value={editedContent}
-                      onChange={setEditedContent}
-                      onKeyDown={(e) => {
-                        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-                          e.preventDefault()
-                          handleSaveNote()
-                        }
-                      }}
-                      noteList={noteList}
-                    />
-                  ) : (
-                    <MarkdownViewer
-                      key={selectedPath}
-                      content={noteContent}
-                      onNavigate={handleWikiLinkClick}
-                      path={selectedPath || undefined}
-                      noteMode={String(noteMetadata?.mode || '')}
-                      noteTitle={String(noteMetadata?.title || '')}
-                      noteCourse={String(noteMetadata?.course || '')}
-                    />
-                  )}
-                </div>
-
-              </div>
+              )
             ) : (
               <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
                 <div className="flex-1 min-h-0">
@@ -3012,77 +3127,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       </div>
     )}
 
-    {/* Map Checklist Sidebar (Right-Contextual) */}
-    {selectedPath && !selectedIsPdf && !isFullscreen && (
-      <aside
-        data-purpose="map-checklist"
-        onMouseEnter={() => window.focus()}
-        className="relative border border-border/40 flex flex-col bg-bento-panel shadow-sm shrink-0 group/connections overflow-hidden rounded-[12px] panel-transition"
-        style={{width: `${connectionsWidth}px`}}
-      >
-        {/* Resize Handle */}
-        <div
-          className={cn(
-            "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-foreground/20",
-            isResizingConnections ? "bg-foreground w-1" : "bg-transparent"
-          )}
-          onMouseDown={startResizingConnections}
-        />
-
-        <div className="flex flex-col h-full overflow-hidden">
-          {/* Header */}
-          <div className="p-4 border-b border-border flex items-center gap-2 text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase bg-transparent shrink-0">
-            <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg">
-              <rect height="18" rx="2" width="18" x="3" y="3"></rect>
-              <path d="M9 3v18"></path>
-              <path d="M15 3v18"></path>
-            </svg>
-            MAP
-          </div>
-
-          {/* Hub Context Badge */}
-          {(() => {
-            const hubName = noteMetadata?.hub || noteMetadata?.Hub || noteMetadata?.HUB || noteMetadata?.concept_hub || noteMetadata?.course || noteMetadata?.Course
-            if (!hubName) return null
-            const clean = typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '').split(/[/\\]/).pop() : ''
-            return (
-              <div className="p-4 pb-1 shrink-0">
-                <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-2 tracking-[0.02em]">Topic</div>
-                <button
-                  onClick={() => handleWikiLinkClick(typeof hubName === 'string' ? hubName.replace(/\[\[/g, '').replace(/\]\]/g, '') : '')}
-                  className="w-full flex items-center justify-between bg-bento-item border border-border rounded-[12px] p-3 text-sm cursor-pointer hover:bg-opacity-80 transition-colors text-left"
-                >
-                  <span className="truncate text-foreground font-medium">{clean?.replace(/_/g, ' ')}</span>
-                  <ChevronDown size={16} className="text-muted-foreground shrink-0" />
-                </button>
-              </div>
-            )
-          })()}
-
-          {/* Connection links */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6 text-sm text-muted-foreground">
-            <div className="max-w-5xl mx-auto mt-2">
-              {hubConnections ? (
-                <HubConnectionsNav
-                  content={hubConnections}
-                  activePath={selectedPath}
-                  onNavigate={handleWikiLinkClick}
-                  onToggleCheckbox={handleToggleCheckbox}
-                  searchQuery={searchQuery}
-                />
-              ) : (
-                <div className="py-20 flex flex-col items-center gap-3 opacity-20">
-                  <Network size={24} strokeWidth={1} className="text-muted-foreground" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">No Map Found</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </aside>
-    )}
-
-    {(isResizing || isResizingConnections) && (
+    {isResizing && (
       <div className="fixed inset-0 z-[9999] cursor-col-resize select-none bg-transparent" />
     )}
   </div>

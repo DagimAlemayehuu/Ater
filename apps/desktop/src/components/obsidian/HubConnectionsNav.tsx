@@ -70,7 +70,9 @@ export const HubConnectionsNav = React.memo(({
   onToggleCheckbox, 
   searchQuery
 }: HubConnectionsNavProps) => {
-  const [tutorSession, setTutorSession] = useState<any | null>(null);
+  const [tutorSession, setTutorSession] = useState<any | null>(() => {
+    return sidecarApi.getTutorStatusSync?.() || null;
+  });
 
   useEffect(() => {
     let active = true;
@@ -81,7 +83,7 @@ export const HubConnectionsNav = React.memo(({
         return;
       }
       try {
-        const session = await sidecarApi.getTutorStatus(activeSessionId);
+        const session = await sidecarApi.getTutorStatus?.(activeSessionId);
         if (active && session) {
           setTutorSession(session);
         }

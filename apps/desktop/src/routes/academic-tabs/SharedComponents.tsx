@@ -33,8 +33,11 @@ export function SectionHeader({ title, count, onAction, actionLabel }: {
       {count !== undefined && <span className="text-[9px] font-black text-muted-foreground/30">{count}</span>}
       <div className="h-px flex-1 bg-border/40" />
       {onAction && (
-        <button onClick={onAction} className="h-7 flex items-center gap-1 px-3 text-muted-foreground border border-border/40 bg-muted/20 rounded-[8px] text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 hover:border-foreground/30 transition-all">
-          <Plus size={10} />{actionLabel || 'Add'}
+        <button 
+          onClick={onAction} 
+          className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans"
+        >
+          + {String(actionLabel || 'ADD').toUpperCase()}
         </button>
       )}
     </div>

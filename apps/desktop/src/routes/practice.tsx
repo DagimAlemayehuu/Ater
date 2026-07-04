@@ -59,129 +59,29 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   } = usePracticeConfig()
 
   const { setSidebarContent } = useSidebarContent()
+  const [activeSubTab, setActiveSubTab] = React.useState<'configure' | 'history'>('configure')
 
   React.useEffect(() => {
-    if (view === 'dashboard' || view === 'history' || view === 'vault' || view === 'configuring') {
-      setSidebarContent(
-        <div className="flex flex-col gap-1 w-full font-sans">
-          <div className="px-3 mb-2 flex items-center gap-2 select-none">
-            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Practice Hub</span>
-            <div className="h-px flex-1 bg-border/20" />
-          </div>
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={11} />, dataTour: 'tab-practice-dashboard' },
-            { id: 'history', label: 'History', icon: <Clock size={11} />, dataTour: 'tab-practice-history' },
-            { id: 'vault', label: 'Reference Vault', icon: <BookOpen size={11} />, dataTour: 'tab-practice-vault' },
-            { id: 'configuring', label: 'Custom', icon: <Sliders size={11} />, dataTour: 'tab-practice-custom' },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setView(t.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none focus-visible:ring-1 focus-visible:ring-primary",
-                view === t.id
-                  ? "bg-bento-item text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
-              )}
-              data-tour={t.dataTour}
-            >
-              <span className="shrink-0 text-muted-foreground">{t.icon}</span>
-              <span>{t.label}</span>
-            </button>
-          ))}
-        </div>,
-        'practice'
-      )
-    } else if (view === 'session') {
-      setSidebarContent(
-        <div className="flex flex-col gap-1 w-full font-sans">
-          <div className="px-3 mb-2 flex items-center gap-2 select-none">
-            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Session Active</span>
-            <div className="h-px flex-1 bg-border/20" />
-          </div>
-          <button
-            onClick={() => setView('dashboard')}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
-          >
-            <span>Exit Practice</span>
-          </button>
-        </div>,
-        'practice'
-      )
-    } else {
-      setSidebarContent(null, 'practice')
-    }
+    setView('configuring')
+  }, [])
+
+  React.useEffect(() => {
+    setSidebarContent(null, 'practice')
     return () => {
       setSidebarContent(null, 'practice')
     }
-  }, [view, setSidebarContent, setView])
+  }, [setSidebarContent])
 
-  if (view === 'dashboard') {
-    return (
-      <PracticeDashboard
-        view={view}
-        setView={setView}
-        pastPractices={pastPractices}
-        analytics={analytics}
-        selectedHub={selectedHub}
-        handleReviewDueCards={handleReviewDueCards}
-      />
-    )
-  }
-
-  if (view === 'history') {
-    return (
-      <PracticeHistory
-        view={view}
-        setView={setView}
-        pastPractices={pastPractices}
-        handleResumePractice={handleResumePractice}
-        handleDeletePractice={handleDeletePractice}
-      />
-    )
-  }
-
-  if (view === 'vault') {
-    return (
-      <PracticeVault
-        view={view}
-        setView={setView}
-        hubs={hubs}
-        selectedHub={selectedHub}
-        setSelectedHub={setSelectedHub}
-        loadVaultFiles={loadVaultFiles}
-        vaultSourceName={vaultSourceName}
-        setVaultSourceName={setVaultSourceName}
-        vaultSourceText={vaultSourceText}
-        setVaultSourceText={setVaultSourceText}
-        handleVaultUploadText={handleVaultUploadText}
-        vaultLoading={vaultLoading}
-        vaultStatus={vaultStatus}
-        vaultFiles={vaultFiles}
-        vaultSelectedFiles={vaultSelectedFiles}
-        setVaultSelectedFiles={setVaultSelectedFiles}
-        vaultMode={vaultMode}
-        setVaultMode={setVaultMode}
-        handleVaultPracticeGenerate={handleVaultPracticeGenerate}
-      />
-    )
-  }
-
-  if (view === 'configuring') {
-    return (
-      <PracticeConfigurator
-        setView={setView}
-        advancedConfig={advancedConfig}
-        setAdvancedConfig={setAdvancedConfig}
-        hubs={hubs}
-        selectedHub={selectedHub}
-        setSelectedHub={setSelectedHub}
-        availableNotes={availableNotes}
-        isLoading={isLoading}
-        handleStartSession={handleStartSession}
-        loadHubNotes={loadHubNotes}
-      />
-    )
+  const handleSetView = (nextView: string) => {
+    if (nextView === 'dashboard' || nextView === 'configuring') {
+      setView('configuring')
+      setActiveSubTab('configure')
+    } else if (nextView === 'history') {
+      setView('history')
+      setActiveSubTab('history')
+    } else {
+      setView(nextView)
+    }
   }
 
   if (view === 'loading') {
@@ -199,7 +99,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
       <PracticeSession
         session={session}
         view={view}
-        setView={setView}
+        setView={handleSetView}
         selectedHub={selectedHub}
         hubs={hubs}
         explainOpen={explainOpen}
@@ -229,7 +129,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
       <PracticeResults
         session={session}
         view={view}
-        setView={setView}
+        setView={handleSetView}
         elapsedSec={elapsedSec}
         setAdvancedConfig={setAdvancedConfig}
       />
@@ -237,20 +137,65 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   }
 
   return (
-    <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden">
-      <div className="flex-1 overflow-hidden flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
-            Session state invalidated
-          </p>
-          <Button
-            onClick={() => setView('dashboard')}
-            variant="outline"
-            className="h-10 px-8 border-border bg-bento-card hover:bg-bento-item text-foreground rounded-[8px] font-black uppercase tracking-widest text-[10px]"
+    <div className="h-full flex flex-col bg-bento-panel font-sans overflow-hidden">
+      {/* Tabs Header */}
+      <div className="px-10 pt-8 border-b border-border/10 flex items-center justify-between shrink-0 bg-bento-card">
+        <div className="flex gap-6">
+          <button 
+            onClick={() => {
+              setActiveSubTab('configure')
+              setView('configuring')
+            }}
+            className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-3 border-b-2 -mb-[2px] focus:outline-none font-sans", 
+              activeSubTab === 'configure' 
+                ? "text-foreground border-foreground" 
+                : "text-muted-foreground/45 border-transparent hover:text-foreground")}
           >
-            Reset Interface
-          </Button>
+            Configure
+          </button>
+          <button 
+            onClick={() => {
+              setActiveSubTab('history')
+              setView('history')
+            }}
+            className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-3 border-b-2 -mb-[2px] focus:outline-none font-sans", 
+              activeSubTab === 'history' 
+                ? "text-foreground border-foreground" 
+                : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+          >
+            History
+          </button>
         </div>
+      </div>
+
+      {/* Tab Body Container */}
+      <div className="flex-1 overflow-hidden relative">
+        {activeSubTab === 'configure' ? (
+          <div className="absolute inset-0 overflow-y-auto">
+            <PracticeConfigurator
+              setView={handleSetView}
+              advancedConfig={advancedConfig}
+              setAdvancedConfig={setAdvancedConfig}
+              hubs={hubs}
+              selectedHub={selectedHub}
+              setSelectedHub={setSelectedHub}
+              availableNotes={availableNotes}
+              isLoading={isLoading}
+              handleStartSession={handleStartSession}
+              loadHubNotes={loadHubNotes}
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0 overflow-y-auto">
+            <PracticeHistory
+              view={view}
+              setView={handleSetView}
+              pastPractices={pastPractices}
+              handleResumePractice={handleResumePractice}
+              handleDeletePractice={handleDeletePractice}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

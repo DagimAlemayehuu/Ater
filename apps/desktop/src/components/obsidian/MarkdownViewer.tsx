@@ -1145,7 +1145,7 @@ const AterUIBlock = memo(({ payload, notePath, onSendMessage }: { payload: any; 
     );
 });
 
-const MarkdownContext = React.createContext<{
+export const MarkdownContext = React.createContext<{
     path?: string;
     onNavigate?: (page: string) => void;
     onSendMessage?: (text: string) => void;
@@ -1414,8 +1414,10 @@ const MarkdownLi = ({ children, className }: any) => {
         );
     }
 
+    const isHubNote = context.path?.toLowerCase().includes('hub.md') || context.path?.toLowerCase().includes('_hub');
+
     return (
-        <li className="text-[13px] leading-relaxed mb-1 text-foreground/80 list-item">
+        <li className={cn("text-[13px] leading-relaxed mb-1 text-foreground/80", isHubNote ? "list-none pl-0" : "list-item")}>
             {inlineContent}
             {nestedBlocks}
         </li>
@@ -1482,6 +1484,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
     const displayContent = useMemo(() => {
         let cleaned = stripArtifactMarkup(content);
         cleaned = cleaned.replace(/(?:(?:\r?\n)+\s*(?:---\s*)?|^\s*)##\s*The\s*Proving\s*Grounds(?:\r?\n)*/i, '\n');
+        cleaned = cleaned.replace(/^.*\[\[[^\]]*roadmap[^\]]*\]\].*$/gim, '');
         return cleaned;
     }, [content]);
     const handleNavigate = useCallback((pageName: string) => {
@@ -1505,8 +1508,10 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
             h3: MarkdownH3,
             h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
             ul: ({ children, className }: any) => {
-                const isTaskList = className?.includes('contains-task-list');
-                return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-8" : "list-disc pl-5")}>{children}</ul>
+                const context = React.useContext(MarkdownContext);
+                const isHubNote = context.path?.toLowerCase().includes('hub.md') || context.path?.toLowerCase().includes('_hub');
+                const isTaskList = className?.includes('contains-task-list') || isHubNote;
+                return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-0" : "list-disc pl-5")}>{children}</ul>
             },
             ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
             li: MarkdownLi,

@@ -99,7 +99,6 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
                 <div className="text-[7px] font-black uppercase text-muted-foreground">days</div>
               </div>
             )}
-            <button onClick={() => onOpenNote(exam.path || `database/exams/${exam.id}.md`)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-bento-item/50 rounded-[4px] transition-colors"><BookOpen size={14} /></button>
             <button onClick={() => { onDelete('exams', selectedId); setSelectedId(null) }} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-[4px] transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
@@ -229,8 +228,8 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
         </div>
         <button onClick={() => setAdding(true)}
           data-tour="exam-add"
-          className="flex items-center gap-1.5 px-3 py-2 text-muted-foreground hover:text-foreground border border-border bg-bento-item/50 rounded-[6px] text-[8px] font-black uppercase hover:bg-bento-item transition-colors">
-          <Plus size={10} /> Add
+          className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans">
+          + ADD
         </button>
       </div>
 
