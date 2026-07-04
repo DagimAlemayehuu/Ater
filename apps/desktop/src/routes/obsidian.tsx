@@ -236,6 +236,25 @@ const FileTreeItem = React.memo(({
   )
 });
 
+
+function normalizeHub(h: any) { 
+  if (!h) return h;
+  return { 
+    ...h, 
+    title: h.title ?? h.name ?? 'Untitled', 
+    name: h.name ?? h.title ?? '' 
+  };
+}
+
+function normalizeFile(f: any) { 
+  if (!f) return f;
+  return { 
+    ...f, 
+    name: f.name ?? f.title ?? 'Untitled',
+    title: f.title ?? f.name ?? '' 
+  };
+}
+
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
@@ -408,8 +427,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   // --- Note List for Autocomplete ---
   const noteList = useMemo(() => {
     return files
-      .filter(f => !f.is_dir && typeof f.name === 'string' && f.name.toLowerCase().endsWith('.md'))
-      .map(f => f.name.slice(0, -3))
+      .filter(f => !f.is_dir && typeof (f.name ?? (f as any).title) === 'string' && (f.name ?? (f as any).title ?? '').toLowerCase().endsWith('.md'))
+      .map(f => (f.name ?? (f as any).title ?? '').slice(0, -3))
   }, [files])
 
   // --- PDF State & Ref ---
@@ -882,7 +901,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
   if (cleanHubName) {
   const res = await sidecarApi.findVaultPage(cleanHubName);
-  const hubPath = res.path || (files.find(f => f.name.toLowerCase().includes(cleanHubName.toLowerCase()))?.path);
+  const hubPath = res.path || (files.find(f => (f.name ?? (f as any).title ?? '').toLowerCase().includes(cleanHubName.toLowerCase()))?.path);
 
   if (hubPath) {
   const hubData = await sidecarApi.readObsidianNote(hubPath);
@@ -1089,7 +1108,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setLoadingFiles(true)
  try {
  const res = await sidecarApi.listObsidianFiles()
- setFiles(res.files || [])
+ setFiles((res.files || []).map(normalizeFile))
 } catch (err) {
  console.error('Failed to fetch obsidian files:', err)
 } finally {
@@ -1490,7 +1509,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
     setLoadingHubs(true)
     try {
       const res = await sidecarApi.listHubs()
-      setHubs(res.hubs || [])
+      setHubs((res.hubs || []).map(normalizeHub))
     } catch (err) {
       console.error("Failed to fetch hubs:", err)
     } finally {
@@ -1511,7 +1530,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
     const groups: Record<string, any[]> = {}
     hubs.filter(hub => {
       if (!searchQuery) return true;
-      return (typeof hub.title === 'string' && hub.title.toLowerCase().includes((searchQuery || '').toLowerCase())) ||
+      return (typeof (hub.title ?? hub.name) === 'string' && (hub.title ?? hub.name ?? '').toLowerCase().includes((searchQuery || '').toLowerCase())) ||
              (hub.course && typeof hub.course === 'string' && hub.course.toLowerCase().includes((searchQuery || '').toLowerCase()));
     }).forEach(hub => {
       const course = hub.course || 'Uncategorized'
@@ -1531,7 +1550,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       const isPdf = typeof f.path === 'string' && f.path.toLowerCase().endsWith('.pdf');
       if (!isPdf) return false;
       if (!searchQuery) return true;
-      return (typeof f.name === 'string' && f.name.toLowerCase().includes((searchQuery || '').toLowerCase())) ||
+      return (typeof (f.name ?? (f as any).title) === 'string' && (f.name ?? (f as any).title ?? '').toLowerCase().includes((searchQuery || '').toLowerCase())) ||
              (typeof f.path === 'string' && f.path.toLowerCase().includes((searchQuery || '').toLowerCase()));
     })
     const groups: Record<string, any[]> = {}
@@ -2071,7 +2090,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
                       >
                         <div className="flex items-center gap-1.5">
                           <span className="text-[9px] font-black opacity-50 tabular-nums">U{hub.unit || '0'}</span>
-                          <span className="truncate">{hub.title.replace(' Hub', '')}</span>
+                          <span className="truncate">{(hub.title ?? hub.name ?? '').replace(' Hub', '')}</span>
                         </div>
                       </button>
                     ))}
@@ -2106,7 +2125,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
                         "shrink-0",
                         selectedPath === file.path ? "text-foreground" : "text-muted-foreground/50"
                       )} />
-                      <span className="truncate">{file.name.replace('.pdf', '')}</span>
+                      <span className="truncate">{(file.name ?? (file as any).title ?? '').replace('.pdf', '')}</span>
                     </button>
                   ))}
                 </div>
@@ -2212,7 +2231,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       return;
     }
     
-    const hubTitles = otherHubs.map((h, i) => `${i + 1}. ${h.title}`).join('\n');
+    const hubTitles = otherHubs.map((h, i) => `${i + 1}. ${h.title ?? h.name ?? 'Untitled'}`).join('\n');
     const choice = window.prompt(`Select destination Hub (enter number 1-${otherHubs.length}):\n\n${hubTitles}`);
     if (!choice) return;
     const index = parseInt(choice) - 1;
@@ -2240,7 +2259,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         setWorkspaceHubNotes(prev => prev.filter(n => n !== cleanNoteName));
       }
       await fetchFiles();
-      toast.success(`Note moved to ${targetHub.title}`);
+      toast.success(`Note moved to ${targetHub.title ?? targetHub.name ?? 'Untitled'}`);
     } catch (err: any) {
       toast.error(`Move failed: ${err.message}`);
     }
@@ -2272,8 +2291,8 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   const resolveNotesForHub = () => {
     if (loadingHubNotes) return [];
     return files.filter(f => {
-      if (f.is_dir || !f.name.endsWith('.md')) return false;
-      const nameWithoutExt = f.name.slice(0, -3).replace(/ /g, '_');
+      if (f.is_dir || !(f.name ?? (f as any).title ?? '').endsWith('.md')) return false;
+      const nameWithoutExt = (f.name ?? (f as any).title ?? '').slice(0, -3).replace(/ /g, '_');
       return workspaceHubNotes.some(link => {
         return link.replace(/ /g, '_') === nameWithoutExt || f.path.replace(/\\/g, '/').includes(link);
       });
@@ -2283,20 +2302,20 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   const renderDashboard = () => {
     // Search filtering logic
     const filteredHubs = hubs.filter(h => 
-      h.title.toLowerCase().includes(dashboardSearchQuery.toLowerCase()) || 
+      (h.title ?? h.name ?? '').toLowerCase().includes(dashboardSearchQuery.toLowerCase()) || 
       (h.course && h.course.toLowerCase().includes(dashboardSearchQuery.toLowerCase()))
     );
 
     const filteredNotes = resolveNotesForHub().filter(file => 
-      file.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+      (file.name ?? (file as any).title ?? '').toLowerCase().includes(dashboardSearchQuery.toLowerCase())
     );
 
     const filteredInbox = inboxFiles.filter(file => 
-      file.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+      (file.name ?? (file as any).title ?? '').toLowerCase().includes(dashboardSearchQuery.toLowerCase())
     );
 
-    const filteredPdfs = files.filter(f => !f.is_dir && f.name.endsWith('.pdf')).filter(file => 
-      file.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+    const filteredPdfs = files.filter(f => !f.is_dir && (f.name ?? (f as any).title ?? '').endsWith('.pdf')).filter(file => 
+      (file.name ?? (file as any).title ?? '').toLowerCase().includes(dashboardSearchQuery.toLowerCase())
     );
 
     return (
@@ -2399,7 +2418,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
                               </span>
                             </div>
                             <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate mt-1">
-                              {hub.title}
+                              {hub.title ?? hub.name ?? 'Untitled'}
                             </h3>
                             <p className="text-[9px] text-muted-foreground/50 mt-1 truncate font-mono">
                               {hub.course || 'Uncategorized'}
@@ -2452,7 +2471,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
                 ) : filteredNotes.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredNotes.map(file => {
-                      const cleanNoteName = file.name.slice(0, -3).replace(/_/g, ' ');
+                      const cleanNoteName = (file.name ?? (file as any).title ?? '').slice(0, -3).replace(/_/g, ' ');
                       return (
                         <div
                           key={file.path}
@@ -2545,7 +2564,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
                           <span className="text-[8px] font-black uppercase tracking-widest font-mono">Inbox file</span>
                         </div>
                         <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">
-                          {file.name.replace('.pdf', '')}
+                          {(file.name ?? (file as any).title ?? '').replace('.pdf', '')}
                         </h3>
                       </div>
                       
@@ -2615,7 +2634,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
                           <span className="text-[8px] font-black uppercase tracking-widest font-mono">PDF reference</span>
                         </div>
                         <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">
-                          {file.name.replace('.pdf', '')}
+                          {(file.name ?? (file as any).title ?? '').replace('.pdf', '')}
                         </h3>
                       </div>
                       
