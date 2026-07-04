@@ -13,15 +13,17 @@ import { extractArtifacts } from '@/lib/artifacts/parser';
 import { UnifiedSandboxViewer } from '@/components/obsidian/UnifiedSandboxViewer';
 import { sidecarApi } from '@/lib/sidecarApi';
 
-export const MarkdownBlock = ({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
+const INLINE_MARKDOWN_COMPONENTS = {
+  p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
+};
+
+export const MarkdownBlock = React.memo(({ content, variant = 'block' }: { content: string; variant?: 'block' | 'inline' }) => {
   if (variant === 'inline') {
     return (
       <AterMarkdown
         content={content}
         className="inline-block align-baseline text-[13px] text-foreground/90"
-        components={{
-          p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
-        }}
+        components={INLINE_MARKDOWN_COMPONENTS}
       />
     );
   }
@@ -31,7 +33,7 @@ export const MarkdownBlock = ({ content, variant = 'block' }: { content: string;
       className="block w-full text-[13px] text-foreground/90 whitespace-pre-wrap break-words"
     />
   );
-};
+});
 
 interface MiniPracticeUIProps {
     question: Question | Question[];

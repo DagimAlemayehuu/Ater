@@ -84,11 +84,60 @@ let syncTotal = 0
 let syncStatus = 'idle'
 
 const optionsCache = new Map<string, any>()
+const sidecarRequestLocks = new Map<string, Promise<void>>()
 
 async function normalizeVaultIpcPath(path: string): Promise<string> {
     const store = await getAppStore()
     const vaultPath = (await store.get<string>('obsidianVaultPath')) || ''
     return toVaultRelativePath(path, vaultPath)
+}
+
+async function getSidecarBaseUrl(): Promise<string> {
+    const port = await invoke<number>('get_sidecar_port')
+    return `http://127.0.0.1:${port}`
+}
+
+async function checkedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = typeof input === 'string' && input.startsWith('/api/')
+        ? `${await getSidecarBaseUrl()}${input}`
+        : input
+    const method = (init?.method || 'GET').toUpperCase()
+    const lockKey = method === 'GET' ? null : `${method}:${String(url)}`
+
+    const execute = async () => {
+        const response = await fetch(url, init)
+        if (!response.ok) {
+            const errText = await response.text().catch(() => '')
+            throw new Error(errText || `Sidecar request failed (${response.status} ${response.statusText})`)
+        }
+        return response
+    }
+
+    if (!lockKey) {
+        return execute()
+    }
+
+    const previous = sidecarRequestLocks.get(lockKey) || Promise.resolve()
+    let releaseLock!: () => void
+    const current = new Promise<void>((resolve) => {
+        releaseLock = resolve
+    })
+    const chained = previous.then(() => current)
+    sidecarRequestLocks.set(lockKey, chained)
+
+    try {
+        await previous
+        return await execute()
+    } finally {
+        releaseLock()
+        if (sidecarRequestLocks.get(lockKey) === chained) {
+            sidecarRequestLocks.delete(lockKey)
+        }
+    }
+}
+
+async function checkedJson<T = any>(response: Response): Promise<T> {
+    return await response.json() as T
 }
 
 export async function getBaseHeaders(contentType?: string): Promise<Record<string, string>> {
@@ -1157,7 +1206,7 @@ export const sidecarApi = {
                 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
                 const edgeUrl = `${supabaseUrl}/functions/v1/execute-ai-action`;
                 
-                const response = await fetch(edgeUrl, {
+                const response = await checkedFetch(edgeUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1183,7 +1232,6 @@ export const sidecarApi = {
 
             // 2. Direct Self-Billed Sidecar Mode
             await deductCredits('oracle-chat');
-            const port = await invoke<number>('get_sidecar_port');
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
             };
@@ -1228,7 +1276,7 @@ export const sidecarApi = {
             const sidecarToken = await invoke<string>('get_sidecar_token');
             headers['X-Ater-Token'] = sidecarToken;
 
-            return await fetch(`http://127.0.0.1:${port}/api/ater/assistant/chat`, {
+            return await checkedFetch(`/api/ater/assistant/chat`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1372,6 +1420,7 @@ export const sidecarApi = {
     },
 
     srsFeynmanValidate: async (notePath: string, explanation: string) => {
+        enforceFeatureLock('interactive_quiz')
         if (await isDemoActive()) {
             return {
                 success: true,
@@ -1482,7 +1531,6 @@ export const sidecarApi = {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1501,7 +1549,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/plan/intent`, {
+            const res = await checkedFetch(`/api/ater/plan/intent`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1510,7 +1558,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to classify intent (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] classifyTeachIntent failed:', err);
             throw err;
@@ -1520,7 +1568,6 @@ export const sidecarApi = {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1539,7 +1586,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/plan/curriculum`, {
+            const res = await checkedFetch(`/api/ater/plan/curriculum`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1548,7 +1595,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to generate teach curriculum (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] generateTeachCurriculum failed:', err);
             throw err;
@@ -1558,7 +1605,6 @@ export const sidecarApi = {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1577,7 +1623,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/plan/confirm`, {
+            const res = await checkedFetch(`/api/ater/plan/confirm`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1586,7 +1632,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to confirm teach curriculum (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] confirmTeachCurriculum failed:', err);
             throw err;
@@ -1613,7 +1659,6 @@ export const sidecarApi = {
             }
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1632,7 +1677,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/curriculum/plan`, {
+            const res = await checkedFetch(`/api/ater/curriculum/plan`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1641,7 +1686,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to plan curriculum (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] planCurriculum failed:', err);
             throw err;
@@ -1657,7 +1702,6 @@ export const sidecarApi = {
             }
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1676,7 +1720,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/curriculum/confirm`, {
+            const res = await checkedFetch(`/api/ater/curriculum/confirm`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1685,7 +1729,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to confirm curriculum (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] confirmCurriculum failed:', err);
             throw err;
@@ -1766,7 +1810,6 @@ export const sidecarApi = {
         enforceFeatureLock('ai-features')
         await deductCredits('explain-features')
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1776,7 +1819,7 @@ export const sidecarApi = {
             };
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/artifact/generate`, {
+            const res = await checkedFetch(`/api/ater/artifact/generate`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1785,7 +1828,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to generate artifacts (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] generateArtifacts failed:', err);
             throw err;
@@ -1809,7 +1852,6 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1819,7 +1861,7 @@ export const sidecarApi = {
             };
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/artifact/rollback`, {
+            const res = await checkedFetch(`/api/ater/artifact/rollback`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1828,7 +1870,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to rollback artifact version (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] rollbackArtifactVersion failed:', err);
             throw err;
@@ -1846,7 +1888,6 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1856,7 +1897,7 @@ export const sidecarApi = {
             };
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/artifact/pin`, {
+            const res = await checkedFetch(`/api/ater/artifact/pin`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1865,7 +1906,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to pin artifact types (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] pinArtifactTypes failed:', err);
             throw err;
@@ -1876,10 +1917,9 @@ export const sidecarApi = {
             return { preview_url: '' };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/lesson/preview/register`, {
+            const res = await checkedFetch(`/api/ater/lesson/register`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1888,7 +1928,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to register lesson preview (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] registerAterLessonPreview failed:', err);
             throw err;
@@ -1908,10 +1948,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/start`, {
+            const res = await checkedFetch(`/api/ater/tutor/start`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1920,7 +1959,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to start tutor session (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startTutorSession failed:', err);
             throw err;
@@ -1940,10 +1979,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/submit`, {
+            const res = await checkedFetch(`/api/ater/tutor/submit`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -1952,7 +1990,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to submit tutor answer (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitTutorAnswer failed:', err);
             throw err;
@@ -1974,7 +2012,6 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -1994,7 +2031,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/practice/remediate`, {
+            const res = await checkedFetch(`/api/ater/practice/remediate`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2003,7 +2040,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to generate remediation (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] practiceRemediate failed:', err);
             throw err;
@@ -2024,10 +2061,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/adaptive_question`, {
+            const res = await checkedFetch(`/api/ater/tutor/adaptive_question`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2036,7 +2072,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to load adaptive tutor question (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getAdaptiveTutorQuestion failed:', err);
             throw err;
@@ -2062,10 +2098,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/adaptive_check`, {
+            const res = await checkedFetch(`/api/ater/tutor/adaptive_check`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2074,7 +2109,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to check adaptive tutor answer (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] checkAdaptiveTutorAnswer failed:', err);
             throw err;
@@ -2085,17 +2120,16 @@ export const sidecarApi = {
             return null;
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/session_by_hub?hub_path=${encodeURIComponent(hub_path)}`, {
+            const res = await checkedFetch(`/api/ater/tutor/session_by_hub?hub_path=${encodeURIComponent(hub_path)}`, {
                 method: 'GET',
                 headers
             });
             if (!res.ok) {
                 return null;
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getTutorSessionByHub failed:', err);
             return null;
@@ -2115,10 +2149,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/status?session_id=${encodeURIComponent(session_id)}`, {
+            const res = await checkedFetch(`/api/ater/tutor/status?session_id=${encodeURIComponent(session_id)}`, {
                 method: 'GET',
                 headers
             });
@@ -2126,7 +2159,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to get tutor status (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getTutorStatus failed:', err);
             throw err;
@@ -2150,10 +2183,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/advance`, {
+            const res = await checkedFetch(`/api/ater/tutor/advance`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2183,10 +2215,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/transfer/submit`, {
+            const res = await checkedFetch(`/api/ater/tutor/transfer/submit`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2195,7 +2226,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to submit transfer answer (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitTransferAnswer failed:', err);
             throw err;
@@ -2209,10 +2240,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/consolidation/start`, {
+            const res = await checkedFetch(`/api/ater/tutor/consolidation/start`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2221,7 +2251,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to start consolidation quiz (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startConsolidationQuiz failed:', err);
             throw err;
@@ -2241,10 +2271,9 @@ export const sidecarApi = {
             };
         }
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/tutor/consolidation/verify`, {
+            const res = await checkedFetch(`/api/ater/tutor/consolidation/verify`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2253,7 +2282,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to verify consolidation quiz (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] verifyConsolidationQuiz failed:', err);
             throw err;
@@ -2262,10 +2291,9 @@ export const sidecarApi = {
 
     startCramSession: async (payload: any) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/start`, {
+            const res = await checkedFetch(`/api/ater/cram/start`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2274,7 +2302,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to start cram session (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startCramSession failed:', err);
             throw err;
@@ -2282,10 +2310,9 @@ export const sidecarApi = {
     },
     getCramStatus: async (sessionId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/status?session_id=${encodeURIComponent(sessionId)}`, {
+            const res = await checkedFetch(`/api/ater/cram/status?session_id=${encodeURIComponent(sessionId)}`, {
                 method: 'GET',
                 headers
             });
@@ -2293,7 +2320,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to get cram status (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getCramStatus failed:', err);
             throw err;
@@ -2301,10 +2328,9 @@ export const sidecarApi = {
     },
     submitCramAnswer: async (payload: any) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/cram/submit`, {
+            const res = await checkedFetch(`/api/ater/cram/submit`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2313,15 +2339,15 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to submit cram answer (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] submitCramAnswer failed:', err);
             throw err;
         }
     },
     uploadSourceFile: async (file: File) => {
+        enforceFeatureLock('file_ingestion');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -2333,7 +2359,7 @@ export const sidecarApi = {
             const formData = new FormData();
             formData.append('file', file);
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/upload`, {
+            const res = await checkedFetch(`/api/ater/source/upload`, {
                 method: 'POST',
                 headers,
                 body: formData
@@ -2342,7 +2368,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to upload source file (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] uploadSourceFile failed:', err);
             throw err;
@@ -2352,7 +2378,6 @@ export const sidecarApi = {
         enforceFeatureLock('ai-features');
         await deductCredits('explain-features');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -2371,7 +2396,7 @@ export const sidecarApi = {
             if (aiModel) headers['X-AI-Model'] = aiModel;
             if (aiBaseUrl) headers['X-AI-Base-Url'] = aiBaseUrl;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/plan`, {
+            const res = await checkedFetch(`/api/ater/source/plan`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2380,15 +2405,16 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to generate grounded curriculum plan (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] generateGroundedCurriculumPlan failed:', err);
             throw err;
         }
     },
     augmentGroundedContext: async (payload: { concept: string }) => {
+        enforceFeatureLock('ai-features');
+        await deductCredits('explain-features');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -2398,7 +2424,7 @@ export const sidecarApi = {
             };
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/augment`, {
+            const res = await checkedFetch(`/api/ater/source/augment`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2407,7 +2433,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to augment grounded context (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] augmentGroundedContext failed:', err);
             throw err;
@@ -2426,10 +2452,10 @@ export const sidecarApi = {
         parent_hub_path?: string;
         chapter_title?: string;
     }) => {
+        enforceFeatureLock('file_ingestion');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs`, {
+            const res = await checkedFetch(`/api/ater/source/jobs`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2438,7 +2464,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to create source learning job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] createSourceLearningJob failed:', err);
             throw err;
@@ -2446,9 +2472,8 @@ export const sidecarApi = {
     },
     getSourceLearningJob: async (jobId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}`, {
+            const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}`, {
                 method: 'GET',
                 headers
             });
@@ -2456,17 +2481,17 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to get source learning job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getSourceLearningJob failed:', err);
             throw err;
         }
     },
     startSourceLearningJob: async (jobId: string) => {
+        enforceFeatureLock('file_ingestion');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}/start`, {
+            const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/start`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({})
@@ -2475,17 +2500,18 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to start source learning job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startSourceLearningJob failed:', err);
             throw err;
         }
     },
     deploySourceLearningJob: async (jobId: string) => {
+        enforceFeatureLock('ai-features');
+        await deductCredits('explain-features');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}/deploy`, {
+            const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/deploy`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({})
@@ -2494,17 +2520,17 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to deploy source learning job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] deploySourceLearningJob failed:', err);
             throw err;
         }
     },
     updateSourceLearningJobRoadmap: async (jobId: string, titles: string[]) => {
+        enforceFeatureLock('ai-features');
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/source/jobs/${encodeURIComponent(jobId)}/roadmap`, {
+            const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/roadmap`, {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ titles })
@@ -2513,7 +2539,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to update source roadmap (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] updateSourceLearningJobRoadmap failed:', err);
             throw err;
@@ -2521,9 +2547,8 @@ export const sidecarApi = {
     },
     createAcademicChapterHub: async (payload: { chapter_title: string; semester: string; course: string }) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/academic/chapter-hubs`, {
+            const res = await checkedFetch(`/api/ater/academic/chapter-hubs`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2532,7 +2557,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to create academic chapter hub (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] createAcademicChapterHub failed:', err);
             throw err;
@@ -2540,9 +2565,8 @@ export const sidecarApi = {
     },
     createPromptTeacherJob: async (payload: { prompt: string; conversation_id?: string }) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/prompt/jobs`, {
+            const res = await checkedFetch(`/api/ater/prompt/jobs`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
@@ -2551,7 +2575,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to create prompt teacher job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] createPromptTeacherJob failed:', err);
             throw err;
@@ -2559,9 +2583,8 @@ export const sidecarApi = {
     },
     getPromptTeacherJob: async (jobId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/prompt/jobs/${encodeURIComponent(jobId)}`, {
+            const res = await checkedFetch(`/api/ater/prompt/jobs/${encodeURIComponent(jobId)}`, {
                 method: 'GET',
                 headers
             });
@@ -2569,7 +2592,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to get prompt teacher job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getPromptTeacherJob failed:', err);
             throw err;
@@ -2577,9 +2600,8 @@ export const sidecarApi = {
     },
     startPromptTeacherJob: async (jobId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/prompt/jobs/${encodeURIComponent(jobId)}/start`, {
+            const res = await checkedFetch(`/api/ater/prompt/jobs/${encodeURIComponent(jobId)}/start`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({})
@@ -2588,7 +2610,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to start prompt teacher job (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startPromptTeacherJob failed:', err);
             throw err;
@@ -2599,7 +2621,6 @@ export const sidecarApi = {
     },
     getLearnerProfile: async (topic: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -2609,7 +2630,7 @@ export const sidecarApi = {
             };
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/learner/profile?topic=${encodeURIComponent(topic)}`, {
+            const res = await checkedFetch(`/api/ater/learner/profile?topic=${encodeURIComponent(topic)}`, {
                 method: 'GET',
                 headers
             });
@@ -2617,7 +2638,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to fetch learner profile (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getLearnerProfile failed:', err);
             throw err;
@@ -2625,7 +2646,6 @@ export const sidecarApi = {
     },
     getLearnerRecommendations: async (topic: string, limit?: number) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
             const obsidianVaultPath = await store.get<string>('obsidianVaultPath');
@@ -2635,7 +2655,7 @@ export const sidecarApi = {
             };
             if (obsidianVaultPath) headers['X-Vault-Path'] = obsidianVaultPath;
 
-            const res = await fetch(`http://127.0.0.1:${port}/api/ater/learner/recommendations?topic=${encodeURIComponent(topic)}&limit=${limit || 5}`, {
+            const res = await checkedFetch(`/api/ater/learner/recommendations?topic=${encodeURIComponent(topic)}&limit=${limit || 5}`, {
                 method: 'GET',
                 headers
             });
@@ -2643,7 +2663,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to fetch learner recommendations (HTTP ${res.status})`);
             }
-            return await res.json();
+            return await checkedJson(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getLearnerRecommendations failed:', err);
             throw err;
@@ -2652,14 +2672,13 @@ export const sidecarApi = {
     // --- Chat Runtime Client API ---
     createConversation: async (title: string, metadata?: any) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations`, {
+            const res = await checkedFetch(`/api/chat/conversations`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ title, metadata })
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] createConversation failed:', err);
             throw err;
@@ -2667,13 +2686,12 @@ export const sidecarApi = {
     },
     listConversations: async (includeArchived?: boolean) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations?include_archived=${!!includeArchived}`, {
+            const res = await checkedFetch(`/api/chat/conversations?include_archived=${!!includeArchived}`, {
                 method: 'GET',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] listConversations failed:', err);
             throw err;
@@ -2681,13 +2699,12 @@ export const sidecarApi = {
     },
     getConversation: async (convId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}`, {
                 method: 'GET',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] getConversation failed:', err);
             throw err;
@@ -2695,14 +2712,13 @@ export const sidecarApi = {
     },
     updateConversation: async (convId: string, data: { title?: string; metadata?: any }) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}`, {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify(data)
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] updateConversation failed:', err);
             throw err;
@@ -2710,13 +2726,12 @@ export const sidecarApi = {
     },
     deleteConversation: async (convId: string, hard?: boolean) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}?hard=${!!hard}`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}?hard=${!!hard}`, {
                 method: 'DELETE',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] deleteConversation failed:', err);
             throw err;
@@ -2724,13 +2739,12 @@ export const sidecarApi = {
     },
     archiveConversation: async (convId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/archive`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}/archive`, {
                 method: 'POST',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] archiveConversation failed:', err);
             throw err;
@@ -2738,13 +2752,12 @@ export const sidecarApi = {
     },
     restoreConversation: async (convId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/restore`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}/restore`, {
                 method: 'POST',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] restoreConversation failed:', err);
             throw err;
@@ -2752,13 +2765,12 @@ export const sidecarApi = {
     },
     getMessages: async (convId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/messages`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
                 method: 'GET',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] getMessages failed:', err);
             throw err;
@@ -2766,14 +2778,13 @@ export const sidecarApi = {
     },
     appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string, metadata?: any) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/messages`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ role, content, parent_message_id: parentMessageId, metadata })
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] appendMessage failed:', err);
             throw err;
@@ -2781,14 +2792,13 @@ export const sidecarApi = {
     },
     cancelStream: async (runId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/stream/cancel`, {
+            const res = await checkedFetch(`/api/chat/stream/cancel`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ run_id: runId })
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] cancelStream failed:', err);
             throw err;
@@ -2796,9 +2806,8 @@ export const sidecarApi = {
     },
     regenerateMessage: async (convId: string, messageId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/regenerate`, {
+            return await checkedFetch(`/api/chat/conversations/${convId}/regenerate`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message_id: messageId })
@@ -2810,9 +2819,8 @@ export const sidecarApi = {
     },
     branchMessage: async (convId: string, messageId: string, content: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/branch`, {
+            return await checkedFetch(`/api/chat/conversations/${convId}/branch`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message_id: messageId, content })
@@ -2824,16 +2832,15 @@ export const sidecarApi = {
     },
     listMemories: async (conversationId?: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
             const url = conversationId 
-                ? `http://127.0.0.1:${port}/api/chat/memories?conversation_id=${conversationId}`
-                : `http://127.0.0.1:${port}/api/chat/memories`;
-            const res = await fetch(url, {
+                ? `/api/chat/memories?conversation_id=${conversationId}`
+                : `/api/chat/memories`;
+            const res = await checkedFetch(url, {
                 method: 'GET',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] listMemories failed:', err);
             throw err;
@@ -2841,14 +2848,13 @@ export const sidecarApi = {
     },
     createMemory: async (data: { scope: string; content: string; confidence?: number; conversation_id?: string; status?: string }) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories`, {
+            const res = await checkedFetch(`/api/chat/memories`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(data)
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] createMemory failed:', err);
             throw err;
@@ -2856,14 +2862,13 @@ export const sidecarApi = {
     },
     patchMemory: async (memoryId: string, data: { enabled?: boolean; status?: string }) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories/${memoryId}`, {
+            const res = await checkedFetch(`/api/chat/memories/${memoryId}`, {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify(data)
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] patchMemory failed:', err);
             throw err;
@@ -2871,13 +2876,12 @@ export const sidecarApi = {
     },
     deleteMemory: async (memoryId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/memories/${memoryId}`, {
+            const res = await checkedFetch(`/api/chat/memories/${memoryId}`, {
                 method: 'DELETE',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] deleteMemory failed:', err);
             throw err;
@@ -2885,14 +2889,13 @@ export const sidecarApi = {
     },
     uploadAttachment: async (convId: string, filePath: string, fileType: string, messageId?: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/attachments`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}/attachments`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ file_path: filePath, file_type: fileType, message_id: messageId })
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] uploadAttachment failed:', err);
             throw err;
@@ -2900,13 +2903,12 @@ export const sidecarApi = {
     },
     listAttachments: async (convId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/attachments`, {
+            const res = await checkedFetch(`/api/chat/conversations/${convId}/attachments`, {
                 method: 'GET',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] listAttachments failed:', err);
             throw err;
@@ -2914,13 +2916,12 @@ export const sidecarApi = {
     },
     promoteAttachment: async (attachmentId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/attachments/${attachmentId}/promote`, {
+            const res = await checkedFetch(`/api/chat/attachments/${attachmentId}/promote`, {
                 method: 'POST',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] promoteAttachment failed:', err);
             throw err;
@@ -2928,13 +2929,12 @@ export const sidecarApi = {
     },
     getMessageTools: async (messageId: string) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders();
-            const res = await fetch(`http://127.0.0.1:${port}/api/chat/messages/${messageId}/tools`, {
+            const res = await checkedFetch(`/api/chat/messages/${messageId}/tools`, {
                 method: 'GET',
                 headers
             });
-            return await res.json();
+            return await checkedJson(res);
         } catch (err) {
             console.error('[Oracle Client] getMessageTools failed:', err);
             throw err;
@@ -2952,9 +2952,8 @@ export const sidecarApi = {
         }
     ) => {
         try {
-            const port = await invoke<number>('get_sidecar_port');
             const headers = await getBaseHeaders('application/json');
-            return await fetch(`http://127.0.0.1:${port}/api/chat/conversations/${convId}/stream`, {
+            return await checkedFetch(`/api/chat/conversations/${convId}/stream`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)

@@ -6,6 +6,91 @@ Ignored scope: website and admin app.
 
 Status: incomplete but deep audit in progress. This document records confirmed problems found so far and gives a checklist-style path to fix them.
 
+## Final Cleanup Update - 2026-07-04
+
+This section records the final manual cleanup pass after the Jules PR campaign. These items were implemented on the final cleanup branch after the automated Jules sessions were merged or superseded.
+
+### Completed In Final Cleanup
+
+- [x] Fixed the remaining `sidecarApi.ts` failed Jules task.
+  - Problem fixed: desktop API calls were still using hardcoded sidecar URLs, inconsistent response handling, and no mutation request serialization.
+  - What changed:
+    - Added a dynamic sidecar base URL helper backed by the Tauri `get_sidecar_port` command.
+    - Added checked fetch/JSON helpers so non-2xx sidecar responses throw useful errors.
+    - Added per-method/per-URL locking for non-GET requests to reduce race conditions in mutation paths.
+    - Updated Ater desktop sidecar calls to use relative `/api/...` URLs through the checked helpers.
+  - Verification:
+    - [x] `pnpm --filter @ater/desktop typecheck`
+    - [x] `pnpm --filter @ater/desktop test -- src/tests/sidecarApi.test.ts src/tests/PdfViewer.test.tsx src/tests/UnifiedSandboxViewer.test.tsx src/tests/app-sidebar.test.tsx`
+    - [x] `pnpm --filter @ater/desktop lint`
+
+- [x] Fixed the `/practice/explain` outside-vault misconception append bug.
+  - Problem fixed: `AterService.append_misconception_to_note()` accepted absolute paths and could read/write outside the configured vault.
+  - What changed:
+    - Resolved note paths through the shared `resolve_vault_path()` containment helper.
+    - Outside-vault absolute paths and traversal attempts are rejected by the shared helper.
+  - Verification:
+    - [x] `uv run pytest tests/routers/test_ai_fixes.py tests/routers/test_ater_traversal.py tests/domains/ater/test_chat_attachment_security.py`
+
+- [x] Removed the dead unauthenticated `/ater/save-persona` endpoint.
+  - Problem fixed: the route was unauthenticated and imported a nonexistent `update_persona_prompt` function.
+  - What changed:
+    - Deleted the broken route instead of preserving a write endpoint with unclear product ownership.
+  - Verification:
+    - [x] Backend targeted tests passed.
+
+- [x] Token-gated the remaining Ater status endpoints.
+  - Problem fixed: `/api/practice/status`, `/api/rag/sync-status`, and `/api/practice/vault/status` did not require sidecar token validation.
+  - What changed:
+    - Added `Depends(get_app_secrets)` to each status route.
+    - Adjusted traversal route tests so dependency overrides do not leak across tests.
+  - Verification:
+    - [x] Backend targeted tests passed.
+
+- [x] Added missing frontend feature locks for source learning and Feynman validation paths.
+  - Problem fixed: several source ingestion/job and Feynman validation client methods could bypass lower-level feature lock checks.
+  - What changed:
+    - Added `file_ingestion` checks to upload/create/start source learning paths.
+    - Added `ai-features` checks and credit deduction to source augmentation/deployment paths.
+    - Added `interactive_quiz` lock enforcement to Feynman validation.
+  - Verification:
+    - [x] Desktop typecheck passed.
+    - [x] Focused desktop tests passed.
+
+- [x] Removed random machine ID fallbacks from desktop entitlement flows.
+  - Problem fixed: `ConfigContext` and `securityStore` could persist or request leases with random UUIDs when native machine ID resolution failed.
+  - What changed:
+    - `ConfigContext` no longer persists a random fallback `machineId`.
+    - `securityStore` skips lease synchronization when no real native machine ID is available.
+  - Verification:
+    - [x] Desktop typecheck passed.
+    - [x] Focused desktop tests passed.
+
+- [x] Applied useful superseded PR work manually without Jules metadata artifacts.
+  - Problem fixed: older pre-campaign PRs still contained useful code changes but also carried generated/session artifacts or overlapped with merged fixes.
+  - What changed:
+    - `AuthGuard` bypass is now development-only.
+    - `HubConnectionsNav` search filtering no longer uses JSON deep cloning.
+    - `MiniPracticeUI` markdown rendering was memoized and static component config was hoisted.
+  - Verification:
+    - [x] Desktop lint passed with warnings only.
+    - [x] Desktop typecheck passed.
+
+### Remaining After Final Cleanup
+
+- [ ] Full CI was not run locally end to end.
+  - Completed local verification covered backend targeted security tests, desktop typecheck, focused desktop tests, and desktop lint.
+  - Still recommended: run the repository's full CI matrix after the final cleanup PR lands.
+
+- [ ] Desktop lint still reports warnings, but zero errors.
+  - Current result: `964 problems (0 errors, 964 warnings)`.
+  - These warnings are mostly existing `no-explicit-any`, fast-refresh, and hook dependency warnings.
+  - They do not block the current lint command because the command exits `0`.
+
+- [ ] Root worktree still contains pre-existing dirty files and scratch scripts.
+  - The final cleanup was done in an isolated temp worktree to avoid overwriting user/local changes.
+  - Recommended cleanup after merge: compare root-local changes against `origin/main`, then delete only confirmed scratch scripts.
+
 ## Continuation Update
 
 This section records the additional audit work done after the initial `Problems.Md` file was created.

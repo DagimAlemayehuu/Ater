@@ -3258,10 +3258,9 @@ generated: true"""
         Appends a misconception bullet point to the '## My Common Misconceptions' section in the note.
         """
         import re
+        from src.utils.vault_path import resolve_vault_path
         try:
-            target_path = Path(note_path)
-            if not target_path.is_absolute():
-                target_path = self.vm.vault_path / note_path
+            target_path = resolve_vault_path(self.vm.vault_path, note_path)
 
             if not target_path.exists():
                 # Search recursively

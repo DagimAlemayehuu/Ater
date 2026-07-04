@@ -410,20 +410,6 @@ def delete_obsidian_item(path: str, secrets: AppSecrets = Depends(get_app_secret
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/ater/save-persona")
-async def save_persona_prompt(payload: Dict[str, str] = Body(...)):
-    """Saves or updates custom persona prompts."""
-    mode = payload.get("mode")
-    prompt = payload.get("prompt")
-    if not mode or not prompt:
-        raise HTTPException(status_code=400, detail="mode and prompt are required")
-    try:
-        from src.domains.ater.agents import update_persona_prompt
-        update_persona_prompt(mode, prompt)
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/ater/process")
 async def ater_process_manual(
     payload: Dict[str, Any],
@@ -1020,7 +1006,7 @@ async def generate_practice_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/practice/status")
-async def get_practice_status():
+async def get_practice_status(secrets: AppSecrets = Depends(get_app_secrets)):
     """Returns the current generation status for all active sessions."""
     return {"status": dict(AterService._status)}
 
@@ -1699,7 +1685,7 @@ async def rag_watcher_toggle(secrets: AppSecrets = Depends(get_app_secrets)):
         return {"status": "stopped"}
 
 @router.get("/rag/sync-status")
-async def get_rag_sync_status():
+async def get_rag_sync_status(secrets: AppSecrets = Depends(get_app_secrets)):
     """Returns the current status of the vault sync."""
     return state.rag_sync_status
 
@@ -2054,7 +2040,7 @@ async def vault_generate_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/practice/vault/status")
-async def vault_generation_status():
+async def vault_generation_status(secrets: AppSecrets = Depends(get_app_secrets)):
     """Returns current vault generation job statuses."""
     return {"status": _vault_status}
 
