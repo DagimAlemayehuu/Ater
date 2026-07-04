@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+
 import { useConfig } from '@/lib/ConfigContext';
 import { useTheme } from '@/context/theme-provider';
 import { ExplainSidebar } from './ExplainSidebar';
@@ -98,6 +98,11 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     const [filteredList, setFilteredList] = useState<number[]>([]);
     const [pageCount, setPageCount] = useState<number | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+    const [isFetchingPdf, setIsFetchingPdf] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
 
     // Explain sidebar state
     const [explainOpen, setExplainOpen] = useState(false);
@@ -238,12 +243,62 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
 
     // resolvedTheme is fetched dynamically from useTheme context
 
-    // Memoize URL to prevent reloads when jumping between waypoints in the same file
-    const pdfUrl = useMemo(() => {
-        const vaultPath = config?.obsidianVaultPath || '';
-        const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
-        const normalizedPath = path.replace(/\\/g, '/');
-        return `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${firstPageRef.current}${filterStr}&theme=${resolvedTheme}`;
+    // Fetch PDF securely with token and create Blob URL
+    useEffect(() => {
+        let active = true;
+        let currentBlobUrl: string | null = null;
+        
+        const fetchPdf = async () => {
+            setIsFetchingPdf(true);
+            setFetchError(null);
+            setPdfBlobUrl(null);
+            
+            try {
+                const vaultPath = config?.obsidianVaultPath || '';
+                const filterStr = filterPages && filterPages.length > 0 ? `&filter_pages=${filterPages.join(',')}` : '';
+                const normalizedPath = path.replace(/\\/g, '/');
+                const url = `http://127.0.0.1:${sidecarPort}/api/obsidian/viewer/${encodeURI(normalizedPath)}?vault_path=${encodeURIComponent(vaultPath)}&page=${firstPageRef.current}${filterStr}&theme=${resolvedTheme}`;
+                
+                const sidecarToken = await invoke<string>('get_sidecar_token').catch(() => '');
+                
+                const res = await fetch(url, {
+                    headers: {
+                        'X-Ater-Token': sidecarToken
+                    }
+                });
+                
+                if (!active) return;
+                
+                if (!res.ok) {
+                    throw new Error(`Failed to load PDF (${res.status})`);
+                }
+                
+                const blob = await res.blob();
+                if (!active) return;
+                
+                currentBlobUrl = URL.createObjectURL(blob);
+                setPdfBlobUrl(currentBlobUrl);
+            } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                if (active) {
+                    setFetchError(err.message || "Failed to load PDF");
+                }
+            } finally {
+                if (active) {
+                    setIsFetchingPdf(false);
+                }
+            }
+        };
+        
+        if (path) {
+            fetchPdf();
+        }
+        
+        return () => {
+            active = false;
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+            }
+        };
     }, [path, resolvedTheme, filterPages, config?.obsidianVaultPath, sidecarPort]);
 
     const handleAskAI = () => {
@@ -361,15 +416,26 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             </div>
                         ) : (
                             <>
-                                {!iframeLoaded && <PanelLoader label="Opening PDF" />}
-                                <iframe 
-                                    ref={iframeRef} 
-                                    src={pdfUrl} 
-                                    onLoad={handleIframeLoad}
-                                    className="w-full h-full border-none overflow-hidden bg-card" 
-                                    title={title} 
-                                    allowFullScreen 
-                                />
+                                {(isFetchingPdf || (!iframeLoaded && pdfBlobUrl)) && <PanelLoader label="Opening PDF" />}
+                                {fetchError && (
+                                    <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                                        <div className="text-destructive mb-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                        </div>
+                                        <p className="text-sm font-medium text-foreground">{fetchError}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Could not load the document</p>
+                                    </div>
+                                )}
+                                {pdfBlobUrl && !fetchError && (
+                                    <iframe 
+                                        ref={iframeRef} 
+                                        src={pdfBlobUrl} 
+                                        onLoad={handleIframeLoad}
+                                        className={`w-full h-full border-none overflow-hidden bg-card ${(!iframeLoaded || isFetchingPdf) ? 'opacity-0 absolute' : 'opacity-100 relative'}`}
+                                        title={title} 
+                                        allowFullScreen 
+                                    />
+                                )}
                             </>
                         )}
                     </div>

@@ -162,6 +162,15 @@ describe('Obsidian Notes Explorer', () => {
   });
 
   it('opens PDFs from the projected sidebar', async () => {
+    (sidecarApi.aterListInbox as any).mockResolvedValue({
+      files: [
+        {
+          name: 'Algorithms_Syllabus.pdf',
+          path: 'Inbox/Algorithms_Syllabus.pdf',
+          is_dir: false,
+        }
+      ]
+    });
     render(
       <MemoryRouter initialEntries={['/obsidian']}>
         <ConfigProvider>
@@ -178,8 +187,12 @@ describe('Obsidian Notes Explorer', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByText('Inbox'));
-    fireEvent.click(await screen.findByText('Algorithms_Syllabus'));
+    const inboxDir = await screen.findByText('Inbox');
+    fireEvent.click(inboxDir);
+    
+    // We need to await the file appearing
+    const file = await screen.findByText('Algorithms_Syllabus');
+    fireEvent.click(file);
 
     const viewer = await screen.findByTestId('pdf-viewer');
     expect(viewer).toHaveAttribute('data-path', 'Inbox/Algorithms_Syllabus.pdf');
