@@ -10,6 +10,7 @@ from urllib.parse import unquote, quote
 from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
+from src.utils.vault_path import resolve_vault_path
 
 router = APIRouter()
 
@@ -183,7 +184,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
         return {"databases": []}
         
     databases = []
-    yaml = ruamel.yaml.YAML(typ='safe', pure=True)
+    
     
     for entry in db_path.iterdir():
         if entry.is_dir() and not entry.name.startswith("."):
@@ -226,7 +227,7 @@ async def list_vault_databases(secrets: AppSecrets = Depends(get_app_secrets)):
                         if content.startswith("---"):
                             end_idx = content.find("---", 3)
                             if end_idx != -1:
-                                frontmatter = yaml.load(content[3:end_idx])
+                                frontmatter = yaml.safe_load(content[3:end_idx])
                                 if isinstance(frontmatter, dict):
                                     for k, v in frontmatter.items():
                                         # STRICT FILTER: ignore internal or redundant properties
@@ -333,7 +334,7 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
     if not db_path.exists():
         raise HTTPException(status_code=404, detail="Database not found")
         
-    yaml = ruamel.yaml.YAML(typ='safe', pure=True)
+    
     rows = []
     
     for md_file in db_path.rglob("*.md"):
@@ -345,7 +346,7 @@ async def query_vault_database(db_name: str, secrets: AppSecrets = Depends(get_a
                 if content.startswith("---"):
                     end_idx = content.find("---", 3)
                     if end_idx != -1:
-                        props = yaml.load(content[3:end_idx]) or {}
+                        props = yaml.safe_load(content[3:end_idx]) or {}
                         
                 # Ensure the title is always part of the properties
                 if isinstance(props, dict):
@@ -388,7 +389,7 @@ async def update_database_schema(db_name: str, req: UpdateSchemaRequest, secrets
         db_path.mkdir(parents=True, exist_ok=True)
         
     try:
-        yaml = ruamel.yaml.YAML(typ='safe')
+        
         
         # 1. Manage select property directories
         for prop_name, prop_meta in req.properties.items():
@@ -410,7 +411,7 @@ async def update_database_schema(db_name: str, req: UpdateSchemaRequest, secrets
                         end_idx = content.find("---", 3)
                         if end_idx != -1:
                             fm_str = content[3:end_idx]
-                            fm_data = yaml.load(fm_str)
+                            fm_data = yaml.safe_load(fm_str)
                             if isinstance(fm_data, dict) and req.rename_from in fm_data:
                                 fm_data[req.rename_to] = fm_data.pop(req.rename_from)
                                 
@@ -452,7 +453,7 @@ async def update_vault_row(db_name: str, file_name: str, req: UpdateRowRequest, 
                 frontmatter_str = content[3:end_idx]
                 body_str = content[end_idx+3:]
                 
-                data = yaml.load(frontmatter_str, Loader=yaml.SafeLoader) or {}
+                data = yaml.safe_load(frontmatter_str) or {}
                 
                 # Apply updates
                 for k, v in req.properties.items():
@@ -585,7 +586,7 @@ async def rename_vault_row(db_name: str, old_file_name: str, req: RenameRowReque
                 if end_idx != -1:
                     frontmatter_str = content[3:end_idx]
                     body_str = content[end_idx+3:]
-                    data = yaml.load(frontmatter_str, Loader=yaml.SafeLoader) or {}
+                    data = yaml.safe_load(frontmatter_str) or {}
                     if "title" in data or True:  # always set title
                         data["title"] = req.new_name
                     import io
@@ -634,7 +635,11 @@ async def create_vault_file(req: CreateFileRequest, secrets: AppSecrets = Depend
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
-    full_path = Path(secrets.vault_path) / req.path
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, req.path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     if full_path.exists() and not req.overwrite:
         raise HTTPException(status_code=400, detail="File already exists")
     
@@ -654,7 +659,11 @@ async def create_vault_folder(req: CreateFolderRequest, secrets: AppSecrets = De
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
-    full_path = Path(secrets.vault_path) / req.path
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, req.path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
     try:
         full_path.mkdir(parents=True, exist_ok=True)
         return {"success": True, "path": req.path}
@@ -670,8 +679,11 @@ async def move_vault_item(req: MoveItemRequest, secrets: AppSecrets = Depends(ge
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
-    old_full_path = Path(secrets.vault_path) / req.old_path
-    new_full_path = Path(secrets.vault_path) / req.new_path
+    try:
+        old_full_path = resolve_vault_path(secrets.vault_path, req.old_path)
+        new_full_path = resolve_vault_path(secrets.vault_path, req.new_path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     if not old_full_path.exists():
         raise HTTPException(status_code=404, detail="Source item not found")
@@ -688,7 +700,11 @@ async def delete_vault_item(path: str, secrets: AppSecrets = Depends(get_app_sec
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
-    full_path = Path(secrets.vault_path) / path
+    try:
+        full_path = resolve_vault_path(secrets.vault_path, path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
     if not full_path.exists():
         raise HTTPException(status_code=404, detail="Item not found")
     
@@ -817,7 +833,11 @@ async def get_property_options(source: str, secrets: AppSecrets = Depends(get_ap
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
-    source_path = Path(secrets.vault_path) / source
+    try:
+        source_path = resolve_vault_path(secrets.vault_path, source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     if not source_path.exists():
         return {"options": []}
         
@@ -836,7 +856,11 @@ async def create_property_option(req: CreateOptionRequest, secrets: AppSecrets =
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
         
-    source_path = Path(secrets.vault_path) / req.source
+    try:
+        source_path = resolve_vault_path(secrets.vault_path, req.source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     if not source_path.exists():
         source_path.mkdir(parents=True, exist_ok=True)
         
@@ -845,7 +869,7 @@ async def create_property_option(req: CreateOptionRequest, secrets: AppSecrets =
     if not safe_name:
         raise HTTPException(status_code=400, detail="Invalid name")
         
-    md_file = source_path / f"{req.name}.md"
+    md_file = source_path / f"{safe_name}.md"
     if not md_file.exists():
         with open(md_file, "w") as f:
             f.write(f"---\ntitle: {req.name}\n---")
@@ -859,7 +883,11 @@ async def update_property_option(req: CreateOptionRequest, old_name: str, secret
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
-    source_path = Path(secrets.vault_path) / req.source
+    try:
+        source_path = resolve_vault_path(secrets.vault_path, req.source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     old_file = source_path / f"{old_name}.md"
     new_file = source_path / f"{req.name}.md"
     
@@ -876,7 +904,11 @@ async def delete_property_option(source: str, name: str, secrets: AppSecrets = D
     if not secrets.vault_path:
         raise HTTPException(status_code=401, detail="X-Vault-Path header missing")
     
-    source_path = Path(secrets.vault_path) / source
+    try:
+        source_path = resolve_vault_path(secrets.vault_path, source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     md_file = source_path / f"{name}.md"
     
     if md_file.exists():
@@ -909,7 +941,7 @@ async def delete_vault_database(db_name: str, secrets: AppSecrets = Depends(get_
     db_path = vault_root / DB_DIR_PREFIX / db_name
     try:
         # Move to archive or delete?
-        archive_path = vault_root / "Database" / "12 - Archive" / f"{db_name}_{uuid.uuid4().hex[:4]}"
+        archive_path = vault_root / "database" / "12 - Archive" / f"{db_name}_{uuid.uuid4().hex[:4]}"
         if db_path.exists():
             archive_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(db_path), str(archive_path))
@@ -1050,24 +1082,11 @@ async def get_vault_backlinks(page_name: str, secrets: AppSecrets = Depends(get_
     return {"backlinks": backlinks}
     
 def resolve_absolute_or_vault_path(decoded_path: str, effective_vault_path: Optional[str]) -> Optional[Path]:
-    # 1. Check if it's already an absolute path
-    path_obj = Path(decoded_path)
-    if decoded_path.startswith("/") or path_obj.is_absolute():
-        return path_obj
-        
-    # 2. Check Windows absolute path starting with drive letter (e.g. C:/...)
-    if len(decoded_path) > 1 and decoded_path[1] == ":" and decoded_path[0].isalpha():
-        return path_obj
-        
-    # 3. Check if it's a Unix absolute path with the leading slash stripped
-    potential_unix_abs = Path("/" + decoded_path)
-    if potential_unix_abs.exists():
-        return potential_unix_abs
-        
-    # 4. Fallback to vault path
     if effective_vault_path:
-        return Path(effective_vault_path) / decoded_path
-        
+        try:
+            return resolve_vault_path(effective_vault_path, decoded_path)
+        except ValueError:
+            return None
     return None
 
 @router.get("/obsidian/pdf-metadata/{path:path}")
@@ -1081,7 +1100,10 @@ async def get_pdf_metadata(
     decoded_path = unquote(path).replace("\\", "/")
     resolved_path = resolve_absolute_or_vault_path(decoded_path, effective_vault_path)
     
-    if not resolved_path or not resolved_path.exists():
+    if not resolved_path:
+        raise HTTPException(status_code=400, detail="Invalid path")
+        
+    if not resolved_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
     try:
@@ -1110,7 +1132,10 @@ async def get_pdf_viewer(
     decoded_path = unquote(path).replace("\\", "/")
     resolved_path = resolve_absolute_or_vault_path(decoded_path, effective_vault_path)
     
-    if not resolved_path or not resolved_path.exists():
+    if not resolved_path:
+        raise HTTPException(status_code=400, detail="Invalid path")
+        
+    if not resolved_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
         
     resolved_str = str(resolved_path.as_posix())
@@ -1423,7 +1448,10 @@ async def serve_obsidian_file(
     decoded_path = unquote(path).replace("\\", "/")
     resolved_path = resolve_absolute_or_vault_path(decoded_path, effective_vault_path)
     
-    if not resolved_path or not resolved_path.exists():
+    if not resolved_path:
+        raise HTTPException(status_code=400, detail="Invalid path")
+        
+    if not resolved_path.exists():
         raise HTTPException(status_code=404, detail=f"File not found: {decoded_path}")
         
     return FileResponse(str(resolved_path))
