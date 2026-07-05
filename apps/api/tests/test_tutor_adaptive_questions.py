@@ -127,6 +127,49 @@ def test_remediation_fallback_chooses_domain_specific_type(tmp_path: Path):
     assert process_question["steps"]
 
 
+@pytest.mark.asyncio
+async def test_remediation_fallback_explains_wrong_answer_and_targets_same_misconception(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    rel = "Economics/Consumer_Preferences.md"
+    _write_note(
+        vault,
+        rel,
+        [{
+            "id": "q1",
+            "type": "true_false",
+            "family": "recognize",
+            "format": "choice",
+            "question": "True or False: weak preference in both directions means strict preference.",
+            "answer": "False",
+            "explanation": "Weak preference in both directions means indifference, not strict preference.",
+            "skill_target": "Consumer Preferences",
+        }],
+    )
+    manager = TutorSessionManager(tmp_path / "ater_queue.db", vault)
+    original = {
+        "id": "q1",
+        "type": "true_false",
+        "question": "True or False: weak preference in both directions means strict preference.",
+        "answer": "False",
+        "explanation": "Weak preference in both directions means indifference, not strict preference.",
+        "skill_target": "Consumer Preferences",
+    }
+
+    lesson = await manager.generate_detailed_remediation_lesson(rel, original, "True")
+    follow_up = await manager.generate_clean_remediation_question(rel, original, "True", lesson, seen_question_types=["true_false"])
+
+    assert "What you got wrong" in lesson
+    assert "Why that is wrong" in lesson
+    assert "Deeper correction" in lesson
+    assert "True" in lesson
+    assert "strict preference" in lesson
+    assert follow_up is not None
+    assert follow_up["is_remediation"] is True
+    assert follow_up["type"] != "true_false"
+    assert "weak preference" in (follow_up.get("question", "") + follow_up.get("explanation", "")).lower()
+
+
 def test_economics_remediation_does_not_choose_code_debug_or_trace(tmp_path: Path):
     vault = tmp_path / "vault"
     vault.mkdir()

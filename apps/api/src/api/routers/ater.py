@@ -3035,7 +3035,8 @@ async def practice_remediate_endpoint(
     
     if not note_path or not question:
         raise HTTPException(status_code=400, detail="note_path and question are required")
-        
+
+    manager = None
     try:
         from src.domains.ater.tutor_service import TutorSessionManager
         from src.domains.ater.service import AterService
@@ -3054,7 +3055,24 @@ async def practice_remediate_endpoint(
     except Exception as e:
         import traceback
         logger.error(f"[RemediationRouter] Error generating remediation: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=502 if e.__class__.__name__ == "TutorAIGenerationError" else 500, detail=str(e))
+        try:
+            if manager is None:
+                raise RuntimeError("remediation manager was not initialized")
+            lesson = manager._fallback_remediation_lesson(question, user_answer, "")
+            remediation_q = manager._fallback_proving_ground_question(
+                note_path,
+                question,
+                lesson,
+                attempt_number,
+                seen_question_types,
+            )
+            return {
+                "detailed_lesson": lesson,
+                "remediation_question": remediation_q,
+                "fallback": True,
+            }
+        except Exception:
+            raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ater/tutor/adaptive_question")
 async def get_adaptive_tutor_question_endpoint(

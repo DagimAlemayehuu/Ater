@@ -1,5 +1,6 @@
 import tempfile
 import sqlite3
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -436,6 +437,35 @@ def test_fallback_note_writes_source_specific_lesson_prose():
     assert "PxX + PyY = M" in content
 
 
+def test_source_atomic_note_contract_uses_three_dynamic_teaching_headings_without_inline_citations():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Qualitative/Definitional")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_preferences",
+        "title": "Consumer Preferences",
+        "domain": "ECON-MICRO",
+        "modality": "Qualitative/Definitional",
+        "source_pages": [3, 4, 5, 6],
+        "source_excerpts": [
+            {"page": 3, "text": "A bundle may contain pizza and Coca-Cola, or burger and beer."},
+            {"page": 4, "text": "A consumption bundle is a complete list of goods and services that are available for choice by the consumer."},
+            {"page": 6, "text": "If X is weakly preferred to Y and Y is weakly preferred to X, then X is indifferent to Y."},
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+    headings = re.findall(r"^##\s+(.+)$", content, flags=re.MULTILINE)
+
+    assert headings[0] == "Mental Model"
+    assert headings[-1] == "The Proving Grounds"
+    assert len([heading for heading in headings if heading not in {"Mental Model", "The Proving Grounds"}]) == 3
+    assert "[PAGE" not in content
+    assert "## Source Evidence" not in content
+
+
 def test_fallback_formal_anchor_avoids_slide_heading_when_no_equation_exists():
     compiler = SourceAtomicNoteCompiler()
     profile = build_teaching_profile("ECON-MICRO", "Quantitative")
@@ -457,7 +487,7 @@ def test_fallback_formal_anchor_avoids_slide_heading_when_no_equation_exists():
     note = compiler.compile_fallback_note(job, node, profile)
     content = note["content"]
 
-    formal_section = content.split("## The Formal Math & Models", 1)[1].split("## Source Evidence", 1)[0]
+    formal_section = content.split("## The Formal Math & Models", 1)[1].split("## The Proving Grounds", 1)[0]
     assert "Consumer Preferences: What the Consumer Wants" not in formal_section
     assert "Consumers make choices by comparing bundles" in formal_section
 
@@ -890,6 +920,45 @@ def test_compiler_ai_validation_repair_and_prompt_bounds():
     failed = compiler.compile_note(job, node, profile, ai_generator=lambda _prompt: (_ for _ in ()).throw(RuntimeError("rate limit")))
     assert failed["fallback"] is True
     assert failed["frontmatter"]["fallback_reason"] == "ai_failure"
+
+
+def test_strict_ai_note_count_validation_falls_back_instead_of_failing():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Conceptual")
+    job = {"job_id": "srcjob_test", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_1",
+        "title": "Consumer Preferences",
+        "domain": "ECON-MICRO",
+        "modality": "Conceptual",
+        "source_pages": [4, 6],
+        "source_excerpts": [
+            {"page": 4, "text": "A consumption bundle is a complete list of goods and services."},
+            {"page": 6, "text": "Consumers rank bundles using preference relations."},
+        ],
+        "warnings": [],
+    }
+    invalid_count_note = """
+## Mental Model
+Consumers choose between bundles.
+
+## Only One Teaching Heading
+This intentionally violates the three-heading teaching contract.
+
+## The Proving Grounds
+```interactive-quiz
+[]
+```
+"""
+
+    note = compiler.compile_note(job, node, profile, ai_generator=lambda _prompt: invalid_count_note, strict_ai=True)
+
+    assert note["fallback"] is True
+    assert "invalid_teaching_heading_count" in note["validation_errors"]
+    assert "invalid_quiz_count" in note["validation_errors"]
+    assert note["frontmatter"]["fallback_reason"]
+    assert note["content"].count("\n## ") >= 4
+    assert "## The Proving Grounds" in note["content"]
 
 
 @patch("src.domains.ater.source_service.load_pdf_robust", return_value=_fake_docs())

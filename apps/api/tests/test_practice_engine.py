@@ -166,6 +166,69 @@ def test_dynamic_proving_grounds_selectors():
     assert "trace" not in types_edu
 
 
+def test_practice_blueprint_selects_cognitive_toolkit_for_code_notes():
+    from src.domains.ater.quiz_builder import build_practice_blueprint
+
+    blueprint = build_practice_blueprint(
+        note_title="Python Function Runtime",
+        modality="Procedural",
+        source_snippet="def total(xs):\n    return sum(xs)\n\nTrace the return value and fix the bug when xs is None.",
+        prerequisites_count=2,
+        mode="CS-SOFTWARE",
+    )
+
+    assert blueprint["schema_version"] == 2
+    assert 1 <= blueprint["recommended_question_count"] <= 5
+    assert {"trace", "debug", "construct"} & set(blueprint["families"])
+    assert {"code_editor", "short_text"} & set(blueprint["formats"])
+    assert {"trace", "debug", "code"} & set(blueprint["legacy_types"])
+
+
+def test_practice_blueprint_preserves_legacy_type_selection():
+    from src.domains.ater.quiz_builder import (
+        build_practice_blueprint,
+        select_dynamic_question_types,
+    )
+
+    blueprint = build_practice_blueprint(
+        note_title="Budget Equation",
+        modality="Quantitative",
+        source_snippet="The source equation is PxX + PyY = M and the slope is -Px/Py.",
+        prerequisites_count=0,
+        mode="ECON-MICRO",
+    )
+
+    legacy_types = select_dynamic_question_types(
+        "Budget Equation",
+        "Quantitative",
+        "The source equation is PxX + PyY = M and the slope is -Px/Py.",
+        3,
+        mode="ECON-MICRO",
+    )
+
+    assert "solve" in blueprint["families"]
+    assert "short_text" in blueprint["formats"] or "table_editor" in blueprint["formats"]
+    assert legacy_types == blueprint["legacy_types"][:3]
+
+
+def test_fallback_questions_are_question_v2_compatible():
+    from src.domains.ater.quiz_builder import create_fallback_question
+
+    question = create_fallback_question(
+        "calculation",
+        "Budget Equation",
+        "Budget Equation",
+        note_content="The budget equation is PxX + PyY = M. Any affordable bundle must fit the income constraint.",
+    )
+
+    assert question["schema_version"] == 2
+    assert question["family"] in {"solve", "apply", "explain", "trace", "diagnose", "construct"}
+    assert question["format"] in {"short_text", "long_text", "blank", "choice", "match", "order", "code_editor", "table_editor"}
+    assert question["skill_target"] == "Budget Equation"
+    assert isinstance(question["rubric"], dict)
+    assert question["rubric"]["grading_mode"] in {"objective", "rubric", "hybrid"}
+
+
 def test_economics_practice_distribution_filters_code_debug_trace():
     from src.domains.ater.quiz_builder import sanitize_question_distribution_for_context
 

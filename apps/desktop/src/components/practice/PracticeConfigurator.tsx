@@ -53,6 +53,12 @@ export function PracticeConfigurator({
     setAdvancedConfig((prev) => ({
       ...prev,
       questionDistribution: { ...prev.questionDistribution, [type]: val },
+      smartMixPreset: 'custom',
+      practicePolicy: {
+        ...(prev.practicePolicy || {}),
+        mode: 'custom',
+        planner: 'manual_distribution',
+      },
     }))
   }
 
@@ -63,6 +69,12 @@ export function PracticeConfigurator({
     setAdvancedConfig((prev) => ({
       ...prev,
       questionDistribution: { ...ZERO_DISTRIBUTION, ...dist },
+      smartMixPreset: key,
+      practicePolicy: {
+        ...(prev.practicePolicy || {}),
+        mode: key,
+        planner: 'smart_mix',
+      },
     }))
   }
 
@@ -80,7 +92,16 @@ export function PracticeConfigurator({
       dist[t] = Math.min(share, remaining)
       remaining = Math.max(0, remaining - dist[t])
     })
-    setAdvancedConfig((prev) => ({ ...prev, questionDistribution: dist }))
+    setAdvancedConfig((prev) => ({
+      ...prev,
+      questionDistribution: dist,
+      smartMixPreset: 'custom',
+      practicePolicy: {
+        ...(prev.practicePolicy || {}),
+        mode: 'custom',
+        planner: 'manual_distribution',
+      },
+    }))
     toast.success('Randomized!')
   }
 
@@ -275,7 +296,7 @@ export function PracticeConfigurator({
           <div className="col-span-1 lg:col-span-3 p-8 bg-bento-card border border-border/40 rounded-[12px] flex flex-col min-h-0 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/40 pb-4 mb-6 gap-4">
               <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-                Question Types Distribution
+                Smart Question Toolkit
               </h3>
               <div className="flex items-center gap-4">
                 <div className="flex flex-wrap gap-1.5 justify-end">
@@ -283,7 +304,10 @@ export function PracticeConfigurator({
                     <button
                       key={k}
                       onClick={() => applyPreset(k)}
-                      className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-bento-card hover:bg-bento-item border border-border/40 text-muted-foreground hover:text-foreground transition-all rounded-[4px] cursor-pointer font-sans"
+                      className={cn(
+                        "px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-bento-card hover:bg-bento-item border border-border/40 text-muted-foreground hover:text-foreground transition-all rounded-[4px] cursor-pointer font-sans",
+                        advancedConfig.smartMixPreset === k && "bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background"
+                      )}
                       title={p.label}
                     >
                       {p.label}
@@ -301,19 +325,19 @@ export function PracticeConfigurator({
             </div>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 content-start">
               {[
-                { key: 'mcq', label: 'Multiple Choice' },
-                { key: 'true_false', label: 'True or False' },
-                { key: 'writing', label: 'Writing / Essay' },
-                { key: 'fill_in', label: 'Fill in the Blank' },
-                { key: 'debug', label: 'Debugging / Error Finding' },
-                { key: 'trace', label: 'Logic / Calculation Trace' },
-                { key: 'order', label: 'Ordering / Steps' },
-                { key: 'matching', label: 'Matching Pairs' },
-                { key: 'synthesis', label: 'Synthesis / Scenario' },
-                { key: 'calculation', label: 'Math / Calculation' },
-                { key: 'data_analysis', label: 'Data Analysis' },
-                { key: 'scenario', label: 'Scenario Analysis' },
-                { key: 'code', label: 'Code / Implementation' },
+                { key: 'mcq', label: 'Recognize / Choice' },
+                { key: 'true_false', label: 'Precision Check' },
+                { key: 'writing', label: 'Explain Mechanism' },
+                { key: 'fill_in', label: 'Recall / Blank' },
+                { key: 'debug', label: 'Debug / Diagnose' },
+                { key: 'trace', label: 'Trace Process' },
+                { key: 'order', label: 'Sequence Steps' },
+                { key: 'matching', label: 'Compare / Match' },
+                { key: 'synthesis', label: 'Construct / Synthesize' },
+                { key: 'calculation', label: 'Solve / Derive' },
+                { key: 'data_analysis', label: 'Interpret Evidence' },
+                { key: 'scenario', label: 'Apply / Transfer' },
+                { key: 'code', label: 'Code Editor' },
               ].map((type) => (
                 <div
                   key={type.key}

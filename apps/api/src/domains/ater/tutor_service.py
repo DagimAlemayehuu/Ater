@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.domains.ai.retry import ainvoke_llm_with_retry
+from src.domains.ater.quiz_builder import enrich_question_v2
 
 logger = logging.getLogger("Ater.TutorService")
 
@@ -37,6 +38,65 @@ class TutorSessionManager:
 
     def _raise_ai_error(self, label: str, exc: BaseException) -> None:
         raise TutorAIGenerationError(f"{label} failed with the configured AI model: {exc}") from exc
+
+    def _fallback_remediation_lesson(self, question: Dict[str, Any], user_answer: str, note_content: str = "") -> str:
+        prompt = str(question.get("question") or "the question").strip()
+        correct = question.get("answer")
+        correct_text = ", ".join(map(str, correct)) if isinstance(correct, list) else str(correct or "the correct concept")
+        explanation = str(question.get("explanation") or "").strip()
+        skill = str(question.get("skill_target") or question.get("note_title") or "this concept").replace("_", " ")
+        note_anchor = self._remediation_note_anchor(note_content, skill)
+        wrong_model = self._diagnose_wrong_answer(question, user_answer)
+        if not explanation:
+            explanation = "A correct answer must apply the concept's mechanism, not only match a familiar word from the question."
+        return (
+            f"### What you got wrong\n\n"
+            f"You answered `{user_answer}` for a question testing {skill}: {prompt}. The expected answer is `{correct_text}`. "
+            f"Your answer points to this wrong mental model: {wrong_model}\n\n"
+            f"### Why that is wrong\n\n"
+            f"{explanation} The problem is not just the selected option; it is the relationship your answer implies. "
+            f"A correct answer must keep the object, condition, and mechanism in the same roles as the note teaches them.\n\n"
+            f"### Deeper correction\n\n"
+            f"Rebuild the idea from the mechanism. First identify the object being studied, then state the relationship, then separate it from nearby concepts that look similar. "
+            f"{note_anchor}"
+        )
+
+    def _remediation_note_anchor(self, note_content: str, skill: str) -> str:
+        text = re.sub(r"```interactive-quiz[\s\S]*?```", "", note_content or "", flags=re.IGNORECASE).strip()
+        text = re.sub(r"^---[\s\S]*?---", "", text, count=1).strip()
+        sections = re.split(r"(?m)^##\s+", text)
+        best = ""
+        skill_terms = [term for term in re.findall(r"[A-Za-z]{4,}", skill.lower())]
+        for section in sections:
+            cleaned = re.sub(r"\s+", " ", section).strip()
+            if not cleaned:
+                continue
+            score = sum(1 for term in skill_terms if term in cleaned.lower())
+            if score > 0 and len(cleaned) > len(best):
+                best = cleaned
+        if not best:
+            best = re.sub(r"\s+", " ", text).strip()
+        best = re.sub(r"^(Mental Model|The [A-Za-z &]+|Limits [A-Za-z &]+)\s+", "", best).strip()
+        if len(best) > 700:
+            best = best[:700].rsplit(" ", 1)[0] + "."
+        return best or "Use the original note as the anchor, then test whether the same rule still holds in a new case."
+
+    def _diagnose_wrong_answer(self, question: Dict[str, Any], user_answer: str) -> str:
+        options = question.get("options") or {}
+        selected = ""
+        if isinstance(options, dict):
+            selected = str(options.get(str(user_answer), ""))
+        selected = selected or str(user_answer or "")
+        lowered = selected.lower()
+        if any(token in lowered for token in ["afford", "income", "price", "budget", "buy"]):
+            return "you are mixing desire/ranking with affordability or final purchase."
+        if any(token in lowered for token in ["happiness", "satisfaction", "utility", "units"]):
+            return "you are mixing a ranking concept with measured utility or satisfaction."
+        if any(token in lowered for token in ["label", "unrelated", "irrelevant"]):
+            return "you are treating the concept as a loose label instead of a working relationship."
+        if any(token in lowered for token in ["reverse", "opposite", "contradict"]):
+            return "you are inverting the relationship instead of preserving the source mechanism."
+        return "you recognized a nearby idea but did not preserve the exact mechanism being tested."
 
     def _init_conn(self):
         self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
@@ -541,13 +601,15 @@ Write 2 continuous paragraphs plus one retry prompt."""
                 note_content = re.sub(r"```interactive-quiz\s*\n?.*?\n?```", "", note_content, flags=re.DOTALL)
 
                 prompt = f"""You are Ater's expert system design and academic tutor. A student got a practice question wrong.
-Your task is to generate a detailed educational lesson explaining the concept they got wrong and what the correct concept is.
+Your task is to generate a detailed educational lesson explaining exactly what they got wrong, why it is wrong, and the deeper concept they need so they do not repeat the mistake.
 
 Strict Rules for the Lesson:
-- It must be written as 2-3 paragraphs of continuous prose.
+- Use exactly these Markdown headings: ### What you got wrong, ### Why that is wrong, ### Deeper correction.
+- Each heading must contain one detailed paragraph.
 - Do NOT use bullet points, numbered lists, checklists, or emojis.
-- Do NOT use meta-phrases like "Not quite", "Incorrect", "You chose X", or refer directly to the student's past attempt or option letters.
-- Focus on explaining the core technical mechanics, relationships, and invariants of the concept from first principles.
+- Directly name the learner's wrong idea and contrast it with the correct idea.
+- Focus on the specific misconception, not the entire note.
+- The remediation lesson should feel like a small Atomic Note about the missed sub-skill.
 
 Note Path: {note_path}
 Note Content:
@@ -576,14 +638,24 @@ Detailed Lesson:"""
                     label="detailed-remediation",
                     timeout=20,
                 )
-                return response.content if hasattr(response, "content") else str(response)
+                text = response.content if hasattr(response, "content") else str(response)
+                if all(marker in text for marker in ["What you got wrong", "Why that is wrong", "Deeper correction"]):
+                    return text
+                return self._fallback_remediation_lesson(question, user_answer, note_content)
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Failed to generate detailed remediation lesson: {e}")
-                if self._strict_ai_enabled():
-                    self._raise_ai_error("Detailed remediation lesson", e)
 
-        correct_val = question.get("answer") or "the correct answer"
-        return f"The central mechanic of this concept governs how inputs are transformed into outputs. When reviewing this topic, ensure you connect the inputs directly to the mechanism and output. The expected correct definition is {correct_val}."
+        try:
+            note_file = self.vault_path / note_path
+            if not note_file.exists():
+                resolved = self._resolve_vault_path(note_path)
+                note_file = resolved if resolved else note_file
+            note_content = note_file.read_text(encoding="utf-8") if (note_file and note_file.exists()) else ""
+            note_content = re.sub(r"^---\s*\n.*?\n---\s*\n?", "", note_content, flags=re.DOTALL)
+            note_content = re.sub(r"```interactive-quiz\s*\n?.*?\n?```", "", note_content, flags=re.DOTALL)
+        except Exception:
+            note_content = ""
+        return self._fallback_remediation_lesson(question, user_answer, note_content)
 
     _SUPPORTED_PROVING_GROUND_TYPES = {
         "mcq", "true_false", "writing", "fill_in", "matching", "order", "debug",
@@ -761,7 +833,12 @@ Detailed Lesson:"""
                 "answer": "See pairs for correct matching.",
             })
         elif q_type == "order":
-            steps = ["Identify the relevant condition", "Apply the concept's mechanism", "Check the resulting implication"]
+            steps = [
+                f"Identify the concept being tested: {Path(note_path).stem.replace('_', ' ')}",
+                "State the exact relationship from the note",
+                "Separate it from the misconception in the wrong answer",
+                "Apply the corrected relationship to the new case",
+            ]
             base.update({"question": "Put the reasoning steps in the correct order.", "steps": list(reversed(steps)), "answer": steps})
         elif q_type in {"debug", "find_error"}:
             base.update({
@@ -793,7 +870,12 @@ Detailed Lesson:"""
                 "question": f"{'Synthesize' if q_type == 'synthesis' else 'Explain'} how the concept applies in a new situation: {concept}",
                 "answer": answer_text,
             })
-        return base
+        return enrich_question_v2(
+            base,
+            q_type=q_type,
+            concept=str(original_question.get("skill_target") or Path(note_path).stem.replace("_", " ")),
+            note_title=Path(note_path).stem.replace("_", " "),
+        )
 
     def _normalize_proving_ground_question(
         self,
@@ -995,8 +1077,6 @@ Original question type: {question.get("type")}
                 )
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Failed to generate clean remediation question: {e}")
-                if self._strict_ai_enabled():
-                    self._raise_ai_error("Follow-up remediation question", e)
 
         return self._fallback_proving_ground_question(
             note_path,

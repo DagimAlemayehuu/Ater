@@ -20,10 +20,24 @@ class AdvancedPracticeConfig(BaseModel):
     gradingStrictness: Literal["Lenient", "Strict", "Flexible"] = "Lenient"
     enableProgressiveHints: bool = False
     requireConfidenceWager: bool = False
+    smartMixPreset: Optional[str] = "smart_mix"
+    practicePolicy: Dict[str, Any] = Field(default_factory=dict)
+    familyDistribution: Dict[str, int] = Field(default_factory=dict)
+    formatDistribution: Dict[str, int] = Field(default_factory=dict)
 
 class BaseQuestion(BaseModel):
     id: Optional[int] = None
     type: str
+    schema_version: int = 1
+    family: Optional[str] = None
+    format: Optional[str] = None
+    variant: Optional[str] = None
+    skill_target: Optional[str] = None
+    rubric: Dict[str, Any] = Field(default_factory=dict)
+    remediation: Dict[str, Any] = Field(default_factory=dict)
+    source_refs: List[Dict[str, Any]] = Field(default_factory=list)
+    artifact_refs: List[Dict[str, Any]] = Field(default_factory=list)
+    grading: Dict[str, Any] = Field(default_factory=dict)
     difficulty: str = Field(default="L1", description="Conceptual depth (L1-L3).")
     question: str
     explanation: str = Field(default="Analysis complete.", description="Step-by-step logic.")

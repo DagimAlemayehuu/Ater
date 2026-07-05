@@ -18,6 +18,101 @@ from src.domains.ai.retry import is_retryable_ai_error
 
 logger = logging.getLogger("Ater")
 
+QUESTION_TYPE_ALIASES = {
+    "mcq": "mcq",
+    "multiplechoice": "mcq",
+    "multiple_choice": "mcq",
+    "multiple-choice": "mcq",
+    "truefalse": "true_false",
+    "true_false": "true_false",
+    "true-false": "true_false",
+    "fillin": "fill_in",
+    "fill_in": "fill_in",
+    "fill-in": "fill_in",
+    "cloze": "fill_in",
+    "shortanswer": "writing",
+    "short_answer": "writing",
+    "writing": "writing",
+    "matching": "matching",
+    "order": "order",
+    "sequencing": "order",
+    "debug": "debug",
+    "finderror": "find_error",
+    "find_error": "find_error",
+    "synthesis": "synthesis",
+    "trace": "trace",
+    "scenario": "scenario",
+    "code": "code",
+    "calculation": "calculation",
+    "dataanalysis": "data_analysis",
+    "data_analysis": "data_analysis",
+}
+
+QUESTION_TYPE_TOOLKIT = {
+    "mcq": {"family": "recognize", "format": "choice", "variant": "source_grounded_choice", "grading_mode": "objective"},
+    "true_false": {"family": "recognize", "format": "choice", "variant": "precision_check", "grading_mode": "objective"},
+    "writing": {"family": "explain", "format": "short_text", "variant": "mechanism_explanation", "grading_mode": "rubric"},
+    "fill_in": {"family": "recall", "format": "blank", "variant": "cloze_recall", "grading_mode": "objective"},
+    "matching": {"family": "compare", "format": "match", "variant": "concept_mapping", "grading_mode": "objective"},
+    "order": {"family": "trace", "format": "order", "variant": "reasoning_sequence", "grading_mode": "objective"},
+    "debug": {"family": "debug", "format": "long_text", "variant": "find_and_fix_reasoning", "grading_mode": "rubric"},
+    "find_error": {"family": "diagnose", "format": "long_text", "variant": "error_diagnosis", "grading_mode": "rubric"},
+    "synthesis": {"family": "construct", "format": "long_text", "variant": "cross_concept_synthesis", "grading_mode": "rubric"},
+    "trace": {"family": "trace", "format": "short_text", "variant": "step_trace", "grading_mode": "hybrid"},
+    "scenario": {"family": "apply", "format": "long_text", "variant": "transfer_scenario", "grading_mode": "rubric"},
+    "code": {"family": "construct", "format": "code_editor", "variant": "write_or_explain_code", "grading_mode": "rubric"},
+    "calculation": {"family": "solve", "format": "short_text", "variant": "calculation_or_derivation", "grading_mode": "hybrid"},
+    "data_analysis": {"family": "diagnose", "format": "table_editor", "variant": "evidence_interpretation", "grading_mode": "rubric"},
+}
+
+QUESTION_FAMILY_FALLBACKS = ["explain", "apply", "compare"]
+
+
+def normalize_question_type(raw_type: Any) -> str:
+    key = str(raw_type or "writing").strip().lower().replace(" ", "").replace("-", "_")
+    return QUESTION_TYPE_ALIASES.get(key, QUESTION_TYPE_ALIASES.get(key.replace("_", ""), "writing"))
+
+
+def _question_toolkit_for_type(q_type: str) -> Dict[str, str]:
+    return dict(QUESTION_TYPE_TOOLKIT.get(normalize_question_type(q_type), QUESTION_TYPE_TOOLKIT["writing"]))
+
+
+def enrich_question_v2(
+    question: Dict[str, Any],
+    q_type: str | None = None,
+    concept: str = "",
+    note_title: str = "",
+    source_pages: List[int] | None = None,
+) -> Dict[str, Any]:
+    q = dict(question or {})
+    normalized_type = normalize_question_type(q_type or q.get("type"))
+    toolkit = _question_toolkit_for_type(normalized_type)
+    q["type"] = normalized_type
+    q.setdefault("schema_version", 2)
+    q.setdefault("family", toolkit["family"])
+    q.setdefault("format", toolkit["format"])
+    q.setdefault("variant", toolkit["variant"])
+    q.setdefault("skill_target", concept or note_title or q.get("note_title") or "Source-grounded concept")
+    q.setdefault("rubric", {
+        "grading_mode": toolkit["grading_mode"],
+        "must_include": q.get("required_keywords") or [],
+        "mastery_signal": "Answer preserves the source-grounded mechanism, not just the surface label.",
+    })
+    q.setdefault("remediation", {
+        "misconception_codes": [
+            "missing_definition",
+            "wrong_mechanism",
+            "bad_transfer",
+            "evidence_gap",
+        ],
+        "follow_up_policy": "Ask a different family or format that targets the failed skill.",
+    })
+    if source_pages:
+        q.setdefault("source_refs", [{"page": int(p)} for p in source_pages if str(p).isdigit()])
+    q.setdefault("artifact_refs", [])
+    return q
+
+
 def determine_dynamic_question_count(note_title: str, modality: str, source_snippet: str, prerequisites_count: int) -> int:
     snippet_len = len(source_snippet or "")
     if snippet_len > 1800:
@@ -33,7 +128,8 @@ def determine_dynamic_question_count(note_title: str, modality: str, source_snip
         
     return base_count
 
-def select_dynamic_question_types(note_title: str, modality: str, source_snippet: str, count: int, mode: str = "ACADEMIC-GENERAL") -> List[str]:
+
+def _select_legacy_question_types(note_title: str, modality: str, source_snippet: str, count: int, mode: str = "ACADEMIC-GENERAL") -> List[str]:
     snippet_lower = (source_snippet or "").lower()
     title_lower = (note_title or "").lower()
     
@@ -148,6 +244,73 @@ def select_dynamic_question_types(note_title: str, modality: str, source_snippet
         
     return selected
 
+
+def build_practice_blueprint(
+    note_title: str,
+    modality: str,
+    source_snippet: str,
+    prerequisites_count: int = 0,
+    mode: str = "ACADEMIC-GENERAL",
+    max_questions: int = 5,
+) -> Dict[str, Any]:
+    """Deterministically plan the Proving Grounds before any model writes questions.
+
+    The LLM should fill selected question shells; this function owns the cognitive
+    toolkit choice so weak models cannot drift into generic flashcards.
+    """
+    count = max(1, min(int(max_questions or 5), determine_dynamic_question_count(
+        note_title,
+        modality,
+        source_snippet,
+        prerequisites_count,
+    )))
+    legacy_types = _select_legacy_question_types(note_title, modality, source_snippet, count, mode=mode)
+    toolkit_items = [_question_toolkit_for_type(q_type) for q_type in legacy_types]
+    families = []
+    formats = []
+    variants = []
+    for item in toolkit_items:
+        if item["family"] not in families:
+            families.append(item["family"])
+        if item["format"] not in formats:
+            formats.append(item["format"])
+        if item["variant"] not in variants:
+            variants.append(item["variant"])
+
+    if not families:
+        families = QUESTION_FAMILY_FALLBACKS[:]
+    if not formats:
+        formats = ["short_text"]
+
+    return {
+        "schema_version": 2,
+        "mode": mode,
+        "modality": modality or "Qualitative/Definitional",
+        "recommended_question_count": count,
+        "legacy_types": legacy_types,
+        "families": families,
+        "formats": formats,
+        "variants": variants,
+        "skill_targets": [note_title],
+        "generation_policy": "deterministic_blueprint_then_llm_fill",
+        "remediation_policy": "classify_misconception_then_follow_up_with_different_family_or_format",
+    }
+
+
+def select_dynamic_question_types(note_title: str, modality: str, source_snippet: str, count: int, mode: str = "ACADEMIC-GENERAL") -> List[str]:
+    blueprint = build_practice_blueprint(
+        note_title=note_title,
+        modality=modality,
+        source_snippet=source_snippet,
+        prerequisites_count=0,
+        mode=mode,
+        max_questions=count,
+    )
+    selected = list(blueprint.get("legacy_types") or [])
+    while len(selected) < count:
+        selected.append("writing")
+    return selected[:count]
+
 def _strip_note_frontmatter(note_content: str) -> str:
     text = str(note_content or "")
     return re.sub(r"^---\s.*?---\s*", "", text, flags=re.DOTALL).strip()
@@ -193,25 +356,50 @@ def _extract_note_equation(note_content: str) -> str:
     return ""
 
 
-def create_fallback_question(q_type: str, concept: str, note_title: str, note_content: str = "") -> dict:
+def _create_legacy_fallback_question(q_type: str, concept: str, note_title: str, note_content: str = "") -> dict:
     grounded_fact = _extract_note_fact(
         note_content,
         concept,
         f"The note identifies {concept} as a source-grounded concept within {note_title}.",
     )
     equation = _extract_note_equation(note_content)
+    context = f"{concept} {note_title} {note_content[:1200]}".lower()
+    if "preference" in context:
+        plausible_distractors = [
+            "It means the consumer buys the cheapest available bundle.",
+            "It measures satisfaction with exact numerical utility units.",
+            "It describes affordability after income and prices are applied.",
+        ]
+    elif "budget" in context:
+        plausible_distractors = [
+            "It ranks bundles by desirability before prices matter.",
+            "It measures the satisfaction created by one more unit.",
+            "It says every preferred bundle is affordable.",
+        ]
+    elif any(token in context for token in ["code", "algorithm", "function", "query", "database"]):
+        plausible_distractors = [
+            "It describes the label shown to the user but not the transformation in the program.",
+            "It assumes all inputs are valid and skips edge-case behavior.",
+            "It explains the visual output but not the state or data dependency.",
+        ]
+    else:
+        plausible_distractors = [
+            "It replaces the concept's mechanism with a nearby term from the same topic.",
+            "It gives an example but does not preserve the rule being tested.",
+            "It treats a consequence as if it were the definition.",
+        ]
     if q_type == "mcq":
         return {
             "type": "mcq",
-            "question": f"Which statement is most directly supported by the source context for {concept}?",
+            "question": f"Which statement best preserves the mechanism of {concept}?",
             "options": {
                 "A": grounded_fact,
-                "B": f"{concept} is unrelated to the cited source context.",
-                "C": f"{concept} only matters outside {note_title}.",
-                "D": f"{concept} contradicts the source evidence rather than explaining it."
+                "B": plausible_distractors[0],
+                "C": plausible_distractors[1],
+                "D": plausible_distractors[2],
             },
             "answer": "A",
-            "explanation": f"The correct answer is the statement grounded in the selected note's source evidence for {concept}."
+            "explanation": f"The correct answer preserves the source-grounded mechanism for {concept}; the other options confuse it with nearby concepts or consequences."
         }
     elif q_type == "true_false":
         return {
@@ -248,18 +436,24 @@ def create_fallback_question(q_type: str, concept: str, note_title: str, note_co
             "explanation": f"Assesses whether the learner can connect {concept} to the selected source evidence."
         }
     elif q_type == "order":
+        step_1 = f"Identify the concept being tested: {concept}."
+        step_2 = f"State the source-grounded relationship: {grounded_fact}"
+        step_3 = "Apply the relationship to the new case without swapping in a nearby concept."
+        step_4 = "Check the implication or failure case."
         return {
             "type": "order",
             "question": f"Arrange the reasoning sequence for answering a source-grounded question about {concept}:",
             "steps": [
-                f"Step 2: State the source fact: {grounded_fact}",
-                f"Step 1: Identify the concept being tested: {concept}.",
-                "Step 3: Explain the consequence or constraint without adding unsupported outside claims."
+                step_3,
+                step_1,
+                step_4,
+                step_2,
             ],
             "answer": [
-                f"Step 1: Identify the concept being tested: {concept}.",
-                f"Step 2: State the source fact: {grounded_fact}",
-                "Step 3: Explain the consequence or constraint without adding unsupported outside claims."
+                step_1,
+                step_2,
+                step_3,
+                step_4,
             ],
             "explanation": f"Ensures the student can reason from source evidence to explanation."
         }
@@ -311,10 +505,16 @@ def create_fallback_question(q_type: str, concept: str, note_title: str, note_co
             "explanation": f"Tests application of {concept} from source evidence rather than generic scenario writing."
         }
     elif q_type == "trace":
+        trace_steps = [
+            f"Start with the condition or object named by {concept}.",
+            f"Apply the source-grounded mechanism: {grounded_fact}",
+            "State the result, implication, or limit without adding unsupported outside claims.",
+        ]
         return {
             "type": "trace",
-            "question": f"Trace the step-by-step causal pathway through which {concept} influences outcomes in {note_title}.",
-            "answer": "Step 1: Ingestion of concepts. Step 2: Strategic alignment. Step 3: Positive feedback loop.",
+            "question": f"Trace the reasoning pathway through which {concept} produces its result in {note_title}.",
+            "steps": trace_steps,
+            "answer": " -> ".join(trace_steps),
             "explanation": f"Checks step-by-step causal tracing of {concept} in the system."
         }
     else:
@@ -325,6 +525,23 @@ def create_fallback_question(q_type: str, concept: str, note_title: str, note_co
             "required_keywords": [w.lower() for w in re.findall(r"[A-Za-z]{4,}", concept.lower())[:3]] or ["concept"],
             "explanation": f"Verifies basic understanding of {concept}."
         }
+
+
+def create_fallback_question(q_type: str, concept: str, note_title: str, note_content: str = "") -> dict:
+    question = _create_legacy_fallback_question(q_type, concept, note_title, note_content=note_content)
+    source_pages: List[int] = []
+    for page_match in re.findall(r"\bp\.\s*(\d+)\b|\[PAGE\s+(\d+)\]", note_content or "", flags=re.IGNORECASE):
+        for page_value in page_match:
+            if page_value:
+                source_pages.append(int(page_value))
+    return enrich_question_v2(
+        question,
+        q_type=q_type,
+        concept=concept,
+        note_title=note_title,
+        source_pages=source_pages,
+    )
+
 
 def is_economics_practice_context(text: str) -> bool:
     lowered = text.lower()
@@ -654,23 +871,12 @@ async def generate_practice(
                 if isinstance(quiz_data, list):
                     for q in quiz_data:
                         if isinstance(q, dict) and "question" in q:
-                            q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")
-                            mapping_types = {
-                                "mcq": "mcq", "multiplechoice": "mcq",
-                                "true_false": "true_false", "truefalse": "true_false",
-                                "fill_in": "fill_in", "fillin": "fill_in", "cloze": "fill_in", "clozedeletion": "fill_in",
-                                "writing": "writing", "short_answer": "writing", "shortanswer": "writing",
-                                "matching": "matching", "matchingmatrix": "matching",
-                                "order": "order", "sequencing": "order", "sequencingsteps": "order",
-                                "debug": "debug", "diagnostic": "debug", "diagnosticerror": "debug",
-                                "synthesis": "synthesis", "socratic": "synthesis", "socraticsynthesis": "synthesis",
-                                "calculation": "calculation", "data_analysis": "data_analysis",
-                                "scenario": "scenario", "code": "code", "trace": "trace"
-                            }
-                            q_type_norm = mapping_types.get(q_raw_type, "writing")
+                            q_raw_type = q.get("type") or q.get("questionType") or q.get("question_type")
+                            q_type_norm = normalize_question_type(q_raw_type)
                             q["type"] = q_type_norm
                             q["note_path"] = str(note_path)
                             q["note_title"] = note_path.stem
+                            q = enrich_question_v2(q, q_type=q_type_norm, concept=note_path.stem.replace("_", " "), note_title=note_path.stem)
                             extracted_pool.append(q)
         except Exception as e:
             logger.error(f"[Ater Service] Error extracting quiz from {note_path.name}: {e}")
@@ -818,22 +1024,7 @@ async def generate_practice(
     for q in all_questions:
         if not isinstance(q, dict):
             continue
-        q_raw_type = (q.get("type") or q.get("questionType") or q.get("question_type") or "").lower().replace("_", "")
-        
-        mapping = {
-            "mcq": "mcq", "multiplechoice": "mcq",
-            "true_false": "true_false", "truefalse": "true_false",
-            "fill_in": "fill_in", "fillin": "fill_in", "cloze": "fill_in", "clozedeletion": "fill_in",
-            "writing": "writing", "short_answer": "writing", "shortanswer": "writing",
-            "matching": "matching", "matchingmatrix": "matching",
-            "order": "order", "sequencing": "order", "sequencingsteps": "order",
-            "debug": "debug", "diagnostic": "debug", "diagnosticerror": "debug",
-            "synthesis": "synthesis", "socratic": "synthesis", "socraticsynthesis": "synthesis",
-            "calculation": "calculation", "data_analysis": "data_analysis",
-            "scenario": "scenario", "code": "code", "trace": "trace"
-        }
-        
-        q["type"] = mapping.get(q_raw_type, "writing")
+        q["type"] = normalize_question_type(q.get("type") or q.get("questionType") or q.get("question_type"))
         
         if q["type"] == "true_false":
             if isinstance(q.get("answer"), str):
@@ -874,7 +1065,12 @@ async def generate_practice(
                 if any(re.search(pat, val_lower) for pat in banned_patterns):
                     q["options"][ok] = "An alternative outcome that contradicts the source framework."
         
-        processed_questions.append(q)
+        processed_questions.append(enrich_question_v2(
+            q,
+            q_type=q.get("type"),
+            concept=str(q.get("note_title") or hub.get("title") or "Practice concept"),
+            note_title=str(q.get("note_title") or hub.get("title") or "Practice concept"),
+        ))
 
     unique_processed = []
     for q in processed_questions:

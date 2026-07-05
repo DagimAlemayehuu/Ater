@@ -55,7 +55,9 @@ function gradeLocally(question: Question, selected: any): boolean {
 }
 
 function isObjectiveQuestion(question: Question): boolean {
-  return ['mcq', 'true_false', 'fill_in', 'matching', 'order'].includes((question as any).type);
+  const format = String((question as any).format || '').toLowerCase();
+  return ['choice', 'blank', 'match', 'order'].includes(format)
+    || ['mcq', 'true_false', 'fill_in', 'matching', 'order'].includes((question as any).type);
 }
 
 function formatAnswerValue(value: any): string {
@@ -144,6 +146,10 @@ function chooseFallbackQuestionType(question: Question, attempt: number, seenTyp
   const original = question as any;
   const context = [
     original.type,
+    original.family,
+    original.format,
+    original.variant,
+    original.skill_target,
     original.question,
     original.content,
     original.codeSnippet,
@@ -189,10 +195,24 @@ function buildFallbackRemediationQuestion(question: Question, selected: any, att
     ...original,
     id: `${original.id}_remediation_${attempt + 1}`,
     type: qType,
+    schema_version: 2,
     difficulty: `L${Math.min(4, attempt + 2)}`,
     question: `Apply this concept in a new case: ${original.question || 'Explain the core concept.'}`,
     answer: answerText || 'A correct answer applies the concept mechanism directly.',
     explanation: original.explanation || `Explain the mechanism from first principles.`,
+    family: original.family || 'apply',
+    format: original.format || (qType === 'mcq' || qType === 'true_false' ? 'choice' : qType === 'fill_in' ? 'blank' : qType === 'matching' ? 'match' : qType === 'order' ? 'order' : qType === 'code' ? 'code_editor' : 'long_text'),
+    variant: original.variant || 'targeted_remediation',
+    skill_target: original.skill_target || original.note_title || 'Missed concept',
+    rubric: original.rubric || {
+      grading_mode: 'rubric',
+      must_include: original.required_keywords || [],
+      mastery_signal: 'Correct the misconception and apply the mechanism in a new case.',
+    },
+    remediation: original.remediation || {
+      misconception_codes: ['wrong_mechanism', 'bad_transfer', 'evidence_gap'],
+      follow_up_policy: 'Use a different question family or format until the missed skill is recovered.',
+    },
     options: undefined,
     note_id: original.note_id || notePathValue,
     is_remediation: true,
@@ -347,10 +367,25 @@ export function usePracticeSession() {
     initialQuestionIndex: number = 0
   ) => {
     const stem = notePathValue ? notePathValue.split('/').pop()?.replace(/\.[^/.]+$/, "") || 'q' : 'q';
-    const normalizedQuestions = questionsList.map((q, idx) => ({
-      ...q,
-      id: q.id !== undefined && q.id !== null ? q.id : `${stem}_q${idx + 1}`
-    }));
+    const normalizedQuestions = questionsList.map((q, idx) => {
+      const normalizedType = normalizeQuestionType((q as any).type);
+      const formatByType: Record<string, string> = {
+        mcq: 'choice',
+        true_false: 'choice',
+        fill_in: 'blank',
+        matching: 'match',
+        order: 'order',
+        code: 'code_editor',
+        data_analysis: 'table_editor',
+      };
+      return {
+        ...q,
+        id: q.id !== undefined && q.id !== null ? q.id : `${stem}_q${idx + 1}`,
+        type: normalizedType,
+        schema_version: (q as any).schema_version || 1,
+        format: (q as any).format || formatByType[normalizedType] || 'short_text',
+      } as Question;
+    });
     setQuestions(normalizedQuestions);
     const safeInitialIndex = Math.max(0, Math.min(initialQuestionIndex, Math.max(questionsList.length - 1, 0)));
     setCurrentQuestionIdx(safeInitialIndex);

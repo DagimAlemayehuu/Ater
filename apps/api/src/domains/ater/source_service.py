@@ -20,6 +20,7 @@ from src.domains.ai.factory import ModelFactory
 from src.domains.ater.router import router as domain_router
 from src.domains.ater.agents import get_persona, normalize_mode
 from src.domains.ater.templates import build_skeleton_note
+from src.domains.ater.quiz_builder import build_practice_blueprint, enrich_question_v2
 
 SOURCE_LEARNING_PIPELINE_VERSION = "source-roadmap-v5"
 
@@ -1005,16 +1006,48 @@ class SourceAtomicNoteCompiler:
     FORBIDDEN_PROMPT_MARKERS = ["system prompt", "developer message", "ignore previous", "chain of thought"]
     DRIFT_TERMS = ["central banking", "exchange rates", "python", "java", "biology", "aggregate demand"]
 
+    def _dynamic_teaching_headings(self, node: Dict[str, Any], profile: Dict[str, Any]) -> List[str]:
+        domain = str(node.get("domain") or "").upper()
+        modality = str(node.get("modality") or "Qualitative/Definitional")
+        if domain.startswith("ECON"):
+            if modality == "Quantitative":
+                return ["The Economic Intuition", "The Calculation Logic", "The Formal Math & Models"]
+            if modality == "Comparative":
+                return ["The Economic Intuition", "The Comparison Mechanism", "The Formal Math & Models"]
+            return ["The Economic Intuition", "The Choice Mechanism", "The Formal Math & Models"]
+        if domain.startswith("CS"):
+            return ["The Working Intuition", "The Implementation Logic", "Failure Modes And Edge Cases"]
+        if domain.startswith("MATH"):
+            return ["The Mathematical Intuition", "The Formal Structure", "Boundary Cases And Counterexamples"]
+        if domain.startswith("MED"):
+            return ["The Clinical Intuition", "The Body Mechanism", "Failure States And Interventions"]
+        return ["The Core Intuition", "The Working Mechanism", "Limits And Transfer"]
+
+    def _strip_visible_citations(self, text: str) -> str:
+        stripped = re.sub(r"\s*\[PAGE\s+\d+\]", "", str(text or ""), flags=re.IGNORECASE)
+        stripped = re.sub(r"\s{2,}", " ", stripped)
+        stripped = re.sub(r" *\n *", "\n", stripped)
+        return stripped.strip()
+
     def build_ai_prompt(self, job: Dict[str, Any], node: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
         excerpts = "\n\n".join(
             f"[PAGE {ex.get('page')}]\n{ex.get('text', '')}"
             for ex in node.get("source_excerpts", [])
         )
+        practice_blueprint = build_practice_blueprint(
+            note_title=node.get("title", "Untitled Concept"),
+            modality=node.get("modality", "Qualitative/Definitional"),
+            source_snippet=excerpts,
+            prerequisites_count=len(node.get("prerequisites", []) or []),
+            mode=node.get("domain") or "ACADEMIC-GENERAL",
+            max_questions=5,
+        )
+        teaching_headings = self._dynamic_teaching_headings(node, profile)
         return {
             "system": (
                 "Generate the complete Atomic Note Markdown body only. Deterministic code owns YAML and deployment paths, "
-                "but YOU must output the required Markdown headings, valid [PAGE n] citations, and exactly one "
-                "```interactive-quiz``` JSON block. Stay strictly inside the cited source excerpts."
+                "but YOU must output the required Markdown headings and exactly one ```interactive-quiz``` JSON block. "
+                "Stay strictly inside the provided source excerpts, but do not show inline citations in the visible note."
             ),
             "user": {
                 "source_file": job.get("file_name"),
@@ -1028,24 +1061,37 @@ class SourceAtomicNoteCompiler:
                     "question_modes": profile.get("question_modes", []),
                     "prohibitions": profile.get("prohibitions", profile.get("prohibited_anti_patterns", "")),
                 },
+                "practice_blueprint": practice_blueprint,
+                "teaching_headings": teaching_headings,
                 "source_excerpts": excerpts[:4000],
                 "required_markdown_contract": [
                     "Start with: ## Mental Model",
-                    "Include 1-3 source-grounded paragraphs with at least one valid [PAGE n] citation.",
-                    "Include a second teaching section, for example: ## How the Economics Actually Work",
+                    "Do not include visible [PAGE n] citations anywhere in the Markdown body.",
+                    f"Then include exactly these three teaching headings in this order: ## {teaching_headings[0]}, ## {teaching_headings[1]}, ## {teaching_headings[2]}",
+                    "Each teaching heading must contain detailed simple-English prose that takes a beginner from zero toward competency.",
+                    "Use an artifact only when it helps the concept: table, LaTeX, Mermaid, code, or ASCII diagram.",
                     "End with: ## The Proving Grounds",
                     "Under Proving Grounds include exactly one fenced block starting with ```interactive-quiz",
-                    "The interactive-quiz block must contain a JSON array with at least one question object.",
-                    "Use only pages listed in valid_source_pages for citations.",
+                    "The interactive-quiz block must contain a JSON array with 3 to 5 question objects for normal concepts.",
+                    "Question objects must follow practice_blueprint legacy_types/families/formats when possible.",
+                    "The question type, family, format, and variant must be internally consistent.",
+                    "Every question should include schema_version=2, family, format, variant, skill_target, rubric, and remediation.",
                     "Do not include YAML/frontmatter, markdown fences around the whole note, or explanatory prefaces.",
                 ],
                 "quiz_schema": [{
                     "id": "q1",
                     "type": "mcq|writing|calculation|matching",
+                    "schema_version": 2,
+                    "family": "recognize|recall|explain|apply|solve|trace|debug|diagnose|compare|construct|critique",
+                    "format": "choice|short_text|long_text|blank|match|order|code_editor|table_editor|diagram_task|sandbox|self_grade",
+                    "variant": "domain-specific question variant",
+                    "skill_target": node.get("title"),
                     "question": "standalone source-grounded question",
                     "options": {"A": "required for mcq", "B": "required for mcq"},
                     "answer": "correct answer",
                     "explanation": "why the answer follows from the cited source",
+                    "rubric": {"grading_mode": "objective|rubric|hybrid", "must_include": []},
+                    "remediation": {"misconception_codes": ["missing_definition"], "follow_up_policy": "different_family_or_format"},
                 }],
             },
         }
@@ -1067,10 +1113,12 @@ class SourceAtomicNoteCompiler:
         user["previous_invalid_output"] = str(invalid_content or "")[:5000]
         user["repair_requirements"] = [
             "The repaired output must contain literal heading text: ## Mental Model",
+            "The repaired output must contain exactly three teaching headings between Mental Model and The Proving Grounds.",
             "The repaired output must contain literal heading text: ## The Proving Grounds",
             "The repaired output must contain exactly one ```interactive-quiz fenced JSON array.",
+            "The repaired output must not include visible [PAGE n] citations.",
             "If any quiz item has type mcq, it must include an options object with at least A and B choices and answer must be one option key.",
-            "Every citation must use a valid [PAGE n] from valid_source_pages.",
+            "Every quiz item must have internally consistent type, family, format, and variant.",
             "Return Markdown body only.",
         ]
         repaired["user"] = user
@@ -1097,17 +1145,27 @@ class SourceAtomicNoteCompiler:
 
     def validate_content(self, content: str, node: Dict[str, Any], profile: Dict[str, Any]) -> Tuple[bool, List[str]]:
         errors: List[str] = []
-        text = content or ""
+        raw_text = content or ""
+        raw_cited_pages = {int(p) for p in re.findall(r"\[PAGE\s+(\d+)\]", raw_text, flags=re.IGNORECASE)}
+        text = raw_text
+        text = self._strip_visible_citations(text)
         lower = text.lower()
         for section in self.REQUIRED_SECTIONS:
             if section.lower() not in lower:
                 errors.append(f"missing_section:{section}")
         valid_pages = self._valid_source_pages(node)
-        cited_pages = {int(p) for p in re.findall(r"\[PAGE\s+(\d+)\]", text, flags=re.IGNORECASE)}
-        if valid_pages and cited_pages and not cited_pages.issubset(valid_pages):
+        if valid_pages and raw_cited_pages and not raw_cited_pages.issubset(valid_pages):
             errors.append("invalid_citation")
-        if not cited_pages and valid_pages:
-            errors.append("missing_citation")
+        cited_pages_after_strip = {int(p) for p in re.findall(r"\[PAGE\s+(\d+)\]", text, flags=re.IGNORECASE)}
+        if cited_pages_after_strip:
+            errors.append("visible_citation")
+        headings = re.findall(r"^##\s+(.+?)\s*$", text, flags=re.MULTILINE)
+        teaching_headings = [
+            heading for heading in headings
+            if heading.lower() not in {"mental model", "the proving grounds"}
+        ]
+        if len(teaching_headings) != 3:
+            errors.append("invalid_teaching_heading_count")
         if "```interactive-quiz" in text:
             quiz_match = re.search(r"```interactive-quiz\s*(.*?)```", text, flags=re.DOTALL | re.IGNORECASE)
             try:
@@ -1115,11 +1173,15 @@ class SourceAtomicNoteCompiler:
                 if not isinstance(parsed, list):
                     errors.append("invalid_quiz_json")
                 else:
+                    if not (1 <= len(parsed) <= 5):
+                        errors.append("invalid_quiz_count")
                     for idx, item in enumerate(parsed, start=1):
                         if not isinstance(item, dict):
                             errors.append(f"invalid_quiz_item:{idx}")
                             continue
                         q_type = str(item.get("type", "")).lower()
+                        family = str(item.get("family", "")).lower()
+                        q_format = str(item.get("format", "")).lower()
                         if not item.get("question"):
                             errors.append(f"missing_quiz_question:{idx}")
                         if q_type == "mcq":
@@ -1128,6 +1190,25 @@ class SourceAtomicNoteCompiler:
                                 errors.append(f"missing_mcq_options:{idx}")
                             elif str(item.get("answer", "")) not in {str(key) for key in options.keys()}:
                                 errors.append(f"invalid_mcq_answer:{idx}")
+                        expected_by_type = {
+                            "mcq": ("recognize", "choice"),
+                            "true_false": ("recognize", "choice"),
+                            "fill_in": ("recall", "blank"),
+                            "matching": ("compare", "match"),
+                            "order": ("trace", "order"),
+                            "writing": ("explain", "short_text"),
+                            "scenario": ("apply", "long_text"),
+                            "synthesis": ("construct", "long_text"),
+                            "calculation": ("solve", "short_text"),
+                            "data_analysis": ("diagnose", "table_editor"),
+                            "trace": ("trace", "short_text"),
+                            "debug": ("debug", "long_text"),
+                            "code": ("construct", "code_editor"),
+                            "find_error": ("diagnose", "long_text"),
+                        }
+                        expected = expected_by_type.get(q_type)
+                        if expected and (family and family != expected[0] or q_format and q_format != expected[1]):
+                            errors.append(f"inconsistent_quiz_toolkit:{idx}")
             except Exception:
                 errors.append("invalid_quiz_json")
         else:
@@ -1152,13 +1233,10 @@ class SourceAtomicNoteCompiler:
         valid, errors = self.validate_content(content, node, profile)
         if valid:
             note = self.compile_fallback_note(job, node, profile)
-            note["content"] = content
+            note["content"] = self._strip_visible_citations(content)
             note["fallback"] = False
             note["frontmatter"]["fallback_generation"] = False
             return note
-        if strict_ai:
-            title = node.get("title", "Untitled Concept")
-            raise SourceAIGenerationError(f"AI note generation failed validation for {title}: {', '.join(errors)}")
         note = self.compile_fallback_note(job, node, profile)
         note["validation_errors"] = errors
         note["frontmatter"]["fallback_reason"] = ",".join(errors)
@@ -1173,10 +1251,11 @@ class SourceAtomicNoteCompiler:
         strict_ai: bool = False,
     ) -> Dict[str, Any]:
         if not ai_generator:
+            note = self.compile_fallback_note(job, node, profile)
             if strict_ai:
-                title = node.get("title", "Untitled Concept")
-                raise SourceAIGenerationError(f"AI note generation required for {title}, but no AI generator is configured.")
-            return self.compile_fallback_note(job, node, profile)
+                note["validation_errors"] = ["ai_unavailable"]
+                note["frontmatter"]["fallback_reason"] = "ai_unavailable"
+            return note
         try:
             prompt = self.build_ai_prompt(job, node, profile)
             content = self._trim_ai_preamble(ai_generator(prompt))
@@ -1185,11 +1264,6 @@ class SourceAtomicNoteCompiler:
                 content = self._trim_ai_preamble(ai_generator(self.build_ai_repair_prompt(prompt, content, errors)))
             return self.repair_or_replace_content(content, job, node, profile, strict_ai=strict_ai)
         except Exception as exc:
-            if strict_ai:
-                title = node.get("title", "Untitled Concept")
-                if isinstance(exc, SourceAIGenerationError):
-                    raise
-                raise SourceAIGenerationError(f"AI note generation failed for {title}: {type(exc).__name__}: {exc}") from exc
             note = self.compile_fallback_note(job, node, profile)
             note["validation_errors"] = [f"ai_failure:{type(exc).__name__}"]
             note["frontmatter"]["fallback_reason"] = "ai_failure"
@@ -1421,36 +1495,117 @@ class SourceAtomicNoteCompiler:
         page = int(primary.get("page") or (source_pages[0] if source_pages else 1))
         second = facts[1]["text"] if len(facts) > 1 else f"{title} is unrelated to the source's consumer-choice model."
         title_keywords = [word.lower() for word in re.findall(r"[A-Za-z]{4,}", title)[:3]] or ["source"]
-        return [
+        distractors = self._concept_distractors(title, primary_text, [self._clean_fact(f.get("text", ""), title) for f in facts])
+        application_case = self._application_case(title)
+        quiz = [
             {
                 "type": "mcq",
-                "question": f"According to the source, which statement best explains {title}?",
+                "question": f"Which statement best preserves the mechanism of {title}?",
                 "options": {
                     "A": primary_text,
-                    "B": f"{title} can be ignored because it has no operational role in the cited source pages.",
-                    "C": f"{title} reverses the source relationship by treating the cited constraint or comparison as irrelevant.",
-                    "D": f"{title} is only a label and does not connect to any source definition, condition, ranking, equation, or example.",
+                    "B": distractors[0],
+                    "C": distractors[1],
+                    "D": distractors[2],
                 },
                 "answer": "A",
-                "explanation": f"The correct option restates the source-grounded fact for {title} from page {page}.",
+                "explanation": f"The correct option keeps the source relationship intact for {title}; the distractors confuse it with a nearby but different idea.",
                 "explanation_page": page,
             },
             {
-                "type": "true_false",
-                "question": f"{title} should be interpreted using the chapter's stated source constraints: {self._clean_fact(second, title)}.",
-                "answer": True,
-                "explanation": f"This follows from the cited source discussion of {title}.",
+                "type": "scenario",
+                "question": f"In this new case, apply {title} without confusing it with a neighboring concept: {application_case}",
+                "answer": self._scenario_answer(title, primary_text),
+                "required_keywords": title_keywords,
+                "explanation": f"This checks whether the learner can transfer {title} beyond copied wording while preserving the source relationship.",
                 "explanation_page": int(facts[1].get("page", page)) if len(facts) > 1 else page,
             },
             {
                 "type": "writing",
-                "question": f"Explain {title} in one precise paragraph using the source's wording and one consequence from the cited pages.",
-                "answer": f"A strong answer defines {title}, states the source-specific rule or relationship, and explains why that relationship matters in the chapter's consumer-choice model.",
+                "question": f"Explain {title} in one precise paragraph. Include the object being studied, the relationship being tested, and the common mistake to avoid.",
+                "answer": f"A strong answer defines {title}, states the source-specific rule or relationship, and separates it from nearby concepts that look similar but do different work.",
                 "required_keywords": title_keywords,
                 "explanation": f"This checks whether the learner can use the source facts for {title}, not just recognize the term.",
                 "explanation_page": page,
             },
         ]
+        return [
+            enrich_question_v2(
+                question,
+                q_type=question.get("type"),
+                concept=title,
+                note_title=title,
+                source_pages=source_pages,
+            )
+            for question in quiz
+        ]
+
+    def _concept_distractors(self, title: str, primary_text: str, fact_texts: List[str]) -> List[str]:
+        haystack = f"{title} {primary_text} {' '.join(fact_texts)}".lower()
+        if "preference" in haystack or "bundle" in haystack:
+            return [
+                "It means the consumer can only rank bundles after prices and income determine what is affordable.",
+                "It measures the exact number of happiness units produced by each bundle.",
+                "It describes the final purchased bundle rather than the ranking of possible bundles.",
+            ]
+        if "budget" in haystack or "income" in haystack or "price" in haystack:
+            return [
+                "It ranks what the consumer wants most before prices are considered.",
+                "It measures psychological satisfaction from consuming one extra unit.",
+                "It says every desirable bundle can be purchased if the consumer prefers it strongly enough.",
+            ]
+        if "marginal" in haystack:
+            return [
+                "It is the total amount accumulated after all units are consumed.",
+                "It is the consumer's ranking of two complete bundles before consumption happens.",
+                "It is the money limit that decides which bundles are affordable.",
+            ]
+        if "utility" in haystack:
+            return [
+                "It is the market price paid for a good rather than satisfaction from consuming it.",
+                "It is the income boundary that separates affordable from unaffordable bundles.",
+                "It is the historical reason the good exists, not the consumer's valuation of it.",
+            ]
+        if any(token in haystack for token in ["code", "algorithm", "function", "data", "query"]):
+            return [
+                "It describes the user interface label but not the logic or data transformation.",
+                "It assumes the implementation has no edge cases, inputs, or failure states.",
+                "It treats output formatting as the same thing as the algorithm's mechanism.",
+            ]
+        if any(token in haystack for token in ["law", "case", "liability", "contract"]):
+            return [
+                "It states the policy preference but skips the legal elements that must be proven.",
+                "It treats the remedy as automatic without checking the rule's conditions.",
+                "It replaces the governing rule with a moral intuition about fairness.",
+            ]
+        return [
+            "It swaps the concept's mechanism with a related label that appears nearby in the source.",
+            "It gives an example but does not preserve the rule or relationship being tested.",
+            "It treats a consequence of the concept as if it were the definition of the concept.",
+        ]
+
+    def _application_case(self, title: str) -> str:
+        lowered = title.lower()
+        if "preference" in lowered:
+            return "A student likes Bundle A more than Bundle B, but Bundle A is too expensive this week. Explain what remains true about the student's preference."
+        if "budget" in lowered:
+            return "A buyer wants the most attractive bundle, but income and prices rule out some options. Explain what the budget line is doing."
+        if "marginal" in lowered:
+            return "A consumer gets a different amount of added satisfaction from the next unit than from all previous units combined. Explain which quantity is marginal."
+        if "utility" in lowered:
+            return "Two goods cost the same, but one gives the consumer more satisfaction. Explain what utility is tracking."
+        return f"A learner sees {title} used in a new example. Explain what must stay true for the application to be valid."
+
+    def _scenario_answer(self, title: str, primary_text: str) -> str:
+        lowered = title.lower()
+        if "preference" in lowered:
+            return "The student can still prefer Bundle A; affordability affects choice, not the underlying ranking of desirability."
+        if "budget" in lowered:
+            return "The budget line separates affordable from unaffordable bundles using income and prices; it does not decide desire by itself."
+        if "marginal" in lowered:
+            return "The marginal quantity is the extra change from one additional unit, not the accumulated total."
+        if "utility" in lowered:
+            return "Utility tracks satisfaction or usefulness to the consumer, not the market price alone."
+        return f"The answer must preserve this source-grounded relationship: {primary_text}"
 
     def _concept_task(self, title: str, facts: List[str]) -> str:
         haystack = f"{title} {' '.join(facts)}".lower()
@@ -1490,36 +1645,129 @@ class SourceAtomicNoteCompiler:
             return formal
         return next((text for text in facts if not self._looks_like_slide_heading(text)), fallback)
 
-    def _build_fallback_content(self, title: str, facts: List[Dict[str, Any]], quiz: List[Dict[str, Any]]) -> str:
+    def _build_fallback_content(self, title: str, facts: List[Dict[str, Any]], quiz: List[Dict[str, Any]], node: Dict[str, Any], profile: Dict[str, Any]) -> str:
         fact_texts = [self._clean_fact(fact["text"], title) for fact in facts]
         first = fact_texts[0] if fact_texts else f"The source introduces {title} as a required concept for this chapter."
         second = fact_texts[1] if len(fact_texts) > 1 else first
         third = fact_texts[2] if len(fact_texts) > 2 else second
         concept_task = self._concept_task(title, fact_texts)
         formal = self._formal_anchor(fact_texts, third)
-        evidence_rows = "\n".join(
-            f"| p. {int(fact.get('page') or 1)} | {self._clean_fact(fact.get('text', ''), title)} |"
-            for fact in facts[:4]
-        ) or f"| p. 1 | The source page identifies {title} as a concept to study. |"
+        headings = self._dynamic_teaching_headings(node, profile)
+        artifact = self._fallback_artifact(title, fact_texts, formal)
         quiz_block = "```interactive-quiz\n" + json.dumps(quiz, indent=2) + "\n```"
         return (
             "## Mental Model\n\n"
-            f"Treat {title} as a working part of the source's consumer-choice model: {concept_task}. "
-            f"The first anchor is: {first}.\n\n"
-            "## How the Economics Actually Work\n\n"
-            f"Start from that anchor, then add the next source detail: {second}. "
-            f"Together, these points show what the consumer is allowed to compare, measure, rank, or choose in this part of the chapter. "
-            f"A correct answer should name the relationship and then state its consequence in the same direction as the source.\n\n"
-            "## The Formal Math & Models\n\n"
-            f"Preserve this formal anchor exactly: {formal}. "
-            f"If it is an equation, ranking, slope, condition, or named relationship, later practice should test that same structure rather than a looser paraphrase.\n\n"
-            "## Source Evidence\n\n"
-            "| Page | Evidence |\n"
-            "| --- | --- |\n"
-            f"{evidence_rows}\n\n"
+            f"{self._mental_model(title, node, fact_texts)}\n\n"
+            f"## {headings[0]}\n\n"
+            f"{self._intuition_section(title, first, node)}\n\n"
+            f"## {headings[1]}\n\n"
+            f"{self._mechanism_section(title, concept_task, second, node, fact_texts)}\n\n"
+            f"{artifact}\n\n"
+            f"## {headings[2]}\n\n"
+            f"{self._formal_section(title, formal, node)}\n\n"
             "---\n\n"
             "## The Proving Grounds\n\n"
             f"{quiz_block}"
+        )
+
+    def _mental_model(self, title: str, node: Dict[str, Any], facts: List[str]) -> str:
+        domain = str(node.get("domain") or "").upper()
+        lowered = f"{title} {' '.join(facts)}".lower()
+        if domain.startswith("ECON") or any(t in lowered for t in ["consumer", "utility", "budget", "preference"]):
+            if "preference" in lowered:
+                return f"Imagine a person sorting complete baskets of goods from most wanted to least wanted before checking the price tags. {title} is that sorting rule. It does not ask what the person can afford yet; it asks how the person ranks whole bundles when comparing them."
+            if "budget" in lowered:
+                return f"Imagine drawing a fence around every bundle a person can actually buy with their income. {title} is that affordability fence. Preferences say what the consumer wants, but this concept says which wanted bundles are possible."
+            return f"Imagine the consumer as a decision-maker comparing options, satisfaction, and limits. {title} is one piece of that decision machine. The goal is to know what the concept measures, what it compares, and what mistake it prevents."
+        if domain.startswith("CS"):
+            return f"Imagine a machine that receives inputs, transforms them through rules, and produces an output. {title} is best learned by naming the input, the transformation, the output, and the failure case."
+        if domain.startswith("MATH"):
+            return f"Imagine the concept as a rule that turns loose intuition into a precise statement. {title} starts with a pattern you can picture, then becomes a formal condition you can test."
+        if domain.startswith("MED"):
+            return f"Imagine the body as a chain of connected systems. {title} names one link in that chain: what enters, what changes, what exits, and what can fail."
+        return f"Imagine {title} as a small engine inside the source material. To master it, identify what goes in, what rule acts on it, what comes out, and which nearby idea it is often confused with."
+
+    def _intuition_section(self, title: str, first: str, node: Dict[str, Any]) -> str:
+        domain = str(node.get("domain") or "").upper()
+        if domain.startswith("ECON"):
+            return f"Start with the economic object being studied, then ask what relationship the concept adds. Here, the usable source fact is: {first}. Read that as a rule about decisions, not as decoration. If the concept is about preferences, it ranks desirability. If it is about budgets, it limits affordability. If it is about utility, it describes satisfaction."
+        if domain.startswith("CS"):
+            return f"Start by separating the name of the system from the behavior it performs. The usable source fact is: {first}. A good explanation should say what data enters, what operation happens, and what output or state change proves the operation worked."
+        if domain.startswith("MATH"):
+            return f"Start with the plain-language pattern before the notation. The usable source fact is: {first}. The formal expression is only useful after you know what each symbol is trying to preserve."
+        return f"Start with the source's strongest usable fact: {first}. Treat it as the anchor for the concept, then explain how the concept changes, constrains, classifies, or predicts something."
+
+    def _mechanism_section(self, title: str, concept_task: str, second: str, node: Dict[str, Any], facts: List[str]) -> str:
+        domain = str(node.get("domain") or "").upper()
+        source_clues = self._source_clues(facts)
+        if domain.startswith("ECON"):
+            return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. To use the concept correctly, first name the economic objects, then name the relationship between them, then keep that relationship separate from later constraints such as income, prices, or equilibrium conditions."
+        if domain.startswith("CS"):
+            return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Trace it like execution: input, rule, intermediate state, output, then edge case. If you cannot identify those five parts, you have only memorized the label."
+        if domain.startswith("MATH"):
+            return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Move from example to abstraction carefully: define the objects, state the operation or condition, then test whether the rule still works at the boundary."
+        return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Use the concept by naming the condition, applying the rule, and checking the consequence without importing facts the source did not support."
+
+    def _source_clues(self, facts: List[str]) -> str:
+        clean = [fact for fact in facts if fact and not self._looks_like_slide_heading(fact)]
+        if not clean:
+            return "the source provides only a thin extractable anchor, so the note preserves the strongest available relationship"
+        return "; ".join(clean[:3])
+
+    def _formal_section(self, title: str, formal: str, node: Dict[str, Any]) -> str:
+        lowered = title.lower()
+        if "preference" in lowered:
+            return (
+                f"The formal anchor is: {formal}. In consumer theory, write bundle comparisons as compact sentences. "
+                "`X > Y` or `X ≻ Y` means X is strictly preferred to Y. `X ~ Y` means the consumer is indifferent between them. "
+                "`X >= Y` or `X ⪰ Y` means X is at least as good as Y. The symbols are not arithmetic; they encode a ranking of complete bundles."
+            )
+        if "budget" in lowered:
+            return (
+                f"The formal anchor is: {formal}. A budget relationship usually connects income, prices, and quantities. "
+                "The key test is whether a bundle is affordable, not whether it is desirable."
+            )
+        if "marginal" in lowered:
+            return f"The formal anchor is: {formal}. Marginal means extra change from one more unit, so practice should distinguish total accumulated amount from the additional amount."
+        return f"The formal anchor is: {formal}. If this is an equation, condition, ranking, schema, rule, or named relationship, preserve its structure exactly before paraphrasing it."
+
+    def _fallback_artifact(self, title: str, facts: List[str], formal: str) -> str:
+        lowered = f"{title} {' '.join(facts)} {formal}".lower()
+        if "preference" in lowered:
+            return (
+                "| Symbol | Read It As | What It Tests |\n"
+                "|---|---|---|\n"
+                "| `X ≻ Y` | X is strictly preferred to Y | One bundle is ranked higher. |\n"
+                "| `X ~ Y` | X and Y are equally desirable | The consumer is indifferent. |\n"
+                "| `X ⪰ Y` | X is at least as good as Y | Weak preference includes strict preference or indifference. |"
+            )
+        if "budget" in lowered:
+            return (
+                "```mermaid\n"
+                "flowchart LR\n"
+                "  Income[Income] --> Constraint[Budget Constraint]\n"
+                "  Prices[Prices] --> Constraint\n"
+                "  Constraint --> Affordable[Affordable Bundles]\n"
+                "  Constraint --> Unaffordable[Unaffordable Bundles]\n"
+                "```"
+            )
+        if re.search(r"[A-Za-z]\w*\s*[=+*/-]\s*[A-Za-z0-9]", formal):
+            return f"$$\n{formal}\n$$"
+        if any(token in lowered for token in ["process", "step", "pipeline", "pathway", "sequence"]):
+            return (
+                "```mermaid\n"
+                "flowchart TD\n"
+                "  A[Condition] --> B[Mechanism]\n"
+                "  B --> C[Result]\n"
+                "  C --> D[Limit or Failure Case]\n"
+                "```"
+            )
+        return (
+            "| Part | Question To Ask | Mastery Check |\n"
+            "|---|---|---|\n"
+            f"| Concept | What does {title} name? | Give the definition without swapping in a nearby concept. |\n"
+            "| Mechanism | What relationship changes or gets tested? | Explain the rule in one new example. |\n"
+            "| Failure | What mistake would break the idea? | Identify the tempting but wrong interpretation. |"
         )
 
     def _source_file_ref(self, job: Dict[str, Any]) -> str:
@@ -1533,7 +1781,7 @@ class SourceAtomicNoteCompiler:
         note_title = lo.normalize_title(title)
         facts = self._source_sentences(node)
         quiz = self._build_fallback_quiz(title, facts, source_pages)
-        body = self._build_fallback_content(title, facts, quiz)
+        body = self._build_fallback_content(title, facts, quiz, node, profile)
         frontmatter = {
             "title": note_title,
             "hub": f"[[{Path(_source_hub_rel_path(job)).stem}]]",

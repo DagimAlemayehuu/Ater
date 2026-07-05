@@ -17,6 +17,23 @@ const INLINE_MARKDOWN_COMPONENTS = {
   p: ({ children }: any) => <span className="inline text-[13px] text-foreground/90">{children}</span>
 };
 
+const FORMAT_BY_TYPE: Record<string, string> = {
+  mcq: 'choice',
+  true_false: 'choice',
+  fill_in: 'blank',
+  matching: 'match',
+  order: 'order',
+  code: 'code_editor',
+  debug: 'long_text',
+  find_error: 'long_text',
+  synthesis: 'long_text',
+  scenario: 'long_text',
+  writing: 'short_text',
+  trace: 'short_text',
+  calculation: 'short_text',
+  data_analysis: 'table_editor',
+};
+
 export const MarkdownBlock = React.memo(({ content, variant = 'block', className }: { content: string; variant?: 'block' | 'inline'; className?: string }) => {
   if (variant === 'inline') {
     return (
@@ -393,6 +410,10 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
   const retrievability = currentCard ? getRetrievability(currentCard) : 1.0;
   const lapses = currentCard ? (currentCard.lapses || 0) : 0;
   const currentScore = scores[currentQ.id];
+  const currentFormat = String((currentQ as any).format || FORMAT_BY_TYPE[currentQ.type] || 'short_text');
+  const currentFamily = String((currentQ as any).family || currentQ.type || 'explain');
+  const currentVariant = String((currentQ as any).variant || '').replace(/_/g, ' ');
+  const skillTarget = String((currentQ as any).skill_target || currentQ.note_title || '').replace(/_/g, ' ');
 
   return (
     <div data-tour="quiz-section" className="my-1 w-full border border-border rounded-[12px] bg-bento-panel shadow-sm not-prose relative flex flex-col">
@@ -511,8 +532,24 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
             <div className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/40 flex items-center gap-2">
               <Badge variant="outline" className="text-[7px] border-border bg-bento-item text-muted-foreground rounded-[8px] px-1.5 py-0">{currentQ.difficulty || '1'}</Badge>
               <div className="w-0.5 h-0.5 rounded-[8px] bg-muted-foreground/20" />
-              <span>{currentQ.type.replace('_', ' ')}</span>
+              <span>{currentFamily.replace('_', ' ')}</span>
+              <div className="w-0.5 h-0.5 rounded-[8px] bg-muted-foreground/20" />
+              <span>{currentFormat.replace('_', ' ')}</span>
             </div>
+            {(skillTarget || currentVariant) && (
+              <div className="flex flex-wrap gap-1.5">
+                {skillTarget && (
+                  <Badge variant="outline" className="text-[7px] border-border/60 bg-bento-item/70 text-muted-foreground rounded-[6px] px-1.5 py-0">
+                    {skillTarget}
+                  </Badge>
+                )}
+                {currentVariant && (
+                  <Badge variant="outline" className="text-[7px] border-border/60 bg-bento-item/70 text-muted-foreground rounded-[6px] px-1.5 py-0">
+                    {currentVariant}
+                  </Badge>
+                )}
+              </div>
+            )}
             {currentQ.type !== 'fill_in' && (
               <div className="text-[13px] font-bold tracking-tight leading-snug text-foreground/90 max-w-3xl">
                 <MarkdownBlock content={currentQ.question} />
@@ -522,7 +559,7 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
 
           <div className="space-y-4" key={`body-${currentQ.id}`}>
             {/* MCQ / True False */}
-            {(currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
+            {(currentFormat === 'choice' || currentQ.type === 'mcq' || currentQ.type === 'true_false') && (
               <div className="grid grid-cols-1 gap-2">
                 {Object.entries(currentQ.options || (currentQ.type === 'true_false' ? {'True':'True', 'False':'False'} : {})).map(([key, val]) => {
                   const isSelected = userAnswers[currentQ.id] === key;
@@ -561,13 +598,14 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
             )}
 
             {/* Order */}
-            {currentQ.type === 'order' && (
+            {(currentFormat === 'order' || currentQ.type === 'order') && (
               <div className="space-y-1.5 max-w-2xl mx-auto">
                 {(userAnswers[currentQ.id] || currentQ.steps || []).map((step: string, i: number) => {
                   const list = userAnswers[currentQ.id] || currentQ.steps || [];
                   const moveUp = () => { if(i>0) { const n = [...list]; [n[i-1], n[i]] = [n[i], n[i-1]]; handleSelectAnswer(n); } };
                   const moveDown = () => { if(i<list.length-1) { const n = [...list]; [n[i], n[i+1]] = [n[i+1], n[i]]; handleSelectAnswer(n); } };
-                  const isCorrect = isRevealed && step === (currentQ.answer || [])[i];
+                  const expectedOrder = Array.isArray(currentQ.answer) ? currentQ.answer : [];
+                  const isCorrect = isRevealed && step === expectedOrder[i];
                   return (
                     <div key={i} className={cn(
                       "group flex items-center gap-2 p-2 border rounded-[8px] ",
@@ -587,10 +625,10 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
             )}
 
             {/* Matching */}
-            {currentQ.type === 'matching' && currentQ.pairs && (
+            {(currentFormat === 'match' || currentQ.type === 'matching') && currentQ.pairs && (
               <div className="space-y-3 max-w-3xl mx-auto">
-                {currentQ.pairs.map((pair: any, i: number) => {
-                  const rights = currentQ.pairs.map((p: any) => p.right).sort();
+                {(currentQ.pairs || []).map((pair: any, i: number) => {
+                  const rights = (currentQ.pairs || []).map((p: any) => p.right).sort();
                   const selected = (userAnswers[currentQ.id] || {})[pair.left] || "";
                   const isCorrect = isRevealed && selected === pair.right;
                   return (
@@ -623,14 +661,14 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
             )}
 
             {/* Fill In Blank */}
-            {currentQ.type === 'fill_in' && (
+            {(currentFormat === 'blank' || currentQ.type === 'fill_in') && (
               <div className="p-3 bg-bento-item border border-border rounded-[8px] leading-relaxed text-xs font-medium tracking-tight text-foreground/70 shadow-inner">
                 {renderFillInBlanks()}
               </div>
             )}
 
             {/* Writing / Scenario / Code / Debug / Synthesis / Find Error */}
-            {(!currentQ.type || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type)) && (
+            {(!currentQ.type || ['short_text', 'long_text', 'code_editor', 'table_editor', 'diagram_task', 'sandbox', 'self_grade'].includes(currentFormat) || ['debug', 'writing', 'scenario', 'code', 'synthesis', 'trace', 'calculation', 'data_analysis', 'find_error'].includes(currentQ.type)) && (
               <div className="space-y-3">
                 {(currentQ.content || currentQ.codeSnippet || currentQ.buggyCode) && (
                   <div className="p-2 bg-bento-item border border-border rounded-[8px] shadow-inner">
@@ -697,6 +735,31 @@ export default function MiniPracticeUI({ question, notePath, initialQuestionInde
                         </div>
                       </div>
                     )
+                  )}
+
+                  {((currentQ as any).rubric?.mastery_signal || Array.isArray((currentQ as any).rubric?.must_include) || (currentQ as any).remediation?.follow_up_policy) && (
+                    <div className="space-y-2 pt-3 border-t border-border">
+                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Mastery Rubric</div>
+                      {(currentQ as any).rubric?.mastery_signal && (
+                        <div className="text-[11px] font-bold text-foreground/75 leading-relaxed">
+                          {(currentQ as any).rubric.mastery_signal}
+                        </div>
+                      )}
+                      {Array.isArray((currentQ as any).rubric?.must_include) && (currentQ as any).rubric.must_include.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {(currentQ as any).rubric.must_include.map((item: string, i: number) => (
+                            <span key={`${item}-${i}`} className="px-1.5 py-0.5 rounded-[4px] border border-border/60 bg-bento-panel text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {(currentQ as any).remediation?.follow_up_policy && currentScore === false && (
+                        <div className="text-[10px] font-bold text-destructive/80 leading-relaxed">
+                          Follow-up: {(currentQ as any).remediation.follow_up_policy}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {(diagnosticLoading || diagnosticFeedback) && (

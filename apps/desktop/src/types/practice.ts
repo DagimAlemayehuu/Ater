@@ -36,7 +36,37 @@ export interface AdvancedPracticeConfig {
   gradingStrictness: "Lenient" | "Strict";
   enableProgressiveHints: boolean;
   requireConfidenceWager: boolean; // Metacognition rating before answer
+  smartMixPreset?: string;
+  practicePolicy?: Record<string, unknown>;
+  familyDistribution?: Partial<Record<QuestionFamily, number>>;
+  formatDistribution?: Partial<Record<QuestionFormat, number>>;
 }
+
+export type QuestionFamily =
+  | "recognize"
+  | "recall"
+  | "explain"
+  | "apply"
+  | "solve"
+  | "trace"
+  | "debug"
+  | "diagnose"
+  | "compare"
+  | "construct"
+  | "critique";
+
+export type QuestionFormat =
+  | "choice"
+  | "short_text"
+  | "long_text"
+  | "blank"
+  | "match"
+  | "order"
+  | "code_editor"
+  | "table_editor"
+  | "diagram_task"
+  | "sandbox"
+  | "self_grade";
 
 export type QuestionType = 
   | "mcq" 
@@ -59,6 +89,25 @@ export interface BaseQuestion {
   note_id?: string;
   note_title?: string;
   type: QuestionType;
+  schema_version?: number;
+  family?: QuestionFamily | string;
+  format?: QuestionFormat | string;
+  variant?: string;
+  skill_target?: string;
+  rubric?: {
+    grading_mode?: "objective" | "rubric" | "hybrid" | string;
+    must_include?: string[];
+    mastery_signal?: string;
+    [key: string]: unknown;
+  };
+  remediation?: {
+    misconception_codes?: string[];
+    follow_up_policy?: string;
+    [key: string]: unknown;
+  };
+  source_refs?: Array<Record<string, unknown>>;
+  artifact_refs?: Array<Record<string, unknown>>;
+  grading?: Record<string, unknown>;
   difficulty: string;
   question: string;
   explanation: string;

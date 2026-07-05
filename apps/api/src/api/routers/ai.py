@@ -3,6 +3,7 @@ import shutil
 import asyncio
 import logging
 import json
+import re
 from pathlib import Path
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request
@@ -16,6 +17,68 @@ from src.domains.ater.assistant import run_assistant_chat
 
 logger = logging.getLogger("Ater")
 router = APIRouter()
+
+
+def _resolve_safe_local_path(root: Optional[str], maybe_path: str) -> Optional[Path]:
+    if not maybe_path:
+        return None
+    try:
+        candidate = Path(maybe_path)
+        if not candidate.is_absolute() and root:
+            candidate = Path(root) / candidate
+        candidate = candidate.resolve()
+        if root:
+            root_path = Path(root).resolve()
+            if root_path not in candidate.parents and candidate != root_path:
+                return None
+        return candidate if candidate.exists() and candidate.is_file() else None
+    except Exception:
+        return None
+
+
+def _read_text_window(path: Path, limit: int = 6000) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+    text = re.sub(r"```interactive-quiz[\s\S]*?```", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^---[\s\S]*?---", "", text, count=1).strip()
+    return re.sub(r"\s+", " ", text).strip()[:limit]
+
+
+def _extract_note_source_refs(note_text: str) -> Dict[str, Any]:
+    refs: Dict[str, Any] = {"source_file": "", "source_pages": []}
+    fm_match = re.match(r"^---\s*\n([\s\S]*?)\n---", note_text or "")
+    if not fm_match:
+        return refs
+    frontmatter = fm_match.group(1)
+    source_match = re.search(r"(?m)^source_file:\s*[\"']?(.+?)[\"']?\s*$", frontmatter)
+    if source_match:
+        refs["source_file"] = source_match.group(1).strip()
+    pages_match = re.search(r"(?m)^source_pages:\s*(\[.*?\])\s*$", frontmatter)
+    if pages_match:
+        try:
+            parsed = json.loads(pages_match.group(1))
+            if isinstance(parsed, list):
+                refs["source_pages"] = [int(p) for p in parsed if str(p).isdigit()]
+        except Exception:
+            refs["source_pages"] = []
+    return refs
+
+
+def _fallback_selection_explanation(selection: str, context: str) -> str:
+    target = (selection or "this selection").strip()
+    context_hint = re.sub(r"\s+", " ", context or "").strip()[:700]
+    return (
+        "## Explain More\n\n"
+        f"**Selected idea:** {target}\n\n"
+        "### From zero\n\n"
+        "Treat the selected phrase as a concept that must do a job inside the note. To understand it, identify the object it talks about, the relationship it states, and the mistake it prevents.\n\n"
+        "### Grounded reading\n\n"
+        f"{context_hint if context_hint else 'No additional note context was available, so the explanation is limited to the selected text.'}\n\n"
+        "### Mastery check\n\n"
+        "Restate the idea in one sentence, then apply it to a new example without changing the relationship."
+    )
 
 @router.get("/ai/rate-limits")
 async def get_rate_limits():
@@ -299,82 +362,72 @@ async def ater_explain(
     page = payload.get("page")
     note_title = payload.get("note_title", "")
     path = payload.get("path", "")
+    source_kind = payload.get("source_kind", "")
+    scope = payload.get("scope", "selection")
+
+    note_context = ""
+    pdf_context = ""
+    resolved_path = _resolve_safe_local_path(secrets.vault_path, path)
+    if resolved_path and resolved_path.suffix.lower() in {".md", ".markdown", ".txt"}:
+        raw_note = resolved_path.read_text(encoding="utf-8", errors="ignore")
+        note_context = _read_text_window(resolved_path)
+        refs = _extract_note_source_refs(raw_note)
+        source_file = refs.get("source_file") or ""
+        if source_file and secrets.vault_path:
+            source_path = _resolve_safe_local_path(secrets.vault_path, source_file)
+            if source_path and source_path.suffix.lower() in {".md", ".txt"}:
+                pdf_context = _read_text_window(source_path, limit=2500)
+            elif source_path and source_path.suffix.lower() == ".pdf":
+                pdf_context = f"Original PDF available at {source_file}. Source pages linked by note: {refs.get('source_pages') or []}."
+    elif resolved_path and resolved_path.suffix.lower() in {".md", ".markdown", ".txt"}:
+        note_context = _read_text_window(resolved_path)
 
     context_str = ""
     if selection:
         context_str += f"Selection: \"{selection}\"\n"
     if selection_context:
         context_str += f"Selection context: \"{selection_context}\"\n"
+    if note_context:
+        context_str += f"Atomic Note Context: \"{note_context}\"\n"
+    if pdf_context:
+        context_str += f"PDF/Source Context: \"{pdf_context}\"\n"
     if page:
         context_str += f"Page: {page}\n"
     if note_title:
         context_str += f"Document Title: {note_title}\n"
     if path:
         context_str += f"Document Path: {path}\n"
+    if source_kind:
+        context_str += f"Source Kind: {source_kind}\n"
+    if scope:
+        context_str += f"Scope: {scope}\n"
 
     try:
         llm = ModelFactory.get_model(
             provider=provider,
             model_name=model,
             api_key=ai_key,
-            temperature=0.7,
-            max_tokens=2000
+            temperature=0.25,
+            max_tokens=1400
         )
 
-        sys_prompt = """You are Ater's Socratic Tutor, an elite AI educator and subject-matter expert.
-Your goal is to explain the provided selection or document context in a comprehensive, detailed, and master-level manner.
+        sys_prompt = """You are Ater's grounded selection tutor.
+Explain the selected text using only the Atomic Note context and source/PDF context provided. If the source/PDF context is thin, say what is known from the note and avoid inventing details.
 
-Instructions:
-1. Master-Level Content: Explain all concepts from the ground up, assuming the student knows absolutely nothing. Provide deep, rich, highly explanatory detailed lessons to take the student to true mastery. Do not summarize or write brief text; write comprehensive explanations, mathematical derivations, or full conceptual breakdowns.
-2. Structure the lesson into a single <artifact> block containing exactly 3 to 5 chapters. Do not write lesson text outside the <artifact> block.
-3. Every single chapter must have a clear title and contain:
-   - A detailed Markdown text explanation of the concepts.
-   - An interactive visual aid or simulation specification.
-4. Formatting & Anti-Code-Fences: Do NOT wrap the chapter's lesson text in any markdown code blocks or fences (like ```markdown or ```text). Write the text directly as plain markdown paragraphs and headings. Code fences (```) must ONLY be used for actual programming code snippets or when formatting a preset like ```ater-ui.
-5. No Emojis: Never use emojis anywhere in your response, chapter titles, or lesson content.
-6. For interactive visual aids, do NOT write the HTML/JS code inside a <sandbox> yourself. Instead, use either:
-   - A declarative `ater-ui` preset block (type: 'math-plotter', 'node-graph', or 'table-explorer').
-   - A `<sandbox-spec>precise sandbox simulator request</sandbox-spec>` block detailing the interactive elements, controls, and visual representation. The system will compile this spec into code asynchronously.
-   - Crucially, do NOT wait until the last chapter to generate an interactive sandbox; every chapter should have its own tailored visualization.
-7. Format for `ater-ui` codeblock:
-```ater-ui
-{
-  "ui_type": "interactive_sandbox",
-  "data": {
-    "title": "Math Plotter Example",
-    "type": "math-plotter",
-    "equation": "sine",
-    "sliders": [
-      { "name": "amplitude", "min": 10, "max": 100, "default": 50 }
-    ]
-  }
-}
-```
-Supported types:
-- `math-plotter` (equations: `sine`, `logistic`, `exponential`, `quadratic`. Sliders: `amplitude`, `frequency`, `phase`, `decay`)
-- `node-graph` (nodes: array of `{ id, label, x, y }`, links: array of `{ source, target }`)
-- `table-explorer` (headers: array of strings, rows: array of objects)
+Return Markdown only. No artifact XML, no sandbox specs, no citations, no emojis.
 
-Format for <artifact> structure:
-<artifact title="Comprehensive Lesson Title">
-  <chapter title="Chapter 1: Title">
-    Detailed lesson text explaining the concepts...
-    <sandbox-spec>Draw an interactive graph showing nodes A, B, C representing a triangle. Allow the user to drag vertices. Ensure it matches dark mode styling.</sandbox-spec>
-  </chapter>
-  <chapter title="Chapter 2: Title">
-    Detailed lesson text on the next concepts...
-    ```ater-ui
-    {
-      "ui_type": "interactive_sandbox",
-      "data": {
-        "title": "Adjacency Table",
-        "type": "table-explorer",
-        ...
-      }
-    }
-    ```
-  </chapter>
-</artifact>"""
+Use exactly this structure:
+## Explain More
+### Simple Mental Model
+Explain it like the learner is 12, but keep the academic meaning correct.
+### What It Means Here
+Tie the explanation directly to the selected text and the atomic note.
+### Source Grounding
+State the source-backed relationship, equation, definition, or contrast in plain English.
+### Common Trap
+Name the most likely misconception.
+### Mastery Check
+Ask one short follow-up question that tests the selected idea."""
 
         human_prompt = f"""Document Context:
 {context_str}
@@ -388,7 +441,8 @@ Please generate the explanation now."""
         )
         return {"answer": res.content}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.warning("[ater-explain] AI explain failed, returning deterministic fallback: %s", e)
+        return {"answer": _fallback_selection_explanation(selection, context_str)}
 
 @router.post("/ater/chat")
 async def ater_chat(
