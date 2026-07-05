@@ -410,3 +410,50 @@ def test_get_vault_stats_filtering(tmp_path):
     # 3. Check stats with atomic_notes category filter
     atomic_result = assistant.get_vault_stats(category="atomic_notes")
     assert atomic_result == "atomic_notes: 1"
+
+
+@pytest.mark.asyncio
+async def test_generate_visual_artifact_registration_and_compilation(tmp_path):
+    secrets = AppSecrets(
+        ai_provider="google",
+        ai_key="mock-key",
+        ai_model="gemma-4-31b-it",
+        vault_path=str(tmp_path),
+        inbox_path=str(tmp_path / "Inbox"),
+        academic_path="Notes"
+    )
+
+    assistant = AterAssistant(secrets)
+    
+    # 1. Verify tool registration
+    tools = assistant.get_tools()
+    tool_names = [t.name for t in tools]
+    assert "generate_visual_artifact" in tool_names
+
+    # 2. Mock LLM call return value
+    class MockLLM:
+        async def ainvoke(self, messages):
+            class MockResult:
+                content = "```chart\n{\n  \"type\": \"line\"\n}\n```"
+            return MockResult()
+
+    # Stub ModelFactory.get_model and GoogleNativeChatModel.ainvoke to return MockLLM
+    from src.domains.ai.factory import ModelFactory
+    from src.domains.ai.google_native import GoogleNativeChatModel
+    original_get_model = ModelFactory.get_model
+    original_ainvoke = GoogleNativeChatModel.ainvoke
+    
+    try:
+        ModelFactory.get_model = lambda *args, **kwargs: MockLLM()
+        GoogleNativeChatModel.ainvoke = MockLLM().ainvoke
+        
+        # Test compilation
+        res = await assistant.generate_visual_artifact(
+            artifact_type="chart",
+            description="microeconomics curve"
+        )
+        assert "```chart" in res
+        assert "line" in res
+    finally:
+        ModelFactory.get_model = original_get_model
+        GoogleNativeChatModel.ainvoke = original_ainvoke

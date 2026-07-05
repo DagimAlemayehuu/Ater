@@ -2876,13 +2876,14 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       .editor-content p {
         margin-bottom: 1.5rem;
         line-height: 1.7;
-        color: #a1a1aa;
+        color: hsl(var(--foreground) / 0.8);
       }
       .editor-content strong {
-        color: #ebebeb;
-        font-weight: 600;
+        color: hsl(var(--foreground));
+        font-weight: 700;
       }
-      .underlined-term {        border-bottom: 1px solid #a1a1aa;
+      .underlined-term {
+        border-bottom: 1px solid hsl(var(--muted-foreground));
         padding-bottom: 2px;
       }
       .custom-scrollbar::-webkit-scrollbar {

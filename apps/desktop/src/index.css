@@ -99,11 +99,7 @@
     @apply h-full overflow-hidden;
   }
 
-  *, ::before, ::after {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-  }
+  /* Global transitions on all elements are removed to make theme switching instant and boost rendering performance. */
 }
 
 /* GPU Acceleration & Performance Optimizations */

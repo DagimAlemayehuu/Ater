@@ -1084,6 +1084,13 @@ class SearchWebInput(BaseModel):
 
 
 
+from typing import Literal
+
+class GenerateVisualArtifactInput(BaseModel):
+    artifact_type: Literal["chart", "mermaid", "quiz", "math"] = Field(description="The type of artifact to compile ('chart' for monochrome graphs/plots, 'mermaid' for flowcharts/mindmaps, 'quiz' for socratic interactive quizzes, 'math' for LaTeX display equation blocks).")
+    description: str = Field(description="The clear description of the content or data you want the artifact to depict (e.g. 'supply curve shifting right' or 'state machine for login flow').")
+
+
 def get_fallback_display_name() -> str:
     import os
     import json
@@ -2735,10 +2742,186 @@ DO NOT wrap your JSON in markdown code blocks. Return the raw JSON string direct
             return "You don't have any upcoming exams or assignments yet. Add some via the Academic Dashboard."
         return self.render_ui("calendar_bar", {"events": events})
 
+    async def generate_visual_artifact(
+        self,
+        artifact_type: Literal["chart", "mermaid", "quiz", "math"],
+        description: str
+    ) -> str:
+        """
+        Generates and compiles a syntactically correct, perfectly formatted, monochrome visual or interactive artifact markdown block.
+        """
+        from src.domains.ai.factory import ModelFactory
+        
+        # Build compiler prompts based on artifact type
+        if artifact_type == "chart":
+            system_instruction = (
+                "You are a specialized Chart Compiler that outputs raw data visualization JSON. "
+                "You respond ONLY with a valid ```chart JSON block, with no explanations, no headers, and no text outside the block."
+            )
+            human_prompt = f"""
+            Compile the following description into a valid, syntactically correct ````chart JSON ```` block.
+            The JSON structure MUST follow this schema exactly:
+            {{
+              "type": "line" | "bar" | "area" | "composed" | "pie",
+              "title": "Clear Title",
+              "subtitle": "Clear Subtitle Description",
+              "xAxis": {{ "key": "x", "label": "Horizontal Label" }},
+              "yAxis": {{ "key": "y", "label": "Vertical Label" }},
+              "series": [
+                {{ "key": "seriesKey", "name": "Display Name" }}
+              ],
+              "data": [
+                {{ "x": 10, "seriesKey": 50 }},
+                ...
+              ]
+            }}
+
+            RULES:
+            1. DO NOT specify hex color codes in the JSON (e.g. do NOT include "color" keys in series objects). The system automatically styles them monochrome.
+            2. For line series, the horizontal axes should ideally be numeric or sorted.
+            3. Respond ONLY with the ````chart JSON ```` markdown block. Do not write any other explanation or text.
+
+            Description: {description}
+            """
+        elif artifact_type == "mermaid":
+            system_instruction = (
+                "You are a specialized Mermaid Graph Compiler that outputs raw graph syntax. "
+                "You respond ONLY with a valid ```mermaid block, with no explanations, no headers, and no text outside the block."
+            )
+            human_prompt = f"""
+            Compile the following description into a valid, renderable, and syntactically clean ````mermaid ```` flowchart or diagram block.
+            RULES:
+            1. Use base/monochrome styling parameters.
+            2. Avoid pure black and pure white styling overrides.
+            3. Ensure all connections, nodes, subgraphs, and arrows are syntactically valid and render correctly.
+            4. Respond ONLY with the ````mermaid ... ```` block. Do not write any other explanation or text.
+
+            Description: {description}
+            """
+        elif artifact_type == "quiz":
+            system_instruction = (
+                "You are a specialized Quiz Compiler that outputs raw interactive quiz JSON. "
+                "You respond ONLY with a valid ```interactive-quiz JSON block, with no explanations, no headers, and no text outside the block."
+            )
+            human_prompt = f"""
+            Compile the following description into a valid, syntactically correct ````interactive-quiz JSON ```` block.
+            The structure MUST follow this JSON schema exactly:
+            [
+              {{
+                "id": "unique-id-1",
+                "type": "mcq" | "true_false" | "writing",
+                "difficulty": "L1" | "L2" | "L3" | "L4",
+                "question": "...",
+                "options": {{
+                  "A": "...",
+                  "B": "..."
+                }} (required for mcq, true_false),
+                "answer": "A" (mcq) or "True"/"False" (true_false) or string (writing),
+                "explanation": "..."
+              }}
+            ]
+
+            RULES:
+            1. Ensure the JSON is syntactically valid.
+            2. Respond ONLY with the ````interactive-quiz JSON ```` block. Do not write any other explanation or text.
+
+            Description: {description}
+            """
+        else: # math
+            system_instruction = (
+                "You are a specialized LaTeX math compiler. "
+                "You respond ONLY with a valid double dollar sign $$ math block, with no explanations, no headers, and no text outside the block."
+            )
+            human_prompt = f"""
+            Compile the following description into a beautifully structured, clean LaTeX/KaTeX display equation block wrapped in double dollar signs:
+            $$
+            ...
+            $$
+            RULES:
+            1. Use standard LaTeX math symbols and arrays if needed.
+            2. Respond ONLY with the $$ ... $$ math block. Do not write any other explanation or text.
+
+            Description: {description}
+            """
+
+        # Call LLM with self-healing retries in case of JSON parse failure
+        max_retries = 2
+        last_error = ""
+        
+        for attempt in range(max_retries):
+            try:
+                provider = self.secrets.ai_provider or "google"
+                model_name = self.secrets.ai_model or "gemma-4-31b-it"
+                api_key = self.secrets.ai_key
+                
+                final_human_prompt = human_prompt
+                if attempt > 0:
+                    final_human_prompt += f"\n\nCRITICAL FIX NEEDED: Your previous response was invalid. Error: {last_error}. Please correct the syntax and return a valid block."
+                
+                if provider.lower() == "google":
+                    from src.domains.ai.google_native import GoogleNativeChatModel
+                    llm = GoogleNativeChatModel(
+                        model=model_name,
+                        api_key=api_key,
+                        temperature=0.1
+                    )
+                    res = await llm.ainvoke([
+                        ("system", system_instruction),
+                        ("human", final_human_prompt)
+                    ])
+                else:
+                    # Instantiate model using factory for other providers
+                    llm = ModelFactory.get_model(
+                        provider=provider,
+                        model_name=model_name,
+                        api_key=api_key,
+                        temperature=0.1,
+                        base_url=self.secrets.ai_base_url,
+                        max_tpm=self.secrets.ai_max_tpm,
+                        max_rpm=self.secrets.ai_max_rpm,
+                        max_tpd=self.secrets.ai_max_tpd,
+                        max_rpd=self.secrets.ai_max_rpd,
+                        max_concurrency=self.secrets.ai_max_concurrency
+                    )
+                    res = await llm.ainvoke([
+                        ("system", system_instruction),
+                        ("human", final_human_prompt)
+                    ])
+                
+                block_content = res.content if hasattr(res, "content") else str(res)
+                block_content = block_content.strip()
+                
+                # Validation checks
+                if artifact_type in ["chart", "quiz"]:
+                    # Try parsing the JSON payload inside the block fences to verify validity
+                    json_str = block_content
+                    if "```json" in json_str:
+                        json_str = json_str.split("```json")[1].split("```")[0].strip()
+                    elif f"```{artifact_type}" in json_str:
+                        json_str = json_str.split(f"```{artifact_type}")[1].split("```")[0].strip()
+                    elif "```" in json_str:
+                        json_str = json_str.split("```")[1].split("```")[0].strip()
+                    
+                    json.loads(json_str) # test load
+                
+                return block_content
+                
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                last_error = str(e)
+                logger.warning(f"[Ater Assistant] Generate visual artifact attempt {attempt+1} failed: {e}")
+                
+        return f"Error compiling artifact: {last_error}"
+
     # ── Tool registry ──────────────────────────────────────────────────────
 
     def get_tools(self) -> List[StructuredTool]:
         return [
+            # Visual Artifact Compiler
+            StructuredTool.from_function(name="generate_visual_artifact", coroutine=self.generate_visual_artifact,
+                description="Consistently and reliably generate visual or interactive learning artifacts (monochrome charts, Mermaid diagrams, interactive quizzes, or LaTeX math blocks) from a simple description. Use this when the user requests diagrams, flowcharts, graphs, math blocks, or quizzes, so the system guarantees error-free JSON/ Mermaid/ LaTeX formatting.",
+                args_schema=GenerateVisualArtifactInput),
             # Web Search
             StructuredTool.from_function(name="search_web", func=self.search_web,
                 description="Search the web (internet) using DuckDuckGo for general knowledge, recent facts, or queries outside the local vault.",

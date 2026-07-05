@@ -1324,8 +1324,11 @@ async def get_pdf_viewer(
                     pageNum = num;
                     return;
                 }}
+                const totalPages = pdfDoc.numPages;
+                const targetPage = Math.max(1, Math.min(num, totalPages));
+                pageNum = targetPage;
                 try {{
-                    const page = await pdfDoc.getPage(num);
+                    const page = await pdfDoc.getPage(targetPage);
                     const baseViewportRef = page.getViewport({{ scale: 1.0 }});
                     
                     if (window.innerWidth === 0 || window.innerHeight === 0) return;
@@ -1469,7 +1472,10 @@ async def get_pdf_viewer(
     </body>
     </html>
     """
-    return HTMLResponse(content=html_content)
+    return HTMLResponse(
+        content=html_content, 
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+    )
 
 @router.get("/obsidian/serve/{path:path}")
 async def serve_obsidian_file(

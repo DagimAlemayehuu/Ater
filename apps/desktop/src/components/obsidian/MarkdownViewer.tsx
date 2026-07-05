@@ -1,5 +1,18 @@
 import ReactMarkdown from 'react-markdown'
 import { useTheme } from '@/context/theme-provider'
+import { useConfig } from '@/lib/ConfigContext'
+import { createPortal } from 'react-dom'
+import {
+    ResponsiveContainer,
+    LineChart, Line,
+    BarChart, Bar,
+    AreaChart, Area,
+    PieChart, Pie, Cell,
+    ComposedChart,
+    XAxis, YAxis,
+    CartesianGrid,
+    Tooltip, Legend
+} from 'recharts'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -9,8 +22,9 @@ import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from '
 import { sidecarApi } from '@/lib/sidecarApi'
 import { updateProperty } from '@/lib/markdownHelper'
 import { WikiLink, renderWikiLinks } from './WikiLink'
+import { invoke } from '@tauri-apps/api/core'
 import mermaid from 'mermaid'
-import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight, Info, AlertTriangle, ShieldAlert, CheckCircle2, HelpCircle, Calendar, Play, X, Loader2 } from 'lucide-react'
+import { Check, RefreshCw, Copy, FileText, Layers, Award, CheckSquare, Sparkles, Clock, Folder, ArrowRight, Info, AlertTriangle, ShieldAlert, CheckCircle2, HelpCircle, Calendar, Play, X, Loader2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import DOMPurify from 'dompurify'
 import MiniPracticeUI from '../MiniPracticeUI'
@@ -34,11 +48,27 @@ import ts from 'react-syntax-highlighter/dist/esm/languages/prism/typescript.js'
 import py from 'react-syntax-highlighter/dist/esm/languages/prism/python.js'
 // @ts-ignore
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash.js'
+// @ts-ignore
+import sql from 'react-syntax-highlighter/dist/esm/languages/prism/sql.js'
+// @ts-ignore
+import json from 'react-syntax-highlighter/dist/esm/languages/prism/json.js'
+// @ts-ignore
+import css from 'react-syntax-highlighter/dist/esm/languages/prism/css.js'
+// @ts-ignore
+import rust from 'react-syntax-highlighter/dist/esm/languages/prism/rust.js'
+// @ts-ignore
+import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup.js'
 
 SyntaxHighlighter.registerLanguage('javascript', js)
 SyntaxHighlighter.registerLanguage('typescript', ts)
 SyntaxHighlighter.registerLanguage('python', py)
 SyntaxHighlighter.registerLanguage('bash', bash)
+SyntaxHighlighter.registerLanguage('sql', sql)
+SyntaxHighlighter.registerLanguage('json', json)
+SyntaxHighlighter.registerLanguage('css', css)
+SyntaxHighlighter.registerLanguage('rust', rust)
+SyntaxHighlighter.registerLanguage('html', markup)
+SyntaxHighlighter.registerLanguage('xml', markup)
 import { ExplainSidebar } from './ExplainSidebar'
 import {
     FocusHUD,
@@ -109,6 +139,11 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
   const { resolvedTheme } = useTheme();
+  
+  // Interactive zoom & pan states
+  const [isOpen, setIsOpen] = useState(false);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   const activeChartRef = useRef<string>(chart);
 
@@ -119,21 +154,158 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'loose',
-      theme: isDark ? 'dark' : 'default',
+      theme: 'base',
       themeVariables: {
-        primaryColor: isDark ? '#27272a' : '#f4f4f5',
-        primaryTextColor: isDark ? '#fafafa' : '#18181b',
-        primaryBorderColor: isDark ? '#3f3f46' : '#e4e4e7',
-        lineColor: isDark ? '#52525b' : '#a1a1aa',
-        secondaryColor: isDark ? '#18181b' : '#fafafa',
-        tertiaryColor: isDark ? '#27272a' : '#f4f4f5',
-        fontFamily: 'Inter, sans-serif',
+        background: isDark ? '#1a1a1c' : '#ffffff',
+        primaryColor: isDark ? '#27272a' : '#fafafa', // Node background color (light/dark zinc)
+        primaryTextColor: isDark ? '#fafafa' : '#18181b', // Node text color
+        primaryBorderColor: isDark ? '#3f3f46' : '#d4d4d8', // Node border color
+        lineColor: isDark ? '#a1a1aa' : '#71717a', // Arrow lines & connections
+        secondaryColor: isDark ? '#18181b' : '#f4f4f5',
+        tertiaryColor: isDark ? '#1e1e21' : '#f4f4f5', // Subgraph background
+        fontFamily: 'Outfit, sans-serif',
         fontSize: '11px',
         mainBkg: isDark ? '#1a1a1c' : '#ffffff',
         nodeSpacing: 40,
         rankSpacing: 40,
-        curve: 'basis'
+        curve: 'basis',
+        clusterBkg: isDark ? '#1e1e21' : '#f4f4f5', // Subgraph background color (dark gray vs light gray)
+        clusterBorder: isDark ? '#3f3f46' : '#d4d4d8', // Subgraph border color (zinc gray instead of purple)
+        nodeBorder: isDark ? '#3f3f46' : '#d4d4d8', // Node border color
+        edgeLabelBackground: isDark ? '#1a1a1c' : '#ffffff',
+        actorBkg: isDark ? '#27272a' : '#fafafa',
+        actorBorder: isDark ? '#3f3f46' : '#d4d4d8',
+        actorTextColor: isDark ? '#fafafa' : '#18181b',
+        signalColor: isDark ? '#fafafa' : '#18181b',
+        signalLineColor: isDark ? '#a1a1aa' : '#71717a',
+        labelBoxBkgColor: isDark ? '#27272a' : '#fafafa',
+        labelBoxBorderColor: isDark ? '#3f3f46' : '#d4d4d8',
+        labelTextColor: isDark ? '#fafafa' : '#18181b',
+        loopLimitColor: isDark ? '#a1a1aa' : '#71717a',
+        loopLimitBorderColor: isDark ? '#3f3f46' : '#d4d4d8',
+        sequenceNumberColor: isDark ? '#fafafa' : '#18181b',
+
+        // Gantt Chart overrides
+        ganttBkgColor: isDark ? '#1a1a1c' : '#ffffff',
+        gridColor: isDark ? '#27272a' : '#e4e4e7',
+        altSectionBkgColor: isDark ? '#1e1e21' : '#f4f4f5',
+        sectionBkgColor: isDark ? '#1a1a1c' : '#ffffff',
+        sectionBkgColor2: isDark ? '#1e1e21' : '#f4f4f5',
+
+        // ER Diagram overrides
+        attributeBackend: isDark ? '#1a1a1c' : '#ffffff',
+        entityBkg: isDark ? '#27272a' : '#fafafa',
+        entityBorder: isDark ? '#3f3f46' : '#d4d4d8',
+        relationshipColor: isDark ? '#a1a1aa' : '#71717a',
+        relationshipLine: isDark ? '#a1a1aa' : '#71717a',
+
+        // Pie Chart overrides
+        pieTitleTextColor: isDark ? '#fafafa' : '#18181b',
+        pieLegendTextColor: isDark ? '#fafafa' : '#18181b',
+
+        // Mindmap overrides
+        mindmapEdgeColor: isDark ? '#a1a1aa' : '#71717a',
+        mindmapNodeBkg: isDark ? '#27272a' : '#fafafa',
+        mindmapNodeBorder: isDark ? '#3f3f46' : '#d4d4d8',
+        mindmapTextColor: isDark ? '#fafafa' : '#18181b',
       },
+      themeCSS: `
+        /* Font and text rules */
+        .actor, .label, text, tspan, .taskText, .taskTextOutside, .entityLabel, .attributeLabel {
+          font-family: 'Outfit', sans-serif !important;
+        }
+        
+        /* Sequence Numbers - Remove pure white circles */
+        g.sequenceNumber circle {
+          fill: ${isDark ? '#3f3f46' : '#e4e4e7'} !important;
+          stroke: ${isDark ? '#52525b' : '#d4d4d8'} !important;
+        }
+        g.sequenceNumber text {
+          fill: ${isDark ? '#fafafa' : '#18181b'} !important;
+          font-weight: bold !important;
+        }
+        
+        /* Gantt Grid & Task Bars */
+        .grid .tick line {
+          stroke: ${isDark ? '#27272a' : '#e4e4e7'} !important;
+          stroke-opacity: 0.65 !important;
+        }
+        rect.task {
+          fill: ${isDark ? '#27272a' : '#fafafa'} !important;
+          stroke: ${isDark ? '#3f3f46' : '#d4d4d8'} !important;
+        }
+        rect.task.done {
+          fill: ${isDark ? '#1e1e21' : '#f4f4f5'} !important;
+          stroke: ${isDark ? '#27272a' : '#e4e4e7'} !important;
+          fill-opacity: 0.65 !important;
+        }
+        rect.task.active {
+          fill: ${isDark ? '#3f3f46' : '#d4d4d8'} !important;
+          stroke: ${isDark ? '#52525b' : '#a1a1aa'} !important;
+        }
+
+        /* ER Diagram Entities & Connections */
+        .entityBox {
+          fill: ${isDark ? '#27272a' : '#fafafa'} !important;
+          stroke: ${isDark ? '#3f3f46' : '#d4d4d8'} !important;
+        }
+        .entityLabel {
+          fill: ${isDark ? '#fafafa' : '#18181b'} !important;
+          font-weight: bold !important;
+        }
+        /* Mute alternating field background fills to avoid pure white/light-gray contrast clashing */
+        .er.attributeBoxOdd, rect.er.attributeBoxOdd, .attributeBoxOdd {
+          fill: ${isDark ? '#1a1a1c' : '#f4f4f5'} !important;
+          stroke: ${isDark ? '#27272a' : '#d4d4d8'} !important;
+        }
+        .er.attributeBoxEven, rect.er.attributeBoxEven, .attributeBoxEven {
+          fill: ${isDark ? '#232326' : '#fafafa'} !important;
+          stroke: ${isDark ? '#27272a' : '#d4d4d8'} !important;
+        }
+        /* Style ER relationship lines and their endpoint cardinality symbols (circles/ticks) */
+        .er.relationshipLine {
+          stroke: ${isDark ? '#a1a1aa' : '#71717a'} !important;
+        }
+        [id^="parent_"] path, [id^="parent_"] circle, [id^="parent_"] line,
+        [id^="child_"] path, [id^="child_"] circle, [id^="child_"] line,
+        marker path, marker circle, marker line {
+          fill: ${isDark ? '#a1a1aa' : '#71717a'} !important;
+          stroke: ${isDark ? '#a1a1aa' : '#71717a'} !important;
+        }
+
+        /* Pie Chart legend spacing & font overrides */
+        .legend text {
+          fill: ${isDark ? '#fafafa' : '#18181b'} !important;
+          font-size: 10px !important;
+        }
+        /* Stretches space between Pie Chart legend texts */
+        g.legend {
+          transform: scale(0.95) !important;
+        }
+        /* Spacing offsets inside individual legend rows */
+        .legend g {
+          transform: translate(0, 4px) !important;
+        }
+
+        /* Mindmap nodes fixes - Prevent solid black nodes */
+        g.mindmap-node, g.node.mindmap-node {
+          fill: ${isDark ? '#27272a' : '#fafafa'} !important;
+          stroke: ${isDark ? '#3f3f46' : '#d4d4d8'} !important;
+        }
+        .mindmap-node rect, .mindmap-node circle, .mindmap-node path,
+        .node.mindmap-node rect, .node.mindmap-node circle, .node.mindmap-node path {
+          fill: ${isDark ? '#27272a' : '#fafafa'} !important;
+          stroke: ${isDark ? '#3f3f46' : '#d4d4d8'} !important;
+        }
+        .node.mindmap-node text, .mindmap-node text {
+          fill: ${isDark ? '#fafafa' : '#18181b'} !important;
+        }
+        
+        /* General mindmap connectors */
+        path.mindmap-edge {
+          stroke: ${isDark ? '#a1a1aa' : '#71717a'} !important;
+        }
+      `,
       flowchart: {
         htmlLabels: true,
         curve: 'basis',
@@ -154,16 +326,232 @@ export const MermaidWrapper = ({ chart }: { chart: string }) => {
     });
   }, [chart, resolvedTheme]);
 
+  // Set up raw DOM events for Zoom & Pan when the modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const canvas = canvasRef.current;
+    const content = contentRef.current;
+    if (!canvas || !content) return;
+
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    const updateTransform = () => {
+      requestAnimationFrame(() => {
+        if (content) {
+          content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+      });
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return; // Only left-click / single-touch drag
+      isDragging = true;
+      startX = e.clientX - translateX;
+      startY = e.clientY - translateY;
+      canvas.style.cursor = 'grabbing';
+      canvas.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isDragging) return;
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      updateTransform();
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (!isDragging) return;
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      if (e.ctrlKey) {
+        // Pinch-to-zoom: Zoom relative to the mouse cursor inside the canvas
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - rect.width / 2;
+        const mouseY = e.clientY - rect.top - rect.height / 2;
+
+        const prevScale = scale;
+        const zoomFactor = 0.02;
+        const delta = -e.deltaY * zoomFactor;
+
+        const newScale = Math.min(Math.max(scale * (1 + delta), 0.5), 6);
+
+        translateX = mouseX - (mouseX - translateX) * (newScale / prevScale);
+        translateY = mouseY - (mouseY - translateY) * (newScale / prevScale);
+        scale = newScale;
+      } else {
+        // Swipe/Scroll: Pan the diagram (translate coordinates)
+        translateX -= e.deltaX * 0.85;
+        translateY -= e.deltaY * 0.85;
+      }
+
+      updateTransform();
+    };
+
+    const handleZoomButton = (direction: number) => {
+      const prevScale = scale;
+      const newScale = Math.min(Math.max(scale * (1 + direction * 0.25), 0.5), 6);
+      translateX = translateX * (newScale / prevScale);
+      translateY = translateY * (newScale / prevScale);
+      scale = newScale;
+      updateTransform();
+    };
+
+    const handleResetButton = () => {
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      updateTransform();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+
+    const zoomInBtn = document.getElementById('diagram-zoom-in');
+    const zoomOutBtn = document.getElementById('diagram-zoom-out');
+    const resetBtn = document.getElementById('diagram-zoom-reset');
+
+    const onZoomIn = () => handleZoomButton(1);
+    const onZoomOut = () => handleZoomButton(-1);
+    const onReset = () => handleResetButton();
+
+    zoomInBtn?.addEventListener('click', onZoomIn);
+    zoomOutBtn?.addEventListener('click', onZoomOut);
+    resetBtn?.addEventListener('click', onReset);
+
+    // Initial draw
+    updateTransform();
+
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerup', handlePointerUp);
+      canvas.removeEventListener('pointercancel', handlePointerUp);
+      canvas.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+      
+      zoomInBtn?.removeEventListener('click', onZoomIn);
+      zoomOutBtn?.removeEventListener('click', onZoomOut);
+      resetBtn?.removeEventListener('click', onReset);
+    };
+  }, [isOpen]);
+
   if (error) return <div className="text-destructive font-mono text-[11px] p-4 bg-destructive/10 rounded-[8px]">Error rendering Mermaid diagram</div>;
   if (!svg) return <div className="text-muted-foreground font-mono text-[11px] p-4 text-center bg-bento-card rounded-[8px] border border-border">Rendering diagram...</div>;
 
   return (
-  <div className="my-6 flex justify-center">
-      <div
-          className="max-w-[85%] w-fit bg-bento-card p-4 rounded-[8px] border border-border overflow-hidden [&>svg]:h-auto [&>svg]:w-full"
-          dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
-      />
-  </div>
+    <>
+      <div className="my-6 flex justify-center">
+          <div
+              onClick={() => {
+                setIsOpen(true);
+              }}
+              title="Click to zoom / expand diagram"
+              className="max-w-[85%] w-fit bg-bento-card p-4 rounded-[8px] border border-border overflow-hidden [&>svg]:h-auto [&>svg]:w-full cursor-zoom-in hover:border-border/80 hover:bg-muted/10 transition-all shadow-sm"
+              dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
+          />
+      </div>
+
+      {isOpen && createPortal(
+        <div 
+          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 select-none animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsOpen(false);
+          }}
+        >
+          {/* Centered Panel Card */}
+          <div className="bg-bento-panel border border-border shadow-2xl rounded-[16px] w-[85vw] h-[80vh] max-w-[1000px] max-h-[700px] flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200">
+            
+            {/* Header Bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0 bg-muted/10">
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                Diagram Viewer
+              </span>
+              
+              {/* Controls */}
+              <div className="flex items-center gap-1 bg-background border border-border px-2.5 py-1 rounded-[10px] shadow-sm">
+                <button 
+                  id="diagram-zoom-in"
+                  className="p-1 hover:bg-foreground/5 rounded-[6px] text-foreground/80 hover:text-foreground transition-all"
+                  title="Zoom In"
+                >
+                  <ZoomIn size={14} />
+                </button>
+                <button 
+                  id="diagram-zoom-out"
+                  className="p-1 hover:bg-foreground/5 rounded-[6px] text-foreground/80 hover:text-foreground transition-all"
+                  title="Zoom Out"
+                >
+                  <ZoomOut size={14} />
+                </button>
+                <button 
+                  id="diagram-zoom-reset"
+                  className="p-1 hover:bg-foreground/5 rounded-[6px] text-foreground/80 hover:text-foreground transition-all"
+                  title="Reset View"
+                >
+                  <RotateCcw size={14} />
+                </button>
+                <div className="w-px h-4 bg-border/50 mx-1" />
+                <button 
+                  onClick={() => setIsOpen(false)} 
+                  className="p-1 hover:bg-destructive/10 hover:text-destructive rounded-[6px] text-foreground/80 transition-all"
+                  title="Close"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Canvas Container */}
+            <div 
+              ref={canvasRef}
+              className="flex-1 w-full overflow-hidden relative flex items-center justify-center bg-card/20 cursor-grab active:cursor-grabbing p-8"
+            >
+              {/* Draggable & Zoomable Wrapper */}
+              <div 
+                ref={contentRef}
+                style={{
+                  transformOrigin: 'center center',
+                  willChange: 'transform',
+                }}
+                className="w-full h-full flex items-center justify-center select-none pointer-events-none [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto [&>svg]:mx-auto"
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
+              />
+            </div>
+
+            {/* Footer Tip */}
+            <div className="px-6 py-3 border-t border-border bg-muted/10 flex justify-between items-center text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest shrink-0">
+              <span>Drag or Scroll to pan • Pinch to zoom</span>
+              <span>Press Esc to close</span>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 interface MarkdownViewerProps {
@@ -185,6 +573,467 @@ interface ProvingGroundsPayload {
 
 
 
+const getCustomTheme = (isDark: boolean) => {
+    const base = isDark ? vscDarkPlus : vs;
+    
+    const commentColor = isDark ? 'hsl(var(--muted-foreground) / 0.45)' : 'hsl(var(--muted-foreground) / 0.55)';
+    const keywordColor = isDark ? '#7aa2f7' : '#2563eb'; // Muted Tokyo Night blue
+    const stringColor = isDark ? '#98c379' : '#15803d'; // Muted soft forest/sage green
+    const functionColor = isDark ? '#bb9afc' : '#6d28d9'; // Muted lavender purple
+    const numberColor = isDark ? '#bb9afc' : '#6d28d9'; // Muted lavender purple (no gold/orange!)
+    const classNameColor = isDark ? '#0db9d7' : '#0369a1'; // Muted cyan
+    const operatorColor = isDark ? '#89ddff' : '#0284c7';
+    const punctuationColor = isDark ? '#a9b1d6' : '#475569';
+    const textColor = isDark ? '#c0caf5' : '#1f2937';
+
+    // One-level-deep clone to prevent reference corruption of imported style objects
+    const theme: Record<string, any> = {};
+    for (const key of Object.keys(base)) {
+        theme[key] = { ...base[key] };
+        // Strip out hardcoded backgrounds to enforce transparency and blend with bg-bento-card background
+        if (theme[key].background) theme[key].background = 'transparent';
+        if (theme[key].backgroundColor) theme[key].backgroundColor = 'transparent';
+    }
+    
+    const overrides: Record<string, any> = {
+        'comment': { color: commentColor, fontStyle: 'italic' },
+        'prolog': { color: commentColor },
+        'doctype': { color: commentColor },
+        'cdata': { color: commentColor },
+        'punctuation': { color: punctuationColor },
+        'keyword': { color: keywordColor, fontWeight: 'bold' },
+        'selector': { color: isDark ? '#7aa2f7' : '#2563eb' },
+        'operator': { color: operatorColor },
+        'boolean': { color: numberColor },
+        'number': { color: numberColor },
+        'string': { color: stringColor },
+        'char': { color: stringColor },
+        'symbol': { color: stringColor },
+        'inserted': { color: '#22863a' },
+        'function': { color: functionColor },
+        'class-name': { color: classNameColor },
+        'variable': { color: textColor },
+        'constant': { color: numberColor },
+        'property': { color: isDark ? '#7aa2f7' : '#2563eb' },
+        'attr-value': { color: stringColor },
+        'attr-name': { color: classNameColor },
+    };
+
+    for (const key of Object.keys(overrides)) {
+        theme[key] = {
+            ...theme[key],
+            ...overrides[key]
+        };
+    }
+    return theme;
+};
+
+const ChartBlock = memo(({ payload }: { payload: any }) => {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const canvasRef = useRef<HTMLDivElement | null>(null);
+    const contentRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const canvas = canvasRef.current;
+        const content = contentRef.current;
+        if (!canvas || !content) return;
+
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        const updateTransform = () => {
+            requestAnimationFrame(() => {
+                if (content) {
+                    content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+                }
+            });
+        };
+
+        const handlePointerDown = (e: PointerEvent) => {
+            if (e.button !== 0) return;
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            canvas.style.cursor = 'grabbing';
+            canvas.setPointerCapture(e.pointerId);
+        };
+
+        const handlePointerMove = (e: PointerEvent) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        };
+
+        const handlePointerUp = (e: PointerEvent) => {
+            if (!isDragging) return;
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+            try {
+                canvas.releasePointerCapture(e.pointerId);
+            } catch (err) {}
+        };
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            if (e.ctrlKey) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left - rect.width / 2;
+                const mouseY = e.clientY - rect.top - rect.height / 2;
+
+                const prevScale = scale;
+                const zoomFactor = 0.02;
+                const delta = -e.deltaY * zoomFactor;
+                const newScale = Math.min(Math.max(scale * (1 + delta), 0.5), 6);
+
+                translateX = mouseX - (mouseX - translateX) * (newScale / prevScale);
+                translateY = mouseY - (mouseY - translateY) * (newScale / prevScale);
+                scale = newScale;
+            } else {
+                translateX -= e.deltaX * 0.85;
+                translateY -= e.deltaY * 0.85;
+            }
+            updateTransform();
+        };
+
+        const handleZoom = (direction: number) => {
+            const prevScale = scale;
+            const newScale = Math.min(Math.max(scale * (1 + direction * 0.25), 0.5), 6);
+            translateX = translateX * (newScale / prevScale);
+            translateY = translateY * (newScale / prevScale);
+            scale = newScale;
+            updateTransform();
+        };
+
+        const handleReset = () => {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        };
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsOpen(false);
+            }
+        };
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerup', handlePointerUp);
+        canvas.addEventListener('pointercancel', handlePointerUp);
+        canvas.addEventListener('wheel', handleWheel, { passive: false });
+        window.addEventListener('keydown', handleKeyDown);
+
+        const zoomInBtn = document.getElementById('chart-zoom-in');
+        const zoomOutBtn = document.getElementById('chart-zoom-out');
+        const resetBtn = document.getElementById('chart-zoom-reset');
+
+        const onZoomIn = () => handleZoom(1);
+        const onZoomOut = () => handleZoom(-1);
+        const onReset = () => handleReset();
+
+        zoomInBtn?.addEventListener('click', onZoomIn);
+        zoomOutBtn?.addEventListener('click', onZoomOut);
+        resetBtn?.addEventListener('click', onReset);
+
+        updateTransform();
+
+        return () => {
+            canvas.removeEventListener('pointerdown', handlePointerDown);
+            canvas.removeEventListener('pointermove', handlePointerMove);
+            canvas.removeEventListener('pointerup', handlePointerUp);
+            canvas.removeEventListener('pointercancel', handlePointerUp);
+            canvas.removeEventListener('wheel', handleWheel);
+            window.removeEventListener('keydown', handleKeyDown);
+
+            zoomInBtn?.removeEventListener('click', onZoomIn);
+            zoomOutBtn?.removeEventListener('click', onZoomOut);
+            resetBtn?.removeEventListener('click', onReset);
+        };
+    }, [isOpen]);
+    
+    if (payload.error) {
+        return (
+            <div className="p-5 my-6 border border-destructive/20 bg-destructive/5 rounded-[8px] text-[13px] font-mono text-destructive">
+                <div className="font-bold mb-1.5 flex items-center gap-1.5">
+                    <ShieldAlert size={14} /> Failed to parse Chart block:
+                </div>
+                <div>{payload.error}</div>
+            </div>
+        );
+    }
+    
+    const {
+        type = 'line',
+        title = '',
+        subtitle = '',
+        data = [],
+        xAxis = {},
+        yAxis = {},
+        series = [],
+        grid = true,
+        legend = true
+    } = payload;
+    
+    // Calibrated monochrome grayscale palettes (high-to-low contrast) - NO pure white or pure black
+    const darkColors = ['#fafafa', '#d1d5db', '#9ca3af', '#6b7280', '#4b5563', '#374151'];
+    const lightColors = ['#18181b', '#3f3f46', '#71717a', '#a1a1aa', '#d4d4d8', '#e4e4e7'];
+    const colors = isDark ? darkColors : lightColors;
+        
+    const gridStroke = isDark ? 'rgba(250, 250, 250, 0.05)' : 'rgba(24, 24, 27, 0.05)';
+    const axisStroke = isDark ? 'rgba(250, 250, 250, 0.12)' : 'rgba(24, 24, 27, 0.12)';
+    const textFill = isDark ? 'hsl(var(--muted-foreground) / 0.7)' : 'hsl(var(--muted-foreground) / 0.85)';
+    
+    const getSeriesStyles = (idx: number) => {
+        const color = colors[idx % colors.length];
+        const dashArrays = [
+            undefined,      // Solid
+            '5 5',          // Dashed
+            '2 2',          // Dotted
+            '8 3 2 3',     // Dash-dot
+            '6 2',          // Short-dash
+        ];
+        const strokeDasharray = dashArrays[idx % dashArrays.length];
+        return { color, strokeDasharray };
+    };
+
+    const renderSeriesItem = (s: any, idx: number) => {
+        const key = s.key;
+        const name = s.name || key;
+        const { color, strokeDasharray } = getSeriesStyles(idx);
+        const finalColor = s.color || color;
+        const finalDash = s.strokeDasharray || strokeDasharray;
+        const sType = s.type || (type === 'composed' ? 'line' : type);
+        const opacity = s.opacity ?? 1;
+        
+        if (sType === 'bar') {
+            return <Bar key={key} dataKey={key} name={name} fill={finalColor} fillOpacity={opacity} radius={[3, 3, 0, 0]} />;
+        }
+        if (sType === 'area') {
+            return (
+                <React.Fragment key={key}>
+                    <defs>
+                        <linearGradient id={`grad-${key}-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={finalColor} stopOpacity={opacity * 0.35}/>
+                            <stop offset="95%" stopColor={finalColor} stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey={key} name={name} stroke={finalColor} strokeDasharray={finalDash} fill={`url(#grad-${key}-${idx})`} strokeWidth={2} />
+                </React.Fragment>
+            );
+        }
+        return (
+            <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                name={name}
+                stroke={finalColor}
+                strokeDasharray={finalDash}
+                strokeWidth={2}
+                dot={{ r: 3.5, strokeWidth: 1.5, stroke: isDark ? '#18181b' : '#fafafa' }}
+                activeDot={{ r: 5 }}
+            />
+        );
+    };
+    
+    const renderChartContainer = () => {
+        const xKey = xAxis.key || (data.length > 0 ? Object.keys(data[0])[0] : '');
+        const yKey = yAxis.key;
+        
+        const CustomTooltip = ({ active, payload: tPayload, label }: any) => {
+            if (active && tPayload && tPayload.length) {
+                return (
+                    <div className="bg-bento-card border border-border px-3.5 py-2.5 rounded-[8px] shadow-lg text-[12px] space-y-1 select-none">
+                        <div className="font-bold text-foreground mb-1 flex items-center gap-1">
+                            <Clock size={12} className="text-muted-foreground" />
+                            {xAxis.label ? `${xAxis.label}: ${label}` : label}
+                        </div>
+                        {tPayload.map((item: any, i: number) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                                <span className="text-muted-foreground">{item.name}:</span>
+                                <span className="font-bold text-foreground">{item.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        const renderAxes = () => (
+            <>
+                <XAxis 
+                    dataKey={xKey} 
+                    stroke={axisStroke} 
+                    tick={{ fill: textFill, fontSize: 10, fontFamily: 'monospace' }}
+                    label={xAxis.label ? { value: xAxis.label, position: 'insideBottom', offset: -5, fill: textFill, fontSize: 10, fontWeight: 'bold' } : undefined}
+                />
+                <YAxis 
+                    stroke={axisStroke} 
+                    tick={{ fill: textFill, fontSize: 10, fontFamily: 'monospace' }}
+                    domain={yAxis.domain || ['auto', 'auto']}
+                    label={yAxis.label ? { value: yAxis.label, angle: -90, position: 'insideLeft', offset: 10, fill: textFill, fontSize: 10, fontWeight: 'bold' } : undefined}
+                />
+            </>
+        );
+        
+        if (type === 'pie') {
+            return (
+                <PieChart>
+                    <Pie
+                        data={data}
+                        dataKey={payload.pieKey || 'value'}
+                        nameKey={payload.nameKey || 'name'}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        innerRadius={60}
+                        paddingAngle={4}
+                    >
+                        {data.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                        ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    {legend && <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: 11 }} />}
+                </PieChart>
+            );
+        }
+        
+        if (type === 'bar') {
+            return (
+                <BarChart data={data} margin={{ top: 15, right: 10, left: 10, bottom: 15 }}>
+                    {grid && <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />}
+                    {renderAxes()}
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }} />
+                    {legend && <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: 11 }} />}
+                    {series.length > 0 ? series.map(renderSeriesItem) : <Bar dataKey={yKey || Object.keys(data[0])[1]} fill={colors[0]} radius={[3, 3, 0, 0]} />}
+                </BarChart>
+            );
+        }
+        
+        if (type === 'area') {
+            return (
+                <AreaChart data={data} margin={{ top: 15, right: 10, left: 10, bottom: 15 }}>
+                    {grid && <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />}
+                    {renderAxes()}
+                    <Tooltip content={<CustomTooltip />} />
+                    {legend && <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: 11 }} />}
+                    {series.length > 0 ? series.map(renderSeriesItem) : renderSeriesItem({ key: yKey || Object.keys(data[0])[1], type: 'area' }, 0)}
+                </AreaChart>
+            );
+        }
+
+        return (
+            <ComposedChart data={data} margin={{ top: 15, right: 10, left: 10, bottom: 15 }}>
+                {grid && <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />}
+                {renderAxes()}
+                <Tooltip content={<CustomTooltip />} />
+                {legend && <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: 11 }} />}
+                {series.length > 0 ? series.map(renderSeriesItem) : renderSeriesItem({ key: yKey || Object.keys(data[0])[1], type: 'line' }, 0)}
+            </ComposedChart>
+        );
+    };
+
+    return (
+        <>
+            <div 
+                onClick={() => setIsOpen(true)}
+                title="Click to zoom / expand chart"
+                className="relative group my-8 rounded-[12px] border border-border/60 overflow-hidden bg-bento-card p-6 shadow-sm hover:border-border/40 hover:bg-muted/5 transition-all select-none cursor-zoom-in"
+            >
+                {(title || subtitle) && (
+                    <div className="mb-6">
+                        {title && <h4 className="text-[14px] font-bold text-foreground mb-1 select-text">{title}</h4>}
+                        {subtitle && <p className="text-[11px] text-muted-foreground select-text">{subtitle}</p>}
+                    </div>
+                )}
+                
+                <div className="w-full h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        {renderChartContainer()}
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {isOpen && createPortal(
+                <div 
+                    className="fixed inset-0 bg-background/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 select-none animate-in fade-in duration-200"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsOpen(false);
+                    }}
+                >
+                    <div className="bg-bento-panel border border-border shadow-2xl rounded-[16px] w-[85vw] h-[80vh] max-w-[1000px] max-h-[700px] flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0 bg-muted/10">
+                            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                Chart Viewer {title ? `— ${title}` : ''}
+                            </span>
+                            
+                            <div className="flex items-center gap-1 bg-background border border-border px-2.5 py-1 rounded-[10px] shadow-sm">
+                                <button 
+                                    id="chart-zoom-in"
+                                    className="p-1 hover:bg-foreground/5 rounded-[6px] text-foreground/80 hover:text-foreground transition-all"
+                                    title="Zoom In"
+                                >
+                                    <ZoomIn size={14} />
+                                </button>
+                                <button 
+                                    id="chart-zoom-out"
+                                    className="p-1 hover:bg-foreground/5 rounded-[6px] text-foreground/80 hover:text-foreground transition-all"
+                                    title="Zoom Out"
+                                >
+                                    <ZoomOut size={14} />
+                                </button>
+                                <button 
+                                    id="chart-zoom-reset"
+                                    className="p-1 hover:bg-foreground/5 rounded-[6px] text-foreground/80 hover:text-foreground transition-all text-muted-foreground hover:text-foreground"
+                                    title="Reset Zoom"
+                                >
+                                    <RotateCcw size={13} />
+                                </button>
+                            </div>
+
+                            <button 
+                                onClick={() => setIsOpen(false)}
+                                className="p-1.5 hover:bg-foreground/5 rounded-[8px] text-muted-foreground hover:text-foreground transition-all"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+                        
+                        <div 
+                            ref={canvasRef}
+                            className="flex-1 w-full h-full overflow-hidden relative cursor-grab bg-bento-panel active:cursor-grabbing flex items-center justify-center"
+                        >
+                            <div 
+                                ref={contentRef}
+                                className="w-full h-full max-w-[90%] max-h-[90%] transition-transform duration-75 ease-out origin-center"
+                            >
+                                <ResponsiveContainer width="100%" height="100%">
+                                    {renderChartContainer()}
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+        </>
+    );
+});
+
 const CodeBlock = memo(({ language, value }: { language: string | null, value: string }) => {
     const [copied, setCopied] = useState(false);
     const { resolvedTheme } = useTheme();
@@ -195,6 +1044,8 @@ const CodeBlock = memo(({ language, value }: { language: string | null, value: s
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    const customTheme = useMemo(() => getCustomTheme(isDark), [isDark]);
 
     return (
         <div className="relative group my-8 rounded-[8px] border border-border overflow-hidden bg-bento-card hover:border-border/40">
@@ -223,14 +1074,27 @@ const CodeBlock = memo(({ language, value }: { language: string | null, value: s
             <div className="relative overflow-hidden">
                 <SyntaxHighlighter
                     language={language || 'text'}
-                    style={isDark ? vscDarkPlus : vs}
+                    style={customTheme}
                     PreTag="div"
+                    showLineNumbers={true}
+                    lineNumberStyle={{
+                        color: isDark ? 'hsl(var(--muted-foreground) / 0.3)' : 'hsl(var(--muted-foreground) / 0.45)',
+                        minWidth: '2.25rem',
+                        paddingRight: '1rem',
+                        textAlign: 'right',
+                        userSelect: 'none',
+                        borderRight: `1px solid ${isDark ? 'hsl(var(--border) / 0.3)' : 'hsl(var(--border) / 0.45)'}`,
+                        marginRight: '1rem',
+                        fontStyle: 'normal', // Force gutter numbers to render without italics
+                        fontFamily: 'JetBrains Mono, Fira Code, Menlo, monospace', // Force monospace glyph widths for alignment
+                        fontSize: '12px',
+                    }}
                     customStyle={{
                         background: 'transparent',
                         padding: language ? '1.25rem 1.5rem' : '1.5rem',
                         margin: 0,
-                        fontSize: '14px',
-                        lineHeight: '1.7',
+                        fontSize: '13px',
+                        lineHeight: '1.75',
                         fontFamily: 'JetBrains Mono, Fira Code, Menlo, monospace',
                         overflowX: 'auto',
                         WebkitFontSmoothing: 'antialiased'
@@ -239,7 +1103,7 @@ const CodeBlock = memo(({ language, value }: { language: string | null, value: s
                         style: {
                             fontFamily: 'inherit',
                             fontSize: 'inherit',
-                            background: 'transparent'
+                            background: 'transparent',
                         }
                     }}
                 >
@@ -1192,6 +2056,15 @@ const CodeRenderer = memo((props: any) => {
         }
     }, [children, language]);
 
+    const chartData = useMemo(() => {
+        if (language !== 'chart') return null;
+        try {
+            return JSON.parse(String(children).trim());
+        } catch (e) {
+            return { error: String(e) };
+        }
+    }, [children, language]);
+
     const curriculumPlannerData = useMemo(() => {
         if (language !== 'curriculum_planner') return null;
         try {
@@ -1200,6 +2073,11 @@ const CodeRenderer = memo((props: any) => {
             return null;
         }
     }, [children, language]);
+
+    if (language === 'chart') {
+        if (!chartData) return null;
+        return <ChartBlock payload={chartData} />;
+    }
 
     if (language === 'rubiks-cube') {
         if (!rubiksData) {
@@ -1275,14 +2153,57 @@ const CodeRenderer = memo((props: any) => {
     // Render ```markdown blocks as actual Markdown documents to support rendered artifact tables
     if (language === 'markdown') {
         return (
-            <div className="my-6 p-6 bg-bento-card border border-border/60 rounded-[12px] prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
-                <ReactMarkdown
-                    remarkPlugins={MARKDOWN_REMARK_PLUGINS as any}
-                    rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}
-                    components={activeComponents}
-                >
-                    {String(children).replace(/\n$/, '')}
-                </ReactMarkdown>
+            <div className="relative group my-8 rounded-[12px] border border-border/60 overflow-hidden bg-bento-card shadow-sm hover:border-border/40 transition-all">
+                <div className="flex items-center justify-between px-6 py-2 border-b border-border/60 bg-bento-item/50 select-none">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                        Rendered Markdown
+                    </span>
+                </div>
+                <div className="p-6 prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:my-2 prose-table:my-0">
+                    <ReactMarkdown
+                        remarkPlugins={MARKDOWN_REMARK_PLUGINS as any}
+                        rehypePlugins={MARKDOWN_REHYPE_PLUGINS as any}
+                        components={activeComponents}
+                    >
+                        {String(children).replace(/\n$/, '')}
+                    </ReactMarkdown>
+                </div>
+            </div>
+        );
+    }
+
+    // Render ```ascii blocks uniquely styled for diagrams, trees, and plots without line numbers
+    if (language === 'ascii') {
+        return (
+            <div className="relative group my-8 rounded-[8px] border border-border/60 overflow-hidden bg-bento-card hover:border-border/40 transition-all shadow-sm">
+                <div className="flex items-center justify-between px-5 py-1.5 border-b border-border/60 bg-bento-item/50 select-none">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                        ASCII Diagram
+                    </span>
+                </div>
+                <div className="p-6 overflow-x-auto bg-card/10">
+                    <pre className="font-mono text-[12px] leading-[1.35] text-foreground/80 antialiased select-all whitespace-pre">
+                        {String(children).replace(/\n$/, '')}
+                    </pre>
+                </div>
+            </div>
+        );
+    }
+
+    // Render ```text blocks as plain, normal raw text blocks without line numbers
+    if (language === 'text') {
+        return (
+            <div className="relative group my-6 rounded-[8px] border border-border/50 overflow-hidden bg-bento-card">
+                <div className="flex items-center justify-between px-5 py-1.5 border-b border-border/40 bg-bento-item/40 select-none">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+                        Plain Text
+                    </span>
+                </div>
+                <div className="p-5 overflow-x-auto">
+                    <pre className="font-mono text-[13px] leading-[1.6] text-foreground/75 select-text whitespace-pre">
+                        {String(children).replace(/\n$/, '')}
+                    </pre>
+                </div>
             </div>
         );
     }
@@ -1485,6 +2406,14 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
         let cleaned = stripArtifactMarkup(content);
         cleaned = cleaned.replace(/(?:(?:\r?\n)+\s*(?:---\s*)?|^\s*)##\s*The\s*Proving\s*Grounds(?:\r?\n)*/i, '\n');
         cleaned = cleaned.replace(/^.*\[\[[^\]]*roadmap[^\]]*\]\].*$/gim, '');
+        
+        // Robust LaTeX delimiter normalization
+        cleaned = cleaned
+            // Convert standard LaTeX block math \[ ... \] to $$ ... $$
+            .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$\n$1\n$$$$')
+            // Convert standard LaTeX inline math \( ... \) to $ ... $
+            .replace(/\\\(([\s\S]*?)\\\)/g, '$$1$');
+
         return cleaned;
     }, [content]);
     const handleNavigate = useCallback((pageName: string) => {
@@ -1518,16 +2447,32 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
             pre: ({ children }: any) => <div className="not-prose">{children}</div>,
             code: CodeRenderer,
             input: MarkdownInput,
-            table: ({ children }: any) => (
-                <div className="overflow-x-auto my-6 rounded-[8px] border border-border/60">
-                    <table className="w-full border-collapse text-[12px]">{children}</table>
+            table: ({ children, ...props }: any) => (
+                <div className="overflow-x-auto my-6 rounded-[8px] border border-border">
+                    <table className="w-full border-collapse text-[12px]" {...props}>{children}</table>
                 </div>
             ),
-            thead: ({ children }: any) => <thead className="bg-muted/30 border-b border-border/60">{children}</thead>,
-            tbody: ({ children }: any) => <tbody className="divide-y divide-border/20">{children}</tbody>,
-            tr: ({ children }: any) => <tr className="hover:bg-muted/5 transition-none">{children}</tr>,
-            th: ({ children }: any) => <th className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-left border-r border-border/20 last:border-r-0">{children}</th>,
-            td: ({ children }: any) => <td className="px-4 py-3 text-foreground/80 border-r border-border/10 last:border-r-0">{children}</td>,
+            thead: ({ children, ...props }: any) => <thead className="bg-muted/30 border-b border-border" {...props}>{children}</thead>,
+            tbody: ({ children, ...props }: any) => <tbody className="bg-card/50" {...props}>{children}</tbody>,
+            tr: ({ children, ...props }: any) => <tr className="hover:bg-muted/5 transition-none" {...props}>{children}</tr>,
+            th: ({ children, style, ...props }: any) => (
+                <th 
+                    style={{ textAlign: 'left', ...style }} 
+                    className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-muted-foreground border-r border-b border-border last:border-r-0"
+                    {...props}
+                >
+                    {children}
+                </th>
+            ),
+            td: ({ children, style, ...props }: any) => (
+                <td 
+                    style={style} 
+                    className="px-4 py-3 text-foreground/80 border-r border-b border-border/80 last:border-r-0"
+                    {...props}
+                >
+                    {children}
+                </td>
+            ),
             blockquote: ({ children, node }: any) => {
                 let isCallout = false;
                 let calloutType = '';
@@ -1632,7 +2577,49 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
                 <a href={href} target="_blank" rel="noreferrer" className="text-foreground font-medium underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground/80">
                     {children}
                 </a>
-            )
+            ),
+            img: ({ src, alt }: any) => {
+                const context = React.useContext(MarkdownContext);
+                const { config } = useConfig();
+                const [imgUrl, setImgUrl] = useState(src);
+                const [sidecarPort, setSidecarPort] = useState(8765);
+                const [sidecarToken, setSidecarToken] = useState('');
+
+                useEffect(() => {
+                    let active = true;
+                    const resolveUrl = async () => {
+                        if (!src || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) return;
+                        
+                        try {
+                            const port = await invoke<number>('get_sidecar_port').catch(() => 8765);
+                            const token = await invoke<string>('get_sidecar_token').catch(() => '');
+                            if (!active) return;
+                            setSidecarPort(port);
+                            setSidecarToken(token);
+
+                            const vaultPath = config?.obsidianVaultPath || '';
+                            const cleanSrc = src.replace(/\\/g, '/');
+                            const relativePath = cleanSrc.startsWith('/') ? cleanSrc : `/${cleanSrc}`;
+                            
+                            const authQuery = vaultPath ? `?vault_path=${encodeURIComponent(vaultPath)}` : '';
+                            const tokenQuery = token ? `${authQuery ? '&' : '?'}sidecar_token=${encodeURIComponent(token)}` : '';
+                            
+                            setImgUrl(`http://127.0.0.1:${port}/api/obsidian/serve${relativePath}${authQuery}${tokenQuery}`);
+                        } catch (err) {
+                            console.error('[ImgRenderer] Failed to resolve local image src:', err);
+                        }
+                    };
+                    void resolveUrl();
+                    return () => { active = false; };
+                }, [src, context.path, config?.obsidianVaultPath]);
+
+                return (
+                    <div className="my-6 flex flex-col items-center">
+                        <img src={imgUrl} alt={alt} className="max-w-[85%] rounded-[8px] border border-border shadow-sm" />
+                        {alt && <span className="text-[10px] text-muted-foreground mt-2 italic">{alt}</span>}
+                    </div>
+                );
+            }
         };
         return comps;
     }, [components]);
