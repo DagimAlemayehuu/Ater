@@ -238,12 +238,15 @@ async def explain_question(
     if note_path and secrets.vault_path:
         try:
             from pathlib import Path
-            resolved_p = Path(secrets.vault_path) / note_path if not Path(note_path).is_absolute() else Path(note_path)
+            from src.utils.vault_path import resolve_vault_path
+            resolved_p = resolve_vault_path(secrets.vault_path, note_path)
             if resolved_p.exists() and resolved_p.is_file():
                 with open(resolved_p, "r", encoding="utf-8") as f:
                     note_content = f.read()
                     if note_content.strip():
                         context = f"{context}\n\nSource Note Material ({resolved_p.name}):\n{note_content}"
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Path escapes vault")
         except Exception as e:
             logger.error(f"Failed to load note content for grading: {e}")
 
