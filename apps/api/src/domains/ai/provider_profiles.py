@@ -20,7 +20,7 @@ DEFAULT_PROFILES = {
     # Conservative free-tier-ish defaults. Live response headers can tighten or
     # relax these during runtime when a provider exposes rate-limit metadata.
     "groq": ProviderProfile("groq", "*", 30000, 30, 300000, 300, 10, 0.98, True, False),
-    "google": ProviderProfile("google", "*", 120000, 60, 1000000, 10000, 2, 0.65, True, False),
+    "google": ProviderProfile("google", "*", 250000, 15, 1000000, 1500, 1, 0.75, True, False),
     "openai": ProviderProfile("openai", "*", 30000, 30, 500000, 5000, 2, 0.65, True, True),
     "anthropic": ProviderProfile("anthropic", "*", 30000, 30, 500000, 5000, 2, 0.65, True, False),
     "openrouter": ProviderProfile("openrouter", "*", 20000, 20, 300000, 3000, 1, 0.60, True, True),

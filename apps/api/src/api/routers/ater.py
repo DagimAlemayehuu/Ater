@@ -12,7 +12,7 @@ from pathlib import Path
 from src.utils.vault_path import resolve_vault_path
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Query, Request, BackgroundTasks
 from fastapi.responses import FileResponse
 
 from src.api.deps import AppSecrets, get_app_secrets
@@ -20,6 +20,7 @@ from src.domains.ater.service import AterService
 from src.domains.ater.watcher import AterQueueManager
 from src.domains.ater.learning_object import normalize_title
 import src.api.state as state
+from src.domains.ai.retry import invoke_llm_with_retry
 
 logger = logging.getLogger("Ater")
 router = APIRouter()
@@ -34,6 +35,284 @@ def _source_job_db_path(secrets: AppSecrets) -> Path:
 def _source_job_service(secrets: AppSecrets):
     from src.domains.ater.source_service import SourceLearningJobService
     return SourceLearningJobService(_source_job_db_path(secrets))
+
+def _build_source_llm(
+    secrets: AppSecrets,
+    *,
+    temperature: float,
+    max_tokens: int,
+    response_mime_type: Optional[str] = None,
+    tier: str = "primary",
+):
+    if tier == "planner":
+        provider_name = getattr(secrets, "planner_provider", None) or secrets.ai_provider
+        model_name = getattr(secrets, "planner_model", None) or secrets.ai_model
+        api_key = getattr(secrets, "planner_key", None) or secrets.ai_key
+    else:
+        provider_name = secrets.ai_provider
+        model_name = secrets.ai_model
+        api_key = secrets.ai_key
+
+    provider = (provider_name or "").lower()
+    if provider in {"google", "gemini"}:
+        from src.domains.ai.google_native import GoogleNativeChatModel
+        from src.domains.ater.governor import governor
+
+        model_name = model_name or "gemma-4-31b-it"
+        governor.configure(
+            "google",
+            model_name,
+            base_url=secrets.ai_base_url,
+            max_tpm=secrets.ai_max_tpm,
+            max_rpm=secrets.ai_max_rpm,
+            max_tpd=secrets.ai_max_tpd,
+            max_rpd=secrets.ai_max_rpd,
+            max_concurrency=secrets.ai_max_concurrency,
+        )
+        valid_key = governor.get_valid_api_key(api_key)
+        return GoogleNativeChatModel(
+            model=model_name,
+            api_key=valid_key,
+            base_url=secrets.ai_base_url,
+            temperature=temperature,
+            timeout=120,
+            max_output_tokens=max_tokens,
+            response_mime_type=response_mime_type,
+        )
+
+    from src.domains.ai.factory import ModelFactory
+    return ModelFactory.get_model(
+        provider=provider_name,
+        model_name=model_name,
+        api_key=api_key,
+        base_url=secrets.ai_base_url,
+        temperature=temperature,
+        timeout=120,
+        request_timeout=120,
+        max_retries=0,
+        max_tokens=max_tokens,
+        max_tpm=secrets.ai_max_tpm,
+        max_rpm=secrets.ai_max_rpm,
+        max_tpd=secrets.ai_max_tpd,
+        max_rpd=secrets.ai_max_rpd,
+        max_concurrency=secrets.ai_max_concurrency,
+    )
+
+def _ai_metadata(secrets: AppSecrets) -> Dict[str, Any]:
+    return {
+        "ai_provider": secrets.ai_provider,
+        "ai_model": secrets.ai_model,
+    }
+
+def _extract_json_array(text: str):
+    stripped = str(text or "").strip()
+    stripped = re.sub(r"^```(?:json)?\s*|\s*```$", "", stripped, flags=re.IGNORECASE | re.DOTALL).strip()
+
+    def array_from(parsed: Any):
+        if isinstance(parsed, list):
+            return parsed
+        if isinstance(parsed, dict):
+            for key in ("roadmap", "concepts", "nodes", "atomic_nodes", "atomicNodes", "items"):
+                value = parsed.get(key)
+                if isinstance(value, list):
+                    return value
+        return None
+
+    try:
+        parsed = json.loads(stripped)
+        result = array_from(parsed)
+        if result is not None:
+            return result
+    except Exception:
+        pass
+
+    decoder = json.JSONDecoder()
+    for idx, char in enumerate(stripped):
+        if char != "[":
+            continue
+        try:
+            parsed, _end = decoder.raw_decode(stripped[idx:])
+        except Exception:
+            continue
+        result = array_from(parsed)
+        if result is not None and all(isinstance(item, dict) for item in result):
+            return result
+    return None
+
+def _normalize_roadmap_title(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+def _extract_ai_roadmap_titles(text: str, candidates: list[Dict[str, Any]]) -> Optional[list[Dict[str, Any]]]:
+    title_by_norm = {
+        _normalize_roadmap_title(str(candidate.get("title") or "")): candidate
+        for candidate in candidates
+        if isinstance(candidate, dict) and candidate.get("title")
+    }
+    if not title_by_norm:
+        return None
+
+    selected: list[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_line in str(text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = re.match(r"^(?:[-*•]|\d+[.)])\s+(.+?)\s*$", line)
+        if not match:
+            continue
+        title = re.sub(r"\s*(?:[-–—:]\s*)?(?:pages?|source_pages?)\s*[:#]?\s*[\[\]()0-9,\-\s]+$", "", match.group(1), flags=re.IGNORECASE).strip()
+        title = re.sub(r"^['\"]|['\"]$", "", title).strip()
+        norm = _normalize_roadmap_title(title)
+        if not norm or norm in seen:
+            continue
+        candidate = title_by_norm.get(norm)
+        if not candidate:
+            continue
+        selected.append({"title": candidate.get("title") or title, "source_pages": candidate.get("source_pages", [])})
+        seen.add(norm)
+
+    return selected if selected else None
+
+def _source_note_ai_generator(secrets: AppSecrets):
+    if not secrets.ai_key or not secrets.ai_provider or not secrets.ai_model:
+        return None
+    llm = _build_source_llm(
+        secrets,
+        temperature=0.2,
+        max_tokens=2600,
+    )
+
+    def generate(prompt: Dict[str, Any]) -> str:
+        system = str(prompt.get("system") or "")
+        user = prompt.get("user") or {}
+        user_text = (
+            "Write the Atomic Note body in Markdown only. Include the required headings, page citations, "
+            "and one valid ```interactive-quiz``` JSON block. Do not include YAML.\n\n"
+            f"{json.dumps(user, ensure_ascii=False, indent=2)}"
+        )
+        res = invoke_llm_with_retry(llm, [("system", system), ("human", user_text)], label="source-note", attempts=2)
+        return str(getattr(res, "content", res) or "")
+
+    return generate
+
+def _source_roadmap_refiner(secrets: AppSecrets):
+    if not (getattr(secrets, "planner_key", None) or secrets.ai_key) or not (getattr(secrets, "planner_provider", None) or secrets.ai_provider) or not (getattr(secrets, "planner_model", None) or secrets.ai_model):
+        return None
+    llm = _build_source_llm(
+        secrets,
+        temperature=0.1,
+        max_tokens=1800,
+        response_mime_type="application/json",
+        tier="planner",
+    )
+
+    def refine(payload: Dict[str, Any]):
+        def compact_page(page: Dict[str, Any]) -> Dict[str, Any]:
+            if not isinstance(page, dict):
+                return {"page_number": None, "content": str(page)[:700]}
+            content = str(page.get("content") or page.get("text") or "")
+            return {
+                "page_number": page.get("page_number") or page.get("page") or page.get("metadata", {}).get("page"),
+                "content": content[:700],
+            }
+
+        def compact_node(node: Dict[str, Any]) -> Dict[str, Any]:
+            if not isinstance(node, dict):
+                return {"title": str(node)[:120], "source_pages": []}
+            return {
+                "title": node.get("title"),
+                "source_pages": node.get("source_pages", []),
+                "domain": node.get("domain"),
+                "objective_ids": node.get("objective_ids", []),
+                "teaching_order": node.get("teaching_order"),
+            }
+
+        system = (
+            "You are Ater's source-grounded academic roadmap planner. Refine noisy deterministic concept candidates "
+            "into a teachable roadmap. Merge duplicates, remove slide labels and tiny subheadings, preserve source "
+            "coverage, and keep every item grounded to valid source pages. Return JSON only."
+        )
+        user = {
+            "topic": payload.get("topic"),
+            "domain": payload.get("domain"),
+            "objectives": payload.get("objectives", []),
+            "source_pages": [compact_page(page) for page in payload.get("pages", [])],
+            "deterministic_candidates": [compact_node(node) for node in payload.get("nodes", [])],
+            "output_contract": (
+                "Return an array of 10-28 objects. Each object must have title and source_pages. "
+                "Use concise academic concept names, not sentence fragments."
+            ),
+        }
+        res = invoke_llm_with_retry(
+            llm,
+            [("system", system), ("human", json.dumps(user, ensure_ascii=False, indent=2))],
+            label="source-roadmap",
+            attempts=2,
+        )
+        raw_response = str(getattr(res, "content", res) or "")
+        parsed = _extract_json_array(raw_response)
+        if parsed is None:
+            parsed = _extract_ai_roadmap_titles(raw_response, user["deterministic_candidates"])
+        if parsed is None:
+            repair_payload = {
+                "original_payload": user,
+                "model_response": raw_response,
+                "required_output": (
+                    "Convert this model response into valid JSON only: an array of objects, "
+                    "each with title and source_pages. Do not include Markdown, prose, or code fences."
+                ),
+            }
+            repaired = invoke_llm_with_retry(
+                llm,
+                [
+                    ("system", "You repair malformed model output into strict JSON. Return JSON only."),
+                    ("human", json.dumps(repair_payload, ensure_ascii=False, indent=2)),
+                ],
+                label="source-roadmap-repair",
+                attempts=1,
+            )
+            repair_response = str(getattr(repaired, "content", repaired) or "")
+            parsed = _extract_json_array(repair_response)
+            if parsed is None:
+                parsed = _extract_ai_roadmap_titles(repair_response, user["deterministic_candidates"])
+        if parsed is None:
+            logger.warning("[SourceLearning] AI roadmap parse failed. Response preview: %r", raw_response[:1000])
+            raise ValueError("AI roadmap refiner did not return a JSON array")
+        return parsed
+
+    return refine
+
+def _background_generate_remaining_source_notes(
+    secrets: AppSecrets,
+    job_id: str,
+    current_node_id: str,
+):
+    if not secrets.vault_path or not secrets.ai_key:
+        return
+    try:
+        service = _source_job_service(secrets)
+        job = service.get_job(job_id)
+        remaining_ids = {
+            node.get("id")
+            for node in job.get("concept_graph", {}).get("nodes", [])
+            if node.get("id") and node.get("id") != current_node_id
+        }
+        if not remaining_ids:
+            return
+        ai_generator = _source_note_ai_generator(secrets)
+        service.deploy_to_vault(
+            job_id,
+            secrets.vault_path,
+            ai_generator=ai_generator,
+            ai_metadata=_ai_metadata(secrets),
+            ai_node_ids=remaining_ids,
+            write_node_ids=remaining_ids,
+            strict_ai=True,
+            write_hub_files=False,
+            per_note_delay_seconds=2.0,
+        )
+    except Exception as exc:
+        logger.error("[SourceLearning] Background AI note generation failed for %s: %s", job_id, exc)
 
 def _prompt_teacher_service(secrets: AppSecrets):
     from src.domains.ater.prompt_teacher_service import PromptTeacherJobService
@@ -136,12 +415,16 @@ async def create_source_learning_job(
             external_domain=payload.get("external_domain"),
             parent_hub_path=payload.get("parent_hub_path"),
             chapter_title=payload.get("chapter_title"),
+            roadmap_refiner=_source_roadmap_refiner(secrets),
+            strict_ai=bool(secrets.ai_key),
         )
     except HTTPException:
         raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        if e.__class__.__name__ == "SourceAIGenerationError":
+            raise HTTPException(status_code=502, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ater/academic/chapter-hubs")
@@ -212,17 +495,36 @@ async def get_source_learning_job(
 @router.post("/ater/source/jobs/{job_id}/start")
 async def start_source_learning_job(
     job_id: str,
+    background_tasks: BackgroundTasks,
     secrets: AppSecrets = Depends(get_app_secrets)
 ):
     try:
         service = _source_job_service(secrets)
-        started = service.start_learning(job_id)
+        note_ai_generator = _source_note_ai_generator(secrets)
+        started = service.start_learning(
+            job_id,
+            ai_generator=note_ai_generator,
+            ai_metadata=_ai_metadata(secrets),
+            strict_ai=bool(secrets.ai_key),
+        )
+        current_node_id = started.get("tutor_session", {}).get("current_concept_node_id")
         if secrets.vault_path:
-            started["deployment"] = service.deploy_to_vault(job_id, secrets.vault_path)
+            started["deployment"] = service.deploy_to_vault(
+                job_id,
+                secrets.vault_path,
+                ai_generator=note_ai_generator,
+                ai_metadata=_ai_metadata(secrets),
+                write_node_ids={current_node_id} if (secrets.ai_key and current_node_id) else None,
+                strict_ai=bool(secrets.ai_key),
+            )
+        if current_node_id and secrets.vault_path and secrets.ai_key:
+            background_tasks.add_task(_background_generate_remaining_source_notes, secrets, job_id, current_node_id)
         return started
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        if e.__class__.__name__ == "SourceAIGenerationError":
+            raise HTTPException(status_code=502, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ater/source/jobs/{job_id}/deploy")
@@ -233,10 +535,18 @@ async def deploy_source_learning_job(
     if not secrets.vault_path:
         raise HTTPException(status_code=400, detail="Vault Path is required")
     try:
-        return _source_job_service(secrets).deploy_to_vault(job_id, secrets.vault_path)
+        return _source_job_service(secrets).deploy_to_vault(
+            job_id,
+            secrets.vault_path,
+            ai_generator=_source_note_ai_generator(secrets),
+            ai_metadata=_ai_metadata(secrets),
+            strict_ai=bool(secrets.ai_key),
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        if e.__class__.__name__ == "SourceAIGenerationError":
+            raise HTTPException(status_code=502, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/ater/source/jobs/{job_id}/roadmap")
@@ -2707,7 +3017,7 @@ async def submit_tutor_answer_endpoint(
         res = await manager.submit_answer(session_id, question_id, bool(is_correct), wager, user_answer)
         return res
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=502 if e.__class__.__name__ == "TutorAIGenerationError" else 500, detail=str(e))
 
 @router.post("/ater/practice/remediate")
 async def practice_remediate_endpoint(
@@ -2744,7 +3054,7 @@ async def practice_remediate_endpoint(
     except Exception as e:
         import traceback
         logger.error(f"[RemediationRouter] Error generating remediation: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=502 if e.__class__.__name__ == "TutorAIGenerationError" else 500, detail=str(e))
 
 @router.post("/ater/tutor/adaptive_question")
 async def get_adaptive_tutor_question_endpoint(
@@ -2771,7 +3081,7 @@ async def get_adaptive_tutor_question_endpoint(
             last_result=payload.get("last_result"),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=502 if e.__class__.__name__ == "TutorAIGenerationError" else 500, detail=str(e))
 
 @router.post("/ater/tutor/adaptive_check")
 async def check_adaptive_tutor_answer_endpoint(
@@ -2800,7 +3110,7 @@ async def check_adaptive_tutor_answer_endpoint(
             history=payload.get("history") or [],
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=502 if e.__class__.__name__ == "TutorAIGenerationError" else 500, detail=str(e))
 
 @router.get("/ater/tutor/session_by_hub")
 async def get_session_by_hub_endpoint(
@@ -2833,7 +3143,7 @@ async def get_session_by_hub_endpoint(
         conn.close()
         return session_data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=502 if e.__class__.__name__ == "TutorAIGenerationError" else 500, detail=str(e))
 
 
 @router.get("/ater/tutor/status")

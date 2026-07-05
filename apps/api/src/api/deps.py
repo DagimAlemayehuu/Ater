@@ -96,8 +96,26 @@ async def get_app_secrets(
         elif primary_provider == "openrouter":
             clean_ai_key = sanitize_api_key(os.environ.get("OPENROUTER_KEY"))
 
-    sanitize_api_key(x_planner_key) or clean_ai_key
-    sanitize_api_key(x_utility_key) or clean_ai_key
+    # Strict Single Provider Mode Enforcement:
+    # If a tier's provider is specified and differs from the primary provider,
+    # we consolidate that tier's settings to the primary settings.
+    if x_planner_provider and x_planner_provider.lower() != primary_provider.lower():
+        planner_provider = primary_provider
+        clean_planner_key = clean_ai_key
+        planner_model = x_ai_model
+    else:
+        planner_provider = (x_planner_provider or primary_provider).lower()
+        clean_planner_key = sanitize_api_key(x_planner_key) or clean_ai_key
+        planner_model = x_planner_model or x_ai_model
+
+    if x_utility_provider and x_utility_provider.lower() != primary_provider.lower():
+        utility_provider = primary_provider
+        clean_utility_key = clean_ai_key
+        utility_model = x_ai_model
+    else:
+        utility_provider = (x_utility_provider or primary_provider).lower()
+        clean_utility_key = sanitize_api_key(x_utility_key) or clean_ai_key
+        utility_model = x_utility_model or planner_model
 
     return AppSecrets(
         ai_provider=primary_provider,
@@ -110,14 +128,13 @@ async def get_app_secrets(
         ai_max_rpd=x_ai_max_rpd,
         ai_max_concurrency=x_ai_max_concurrency,
         
-        # Consolidate all tiers to primary to enforce "Strict Single Provider" mode
-        planner_provider=primary_provider,
-        planner_key=clean_ai_key,
-        planner_model=x_ai_model,
+        planner_provider=planner_provider,
+        planner_key=clean_planner_key,
+        planner_model=planner_model,
 
-        utility_provider=primary_provider,
-        utility_key=clean_ai_key,
-        utility_model=x_ai_model,
+        utility_provider=utility_provider,
+        utility_key=clean_utility_key,
+        utility_model=utility_model,
 
         vault_path=x_vault_path,
         inbox_path=x_inbox_path,

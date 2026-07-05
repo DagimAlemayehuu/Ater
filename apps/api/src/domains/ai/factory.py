@@ -17,6 +17,9 @@ class TrackingCallbackHandler(AsyncCallbackHandler, BaseCallbackHandler):
         self.provider = provider
         self.model = model
 
+    def on_chat_model_start(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """Capture rate limits and usage stats from metadata."""
         try:
@@ -162,11 +165,9 @@ class ModelFactory:
             "callbacks": [TrackingCallbackHandler(provider, model_name)]
         }
         
-        # Provider-specific timeout configuration
-        if provider == "google":
-            effective_timeout = 25
-        else:
-            effective_timeout = timeout or 60
+        # Provider-specific timeout configuration. Google/Gemma calls can take
+        # materially longer than short chat probes on large source-grounded jobs.
+        effective_timeout = timeout or request_timeout or (120 if provider == "google" else 60)
             
         if provider in ["openai", "openrouter", "custom", "anthropic", "groq"]:
             config["timeout"] = effective_timeout

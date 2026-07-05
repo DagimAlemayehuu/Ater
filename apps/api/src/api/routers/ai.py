@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from src.api.deps import AppSecrets, get_app_secrets
 from src.domains.ai.tracker import tracker
 from src.domains.ai.factory import ModelFactory
+from src.domains.ai.retry import ainvoke_llm_with_retry
 from src.domains.ater.assistant import run_assistant_chat
 
 logger = logging.getLogger("Ater")
@@ -113,7 +114,12 @@ async def test_ai_connection(
             max_concurrency=secrets.ai_max_concurrency,
         )
         
-        response = await llm.ainvoke([HumanMessage(content="Hello. Respond with exactly one word: 'Connected'.")])
+        response = await ainvoke_llm_with_retry(
+            llm,
+            [HumanMessage(content="Hello. Respond with exactly one word: 'Connected'.")],
+            label=f"{target}-test-connection",
+            attempts=4,
+        )
         content = response.content.strip() if hasattr(response, 'content') else str(response)
         
         return {"success": True, "message": f"{target.capitalize()} Tier: {content}"}
@@ -238,7 +244,11 @@ Correct Answer: {answer}
 
 Generate the mini-lesson now."""
 
-        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        res = await ainvoke_llm_with_retry(
+            llm,
+            [("system", sys_prompt), ("human", human_prompt)],
+            label="practice-explain",
+        )
         lesson_content = res.content.strip()
         
         is_graded_correct = True
@@ -371,7 +381,11 @@ Format for <artifact> structure:
 
 Please generate the explanation now."""
 
-        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        res = await ainvoke_llm_with_retry(
+            llm,
+            [("system", sys_prompt), ("human", human_prompt)],
+            label="ater-explain",
+        )
         return {"answer": res.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -461,7 +475,7 @@ If the student asks to modify, fix, expand, or personalize the interactive simul
             content = msg.get("content", "")
             formatted_messages.append((role, content))
 
-        res = await llm.ainvoke(formatted_messages)
+        res = await ainvoke_llm_with_retry(llm, formatted_messages, label="ater-follow-up")
         return {"answer": res.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -748,7 +762,11 @@ Broken code:
 {code}
 
 Return corrected code only."""
-        res = await llm.ainvoke([("system", sys_prompt), ("human", human_prompt)])
+        res = await ainvoke_llm_with_retry(
+            llm,
+            [("system", sys_prompt), ("human", human_prompt)],
+            label="artifact-repair",
+        )
         code = res.content.strip() if hasattr(res, "content") else str(res).strip()
         return {"code": _clean_markdown_fences(code)}
     except Exception as e:
@@ -796,7 +814,11 @@ async def ater_quick_questions(
 
 Provide the questions in a clean, readable Markdown format with bold question numbers, and include short guidance or hints for each question."""
 
-        res = await llm.ainvoke([("system", sys_prompt), ("human", "Generate the quick questions now.")])
+        res = await ainvoke_llm_with_retry(
+            llm,
+            [("system", sys_prompt), ("human", "Generate the quick questions now.")],
+            label="quick-questions",
+        )
         return {"answer": res.content, "questions": res.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

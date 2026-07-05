@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from langchain_core.language_models.chat_models import BaseChatModel
 from .schemas import PartialPlan
 from .governor import governor, DailyLimitExceededException
+from src.domains.ai.retry import ainvoke_llm_with_retry
 
 import yaml
 from pathlib import Path
@@ -1330,10 +1331,10 @@ Domain axioms: {axioms[:300]}"""
                 estimated_tokens = (count * 300) + 1000
                 await governor.get_permit(expected_tokens=estimated_tokens)
                 
-                res = await self.llm.ainvoke([
+                res = await ainvoke_llm_with_retry(self.llm, [
                     ("system", sys_prompt),
                     ("human", f"Generate the S-Tier mastery quiz for {title_readable}. Count: {count}. Seed: {seed or 'None'}")
-                ])
+                ], label="practice-question-agent", attempts=3)
                 
                 content = res.content
                 

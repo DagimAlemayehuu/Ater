@@ -1,9 +1,177 @@
 import json
 import re
+import pytest
 from src.domains.ater.router import DomainRouter
 from src.domains.ater.healer import LogicHealer
 from src.domains.ater.templates import render_atomic_note
 from src.domains.ater.agents import DOMAIN_MATRIX
+
+def test_google_model_factory_respects_explicit_long_timeout(monkeypatch):
+    from src.domains.ai.factory import ModelFactory
+    from src.domains.ater.governor import governor
+
+    class FakeGoogleModel:
+        last_config = None
+
+        def __init__(self, **config):
+            FakeGoogleModel.last_config = config
+
+        def invoke(self, *args, **kwargs):
+            return None
+
+        async def ainvoke(self, *args, **kwargs):
+            return None
+
+        def generate(self, *args, **kwargs):
+            return None
+
+        async def agenerate(self, *args, **kwargs):
+            return None
+
+        def stream(self, *args, **kwargs):
+            return iter(())
+
+        async def astream(self, *args, **kwargs):
+            if False:
+                yield None
+
+    monkeypatch.setitem(ModelFactory.PROVIDERS, "google", FakeGoogleModel)
+    monkeypatch.setattr(governor, "configure", lambda *args, **kwargs: None)
+    monkeypatch.setattr(governor, "get_valid_api_key", lambda key, **kwargs: key)
+
+    ModelFactory.get_model(
+        provider="google",
+        model_name="Gemma-4-31b-it",
+        api_key="test-key",
+        timeout=180,
+        request_timeout=180,
+    )
+
+    assert FakeGoogleModel.last_config["timeout"] == 180
+    assert FakeGoogleModel.last_config["request_timeout"] == 180
+
+def test_source_roadmap_json_parser_accepts_wrapped_gemma_object():
+    from src.api.routers.ater import _extract_json_array
+
+    parsed = _extract_json_array(
+        """```json
+{"roadmap":[{"title":"Consumer Preferences","source_pages":[3]}]}
+```"""
+    )
+
+    assert parsed == [{"title": "Consumer Preferences", "source_pages": [3]}]
+
+
+def test_source_roadmap_json_parser_ignores_preamble_brackets_before_array():
+    from src.api.routers.ater import _extract_json_array
+
+    parsed = _extract_json_array(
+        """I used the source pages [3, 4].
+
+[
+  {"title":"Consumer Preferences","source_pages":[3]},
+  {"title":"Budget Line","source_pages":[12]}
+]"""
+    )
+
+    assert [item["title"] for item in parsed] == ["Consumer Preferences", "Budget Line"]
+
+
+def test_source_roadmap_refiner_repairs_non_json_gemma_response(monkeypatch):
+    from types import SimpleNamespace
+    import src.api.routers.ater as ater_router
+
+    class FakeResponse:
+        def __init__(self, content):
+            self.content = content
+
+    class FakeLLM:
+        def __init__(self):
+            self.calls = []
+
+        def invoke(self, messages):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                return FakeResponse("The roadmap should start with Consumer Preferences, then later include Budget Line.")
+            return FakeResponse('[{"title":"Consumer Preferences","source_pages":[3]}]')
+
+    fake_llm = FakeLLM()
+    monkeypatch.setattr(ater_router, "_build_source_llm", lambda *_args, **_kwargs: fake_llm)
+    secrets = SimpleNamespace(
+        ai_key="configured",
+        ai_provider="google",
+        ai_model="Gemma-4-31b-it",
+        ai_base_url=None,
+        ai_max_tpm=None,
+        ai_max_rpm=None,
+        ai_max_tpd=None,
+        ai_max_rpd=None,
+        ai_max_concurrency=None,
+    )
+
+    refine = ater_router._source_roadmap_refiner(secrets)
+    parsed = refine(
+        {
+            "topic": "Consumer Preferences",
+            "domain": "ECON-MICRO",
+            "objectives": [],
+            "pages": [{"page_number": 3, "content": "Consumer preferences rank bundles."}],
+            "nodes": [{"title": "Consumer Preferences", "source_pages": [3]}],
+        }
+    )
+
+    assert parsed == [{"title": "Consumer Preferences", "source_pages": [3]}]
+    assert len(fake_llm.calls) == 2
+    assert "Convert this model response into valid JSON" in fake_llm.calls[1][1][1]
+
+
+def test_source_roadmap_refiner_accepts_ai_bullets_without_repair(monkeypatch):
+    from types import SimpleNamespace
+    import src.api.routers.ater as ater_router
+
+    class FakeResponse:
+        content = "- Consumer Preferences\n- Budget Line"
+
+    class FakeLLM:
+        def __init__(self):
+            self.calls = 0
+
+        def invoke(self, _messages):
+            self.calls += 1
+            return FakeResponse()
+
+    fake_llm = FakeLLM()
+    monkeypatch.setattr(ater_router, "_build_source_llm", lambda *_args, **_kwargs: fake_llm)
+    secrets = SimpleNamespace(
+        ai_key="configured",
+        ai_provider="google",
+        ai_model="Gemma-4-31b-it",
+        ai_base_url=None,
+        ai_max_tpm=None,
+        ai_max_rpm=None,
+        ai_max_tpd=None,
+        ai_max_rpd=None,
+        ai_max_concurrency=None,
+    )
+
+    parsed = ater_router._source_roadmap_refiner(secrets)(
+        {
+            "topic": "Consumer Preferences",
+            "domain": "ECON-MICRO",
+            "objectives": [],
+            "pages": [{"page_number": 3, "content": "Consumer preferences and budget line."}],
+            "nodes": [
+                {"title": "Consumer Preferences", "source_pages": [3]},
+                {"title": "Budget Line", "source_pages": [12]},
+            ],
+        }
+    )
+
+    assert parsed == [
+        {"title": "Consumer Preferences", "source_pages": [3]},
+        {"title": "Budget Line", "source_pages": [12]},
+    ]
+    assert fake_llm.calls == 1
 
 def test_domain_router():
     router = DomainRouter()
@@ -676,6 +844,587 @@ def test_source_job_deploys_academic_pdf_to_study_planner_and_notes(tmp_path, mo
     assert "SourceJobs" not in "\n".join(deployed["written_files"])
 
 
+def test_source_job_deploy_uses_ai_generator_when_available(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import frontmatter
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_3_Consumer_Behavior.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+    docs = [
+        SimpleNamespace(
+            page_content=(
+                "Chapter 3 Consumer Preferences And Utility\n"
+                "Objectives\n"
+                "Define consumer preferences"
+            ),
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content="Consumer preferences rank bundles by the satisfaction a consumer expects from each bundle.",
+            metadata={"page": 1},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    prompts = []
+
+    def ai_generator(prompt):
+        prompts.append(prompt)
+        return """## Mental Model
+
+Consumer preferences are the ranking rule that lets a consumer compare bundles before choosing. The source anchors the idea in expected satisfaction from each bundle [PAGE 1].
+
+## How the Economics Actually Work
+
+The learner should connect preferences to ranking, not to prices first: preferences order bundles by expected satisfaction, then later constraints decide what can be bought [PAGE 1].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"type":"mcq","question":"What do consumer preferences do in the source?","options":{"A":"Rank bundles by expected satisfaction","B":"Set the market price"},"answer":"A","explanation":"The cited page says preferences rank bundles by satisfaction."}]
+```"""
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+    )
+    deployed = service.deploy_to_vault(job["job_id"], str(tmp_path), ai_generator=ai_generator)
+
+    note_path = tmp_path / deployed["written_files"][0]
+    post = frontmatter.loads(note_path.read_text(encoding="utf-8"))
+    assert prompts
+    assert post.metadata["fallback_generation"] is False
+    assert "ranking rule" in post.content
+    assert "[PAGE 1]" in post.content
+
+
+def test_source_job_roadmap_can_be_ai_refined_before_persisting(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_3_Consumer_Behavior.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+    docs = [
+        SimpleNamespace(
+            page_content=(
+                "Chapter 3 Consumer Preferences And Utility\n"
+                "Objectives\n"
+                "Define consumer preferences\n"
+                "Explain budget line\n"
+                "Discuss consumer equilibrium"
+            ),
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content="Consumer preferences rank bundles. A budget line separates affordable and unaffordable bundles.",
+            metadata={"page": 1},
+        ),
+        SimpleNamespace(
+            page_content="Consumer equilibrium is the optimal affordable choice under preferences and the budget constraint.",
+            metadata={"page": 2},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    def roadmap_refiner(payload):
+        assert payload["topic"] == "Consumer Preferences And Utility"
+        assert payload["nodes"]
+        return [
+            {"title": "Consumer Preferences", "source_pages": [1]},
+            {"title": "Budget Line", "source_pages": [1]},
+            {"title": "Consumer Equilibrium", "source_pages": [2]},
+        ]
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+        roadmap_refiner=roadmap_refiner,
+    )
+
+    assert [item["title"] for item in job["roadmap"]] == [
+        "Consumer Preferences",
+        "Budget Line",
+        "Consumer Equilibrium",
+    ]
+
+
+def test_source_job_roadmap_timeout_uses_compacted_deterministic_fallback(tmp_path, monkeypatch):
+    from src.domains.ater.source_service import _refine_concept_graph
+
+    def roadmap_refiner(_payload):
+        raise TimeoutError("simulated timeout")
+
+    raw_titles = [
+        "Consumer Preferences And Utility",
+        "Ordinal Utility",
+        "Cardinal Versus Ordinal Utility",
+        "Indifference Curve",
+        "Budget Line",
+        "Equilibrium Condition Of A Consumer",
+        "Theory Of Consumer Behavior",
+        "Consumer Preferences",
+        "Assumptions (Axioms) Of Consumer Preference",
+        "Complete",
+        "Reflexive",
+        "Transitivity",
+        "Concept Of Utility",
+        "Budget Set",
+        "Budget Equation",
+        "Determinants Of The Budget Line",
+        "Consumers Income",
+        "Prices Of Goods",
+        "Taxes, Subsides And Rationing",
+        "Equilibrium Of The Consumer",
+        "Optimal Choice",
+    ] + [f"Minor Slide Heading {idx}" for idx in range(30)]
+    nodes = [
+        {
+            "id": f"concept_{idx}",
+            "title": title,
+            "domain": "ECON-MICRO",
+            "modality": "Quantitative",
+            "source_pages": [max(1, idx)],
+            "source_excerpts": [{"page": max(1, idx), "text": f"{title} source context."}],
+            "objective_ids": ["obj_1"] if idx <= 8 else [],
+            "teaching_order": idx,
+            "warnings": [],
+        }
+        for idx, title in enumerate(raw_titles, start=1)
+    ]
+    pages = [{"page_number": idx, "content": f"Page {idx} content"} for idx in range(1, 60)]
+
+    refined, _edges, warnings = _refine_concept_graph(
+        "Theory of Consumer Behavior",
+        [],
+        pages,
+        "ECON-MICRO",
+        nodes,
+        roadmap_refiner=roadmap_refiner,
+    )
+    titles = [item["title"] for item in refined]
+
+    assert len(titles) <= 28
+    assert "Complete" not in titles
+    assert "Reflexive" not in titles
+    assert "Transitivity" not in titles
+    assert any("Consumer Preferences" in title for title in titles)
+    assert any("Budget" in title for title in titles)
+    assert any("Equilibrium" in title for title in titles)
+    assert warnings
+
+
+def test_source_job_roadmap_strict_ai_refinement_raises_on_failure():
+    from src.domains.ater.source_service import SourceAIGenerationError, _refine_concept_graph
+
+    nodes = [
+        {
+            "id": "concept_1",
+            "title": "Consumer Preferences",
+            "domain": "ECON-MICRO",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [1],
+            "source_excerpts": [{"page": 1, "text": "Consumer preferences rank bundles."}],
+            "objective_ids": ["obj_1"],
+            "teaching_order": 1,
+            "warnings": [],
+        }
+    ]
+
+    def roadmap_refiner(_payload):
+        raise RuntimeError("provider 500")
+
+    try:
+        _refine_concept_graph(
+            "Theory of Consumer Behavior",
+            [],
+            [{"page_number": 1, "content": "Consumer preferences rank bundles."}],
+            "ECON-MICRO",
+            nodes,
+            roadmap_refiner=roadmap_refiner,
+            strict_ai=True,
+        )
+    except SourceAIGenerationError as exc:
+        assert "AI roadmap refinement failed" in str(exc)
+        assert "provider 500" in str(exc)
+    else:
+        raise AssertionError("strict roadmap refinement should raise on AI failure")
+
+
+def test_start_source_learning_uses_ai_note_for_first_lesson(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import frontmatter
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_3_Consumer_Behavior.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+    docs = [
+        SimpleNamespace(
+            page_content="Chapter 3 Consumer Preferences And Utility\nObjectives\nDefine consumer preferences",
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content="Consumer preferences rank bundles by expected satisfaction.",
+            metadata={"page": 1},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    def ai_generator(_prompt):
+        return """## Mental Model
+
+Consumer preferences are the learner's first source-grounded ranking rule [PAGE 1].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"type":"mcq","question":"What does the source use preferences for?","options":{"A":"Ranking bundles","B":"Changing taxes"},"answer":"A","explanation":"The cited page ties preferences to ranking bundles."}]
+```"""
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+    )
+
+    started = service.start_learning(job["job_id"], ai_generator=ai_generator, ai_metadata={"ai_model": "Gemma-4-31b-it"})
+    note = started["tutor_session"]["current_note"]
+    note_path = tmp_path / started["tutor_session"]["current_note_path"]
+    post = frontmatter.loads(note_path.read_text(encoding="utf-8"))
+
+    assert note["frontmatter"]["fallback_generation"] is False
+    assert note["frontmatter"]["ai_model"] == "Gemma-4-31b-it"
+    assert post.metadata["fallback_generation"] is False
+
+
+def test_start_source_learning_strict_ai_failure_does_not_write_fallback_note(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from src.domains.ater.source_service import SourceAIGenerationError, SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_3_Consumer_Behavior.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+    docs = [
+        SimpleNamespace(
+            page_content="Chapter 3 Consumer Preferences And Utility\nObjectives\nDefine consumer preferences",
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content="Consumer preferences rank bundles by expected satisfaction.",
+            metadata={"page": 1},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+    )
+
+    def failing_ai(_prompt):
+        raise RuntimeError("provider 500")
+
+    try:
+        service.start_learning(job["job_id"], ai_generator=failing_ai, strict_ai=True)
+    except SourceAIGenerationError as exc:
+        assert "AI note generation failed" in str(exc)
+    else:
+        raise AssertionError("strict note generation should raise on AI failure")
+
+    assert not list((tmp_path / "Notes" / "academic" / "Winter2026" / "Economics" / "Chapter_3").glob("**/*.md"))
+
+
+def test_source_note_generation_repairs_malformed_ai_output_in_strict_mode():
+    from src.domains.ater.source_service import SourceAtomicNoteCompiler
+
+    compiler = SourceAtomicNoteCompiler()
+    job = {"file_name": "Chapter_3.pdf", "learning_scope": "academic"}
+    node = {
+        "title": "Consumer Preferences",
+        "domain": "ECON-MICRO",
+        "modality": "Qualitative/Definitional",
+        "source_pages": [2],
+        "source_excerpts": [{"page": 2, "text": "Consumer preferences rank bundles by expected satisfaction."}],
+    }
+    profile = {"artifact_constraints": {}, "question_modes": ["mcq"]}
+    calls = []
+
+    def ai_generator(prompt):
+        calls.append(prompt)
+        if len(calls) == 1:
+            return "Consumer preferences rank bundles by expected satisfaction [PAGE 2]."
+        return """## Mental Model
+
+Consumer preferences are the ranking rule that lets a consumer compare bundles by expected satisfaction [PAGE 2].
+
+## How the Economics Actually Work
+
+The note should keep the idea separate from budget constraints: preferences rank bundles before affordability is checked [PAGE 2].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"id":"q1","type":"mcq","question":"What do consumer preferences do?","options":{"A":"Rank bundles by expected satisfaction","B":"Set the tax rate"},"answer":"A","explanation":"The source says preferences rank bundles by expected satisfaction."}]
+```"""
+
+    note = compiler.compile_note(job, node, profile, ai_generator=ai_generator, strict_ai=True)
+
+    assert len(calls) == 2
+    assert calls[1]["user"]["validation_errors_to_fix"]
+    assert note["fallback"] is False
+    assert "## Mental Model" in note["content"]
+    assert "```interactive-quiz" in note["content"]
+
+
+def test_source_note_validation_rejects_mcq_without_options():
+    from src.domains.ater.source_service import SourceAtomicNoteCompiler
+
+    compiler = SourceAtomicNoteCompiler()
+    node = {"title": "Consumer Preferences", "source_pages": [2], "domain": "ECON-MICRO"}
+    content = """## Mental Model
+
+Consumer preferences rank bundles [PAGE 2].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"id":"q1","type":"mcq","question":"What is ranked?","answer":"Bundles","explanation":"The source says bundles are ranked."}]
+```"""
+
+    valid, errors = compiler.validate_content(content, node, {"artifact_constraints": {"forbidden": []}})
+
+    assert valid is False
+    assert "missing_mcq_options:1" in errors
+
+
+def test_source_note_compiler_trims_ai_prompt_echo_before_first_heading():
+    from src.domains.ater.source_service import SourceAtomicNoteCompiler
+
+    compiler = SourceAtomicNoteCompiler()
+    content = """* Concept: Consumer Preferences.
+* Source: Page 3.
+* Required Sections: Mental Model, Proving Grounds.
+
+## Mental Model
+
+Consumer preferences rank consumption bundles by expected satisfaction [PAGE 3].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"id":"q1","type":"mcq","question":"What do consumer preferences rank?","options":{"A":"Consumption bundles","B":"Weather patterns"},"answer":"A","explanation":"The source says preferences rank consumption bundles."}]
+```"""
+
+    trimmed = compiler._trim_ai_preamble(content)
+
+    assert trimmed.startswith("## Mental Model")
+    assert "Concept: Consumer Preferences" not in trimmed
+
+
+def test_source_note_compiler_renders_structured_ai_payload():
+    from src.domains.ater.source_service import SourceAtomicNoteCompiler
+
+    compiler = SourceAtomicNoteCompiler()
+    payload = {
+        "mental_model": "Consumer preferences rank consumption bundles by expected satisfaction [PAGE 3].",
+        "how_it_works": "The ranking comes before the budget constraint filters what can be bought [PAGE 3].",
+        "quiz": [
+            {
+                "id": "q1",
+                "type": "mcq",
+                "question": "What do consumer preferences rank?",
+                "options": {"A": "Consumption bundles", "B": "Weather patterns"},
+                "answer": "A",
+                "explanation": "The cited page says preferences rank consumption bundles.",
+            }
+        ],
+    }
+
+    content = compiler._coerce_structured_ai_note(json.dumps(payload), {"title": "Consumer Preferences"})
+
+    assert content.startswith("## Mental Model")
+    assert "## How the Economics Actually Work" in content
+    assert "```interactive-quiz" in content
+    valid, errors = compiler.validate_content(
+        content,
+        {"title": "Consumer Preferences", "source_pages": [3], "domain": "ECON-MICRO"},
+        {"artifact_constraints": {"forbidden": []}},
+    )
+    assert valid is True
+    assert errors == []
+
+
+def test_source_note_forbidden_artifact_does_not_match_single_letter_substrings():
+    from src.domains.ater.source_service import SourceAtomicNoteCompiler
+
+    compiler = SourceAtomicNoteCompiler()
+    content = """## Mental Model
+
+Cardinal utility measures satisfaction and represents preferences [PAGE 8].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"id":"q1","type":"writing","question":"Explain utility.","answer":"Utility measures satisfaction.","explanation":"This follows from the source."}]
+```"""
+
+    valid, errors = compiler.validate_content(
+        content,
+        {"title": "Cardinal Utility", "source_pages": [8], "domain": "ECON-MICRO"},
+        {"artifact_constraints": {"forbidden": ["R", "Java"]}},
+    )
+
+    assert valid is True
+    assert "forbidden_artifact" not in errors
+
+
+def test_source_job_deploy_limits_ai_generation_to_selected_nodes(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import frontmatter
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_3_Consumer_Behavior.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+    docs = [
+        SimpleNamespace(
+            page_content=(
+                "Chapter 3 Consumer Preferences And Utility\n"
+                "Objectives\n"
+                "Define consumer preferences\n"
+                "Explain budget line"
+            ),
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content="Consumer preferences rank bundles by expected satisfaction.",
+            metadata={"page": 1},
+        ),
+        SimpleNamespace(
+            page_content="A budget line separates affordable bundles from unaffordable bundles.",
+            metadata={"page": 2},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    calls = []
+
+    def ai_generator(prompt):
+        calls.append(prompt["user"]["concept"])
+        return """## Mental Model
+
+Consumer preferences are generated with AI for the selected current lesson only [PAGE 1].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{"type":"mcq","question":"Which lesson used AI?","options":{"A":"The selected current lesson","B":"Every roadmap node"},"answer":"A","explanation":"Only the selected node should call AI."}]
+```"""
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+    )
+    first_node_id = job["concept_graph"]["nodes"][0]["id"]
+    deployed = service.deploy_to_vault(
+        job["job_id"],
+        str(tmp_path),
+        ai_generator=ai_generator,
+        ai_node_ids={first_node_id},
+    )
+
+    first_note = frontmatter.loads((tmp_path / deployed["written_files"][0]).read_text(encoding="utf-8"))
+    fallback_notes = [
+        frontmatter.loads((tmp_path / rel_path).read_text(encoding="utf-8"))
+        for rel_path in deployed["written_files"]
+        if rel_path.endswith(".md") and rel_path.startswith("Notes/") and "01_Source_Roadmap" in rel_path
+    ][1:]
+
+    assert calls == [job["concept_graph"]["nodes"][0]["title"]]
+    assert first_note.metadata["fallback_generation"] is False
+    assert fallback_notes
+    assert all(note.metadata["fallback_generation"] is True for note in fallback_notes)
+
+
+def test_source_job_deploy_can_write_only_selected_ai_nodes_without_fallbacks(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import frontmatter
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_3_Consumer_Behavior.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+    docs = [
+        SimpleNamespace(
+            page_content="Chapter 3 Consumer Preferences And Utility\nObjectives\nDefine consumer preferences\nExplain budget line",
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(page_content="Consumer preferences rank bundles by expected satisfaction.", metadata={"page": 1}),
+        SimpleNamespace(page_content="A budget line separates affordable bundles from unaffordable bundles.", metadata={"page": 2}),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    def ai_generator(prompt):
+        page = (prompt["user"].get("valid_source_pages") or [1])[0]
+        concept = prompt["user"]["concept"]
+        return f"""## Mental Model
+
+{concept} was generated by AI from the selected source page [PAGE {page}].
+
+## The Proving Grounds
+
+```interactive-quiz
+[{{"type":"mcq","question":"Was this note generated by AI?","options":{{"A":"Yes","B":"No"}},"answer":"A","explanation":"The selected background node used AI."}}]
+```"""
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Economics",
+        unit="Chapter_3",
+    )
+    selected_id = job["concept_graph"]["nodes"][1]["id"]
+    deployed = service.deploy_to_vault(
+        job["job_id"],
+        str(tmp_path),
+        ai_generator=ai_generator,
+        ai_node_ids={selected_id},
+        write_node_ids={selected_id},
+        strict_ai=True,
+        write_hub_files=False,
+    )
+
+    note_files = [path for path in deployed["written_files"] if path.startswith("Notes/")]
+    assert len(note_files) == 1
+    post = frontmatter.loads((tmp_path / note_files[0]).read_text(encoding="utf-8"))
+    assert post.metadata["fallback_generation"] is False
+    assert not (tmp_path / "database" / "study planner" / "Winter2026" / "Economics" / "Chapter_3" / "Chapter_01_Source_Roadmap.md").exists()
+
+
 def test_source_job_attaches_to_existing_academic_chapter_hub(tmp_path, monkeypatch):
     from types import SimpleNamespace
     import frontmatter
@@ -872,3 +1621,59 @@ def test_learning_object_paths_separate_academic_and_external_vault_roots():
     ) == "Notes/academic/Winter2026/Microeconomics/04_Production_And_Cost/01_Foundations/Production_Function.md"
     assert lo.get_hub_path("System Design") == "database/learning paths/System_Design_Hub.md"
     assert lo.get_note_path("System Design", "Foundations", 1, "Load Balancing") == "database/General/System_Design/01_Foundations/Load_Balancing.md"
+
+
+@pytest.mark.asyncio
+async def test_ai_retry_recovers_from_transient_async_provider_error():
+    from src.domains.ai.retry import ainvoke_llm_with_retry
+
+    class FakeResponse:
+        content = "OK"
+
+    class FlakyLLM:
+        def __init__(self):
+            self.calls = 0
+
+        async def ainvoke(self, _messages):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("500 Internal Server Error")
+            return FakeResponse()
+
+    llm = FlakyLLM()
+    res = await ainvoke_llm_with_retry(llm, [("human", "hello")], label="test", base_delay=0)
+
+    assert res.content == "OK"
+    assert llm.calls == 2
+
+
+def test_ai_retry_treats_read_operation_timed_out_as_retryable():
+    from src.domains.ai.retry import is_retryable_ai_error
+
+    assert is_retryable_ai_error(RuntimeError("ReadTimeout: The read operation timed out"))
+
+
+@pytest.mark.asyncio
+async def test_remediation_lesson_strict_ai_failure_does_not_use_fallback(tmp_path):
+    from types import SimpleNamespace
+    from src.domains.ater.tutor_service import TutorAIGenerationError, TutorSessionManager
+
+    note_path = "Notes/academic/Test.md"
+    note_file = tmp_path / note_path
+    note_file.parent.mkdir(parents=True)
+    note_file.write_text("# Test\n\nConsumer preferences rank bundles.", encoding="utf-8")
+
+    class FailingLLM:
+        async def ainvoke(self, _messages):
+            raise RuntimeError("500 Internal Server Error")
+
+    (tmp_path / "Inbox").mkdir()
+    ai_service = SimpleNamespace(llm=FailingLLM(), secrets=SimpleNamespace(ai_key="configured"))
+    manager = TutorSessionManager(tmp_path / "Inbox" / "ater_queue.db", tmp_path, ai_service)
+
+    with pytest.raises(TutorAIGenerationError):
+        await manager.generate_detailed_remediation_lesson(
+            note_path,
+            {"id": "q1", "question": "What do preferences do?", "answer": "Rank bundles"},
+            "They set prices",
+        )

@@ -14,6 +14,7 @@ from difflib import SequenceMatcher
 from .schemas import AdvancedPracticeConfig, NoteSchema
 from .agents import QuestionAgent, DOMAIN_MATRIX, get_persona, get_professional_domain
 from .governor import DailyLimitExceededException
+from src.domains.ai.retry import is_retryable_ai_error
 
 logger = logging.getLogger("Ater")
 
@@ -781,15 +782,15 @@ async def generate_practice(
                     return {"error": str(e)}
                 except Exception as e:
                     err_msg = str(e)
-                    is_rate = "429" in err_msg or "rate limit" in err_msg.lower()
-                    if is_rate:
+                    is_retryable = "429" in err_msg or "rate limit" in err_msg.lower() or is_retryable_ai_error(e)
+                    if is_retryable:
                         if attempt == max_retries - 1:
                             logger.error(f"[Ater Service] Max retries reached: {e}")
-                            return {"error": "Rate limit exceeded after retries"}
+                            return {"error": f"AI generation failed after retries: {e}"}
                         import re as _re
                         m = _re.search(r'Please try again in ([0-9.]+)s', err_msg)
                         delay = float(m.group(1)) + 2.0 if m else base_delay * (2 ** attempt)
-                        logger.warning(f"[Ater Service] 429 – waiting {delay:.1f}s (attempt {attempt+1})")
+                        logger.warning(f"[Ater Service] AI generation retry in {delay:.1f}s (attempt {attempt+1}): {e}")
                         await asyncio.sleep(delay)
                     else:
                         logger.error(f"[Ater Service] Non-retryable error during generation: {e}")
@@ -896,6 +897,11 @@ async def generate_practice(
         type_qs = [q for q in processed_questions if q.get("type") == q_type]
         
         if len(type_qs) < count:
+            if planner_llm:
+                raise RuntimeError(
+                    f"AI practice generation produced {len(type_qs)}/{count} '{q_type}' questions. "
+                    "No deterministic fallback was written; retry or use a different model/key."
+                )
             logger.warning(f"[Ater Service] Practice Builder: Shortfall detected for type '{q_type}'. Requested {count}, found {len(type_qs)}. Generating fallbacks.")
             fallback_pool = list(notes_to_process) if notes_to_process else []
             

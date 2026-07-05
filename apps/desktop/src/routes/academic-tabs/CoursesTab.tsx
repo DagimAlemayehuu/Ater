@@ -25,6 +25,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   const [activeTutorSession, setActiveTutorSession] = useState<any | null>(null)
   const [showAddHubModal, setShowAddHubModal] = useState(false)
   const [vaultFiles, setVaultFiles] = useState<any[]>([])
+  const [loaderType, setLoaderType] = useState<'roadmap' | 'lesson'>('roadmap')
 
   useEffect(() => {
     sidecarApi.listObsidianFiles()
@@ -141,6 +142,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         toast.error('Enter a chapter name')
         return
       }
+      setLoaderType('roadmap')
       setChapterBusy(true)
       try {
         const hub = await sidecarApi.createAcademicChapterHub({
@@ -221,6 +223,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
     const openSourceLesson = async (jobId?: string, resume = false) => {
       const targetJobId = jobId || activeRoadmap?.sourceJob?.job_id
       if (!targetJobId) return
+      setLoaderType('lesson')
       setChapterBusy(true)
       try {
         let sourceJob = activeRoadmap?.sourceJob
@@ -287,6 +290,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         return
       }
 
+      setLoaderType('roadmap')
       setChapterBusy(true)
       try {
         const jobId = activeRoadmap?.sourceJob?.job_id
@@ -328,7 +332,8 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
 
     if (activePreview) {
       return (
-        <div className="h-full overflow-hidden">
+        <div className="h-full overflow-hidden relative">
+          {chapterBusy && <AterAILoader type={loaderType} />}
           <LearningWorkspace
             preview={activePreview}
             tutorSession={activeTutorSession}
@@ -353,7 +358,8 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         })),
       }
       return (
-        <div className="h-full flex flex-col overflow-hidden bg-background">
+        <div className="h-full flex flex-col overflow-hidden bg-background relative">
+          {chapterBusy && <AterAILoader type={loaderType} />}
           <div className="shrink-0 border-b border-border px-6 py-4 flex items-center justify-between gap-3">
             <button
               onClick={() => setActiveRoadmap(null)}
@@ -417,7 +423,8 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
     }
 
     return (
-      <div data-tour="course-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24">
+      <div data-tour="course-detail-view" className="h-full overflow-y-auto custom-scrollbar p-10 space-y-10 pb-24 relative">
+        {chapterBusy && <AterAILoader type={loaderType} />}
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -591,7 +598,8 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   // COURSE LIST
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden relative">
+      {chapterBusy && <AterAILoader type={loaderType} />}
       {/* Filter bar */}
       <div className="px-6 py-3 border-b border-border flex items-center gap-3 shrink-0 flex-wrap">
         <div className="flex items-center gap-1.5 bg-bento-card p-1 border border-border rounded-[6px]">
@@ -693,6 +701,58 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
             )
           })}
         </div>
+      </div>
+    </div>
+  )
+}
+
+const ROADMAP_STAGES = [
+  'Reading document...',
+  'Analyzing topics...',
+  'Creating study plan...',
+  'Finalizing roadmap...'
+]
+
+const LESSON_STAGES = [
+  'Preparing lesson...',
+  'Writing notes...',
+  'Generating quiz...',
+  'Saving to vault...'
+]
+
+interface AterAILoaderProps {
+  type: 'roadmap' | 'lesson'
+}
+
+function AterAILoader({ type }: AterAILoaderProps) {
+  const stages = type === 'roadmap' ? ROADMAP_STAGES : LESSON_STAGES
+  const [currentIdx, setCurrentIdx] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const run = async () => {
+      for (let i = 0; i < stages.length; i++) {
+        if (!active) break
+        setCurrentIdx(i)
+        // Allocate time budget for each simple step (~40-50 seconds total)
+        await new Promise(resolve => setTimeout(resolve, i === 0 ? 5000 : 9000))
+      }
+    }
+    void run()
+    return () => {
+      active = false
+    }
+  }, [type, stages])
+
+  return (
+    <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-4 animate-in fade-in duration-200">
+      <div className="flex flex-col items-center gap-3">
+        {/* Minimal rotating circle */}
+        <div className="animate-spin rounded-full h-7 w-7 border-2 border-border border-t-foreground/80" />
+        {/* Simple English status text */}
+        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80 font-sans select-none animate-pulse">
+          {stages[currentIdx]}
+        </span>
       </div>
     </div>
   )

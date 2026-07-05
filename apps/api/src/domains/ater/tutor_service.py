@@ -8,8 +8,14 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.domains.ai.retry import ainvoke_llm_with_retry
 
 logger = logging.getLogger("Ater.TutorService")
+
+
+class TutorAIGenerationError(RuntimeError):
+    pass
+
 
 class TutorSessionManager:
     def __init__(self, db_path: Path, vault_path: Path, ai_service=None):
@@ -24,6 +30,13 @@ class TutorSessionManager:
                 self.conn.close()
         except Exception:
             pass
+
+    def _strict_ai_enabled(self) -> bool:
+        secrets = getattr(self.ai_service, "secrets", None)
+        return bool(self.ai_service and getattr(self.ai_service, "llm", None) and getattr(secrets, "ai_key", None))
+
+    def _raise_ai_error(self, label: str, exc: BaseException) -> None:
+        raise TutorAIGenerationError(f"{label} failed with the configured AI model: {exc}") from exc
 
     def _init_conn(self):
         self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
@@ -496,16 +509,20 @@ Question: {json.dumps(question, ensure_ascii=False)}
 Learner answer: {user_answer}
 
 Write 2 continuous paragraphs plus one retry prompt."""
-                response = await self.ai_service.llm.ainvoke([
+                response = await ainvoke_llm_with_retry(self.ai_service.llm, [
                     SystemMessage(content="You are a source-grounded tutor. Stay inside the provided source."),
                     HumanMessage(content=prompt),
-                ])
+                ], label="source-remediation")
                 text = response.content if hasattr(response, "content") else str(response)
                 lowered = text.lower()
                 if not any(term in lowered for term in ["central banking", "exchange rates", "programming", "biology"]):
                     return text
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("source remediation drifted outside the source context")
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Source remediation AI failed: {e}")
+                if self._strict_ai_enabled():
+                    self._raise_ai_error("Source remediation lesson", e)
         return (
             f"{node.get('title')} should be repaired from the source evidence on page(s) "
             f"{', '.join(map(str, node.get('source_pages', [])))}. {excerpt[:500]} "
@@ -553,14 +570,17 @@ Detailed Lesson:"""
                     SystemMessage(content="You are a helpful, expert academic tutor. You write continuous, detailed educational lessons to clarify misconceptions."),
                     HumanMessage(content=prompt)
                 ]
-                import asyncio
-                response = await asyncio.wait_for(
-                    self.ai_service.llm.ainvoke(messages),
+                response = await ainvoke_llm_with_retry(
+                    self.ai_service.llm,
+                    messages,
+                    label="detailed-remediation",
                     timeout=20,
                 )
                 return response.content if hasattr(response, "content") else str(response)
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Failed to generate detailed remediation lesson: {e}")
+                if self._strict_ai_enabled():
+                    self._raise_ai_error("Detailed remediation lesson", e)
 
         correct_val = question.get("answer") or "the correct answer"
         return f"The central mechanic of this concept governs how inputs are transformed into outputs. When reviewing this topic, ensure you connect the inputs directly to the mechanism and output. The expected correct definition is {correct_val}."
@@ -796,6 +816,8 @@ Detailed Lesson:"""
             if q_type != preferred_normalized:
                 q_type = preferred_normalized
         if not str(q.get("question") or "").strip():
+            if self._strict_ai_enabled():
+                raise TutorAIGenerationError("AI question did not include a usable question prompt")
             return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, q_type, note_content, adaptive)
 
         q["type"] = q_type
@@ -814,6 +836,8 @@ Detailed Lesson:"""
             if isinstance(options, list):
                 options = {chr(65 + idx): str(opt) for idx, opt in enumerate(options[:6])}
             if not isinstance(options, dict) or len(options) < 2:
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("AI MCQ question did not include enough options")
                 return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, "mcq", note_content, adaptive)
             q["options"] = {str(k): str(v) for k, v in options.items()}
             if str(q.get("answer") or "") not in q["options"]:
@@ -835,6 +859,8 @@ Detailed Lesson:"""
         elif q_type == "matching":
             pairs = q.get("pairs")
             if not isinstance(pairs, list) or len(pairs) < 2 or any(not isinstance(pair, dict) or "left" not in pair or "right" not in pair for pair in pairs):
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("AI matching question did not include valid pairs")
                 return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, "matching", note_content, adaptive)
             q["pairs"] = [{"left": str(pair["left"]), "right": str(pair["right"])} for pair in pairs]
             q.setdefault("answer", "See pairs for correct matching.")
@@ -846,12 +872,16 @@ Detailed Lesson:"""
             if len(steps) < 2 and len(answer_steps) >= 2:
                 steps = list(reversed(answer_steps))
             if len(steps) < 2:
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("AI ordering question did not include enough steps")
                 return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, "order", note_content, adaptive)
             q["steps"] = steps
             q["answer"] = answer_steps or steps
         elif q_type in {"debug", "find_error"}:
             snippet = q.get("buggyCode") or q.get("content") or q.get("codeSnippet")
             if not snippet:
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("AI debug question did not include inspectable content")
                 return self._fallback_proving_ground_question(note_path, original_question, lesson, attempt_number, seen_question_types, q_type, note_content, adaptive)
             q["buggyCode"] = str(snippet)
             q.setdefault("content", str(snippet))
@@ -944,9 +974,10 @@ Original question type: {question.get("type")}
                     SystemMessage(content="You are an expert tutor generating a clean, standalone remediation question."),
                     HumanMessage(content=prompt)
                 ]
-                import asyncio
-                response = await asyncio.wait_for(
-                    self.ai_service.llm.ainvoke(messages),
+                response = await ainvoke_llm_with_retry(
+                    self.ai_service.llm,
+                    messages,
+                    label="clean-remediation-question",
                     timeout=20,
                 )
                 parsed = parser.parse(response.content)
@@ -964,6 +995,8 @@ Original question type: {question.get("type")}
                 )
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Failed to generate clean remediation question: {e}")
+                if self._strict_ai_enabled():
+                    self._raise_ai_error("Follow-up remediation question", e)
 
         return self._fallback_proving_ground_question(
             note_path,
@@ -1057,6 +1090,8 @@ Original question type: {question.get("type")}
 
         generated = await self._generate_adaptive_follow_up(note_path, history, last_result)
         if not generated:
+            if self._strict_ai_enabled():
+                raise TutorAIGenerationError("Adaptive follow-up question failed with the configured AI model")
             generated = self._fallback_question(note_path, session_id, len(history))
         generated["note_id"] = note_path
         generated.setdefault("is_adaptive", True)
@@ -1093,6 +1128,8 @@ Original question type: {question.get("type")}
                 graded,
             )
             if not next_question:
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("Adaptive correction follow-up failed with the configured AI model")
                 next_question = self._fallback_question(note_path, session_id, len(history) + 1)
 
         return {
@@ -1175,10 +1212,10 @@ Schema rules:
 
 {parser.get_format_instructions()}
 """
-            response = await self.ai_service.llm.ainvoke([
+            response = await ainvoke_llm_with_retry(self.ai_service.llm, [
                 SystemMessage(content="You are Ater's adaptive Proving Grounds question generator."),
                 HumanMessage(content=prompt),
-            ])
+            ], label="adaptive-follow-up")
             question = parser.parse(response.content).model_dump()
             question["id"] = f"adaptive_{Path(note_path).stem}_{abs(hash(response.content)) % 100000}"
             question["difficulty"] = "L2"
@@ -1194,6 +1231,8 @@ Schema rules:
             )
         except Exception as e:
             logger.warning(f"[TutorSessionManager] Failed to generate adaptive follow-up: {e}")
+            if self._strict_ai_enabled():
+                self._raise_ai_error("Adaptive follow-up question", e)
             return None
 
     async def _grade_adaptive_answer(self, note_path: str, question: Dict[str, Any], user_answer: Any) -> Dict[str, Any]:
@@ -1259,13 +1298,15 @@ Be fair but rigorous. Correct answers can use different wording. If wrong, give 
 
 {parser.get_format_instructions()}
 """
-                response = await self.ai_service.llm.ainvoke([
+                response = await ainvoke_llm_with_retry(self.ai_service.llm, [
                     SystemMessage(content="You are Ater's adaptive tutor grader."),
                     HumanMessage(content=prompt),
-                ])
+                ], label="adaptive-answer-grading")
                 return parser.parse(response.content).model_dump()
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] AI adaptive grading failed: {e}")
+                if self._strict_ai_enabled():
+                    self._raise_ai_error("Adaptive answer grading", e)
 
         expected_terms = [str(term).lower() for term in question.get("required_keywords", []) if str(term).strip()]
         lower_answer = answer_text.lower()
@@ -1315,9 +1356,10 @@ Use the exact same format and question type as the original if possible.
                     SystemMessage(content="You are a helpful tutor generating a remediation question."),
                     HumanMessage(content=prompt)
                 ]
-                import asyncio
-                response = await asyncio.wait_for(
-                    self.ai_service.llm.ainvoke(messages),
+                response = await ainvoke_llm_with_retry(
+                    self.ai_service.llm,
+                    messages,
+                    label="remediation-question",
                     timeout=15,
                 )
                 parsed = parser.parse(response.content)
@@ -1346,6 +1388,8 @@ Use the exact same format and question type as the original if possible.
                 }
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Failed to generate remediation question: {e}")
+                if self._strict_ai_enabled():
+                    self._raise_ai_error("Remediation question", e)
                 
         # Fallback question
         return {
@@ -1631,10 +1675,10 @@ Return ONLY valid JSON matching the schema format. No formatting, no markdown wr
             
             user_prompt = f"Note Title: {note_title}\nTopic: {topic}\n\nNote Content Excerpt:\n{content[:4000]}\n\n{parser.get_format_instructions()}"
             
-            response = await self.ai_service.llm.ainvoke([
+            response = await ainvoke_llm_with_retry(self.ai_service.llm, [
                 ("system", sys_prompt),
                 ("human", user_prompt)
-            ])
+            ], label="transfer-task")
             text = response.content.strip()
             if text.startswith("```"):
                 lines = text.splitlines()
@@ -1644,6 +1688,8 @@ Return ONLY valid JSON matching the schema format. No formatting, no markdown wr
             return _json.loads(text)
         except Exception as e:
             logger.warning(f"[Tutor] Failed to generate transfer task: {e}")
+            if self._strict_ai_enabled():
+                self._raise_ai_error("Transfer task generation", e)
             return {
                 "type": "scenario",
                 "prompt": f"Apply the concept of {note_title} in a real-world scenario.",
@@ -1702,10 +1748,10 @@ Transfer Task Prompt: {transfer_task.get("prompt")}
 Grading Criteria: {transfer_task.get("grading_criteria")}
 User Answer: {user_answer}"""
                     
-                    response = await self.ai_service.llm.ainvoke([
+                    response = await ainvoke_llm_with_retry(self.ai_service.llm, [
                         ("system", sys_prompt),
                         ("human", user_prompt)
-                    ])
+                    ], label="transfer-grading")
                     text = response.content.strip()
                     if text.startswith("```"):
                         lines = text.splitlines()
@@ -1718,6 +1764,8 @@ User Answer: {user_answer}"""
                     remediation = str(graded_json.get("remediation", ""))
                 except Exception as e:
                     logger.warning(f"[Tutor] Failed LLM transfer grading: {e}")
+                    if self._strict_ai_enabled():
+                        self._raise_ai_error("Transfer answer grading", e)
                     is_correct = True
                     feedback = "System grading failed, defaulting to pass."
             else:
@@ -2041,9 +2089,10 @@ Student answer: '{user_answer}'
                     SystemMessage(content="You are a helpful tutor diagnosing student errors."),
                     HumanMessage(content=prompt)
                 ]
-                import asyncio
-                response = await asyncio.wait_for(
-                    self.ai_service.llm.ainvoke(messages),
+                response = await ainvoke_llm_with_retry(
+                    self.ai_service.llm,
+                    messages,
+                    label="mistake-diagnosis",
                     timeout=15,
                 )
                 parsed = parser.parse(response.content)
@@ -2052,8 +2101,9 @@ Student answer: '{user_answer}'
                     "misconception_text": parsed.misconception_text,
                     "hint": parsed.hint
                 }
-            except Exception:
-                pass
+            except Exception as e:
+                if self._strict_ai_enabled():
+                    self._raise_ai_error("Mistake diagnosis", e)
                 
         return {
             "is_misconception": True,

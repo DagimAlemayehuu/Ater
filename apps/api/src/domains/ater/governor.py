@@ -56,6 +56,7 @@ class TokenGovernor:
         self._current_quota_key = "default"
         self._all_keys = []  # List of all available keys in the pool
         self._active_key = "" # The actual key string currently in use
+        self.active_interactive_calls = 0
 
     def _get_db_conn(self):
         conn = sqlite3.connect(self.db_path, timeout=30.0)

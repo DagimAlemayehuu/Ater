@@ -6,6 +6,8 @@ import uuid
 import sqlite3
 import hashlib
 import shutil
+import time
+import copy
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Literal, Tuple, Callable
 from pydantic import BaseModel
@@ -20,6 +22,11 @@ from src.domains.ater.agents import get_persona, normalize_mode
 from src.domains.ater.templates import build_skeleton_note
 
 SOURCE_LEARNING_PIPELINE_VERSION = "source-roadmap-v5"
+
+
+class SourceAIGenerationError(RuntimeError):
+    """Raised when source-learning AI generation is required but fails."""
+
 
 class SourceCitation(BaseModel):
     file_name: str
@@ -249,7 +256,7 @@ def build_teaching_profile(domain: str, modality: str, source_context: str = "")
     profile_type = str(profile.get("type", ""))
     if profile["domain"] == "ECON-MICRO" and profile["modality"] == "Quantitative":
         profile["artifact_constraints"]["allowed"] = ["LaTeX", "Markdown Table", "ASCII Graph"]
-        profile["artifact_constraints"]["forbidden"] = ["Python", "R", "Java", "JavaScript", "programming code"]
+        profile["artifact_constraints"]["forbidden"] = ["Python", "R code", "Java", "JavaScript", "programming code"]
         profile["prohibitions"] = (
             str(profile.get("prohibitions", "")) +
             " DO NOT generate Python, R, Java, JavaScript, or programming code."
@@ -825,6 +832,174 @@ def build_concept_graph(topic: str, objectives: List[Dict[str, Any]], pages: Lis
     return nodes, edges, []
 
 
+RoadmapRefiner = Callable[[Dict[str, Any]], List[Dict[str, Any]]]
+
+
+_COMPACT_FALLBACK_DROP_KEYS = {
+    "complete",
+    "reflexive",
+    "transitivity",
+}
+
+
+def _edges_for_nodes(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [
+        {"from": nodes[i]["id"], "to": nodes[i + 1]["id"], "type": "prerequisite"}
+        for i in range(len(nodes) - 1)
+    ]
+
+
+def _compact_deterministic_nodes(nodes: List[Dict[str, Any]], max_nodes: int = 28) -> List[Dict[str, Any]]:
+    compacted: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for node in nodes:
+        title = str(node.get("title") or "").strip()
+        key = _concept_key(title)
+        if not key or key in seen:
+            continue
+        if key in _COMPACT_FALLBACK_DROP_KEYS:
+            continue
+        if key.startswith("minor slide heading"):
+            continue
+        if key.startswith("page "):
+            continue
+        compacted.append(dict(node))
+        seen.add(key)
+        if len(compacted) >= max_nodes:
+            break
+    if not compacted:
+        compacted = [dict(node) for node in nodes[:max_nodes]]
+    for idx, node in enumerate(compacted, start=1):
+        node["id"] = f"concept_{idx}"
+        node["teaching_order"] = idx
+    return compacted
+
+
+def _source_excerpts_for_pages(pages: List[Dict[str, Any]], source_pages: List[int]) -> List[Dict[str, Any]]:
+    page_text = _page_text_lookup(pages)
+    excerpts = []
+    for page_no in source_pages:
+        text = re.sub(r"\s+", " ", page_text.get(int(page_no), "")).strip()
+        if text:
+            excerpts.append({"page": int(page_no), "text": text[:800]})
+    return excerpts
+
+
+def _refine_concept_graph(
+    topic: str,
+    objectives: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+    domain: str,
+    nodes: List[Dict[str, Any]],
+    roadmap_refiner: Optional[RoadmapRefiner] = None,
+    strict_ai: bool = False,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    if not roadmap_refiner:
+        edges = [
+            {"from": nodes[i]["id"], "to": nodes[i + 1]["id"], "type": "prerequisite"}
+            for i in range(len(nodes) - 1)
+        ]
+        return nodes, edges, []
+
+    payload = {
+        "topic": topic,
+        "domain": domain,
+        "objectives": objectives,
+        "pages": [
+            {
+                "page_number": page.get("page_number"),
+                "content": re.sub(r"\s+", " ", page.get("content", "")).strip()[:1200],
+            }
+            for page in pages
+        ],
+        "nodes": [
+            {
+                "title": node.get("title"),
+                "domain": node.get("domain"),
+                "modality": node.get("modality"),
+                "source_pages": node.get("source_pages", []),
+                "source_context": " ".join(ex.get("text", "") for ex in node.get("source_excerpts", []))[:1200],
+            }
+            for node in nodes
+        ],
+    }
+    try:
+        refined = roadmap_refiner(payload)
+    except Exception as exc:
+        if strict_ai:
+            raise SourceAIGenerationError(f"AI roadmap refinement failed: {type(exc).__name__}: {exc}") from exc
+        compacted = _compact_deterministic_nodes(nodes)
+        return compacted, _edges_for_nodes(compacted), [{
+            "concept": topic,
+            "dimension": "definition",
+            "severity": "medium",
+            "description": f"AI roadmap refinement failed; compacted deterministic roadmap retained: {type(exc).__name__}",
+        }]
+
+    if not isinstance(refined, list) or not refined:
+        if strict_ai:
+            raise SourceAIGenerationError("AI roadmap refinement returned no usable concepts.")
+        compacted = _compact_deterministic_nodes(nodes)
+        return compacted, _edges_for_nodes(compacted), [{
+            "concept": topic,
+            "dimension": "definition",
+            "severity": "medium",
+            "description": "AI roadmap refinement returned no usable concepts; compacted deterministic roadmap retained.",
+        }]
+
+    page_numbers = {int(page.get("page_number", idx + 1)) for idx, page in enumerate(pages)}
+    existing_by_title = {_concept_key(node.get("title", "")): node for node in nodes}
+    refined_nodes: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    fallback_page = min(page_numbers) if page_numbers else 1
+    for idx, item in enumerate(refined, start=1):
+        if not isinstance(item, dict):
+            continue
+        title = _concept_title_from_text(item.get("title", ""), "")
+        if not _is_teachable_title(title):
+            continue
+        key = _concept_key(title)
+        if key in seen:
+            continue
+        seen.add(key)
+        existing = existing_by_title.get(key) or {}
+        raw_source_pages = item.get("source_pages") or existing.get("source_pages") or [fallback_page]
+        source_pages = sorted({
+            int(page_no)
+            for page_no in raw_source_pages
+            if str(page_no).isdigit() and int(page_no) in page_numbers
+        }) or [fallback_page]
+        source_excerpts = _source_excerpts_for_pages(pages, source_pages) or existing.get("source_excerpts", [])
+        source_context = " ".join(ex.get("text", "") for ex in source_excerpts)
+        refined_nodes.append({
+            "id": f"concept_{idx}",
+            "title": title[:80],
+            "domain": item.get("domain") or existing.get("domain") or domain,
+            "modality": item.get("modality") or existing.get("modality") or classify_concept_modality(title, source_context, domain),
+            "source_pages": source_pages,
+            "source_excerpts": source_excerpts,
+            "objective_ids": item.get("objective_ids") or existing.get("objective_ids") or [],
+            "teaching_order": len(refined_nodes) + 1,
+            "warnings": item.get("warnings") or existing.get("warnings") or [],
+        })
+
+    if not refined_nodes:
+        if strict_ai:
+            raise SourceAIGenerationError("AI roadmap refinement returned only invalid concepts.")
+        compacted = _compact_deterministic_nodes(nodes)
+        return compacted, _edges_for_nodes(compacted), [{
+            "concept": topic,
+            "dimension": "definition",
+            "severity": "medium",
+            "description": "AI roadmap refinement returned only invalid concepts; compacted deterministic roadmap retained.",
+        }]
+
+    for idx, node in enumerate(refined_nodes, start=1):
+        node["id"] = f"concept_{idx}"
+        node["teaching_order"] = idx
+    return refined_nodes, _edges_for_nodes(refined_nodes), []
+
+
 class SourceAtomicNoteCompiler:
     REQUIRED_SECTIONS = ["Mental Model", "Proving Grounds"]
     FORBIDDEN_PROMPT_MARKERS = ["system prompt", "developer message", "ignore previous", "chain of thought"]
@@ -837,8 +1012,9 @@ class SourceAtomicNoteCompiler:
         )
         return {
             "system": (
-                "Generate replaceable Atomic Note content only. Deterministic code owns YAML, headings, citations, "
-                "quiz schema, deployment paths, and validation. Stay strictly inside the cited source excerpts."
+                "Generate the complete Atomic Note Markdown body only. Deterministic code owns YAML and deployment paths, "
+                "but YOU must output the required Markdown headings, valid [PAGE n] citations, and exactly one "
+                "```interactive-quiz``` JSON block. Stay strictly inside the cited source excerpts."
             ),
             "user": {
                 "source_file": job.get("file_name"),
@@ -853,15 +1029,68 @@ class SourceAtomicNoteCompiler:
                     "prohibitions": profile.get("prohibitions", profile.get("prohibited_anti_patterns", "")),
                 },
                 "source_excerpts": excerpts[:4000],
-                "output_schema": {
-                    "mental_model": "continuous source-aligned prose",
-                    "core_explanation": "continuous source-aligned prose with valid [PAGE n] citations",
-                    "artifact": "only if compatible with artifact_constraints",
-                    "quiz": [{"id": "q1", "type": "mcq|writing|calculation|matching", "question": "...", "answer": "..."}],
-                    "remediation": "source-grounded hint text",
-                },
+                "required_markdown_contract": [
+                    "Start with: ## Mental Model",
+                    "Include 1-3 source-grounded paragraphs with at least one valid [PAGE n] citation.",
+                    "Include a second teaching section, for example: ## How the Economics Actually Work",
+                    "End with: ## The Proving Grounds",
+                    "Under Proving Grounds include exactly one fenced block starting with ```interactive-quiz",
+                    "The interactive-quiz block must contain a JSON array with at least one question object.",
+                    "Use only pages listed in valid_source_pages for citations.",
+                    "Do not include YAML/frontmatter, markdown fences around the whole note, or explanatory prefaces.",
+                ],
+                "quiz_schema": [{
+                    "id": "q1",
+                    "type": "mcq|writing|calculation|matching",
+                    "question": "standalone source-grounded question",
+                    "options": {"A": "required for mcq", "B": "required for mcq"},
+                    "answer": "correct answer",
+                    "explanation": "why the answer follows from the cited source",
+                }],
             },
         }
+
+    def build_ai_repair_prompt(
+        self,
+        base_prompt: Dict[str, Any],
+        invalid_content: str,
+        validation_errors: List[str],
+    ) -> Dict[str, Any]:
+        repaired = copy.deepcopy(base_prompt)
+        repaired["system"] = (
+            f"{base_prompt.get('system', '')}\n\n"
+            "Repair the previous malformed note into the exact required contract. Preserve any useful source-grounded "
+            "teaching content, but return a complete valid Atomic Note body. Do not apologize or explain the repair."
+        )
+        user = dict(repaired.get("user") or {})
+        user["validation_errors_to_fix"] = validation_errors
+        user["previous_invalid_output"] = str(invalid_content or "")[:5000]
+        user["repair_requirements"] = [
+            "The repaired output must contain literal heading text: ## Mental Model",
+            "The repaired output must contain literal heading text: ## The Proving Grounds",
+            "The repaired output must contain exactly one ```interactive-quiz fenced JSON array.",
+            "If any quiz item has type mcq, it must include an options object with at least A and B choices and answer must be one option key.",
+            "Every citation must use a valid [PAGE n] from valid_source_pages.",
+            "Return Markdown body only.",
+        ]
+        repaired["user"] = user
+        return repaired
+
+    def _contains_forbidden_artifact(self, text: str, forbidden_items: List[str]) -> bool:
+        lower = text.lower()
+        for raw_item in forbidden_items:
+            item = str(raw_item or "").strip().lower()
+            if not item:
+                continue
+            if len(item) <= 2:
+                if re.search(rf"(?<![a-z0-9]){re.escape(item)}(?![a-z0-9])", lower):
+                    return True
+            elif " " in item:
+                if item in lower:
+                    return True
+            elif re.search(rf"(?<![a-z0-9]){re.escape(item)}(?![a-z0-9])", lower):
+                return True
+        return False
 
     def _valid_source_pages(self, node: Dict[str, Any]) -> set[int]:
         return {int(p) for p in node.get("source_pages", []) if str(p).isdigit()}
@@ -885,12 +1114,26 @@ class SourceAtomicNoteCompiler:
                 parsed = json.loads(quiz_match.group(1).strip() if quiz_match else "")
                 if not isinstance(parsed, list):
                     errors.append("invalid_quiz_json")
+                else:
+                    for idx, item in enumerate(parsed, start=1):
+                        if not isinstance(item, dict):
+                            errors.append(f"invalid_quiz_item:{idx}")
+                            continue
+                        q_type = str(item.get("type", "")).lower()
+                        if not item.get("question"):
+                            errors.append(f"missing_quiz_question:{idx}")
+                        if q_type == "mcq":
+                            options = item.get("options")
+                            if not isinstance(options, dict) or len(options) < 2:
+                                errors.append(f"missing_mcq_options:{idx}")
+                            elif str(item.get("answer", "")) not in {str(key) for key in options.keys()}:
+                                errors.append(f"invalid_mcq_answer:{idx}")
             except Exception:
                 errors.append("invalid_quiz_json")
         else:
             errors.append("missing_quiz")
         forbidden_artifacts = [str(v).lower() for v in profile.get("artifact_constraints", {}).get("forbidden", [])]
-        if any(item and item in lower for item in forbidden_artifacts):
+        if self._contains_forbidden_artifact(text, forbidden_artifacts):
             errors.append("forbidden_artifact")
         if node.get("domain") == "ECON-MICRO" and any(term in lower for term in self.DRIFT_TERMS if term not in ["python", "java"]):
             errors.append("domain_drift")
@@ -898,7 +1141,14 @@ class SourceAtomicNoteCompiler:
             errors.append("prompt_leakage")
         return not errors, errors
 
-    def repair_or_replace_content(self, content: str, job: Dict[str, Any], node: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
+    def repair_or_replace_content(
+        self,
+        content: str,
+        job: Dict[str, Any],
+        node: Dict[str, Any],
+        profile: Dict[str, Any],
+        strict_ai: bool = False,
+    ) -> Dict[str, Any]:
         valid, errors = self.validate_content(content, node, profile)
         if valid:
             note = self.compile_fallback_note(job, node, profile)
@@ -906,6 +1156,9 @@ class SourceAtomicNoteCompiler:
             note["fallback"] = False
             note["frontmatter"]["fallback_generation"] = False
             return note
+        if strict_ai:
+            title = node.get("title", "Untitled Concept")
+            raise SourceAIGenerationError(f"AI note generation failed validation for {title}: {', '.join(errors)}")
         note = self.compile_fallback_note(job, node, profile)
         note["validation_errors"] = errors
         note["frontmatter"]["fallback_reason"] = ",".join(errors)
@@ -917,17 +1170,59 @@ class SourceAtomicNoteCompiler:
         node: Dict[str, Any],
         profile: Dict[str, Any],
         ai_generator: Optional[Callable[[Dict[str, Any]], str]] = None,
+        strict_ai: bool = False,
     ) -> Dict[str, Any]:
         if not ai_generator:
+            if strict_ai:
+                title = node.get("title", "Untitled Concept")
+                raise SourceAIGenerationError(f"AI note generation required for {title}, but no AI generator is configured.")
             return self.compile_fallback_note(job, node, profile)
         try:
-            content = ai_generator(self.build_ai_prompt(job, node, profile))
-            return self.repair_or_replace_content(content, job, node, profile)
+            prompt = self.build_ai_prompt(job, node, profile)
+            content = self._trim_ai_preamble(ai_generator(prompt))
+            valid, errors = self.validate_content(content, node, profile)
+            if not valid:
+                content = self._trim_ai_preamble(ai_generator(self.build_ai_repair_prompt(prompt, content, errors)))
+            return self.repair_or_replace_content(content, job, node, profile, strict_ai=strict_ai)
         except Exception as exc:
+            if strict_ai:
+                title = node.get("title", "Untitled Concept")
+                if isinstance(exc, SourceAIGenerationError):
+                    raise
+                raise SourceAIGenerationError(f"AI note generation failed for {title}: {type(exc).__name__}: {exc}") from exc
             note = self.compile_fallback_note(job, node, profile)
             note["validation_errors"] = [f"ai_failure:{type(exc).__name__}"]
             note["frontmatter"]["fallback_reason"] = "ai_failure"
             return note
+
+    def _coerce_structured_ai_note(self, payload_str: str, node: Dict[str, Any]) -> str:
+        try:
+            data = json.loads(payload_str)
+        except Exception:
+            return payload_str
+        if not isinstance(data, dict):
+            return payload_str
+        mental_model = data.get("mental_model", "")
+        how_it_works = data.get("how_it_works", "")
+        quiz = data.get("quiz", [])
+        lines = [
+            "## Mental Model\n",
+            f"{mental_model}\n",
+            "## How the Economics Actually Work\n",
+            f"{how_it_works}\n",
+            "## The Proving Grounds\n",
+            "```interactive-quiz",
+            json.dumps(quiz, indent=2),
+            "```"
+        ]
+        return "\n".join(lines)
+
+    def _trim_ai_preamble(self, content: str) -> str:
+        text = str(content or "").strip()
+        match = re.search(r"(?im)^##\s+(Mental Model|How the Economics Actually Work|The Proving Grounds)\s*$", text)
+        if match:
+            return text[match.start():].strip()
+        return text
 
     def _source_sentences(self, node: Dict[str, Any], limit: int = 5) -> List[Dict[str, Any]]:
         candidates: List[Dict[str, Any]] = []
@@ -1474,6 +1769,8 @@ class SourceLearningJobService:
         external_domain: Optional[str] = None,
         parent_hub_path: Optional[str] = None,
         chapter_title: Optional[str] = None,
+        roadmap_refiner: Optional[RoadmapRefiner] = None,
+        strict_ai: bool = False,
     ) -> Dict[str, Any]:
         path = Path(file_path)
         if not path.exists():
@@ -1525,9 +1822,19 @@ class SourceLearningJobService:
                     "severity": "medium",
                     "description": f"Page(s) {', '.join(map(str, low_text_pages[:12]))} have low extractable text; diagrams, graphs, or slide visuals may require review.",
                 })
-            nodes, edges, drift_warnings = SourceConceptGraphService().build_from_pages(topic, objectives, pages, domain)
+            nodes, _edges, drift_warnings = SourceConceptGraphService().build_from_pages(topic, objectives, pages, domain)
+            nodes, edges, refine_warnings = _refine_concept_graph(
+                topic,
+                objectives,
+                pages,
+                domain,
+                nodes,
+                roadmap_refiner=roadmap_refiner,
+                strict_ai=strict_ai,
+            )
             nodes, edges = scope_concept_graph_ids(job_id, nodes, edges)
             warnings.extend(drift_warnings)
+            warnings.extend(refine_warnings)
             with conn:
                 conn.execute("""
                     INSERT INTO source_learning_jobs (job_id, source_identity, file_path, file_name, file_size, content_hash, title, topic, domain, source_type, page_count, status, conversation_id, attachment_id, created_at, updated_at, metadata)
@@ -1711,7 +2018,13 @@ class SourceLearningJobService:
         finally:
             conn.close()
 
-    def start_learning(self, job_id: str) -> Dict[str, Any]:
+    def start_learning(
+        self,
+        job_id: str,
+        ai_generator: Optional[Callable[[Dict[str, Any]], str]] = None,
+        ai_metadata: Optional[Dict[str, Any]] = None,
+        strict_ai: bool = False,
+    ) -> Dict[str, Any]:
         job = self.get_job(job_id)
         processed_source_path = self._processed_pdf_destination_rel_path(job, self._runtime_root())
         if processed_source_path:
@@ -1749,7 +2062,15 @@ class SourceLearningJobService:
                 ]
                 current_node = node_by_id.get(current_node_id, nodes[0])
                 profile = current_node.get("teaching_profile") or build_teaching_profile(current_node["domain"], current_node["modality"])
-                note = SourceAtomicNoteCompiler().compile_fallback_note(job, current_node, profile)
+                note = SourceAtomicNoteCompiler().compile_note(
+                    job,
+                    current_node,
+                    profile,
+                    ai_generator=ai_generator,
+                    strict_ai=strict_ai,
+                )
+                if ai_metadata:
+                    note["frontmatter"].update({k: v for k, v in ai_metadata.items() if v is not None})
                 return {
                     "source_job": self.get_job(job_id),
                     "tutor_session": {
@@ -1768,7 +2089,15 @@ class SourceLearningJobService:
 
             first = nodes[0]
             profile = first.get("teaching_profile") or build_teaching_profile(first["domain"], first["modality"])
-            note = SourceAtomicNoteCompiler().compile_fallback_note(job, first, profile)
+            note = SourceAtomicNoteCompiler().compile_note(
+                job,
+                first,
+                profile,
+                ai_generator=ai_generator,
+                strict_ai=strict_ai,
+            )
+            if ai_metadata:
+                note["frontmatter"].update({k: v for k, v in ai_metadata.items() if v is not None})
             now = datetime.now().isoformat()
             current_note_path = self._write_session_note(job, note)
             roadmap = [
@@ -1849,7 +2178,18 @@ class SourceLearningJobService:
         finally:
             conn.close()
 
-    def deploy_to_vault(self, job_id: str, vault_path: str) -> Dict[str, Any]:
+    def deploy_to_vault(
+        self,
+        job_id: str,
+        vault_path: str,
+        ai_generator: Optional[Callable[[Dict[str, Any]], str]] = None,
+        ai_metadata: Optional[Dict[str, Any]] = None,
+        ai_node_ids: Optional[set[str]] = None,
+        strict_ai: bool = False,
+        write_node_ids: Optional[set[str]] = None,
+        write_hub_files: bool = True,
+        per_note_delay_seconds: float = 0.0,
+    ) -> Dict[str, Any]:
         vault = Path(vault_path)
         job = self.get_job(job_id)
         compiler = SourceAtomicNoteCompiler()
@@ -1866,7 +2206,31 @@ class SourceLearningJobService:
 
         note_links: List[str] = []
         for node in job["concept_graph"]["nodes"]:
-            note = compiler.compile_fallback_note(job, node, node.get("teaching_profile") or {})
+            if write_node_ids is not None and node.get("id") not in write_node_ids:
+                continue
+            node_ai_generator = ai_generator
+            if ai_node_ids is not None and node.get("id") not in ai_node_ids:
+                node_ai_generator = None
+            node_strict_ai = strict_ai and (ai_node_ids is None or node.get("id") in ai_node_ids)
+            try:
+                note = compiler.compile_note(
+                    job,
+                    node,
+                    node.get("teaching_profile") or {},
+                    ai_generator=node_ai_generator,
+                    strict_ai=node_strict_ai,
+                )
+            except Exception as exc:
+                if strict_ai and write_node_ids and len(write_node_ids) == 1:
+                    raise
+                logger.error("[SourceLearning] AI note generation failed for %s: %s", node.get("title", "Untitled"), exc)
+                note = compiler.compile_fallback_note(job, node, node.get("teaching_profile") or {})
+                note["validation_errors"] = [str(exc)]
+                note["frontmatter"]["fallback_reason"] = "ai_generation_error"
+            if ai_metadata:
+                for key, value in ai_metadata.items():
+                    if value is not None:
+                        note["frontmatter"][key] = value
             note_title = note["note_title"]
             note_rel = _source_note_rel_path(job, note_title)
             note_path = vault / note_rel
@@ -1898,14 +2262,18 @@ class SourceLearningJobService:
             written.append(rel_path)
             note_links.append(f"[[{note_title}]]")
             self.record_deployment(job_id, node["id"], rel_path, True)
+            if per_note_delay_seconds > 0:
+                time.sleep(per_note_delay_seconds)
 
-        chapter_path = vault / _source_chapter_rel_path(job)
-        chapter_path.parent.mkdir(parents=True, exist_ok=True)
-        chapter_path.write_text("---\ntype: \"Chapter\"\ngenerated_by: \"ater_source_job\"\nsource_job_id: " + json.dumps(job_id) + "\n---\n\n# Source Roadmap\n\n" + "\n".join(f"- {link}" for link in note_links) + "\n", encoding="utf-8")
-        hub_title = Path(hub_rel_path).stem
-        hub_path.write_text(self._build_hub_file(job, job_id, hub_title, note_links), encoding="utf-8")
-        written.extend([chapter_path.relative_to(vault).as_posix(), hub_path.relative_to(vault).as_posix()])
-        moved_source = self._move_processed_pdf(job, vault) if not collisions else None
+        if write_hub_files:
+            full_note_links = [f"[[{lo.normalize_title(node.get('title', 'Untitled Concept'))}]]" for node in job["concept_graph"]["nodes"]]
+            chapter_path = vault / _source_chapter_rel_path(job)
+            chapter_path.parent.mkdir(parents=True, exist_ok=True)
+            chapter_path.write_text("---\ntype: \"Chapter\"\ngenerated_by: \"ater_source_job\"\nsource_job_id: " + json.dumps(job_id) + "\n---\n\n# Source Roadmap\n\n" + "\n".join(f"- {link}" for link in full_note_links) + "\n", encoding="utf-8")
+            hub_title = Path(hub_rel_path).stem
+            hub_path.write_text(self._build_hub_file(job, job_id, hub_title, full_note_links), encoding="utf-8")
+            written.extend([chapter_path.relative_to(vault).as_posix(), hub_path.relative_to(vault).as_posix()])
+        moved_source = self._move_processed_pdf(job, vault) if write_hub_files and not collisions else None
         return {
             "job_id": job_id,
             "written_files": written,
