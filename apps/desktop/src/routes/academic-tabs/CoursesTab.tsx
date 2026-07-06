@@ -27,6 +27,33 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   const [vaultFiles, setVaultFiles] = useState<any[]>([])
   const [loaderType, setLoaderType] = useState<'roadmap' | 'lesson'>('roadmap')
 
+  const getRoadmapTitles = (sourceJob: any) => {
+    const chapterNotes = Array.isArray(sourceJob?.chapters)
+      ? sourceJob.chapters.flatMap((chapter: any) => Array.isArray(chapter.atomic_notes) ? chapter.atomic_notes : [])
+      : []
+    const notes = chapterNotes.length > 0 ? chapterNotes : (sourceJob?.roadmap || [])
+    return notes.map((item: any) => item?.title).filter(Boolean)
+  }
+
+  const applyRoadmapTitles = (sourceJob: any, titles: string[]) => {
+    let idx = 0
+    const roadmap = (sourceJob?.roadmap || []).map((item: any) => ({
+      ...item,
+      title: titles[idx++] || item.title,
+    }))
+    idx = 0
+    const chapters = Array.isArray(sourceJob?.chapters)
+      ? sourceJob.chapters.map((chapter: any) => ({
+          ...chapter,
+          atomic_notes: (chapter.atomic_notes || []).map((note: any) => ({
+            ...note,
+            title: titles[idx++] || note.title,
+          })),
+        }))
+      : sourceJob?.chapters
+    return { ...sourceJob, roadmap, chapters }
+  }
+
   useEffect(() => {
     sidecarApi.listObsidianFiles()
       .then(res => setVaultFiles(res?.files || []))
@@ -36,17 +63,38 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   const buildRoadmapMarkdown = (sourceJob: any, hubTitle: string) => {
     const placement = sourceJob.placement || {}
     const courseName = placement.course || sourceJob.domain || 'Academic'
-    const titles = (sourceJob.roadmap || []).map((item: any) => item.title).filter(Boolean)
+    const titles = getRoadmapTitles(sourceJob)
+    const chapters = Array.isArray(sourceJob.chapters) ? sourceJob.chapters : []
+    const coverage = sourceJob.coverage || {}
+    const covered = coverage.covered_source_items || 0
+    const total = coverage.total_source_items || 0
     let markdown = `## ${courseName} - ${hubTitle.replace(/[_-]/g, ' ')} - Learning Roadmap\n\n`
-    markdown += `${sourceJob.audit?.page_count || sourceJob.page_count || 0} pages · ${titles.length} source-grounded concepts planned.\n\n`
+    markdown += `${sourceJob.audit?.page_count || sourceJob.page_count || 0} pages · ${chapters.length || 1} chapters · ${titles.length} atomic notes planned`
+    if (total > 0) markdown += ` · ${covered}/${total} source items covered`
+    markdown += `.\n\n`
     if (sourceJob.warnings?.length) {
       markdown += `Warnings:\n\n${sourceJob.warnings.map((w: any) => `- ${w.severity}: ${w.description}`).join('\n')}\n\n`
     }
     markdown += `---\n\n`
-    markdown += `**Atomic Nodes**\n\n`
-    markdown += titles.length > 0
-      ? titles.map((title: string) => `- [ ] ${title.replace(/[_-]/g, ' ')}`).join('\n')
-      : 'No teachable concepts were returned for this source yet.'
+    markdown += `**Chapter Roadmap**\n\n`
+    if (chapters.length > 0) {
+      markdown += chapters.map((chapter: any) => {
+        const pages = Array.isArray(chapter.source_pages) && chapter.source_pages.length
+          ? ` · pages ${chapter.source_pages.join(', ')}`
+          : ''
+        const notes = (chapter.atomic_notes || []).map((note: any) => {
+          const notePages = Array.isArray(note.source_pages) && note.source_pages.length
+            ? ` _(pages ${note.source_pages.join(', ')})_`
+            : ''
+          return `  - [ ] ${String(note.title || '').replace(/[_-]/g, ' ')}${notePages}`
+        }).join('\n')
+        return `### ${chapter.title || 'Chapter'}${pages}\n${notes}`
+      }).join('\n\n')
+    } else {
+      markdown += titles.length > 0
+        ? titles.map((title: string) => `- [ ] ${title.replace(/[_-]/g, ' ')}`).join('\n')
+        : 'No teachable concepts were returned for this source yet.'
+    }
     markdown += `\n\n---\n\nConfirm the roadmap to open the first lesson.`
     return markdown
   }
@@ -177,7 +225,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         setActiveRoadmap({
           sourceJob,
           hubTitle: name,
-          titles: (sourceJob.roadmap || []).map((item: any) => item.title).filter(Boolean),
+          titles: getRoadmapTitles(sourceJob),
         })
         setShowAddHubModal(false)
       } catch (err: any) {
@@ -302,7 +350,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
           return {
             ...current,
             sourceJob: updatedJob,
-            titles: (updatedJob.roadmap || []).map((item: any) => item.title).filter(Boolean),
+            titles: getRoadmapTitles(updatedJob),
           }
         })
         toast.success('Roadmap updated')
@@ -350,13 +398,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
     }
 
     if (activeRoadmap) {
-      const sourceJob = {
-        ...activeRoadmap.sourceJob,
-        roadmap: activeRoadmap.titles.map((title: string, idx: number) => ({
-          ...(activeRoadmap.sourceJob.roadmap?.[idx] || {}),
-          title,
-        })),
-      }
+      const sourceJob = applyRoadmapTitles(activeRoadmap.sourceJob, activeRoadmap.titles)
       return (
         <div className="h-full flex flex-col overflow-hidden bg-background relative">
           {chapterBusy && <AterAILoader type={loaderType} />}

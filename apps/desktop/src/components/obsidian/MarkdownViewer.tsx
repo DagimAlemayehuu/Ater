@@ -2752,7 +2752,7 @@ export function MarkdownViewer({ content, onNavigate, path, components, noteMode
                     setSelectedText(text)
                     setFloatPos({
                         x: rect.left - wRect.left + rect.width / 2,
-                        y: rect.top - wRect.top + scrollTop - 44,
+                        y: rect.top - wRect.top - 44,
                     })
                 } else {
                     setSelectedText('')

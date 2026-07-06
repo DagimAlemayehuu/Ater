@@ -229,8 +229,10 @@ def _source_roadmap_refiner(secrets: AppSecrets):
 
         system = (
             "You are Ater's source-grounded academic roadmap planner. Refine noisy deterministic concept candidates "
-            "into a teachable roadmap. Merge duplicates, remove slide labels and tiny subheadings, preserve source "
-            "coverage, and keep every item grounded to valid source pages. Return JSON only."
+            "into a teachable, high-quality academic roadmap. Merge duplicates and remove slide labels, page titles, "
+            "and generic terms or words (like 'Output', 'Clause', 'Brief History', 'Intro'). Focus strictly on substantive, "
+            "teachable academic concepts and engineering paradigms. Preserve source coverage, keep every item grounded "
+            "to valid source pages, and ensure the roadmap contains 10-28 comprehensive concepts. Return JSON only."
         )
         user = {
             "topic": payload.get("topic"),

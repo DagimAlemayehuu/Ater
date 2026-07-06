@@ -641,9 +641,15 @@ Detailed Lesson:"""
                 text = response.content if hasattr(response, "content") else str(response)
                 if all(marker in text for marker in ["What you got wrong", "Why that is wrong", "Deeper correction"]):
                     return text
+                if self._strict_ai_enabled():
+                    raise TutorAIGenerationError("Detailed remediation lesson output was missing the required headers")
                 return self._fallback_remediation_lesson(question, user_answer, note_content)
             except Exception as e:
                 logger.warning(f"[TutorSessionManager] Failed to generate detailed remediation lesson: {e}")
+                if self._strict_ai_enabled():
+                    if isinstance(e, TutorAIGenerationError):
+                        raise
+                    self._raise_ai_error("Detailed remediation lesson", e)
 
         try:
             note_file = self.vault_path / note_path
@@ -1902,6 +1908,21 @@ User Answer: {user_answer}"""
         transfer_passed = mastery["transfer_passed"]
         return (recall_passed and transfer_passed), recall_passed, transfer_passed
 
+    def _source_chapter_for_note(self, session: Dict[str, Any], note_path: str) -> Optional[Dict[str, Any]]:
+        source_job = session.get("source_job") or {}
+        for chapter in source_job.get("chapters") or []:
+            for note in chapter.get("atomic_notes") or []:
+                if note.get("path") == note_path:
+                    return chapter
+        return None
+
+    def _source_chapter_note_paths(self, chapter: Dict[str, Any]) -> List[str]:
+        return [
+            str(note.get("path"))
+            for note in chapter.get("atomic_notes") or []
+            if note.get("path")
+        ]
+
     def advance_note(self, session_id: str) -> Dict[str, Any]:
         session = self.get_session(session_id)
         if not session:
@@ -1961,10 +1982,20 @@ User Answer: {user_answer}"""
                     break
             
         if next_note:
-            curr_chapter = Path(curr_note).parts[-2] if len(Path(curr_note).parts) >= 2 else ""
-            next_chapter = Path(next_note).parts[-2] if len(Path(next_note).parts) >= 2 else ""
+            source_curr_chapter = self._source_chapter_for_note(session, curr_note) if session.get("source_job_id") else None
+            source_next_chapter = self._source_chapter_for_note(session, next_note) if session.get("source_job_id") else None
+            if source_curr_chapter or source_next_chapter:
+                same_chapter = (
+                    bool(source_curr_chapter)
+                    and bool(source_next_chapter)
+                    and source_curr_chapter.get("id") == source_next_chapter.get("id")
+                )
+            else:
+                curr_chapter = Path(curr_note).parts[-2] if len(Path(curr_note).parts) >= 2 else ""
+                next_chapter = Path(next_note).parts[-2] if len(Path(next_note).parts) >= 2 else ""
+                same_chapter = curr_chapter == next_chapter
             
-            if curr_chapter == next_chapter:
+            if same_chapter:
                 if next_note not in active_note_unlocks:
                     active_note_unlocks.append(next_note)
                     import asyncio
@@ -2031,41 +2062,46 @@ User Answer: {user_answer}"""
         session = self.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
-        
-        hub_path = self.vault_path / session["hub_path"]
-        if not hub_path.exists():
-            raise ValueError("Hub file not found")
             
         curr_note = session["current_note_path"]
-        chapters_list = self._extract_wikilinks(hub_path.read_text(encoding="utf-8"))
-        
-        target_chapter_path = None
-        target_chapter_title = ""
-        chapter_notes = []
-        
-        for chap_name in chapters_list:
-            chap_path = self._resolve_vault_path(chap_name)
-            if not chap_path or not chap_path.exists():
-                continue
+        source_chapter = self._source_chapter_for_note(session, curr_note) if session.get("source_job_id") else None
+        if source_chapter:
+            target_chapter_title = str(source_chapter.get("title") or "Chapter")
+            chapter_notes = self._source_chapter_note_paths(source_chapter)
+        else:
+            hub_path = self.vault_path / session["hub_path"]
+            if not hub_path.exists():
+                raise ValueError("Hub file not found")
+
+            chapters_list = self._extract_wikilinks(hub_path.read_text(encoding="utf-8"))
+
+            target_chapter_path = None
+            target_chapter_title = ""
+            chapter_notes = []
             
-            chap_content = chap_path.read_text(encoding="utf-8")
-            notes_list = self._extract_wikilinks(chap_content)
-            
-            chap_note_rel_paths = []
-            for n in notes_list:
-                note_p = self._resolve_vault_path(n)
-                if note_p:
-                    chap_note_rel_paths.append(note_p.relative_to(self.vault_path).as_posix())
-            
-            if curr_note in chap_note_rel_paths:
-                target_chapter_path = chap_path
-                target_chapter_title = chap_path.stem
-                chapter_notes = chap_note_rel_paths
-                break
-                
-        if not target_chapter_path:
-            raise ValueError(f"Could not find chapter containing note {curr_note}")
-            
+            for chap_name in chapters_list:
+                chap_path = self._resolve_vault_path(chap_name)
+                if not chap_path or not chap_path.exists():
+                    continue
+
+                chap_content = chap_path.read_text(encoding="utf-8")
+                notes_list = self._extract_wikilinks(chap_content)
+
+                chap_note_rel_paths = []
+                for n in notes_list:
+                    note_p = self._resolve_vault_path(n)
+                    if note_p:
+                        chap_note_rel_paths.append(note_p.relative_to(self.vault_path).as_posix())
+
+                if curr_note in chap_note_rel_paths:
+                    target_chapter_path = chap_path
+                    target_chapter_title = chap_path.stem
+                    chapter_notes = chap_note_rel_paths
+                    break
+
+            if not target_chapter_path:
+                raise ValueError(f"Could not find chapter containing note {curr_note}")
+
         all_questions = []
         for note_rel in chapter_notes:
             note_abs = self.vault_path / note_rel

@@ -43,6 +43,8 @@ FEYNMAN_MAPPINGS = {
     "PHILOSOPHY": {"h1": "The Core Argument in Plain English", "h2": "The Formal Logic & Counter-Arguments"},
     "HIST-CATALYST": {"h1": "The Human Story Behind the Event", "h2": "The Historical Analysis & Impact"},
     "EDUCATION": {"h1": "How Participation Works", "h2": "The Inclusion Rules"},
+    "SOC-GLOBAL-TRENDS": {"h1": "The Global Shift in Plain English", "h2": "The Trend Analysis & Jargon"},
+    "SOC-POLITICAL": {"h1": "The Power Dynamic in Plain English", "h2": "The Institutional Analysis"},
 }
 
 def apply_feynman_consistency(target_matrix: dict):

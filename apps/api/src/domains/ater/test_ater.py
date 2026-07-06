@@ -1,6 +1,7 @@
 import json
 import re
 import pytest
+import inspect
 from src.domains.ater.router import DomainRouter
 from src.domains.ater.healer import LogicHealer
 from src.domains.ater.templates import render_atomic_note
@@ -844,6 +845,244 @@ def test_source_job_deploys_academic_pdf_to_study_planner_and_notes(tmp_path, mo
     assert "SourceJobs" not in "\n".join(deployed["written_files"])
 
 
+def test_source_job_builds_nested_chapter_roadmap_with_full_coverage(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from src.domains.ater.source_service import SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "Chapter_2_Web_Foundations.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF academic source")
+
+    docs = [
+        SimpleNamespace(
+            page_content=(
+                "Chapter 2 Web Foundations\n"
+                "Objectives\n"
+                "Define HTML document structure\n"
+                "Explain CSS selectors\n"
+                "Describe JavaScript event handling"
+            ),
+            metadata={"page": 0},
+        ),
+        SimpleNamespace(
+            page_content=(
+                "HTML document structure uses semantic elements, attributes, and nested tags "
+                "to describe the meaning of page content."
+            ),
+            metadata={"page": 1},
+        ),
+        SimpleNamespace(
+            page_content=(
+                "CSS selectors target elements by type, class, id, and attributes. The cascade "
+                "resolves competing declarations using specificity and source order."
+            ),
+            metadata={"page": 2},
+        ),
+        SimpleNamespace(
+            page_content=(
+                "JavaScript event handling connects user actions to functions through listeners. "
+                "Handlers receive event objects and update document state."
+            ),
+            metadata={"page": 3},
+        ),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    job = service.create_or_resume_from_path(
+        str(pdf_path),
+        learning_scope="academic",
+        semester="Winter2026",
+        course="Web Development",
+        unit="Chapter_2_Web_Foundations",
+    )
+
+    assert job["chapters"], "Roadmap must expose nested chapter groups, not only a flat note list."
+    assert all(chapter["atomic_notes"] for chapter in job["chapters"])
+    assert all("Chapter" not in note["title"] for chapter in job["chapters"] for note in chapter["atomic_notes"])
+
+    coverage_items = job["coverage"]["source_items"]
+    assert coverage_items, "Every PDF should produce a source-item coverage ledger."
+    assert all(item["status"] in {"covered", "merged", "ignored", "warning"} for item in coverage_items)
+    assert all(item["status"] != "warning" for item in coverage_items if item["importance"] == "high")
+    assert {item["page_number"] for item in coverage_items if item["status"] in {"covered", "merged"}} >= {1, 2, 3, 4}
+
+    deployed = service.deploy_to_vault(job["job_id"], str(tmp_path))
+    hub_content = (
+        tmp_path
+        / "database"
+        / "study planner"
+        / "Winter2026"
+        / "Web_Development"
+        / "Chapter_2_Web_Foundations"
+        / "Web_Foundations_Hub.md"
+    ).read_text(encoding="utf-8")
+
+    assert "## Chapter Roadmap" in hub_content
+    assert "### Chapter 1:" in hub_content
+    assert "- [[" in hub_content
+    assert any(path.endswith("_Hub.md") for path in deployed["written_files"])
+
+
+def test_source_roadmap_finalizer_splits_large_notes_and_assigns_all_pages():
+    from src.domains.ater.source_service import (
+        build_nested_chapters,
+        build_source_coverage_items,
+        finalize_source_roadmap_nodes,
+    )
+
+    pages = [
+        {"page_number": 1, "content": "CSS Basics: CSS controls presentation for HTML documents.", "text_length": 62},
+        {"page_number": 2, "content": "Layer Page\nCSS belongs to the presentation layer of a web page.", "text_length": 64},
+        {"page_number": 3, "content": "CSS Selectors\nSelectors target elements in a document.", "text_length": 55},
+        {"page_number": 4, "content": "Element Selectors\nElement selectors match HTML tag names.", "text_length": 58},
+        {"page_number": 5, "content": "Class Selectors\nClass selectors match reusable class attributes.", "text_length": 64},
+        {"page_number": 6, "content": "ID Selectors\nID selectors match one unique id attribute.", "text_length": 56},
+        {"page_number": 7, "content": "Attribute Selectors\nAttribute selectors match elements by attribute presence or value.", "text_length": 83},
+        {"page_number": 8, "content": "Pseudo Class Selectors\nPseudo classes match element states such as hover.", "text_length": 77},
+        {"page_number": 9, "content": "Pseudo Element Selectors\nPseudo elements style parts of elements.", "text_length": 68},
+        {"page_number": 10, "content": "Combinator Selectors\nCombinators describe relationships between elements.", "text_length": 76},
+        {"page_number": 11, "content": "Specificity\nSpecificity decides which declaration wins.", "text_length": 55},
+        {"page_number": 12, "content": "Cascade Order\nSource order resolves otherwise equal CSS rules.", "text_length": 59},
+    ]
+    nodes = [
+        {
+            "id": "concept_1",
+            "title": "CSS Basics",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [1],
+            "source_excerpts": [],
+            "objective_ids": [],
+            "teaching_order": 1,
+            "warnings": [],
+        },
+        {
+            "id": "concept_2",
+            "title": "CSS Selectors",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": list(range(3, 13)),
+            "source_excerpts": [],
+            "objective_ids": ["obj_selectors"],
+            "teaching_order": 2,
+            "warnings": [],
+        },
+    ]
+
+    finalized = finalize_source_roadmap_nodes(nodes, pages, "CSS", "CS-WEB-DEV")
+    titles = [node["title"] for node in finalized]
+
+    assert "CSS Selectors" in titles
+    assert "Element Selectors" in titles
+    assert "Class Selectors" in titles
+    assert "Attribute Selectors" in titles
+    assert "Pseudo Class Selectors" in titles
+    assert {page for node in finalized for page in node["source_pages"]} >= set(range(1, 13))
+
+    coverage_items = build_source_coverage_items(pages, [], finalized)
+    assert all(item["status"] in {"covered", "merged"} for item in coverage_items)
+    assert {item["page_number"] for item in coverage_items if item["status"] == "covered"} >= set(range(1, 13))
+
+    chapters = build_nested_chapters({"file_name": "CSS.pdf", "topic": "CSS"}, finalized)
+    chapter_titles = " ".join(chapter["title"] for chapter in chapters)
+    assert "Clas Selector" not in chapter_titles
+    assert "Sheet Sourc" not in chapter_titles
+
+
+def test_source_roadmap_finalizer_does_not_overload_broad_css_parent_notes():
+    from src.domains.ater.source_service import finalize_source_roadmap_nodes
+
+    page_text = {
+        1: "CHAPTER 3 CSS(CASCADING STYLE SHEETS)",
+        2: "Quiz one ..Create the ff page. Boxes represent a div element.",
+        3: "What is CSS? Every web page is composed of HTML code that describes content.",
+        4: "What is CSS? Layers of a web page: Content, Presentation, Behavior.",
+        5: "Style Sheet Languages are used to describe the presentation of structured documents.",
+        6: "What is CSS? Cascading Style Sheets contains rules for presentation of HTML.",
+        7: "What are Cascading Style Sheets? Cascading style sheets define presentation rules.",
+        8: "Why CSS? Flexible, easy to maintain, and improves accessibility.",
+        9: "Why use Style Sheets? Separate structure from appearance and create consistency.",
+        10: "What is CSS? Before CSS designers used presentation tags like FONT and BR.",
+        11: "Brief history 1997-2001 Content: HTML 4.01 Presentation: CSS1",
+        12: "Brief history 2001-2006 Content: XHTML 1 Presentation: CSS2",
+        13: "Brief history 2007-present Content: HTML5 Presentation: CSS3",
+        14: "Pros and Cons of Using CSS Pros include designer control and maintainability.",
+        15: "General Syntax Style Definition: Selector { property: value; }",
+        16: "CSS Syntax Case insensitive and whitespace rules.",
+        17: "Source of Styles Author Developer Style Sheets Inline Embedded External.",
+        18: "Source of Styles > Author Developer Style Sheets Inline Styles.",
+        19: "Source of Styles > Author Developer Style Sheets Embedded Styles.",
+        20: "Source of Styles > Author Developer Style Sheets External Styles.",
+        21: "Source of Styles > Author Developer Style Sheets External Styles import.",
+        22: "Source of Styles > User Style Sheets User-created style sheet.",
+        23: "Source of Styles > Browser Default Style Sheets user agent style sheets.",
+        24: "Structuring HTML Correctly Without logical consistent HTML, writing CSS is harder.",
+        25: "Use tools for website designing, planning and prototyping such as mockups.",
+        26: "Planning and prototyping using mindmeister and mockups.",
+        27: "CSS SELECTORS",
+        28: "CSS Selectors selectors are patterns used to select elements.",
+        29: "CSS Selectors > Element Selector Also known as type selector.",
+        30: "Quiz Use Element Selector",
+        31: "CSS Selectors > Class Selector Class selectors target class attributes.",
+        32: "CSS Selectors > Id Selector Identifier Selector ID selectors target id attributes.",
+        33: "CSS Selectors > Considerations Id and Class attributes extend meaning.",
+        34: "CSS Selectors > Considerations Id and Class",
+        35: "CSS Selectors > Class and Id Selectors with the Element example.",
+        36: "Quiz use class and id selectors",
+        37: "CSS Selectors > Universal Selectors Universal selectors select any element.",
+        38: "CSS Selectors > Grouping Selectors Often several elements use same style.",
+        39: "Quiz Group selectors",
+        40: "CSS Selectors > Descendant Selector The most powerful targeting ability.",
+        41: "CSS Selectors > Descendant Selector space",
+        42: "Quiz use a descendant selector to change font size.",
+        43: "CSS Selectors > Child Selectors A child selector selects direct children.",
+        44: "CSS Selectors > Child Selectors",
+        45: "Quiz Use Child Selectors to change paragraph colors.",
+        46: "CSS Selectors > Adjacent Selectors Also called adjacent sibling selectors.",
+        47: "CSS Selectors > Adjacent Selectors",
+        48: "Quiz Use Adjacent Selectors to change the last paragraph color.",
+        49: "CSS Selectors > General Sibling Selectors Sibling has the same parent.",
+        50: "Quiz Use General Sibling Selectors",
+        51: "CSS Selectors > Attribute Selectors select elements based on attributes.",
+        52: "CSS Selectors > Attribute Selectors",
+        53: "CSS Selectors > Attribute Selectors",
+        54: "CSS Selectors > Attribute Selectors",
+        55: "Quiz Use Attribute selectors to change the color of the second link.",
+        56: "CSS Selectors > Attribute Selectors Tilde pattern matching.",
+        57: "CSS Selectors > Attribute Selectors Caret pattern matching.",
+        58: "CSS Selectors > Attribute Selectors Dollar sign pattern matching.",
+        59: "CSS Selectors > Attribute Selectors Asterisk sign pattern matching.",
+        60: "Quiz Use attribute selector and Asterisk Sign.",
+    }
+    pages = [
+        {"page_number": page_no, "content": content, "text_length": len(content)}
+        for page_no, content in page_text.items()
+    ]
+    nodes = [
+        {"id": "concept_1", "title": "Css Basics", "domain": "CS-WEB-DEV", "modality": "Qualitative/Definitional", "source_pages": [1, 3, 6], "source_excerpts": [], "objective_ids": [], "teaching_order": 1, "warnings": []},
+        {"id": "concept_2", "title": "Style Sheet Languages", "domain": "CS-WEB-DEV", "modality": "Qualitative/Definitional", "source_pages": [1, 5, 6], "source_excerpts": [], "objective_ids": [], "teaching_order": 2, "warnings": []},
+        {"id": "concept_3", "title": "Web Page Layers", "domain": "CS-WEB-DEV", "modality": "Qualitative/Definitional", "source_pages": [4], "source_excerpts": [], "objective_ids": [], "teaching_order": 3, "warnings": []},
+        {"id": "concept_4", "title": "Css Syntax", "domain": "CS-WEB-DEV", "modality": "Qualitative/Definitional", "source_pages": [15, 16], "source_excerpts": [], "objective_ids": [], "teaching_order": 4, "warnings": []},
+        {"id": "concept_5", "title": "Style Sheet Sources", "domain": "CS-WEB-DEV", "modality": "Qualitative/Definitional", "source_pages": [17, 18, 19, 20, 21, 22, 23], "source_excerpts": [], "objective_ids": [], "teaching_order": 5, "warnings": []},
+        {"id": "concept_6", "title": "Css Selectors", "domain": "CS-WEB-DEV", "modality": "Qualitative/Definitional", "source_pages": list(range(27, 61)), "source_excerpts": [], "objective_ids": ["obj_selectors"], "teaching_order": 6, "warnings": []},
+    ]
+
+    finalized = finalize_source_roadmap_nodes(nodes, pages, "CSS", "CS-WEB-DEV")
+    by_title = {node["title"]: node for node in finalized}
+
+    assert any("Evolution" in title for title in by_title)
+    assert any("Prototyping" in title for title in by_title)
+    assert "General Sibling Selectors" in by_title
+    assert "Attribute Selectors" in by_title
+    assert "Essentially General" not in by_title
+    assert "Essentially Adjacent" not in by_title
+    if "Css Selectors" in by_title:
+        assert len(by_title["Css Selectors"]["source_pages"]) <= 3
+    assert len(by_title["Css Basics"]["source_pages"]) <= 4
+    assert {page for node in finalized for page in node["source_pages"]} >= set(range(1, 61))
+
+
 def test_source_job_deploy_uses_ai_generator_when_available(tmp_path, monkeypatch):
     from types import SimpleNamespace
     import frontmatter
@@ -872,19 +1111,44 @@ def test_source_job_deploy_uses_ai_generator_when_available(tmp_path, monkeypatc
 
     def ai_generator(prompt):
         prompts.append(prompt)
-        return """## Mental Model
+        h = prompt["user"]["teaching_headings"]
+        return inspect.cleandoc(f"""## Mental Model
 
 Consumer preferences are the ranking rule that lets a consumer compare bundles before choosing. The source anchors the idea in expected satisfaction from each bundle [PAGE 1].
 
-## How the Economics Actually Work
+## {h[0]}
 
 The learner should connect preferences to ranking, not to prices first: preferences order bundles by expected satisfaction, then later constraints decide what can be bought [PAGE 1].
+
+## {h[1]}
+
+Secondary concept explanation placeholder.
+
+## {h[2]}
+
+Tertiary concept explanation placeholder.
 
 ## The Proving Grounds
 
 ```interactive-quiz
-[{"type":"mcq","question":"What do consumer preferences do in the source?","options":{"A":"Rank bundles by expected satisfaction","B":"Set the market price"},"answer":"A","explanation":"The cited page says preferences rank bundles by satisfaction."}]
-```"""
+[
+  {{
+    "id": "q1",
+    "type": "mcq",
+    "difficulty": "L1",
+    "family": "recognize",
+    "format": "choice",
+    "variant": "conceptual",
+    "skill_target": "Consumer Preferences",
+    "question": "What do consumer preferences do in the source?",
+    "options": {{"A": "Rank bundles by expected satisfaction", "B": "Set the market price"}},
+    "answer": "A",
+    "explanation": "The cited page says preferences rank bundles by satisfaction.",
+    "rubric": {{"grading_mode": "objective"}},
+    "remediation": {{"misconception_codes": ["missing_definition"]}}
+  }}
+]
+```""")
 
     service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
     job = service.create_or_resume_from_path(
@@ -901,7 +1165,7 @@ The learner should connect preferences to ranking, not to prices first: preferen
     assert prompts
     assert post.metadata["fallback_generation"] is False
     assert "ranking rule" in post.content
-    assert "[PAGE 1]" in post.content
+    assert "[PAGE 1]" not in post.content
 
 
 def test_source_job_roadmap_can_be_ai_refined_before_persisting(tmp_path, monkeypatch):
@@ -937,7 +1201,7 @@ def test_source_job_roadmap_can_be_ai_refined_before_persisting(tmp_path, monkey
         assert payload["topic"] == "Consumer Preferences And Utility"
         assert payload["nodes"]
         return [
-            {"title": "Consumer Preferences", "source_pages": [1]},
+            {"title": "Consumer Preferences Rank Bundles", "source_pages": [1]},
             {"title": "Budget Line", "source_pages": [1]},
             {"title": "Consumer Equilibrium", "source_pages": [2]},
         ]
@@ -953,9 +1217,9 @@ def test_source_job_roadmap_can_be_ai_refined_before_persisting(tmp_path, monkey
     )
 
     assert [item["title"] for item in job["roadmap"]] == [
-        "Consumer Preferences",
         "Budget Line",
         "Consumer Equilibrium",
+        "Consumer Preferences Rank Bundles",
     ]
 
 
@@ -1081,16 +1345,45 @@ def test_start_source_learning_uses_ai_note_for_first_lesson(tmp_path, monkeypat
     ]
     monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
 
-    def ai_generator(_prompt):
-        return """## Mental Model
+    def ai_generator(prompt):
+        h = prompt["user"]["teaching_headings"]
+        return inspect.cleandoc(f"""## Mental Model
 
 Consumer preferences are the learner's first source-grounded ranking rule [PAGE 1].
+
+## {h[0]}
+
+Prose explanation 1 [PAGE 1].
+
+## {h[1]}
+
+Prose explanation 2.
+
+## {h[2]}
+
+Prose explanation 3.
 
 ## The Proving Grounds
 
 ```interactive-quiz
-[{"type":"mcq","question":"What does the source use preferences for?","options":{"A":"Ranking bundles","B":"Changing taxes"},"answer":"A","explanation":"The cited page ties preferences to ranking bundles."}]
-```"""
+[
+  {{
+    "id": "q1",
+    "type": "mcq",
+    "difficulty": "L1",
+    "family": "recognize",
+    "format": "choice",
+    "variant": "conceptual",
+    "skill_target": "Consumer Preferences",
+    "question": "What does the source use preferences for?",
+    "options": {{"A": "Ranking bundles", "B": "Changing taxes"}},
+    "answer": "A",
+    "explanation": "The cited page ties preferences to ranking bundles.",
+    "rubric": {{"grading_mode": "objective"}},
+    "remediation": {{"misconception_codes": ["missing_definition"]}}
+  }}
+]
+```""")
 
     service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
     job = service.create_or_resume_from_path(
@@ -1171,19 +1464,44 @@ def test_source_note_generation_repairs_malformed_ai_output_in_strict_mode():
         calls.append(prompt)
         if len(calls) == 1:
             return "Consumer preferences rank bundles by expected satisfaction [PAGE 2]."
-        return """## Mental Model
+        h = prompt["user"]["teaching_headings"]
+        return inspect.cleandoc(f"""## Mental Model
 
 Consumer preferences are the ranking rule that lets a consumer compare bundles by expected satisfaction [PAGE 2].
 
-## How the Economics Actually Work
+## {h[0]}
 
 The note should keep the idea separate from budget constraints: preferences rank bundles before affordability is checked [PAGE 2].
+
+## {h[1]}
+
+Secondary details.
+
+## {h[2]}
+
+Tertiary details.
 
 ## The Proving Grounds
 
 ```interactive-quiz
-[{"id":"q1","type":"mcq","question":"What do consumer preferences do?","options":{"A":"Rank bundles by expected satisfaction","B":"Set the tax rate"},"answer":"A","explanation":"The source says preferences rank bundles by expected satisfaction."}]
-```"""
+[
+  {{
+    "id": "q1",
+    "type": "mcq",
+    "difficulty": "L1",
+    "family": "recognize",
+    "format": "choice",
+    "variant": "conceptual",
+    "skill_target": "Consumer Preferences",
+    "question": "What do consumer preferences do?",
+    "options": {{"A": "Rank bundles by expected satisfaction", "B": "Set the tax rate"}},
+    "answer": "A",
+    "explanation": "The source says preferences rank bundles by expected satisfaction.",
+    "rubric": {{"grading_mode": "objective"}},
+    "remediation": {{"misconception_codes": ["missing_definition"]}}
+  }}
+]
+```""")
 
     note = compiler.compile_note(job, node, profile, ai_generator=ai_generator, strict_ai=True)
 
@@ -1268,6 +1586,8 @@ def test_source_note_compiler_renders_structured_ai_payload():
         {"title": "Consumer Preferences", "source_pages": [3], "domain": "ECON-MICRO"},
         {"artifact_constraints": {"forbidden": []}},
     )
+    print("COERCED NOTE ERRORS ARE:", errors)
+    print("MATCHED HEADINGS ARE:", re.findall(r"^##\s+(.+?)\s*$", content, flags=re.MULTILINE))
     assert valid is True
     assert errors == []
 
@@ -1280,10 +1600,38 @@ def test_source_note_forbidden_artifact_does_not_match_single_letter_substrings(
 
 Cardinal utility measures satisfaction and represents preferences [PAGE 8].
 
+## The Economic Intuition
+
+Some economic intuition here [PAGE 8].
+
+## The Choice Mechanism
+
+Some choice mechanism here.
+
+## The Formal Math & Models
+
+Some formal math here.
+
 ## The Proving Grounds
 
 ```interactive-quiz
-[{"id":"q1","type":"writing","question":"Explain utility.","answer":"Utility measures satisfaction.","explanation":"This follows from the source."}]
+[
+  {
+    "id": "q1",
+    "type": "mcq",
+    "difficulty": "L1",
+    "family": "recognize",
+    "format": "choice",
+    "variant": "conceptual",
+    "skill_target": "Cardinal Utility",
+    "question": "What does cardinal utility measure?",
+    "options": {"A": "Satisfaction", "B": "Nothing"},
+    "answer": "A",
+    "explanation": "This follows from the source.",
+    "rubric": {"grading_mode": "objective"},
+    "remediation": {"misconception_codes": ["missing_definition"]}
+  }
+]
 ```"""
 
     valid, errors = compiler.validate_content(
@@ -1329,15 +1677,44 @@ def test_source_job_deploy_limits_ai_generation_to_selected_nodes(tmp_path, monk
 
     def ai_generator(prompt):
         calls.append(prompt["user"]["concept"])
-        return """## Mental Model
+        h = prompt["user"]["teaching_headings"]
+        return inspect.cleandoc(f"""## Mental Model
 
 Consumer preferences are generated with AI for the selected current lesson only [PAGE 1].
+
+## {h[0]}
+
+Explanation 1.
+
+## {h[1]}
+
+Explanation 2.
+
+## {h[2]}
+
+Explanation 3.
 
 ## The Proving Grounds
 
 ```interactive-quiz
-[{"type":"mcq","question":"Which lesson used AI?","options":{"A":"The selected current lesson","B":"Every roadmap node"},"answer":"A","explanation":"Only the selected node should call AI."}]
-```"""
+[
+  {{
+    "id": "q1",
+    "type": "mcq",
+    "difficulty": "L1",
+    "family": "recognize",
+    "format": "choice",
+    "variant": "conceptual",
+    "skill_target": "Consumer Preferences",
+    "question": "Which lesson used AI?",
+    "options": {{"A": "The selected current lesson", "B": "Every roadmap node"}},
+    "answer": "A",
+    "explanation": "Only the selected node should call AI.",
+    "rubric": {{"grading_mode": "objective"}},
+    "remediation": {{"misconception_codes": ["missing_definition"]}}
+  }}
+]
+```""")
 
     service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
     job = service.create_or_resume_from_path(
@@ -1389,15 +1766,44 @@ def test_source_job_deploy_can_write_only_selected_ai_nodes_without_fallbacks(tm
     def ai_generator(prompt):
         page = (prompt["user"].get("valid_source_pages") or [1])[0]
         concept = prompt["user"]["concept"]
-        return f"""## Mental Model
+        h = prompt["user"]["teaching_headings"]
+        return inspect.cleandoc(f"""## Mental Model
 
 {concept} was generated by AI from the selected source page [PAGE {page}].
+
+## {h[0]}
+
+Explanation 1 [PAGE {page}].
+
+## {h[1]}
+
+Explanation 2.
+
+## {h[2]}
+
+Explanation 3.
 
 ## The Proving Grounds
 
 ```interactive-quiz
-[{{"type":"mcq","question":"Was this note generated by AI?","options":{{"A":"Yes","B":"No"}},"answer":"A","explanation":"The selected background node used AI."}}]
-```"""
+[
+  {{
+    "id": "q1",
+    "type": "mcq",
+    "difficulty": "L1",
+    "family": "recognize",
+    "format": "choice",
+    "variant": "conceptual",
+    "skill_target": "{concept}",
+    "question": "Was this note generated by AI?",
+    "options": {{"A": "Yes", "B": "No"}},
+    "answer": "A",
+    "explanation": "The selected background node used AI.",
+    "rubric": {{"grading_mode": "objective"}},
+    "remediation": {{"misconception_codes": ["missing_definition"]}}
+  }}
+]
+```""")
 
     service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
     job = service.create_or_resume_from_path(

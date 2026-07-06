@@ -8,8 +8,11 @@ import hashlib
 import shutil
 import time
 import copy
+import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Literal, Tuple, Callable
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from pathlib import Path
 
@@ -22,7 +25,7 @@ from src.domains.ater.agents import get_persona, normalize_mode
 from src.domains.ater.templates import build_skeleton_note
 from src.domains.ater.quiz_builder import build_practice_blueprint, enrich_question_v2
 
-SOURCE_LEARNING_PIPELINE_VERSION = "source-roadmap-v5"
+SOURCE_LEARNING_PIPELINE_VERSION = "source-roadmap-v9"
 
 
 class SourceAIGenerationError(RuntimeError):
@@ -953,6 +956,10 @@ _ROADMAP_DECORATOR_TOKENS = {
 
 
 def _singular_token(token: str) -> str:
+    if token.endswith("ss"):
+        return token
+    if len(token) > 4 and token.endswith("ces"):
+        return token[:-1]
     if len(token) > 4 and token.endswith("ies"):
         return token[:-3] + "y"
     if len(token) > 4 and token.endswith("es"):
@@ -1171,7 +1178,7 @@ def _reconcile_refined_nodes(
         if _is_broad_weak_node(node):
             continue
         score = _node_evidence_score(node)
-        if score >= 2.0 or node.get("objective_ids"):
+        if node.get("objective_ids") or (score >= 12.0 and len(refined_nodes) < 10):
             merged.append(dict(node))
             seen.add(key)
 
@@ -1245,6 +1252,603 @@ def _source_excerpts_for_pages(pages: List[Dict[str, Any]], source_pages: List[i
         if text:
             excerpts.append({"page": int(page_no), "text": text[:800]})
     return excerpts
+
+
+def _source_page_numbers(pages: List[Dict[str, Any]]) -> List[int]:
+    return sorted({
+        int(page.get("page_number") or 0)
+        for page in pages
+        if int(page.get("page_number") or 0) > 0
+    })
+
+
+def _node_source_page_set(node: Dict[str, Any]) -> set[int]:
+    return {int(p) for p in node.get("source_pages", []) if str(p).isdigit()}
+
+
+def _nearest_node_for_page(nodes: List[Dict[str, Any]], page_number: int) -> Optional[Dict[str, Any]]:
+    if not nodes:
+        return None
+    ranked = []
+    for idx, node in enumerate(nodes):
+        pages = _node_source_page_set(node)
+        if not pages:
+            continue
+        distance = min(abs(page_number - page) for page in pages)
+        direction_penalty = 0 if min(pages) <= page_number else 1
+        ranked.append((distance, direction_penalty, idx, node))
+    if ranked:
+        ranked.sort(key=lambda item: item[:3])
+        return ranked[0][3]
+    return nodes[0]
+
+
+def _page_title_candidates(page: Dict[str, Any], topic: str, slide_deck: bool) -> List[str]:
+    page_no = int(page.get("page_number") or 1)
+    extractor = _extract_slide_concept_titles if slide_deck else _extract_page_concept_titles
+    content = str(page.get("content") or "")
+    candidates: List[str] = []
+    first_segment = re.split(r"[\n\r•]", content, maxsplit=1)[0]
+    first_segment = re.sub(r"\s+", " ", first_segment).strip(" .:-\t")
+    if ">" in first_segment:
+        breadcrumb_title = first_segment.split(">")[-1].strip()
+        breadcrumb_title = _clean_section_heading(breadcrumb_title)
+        candidates.append(breadcrumb_title)
+    if first_segment:
+        candidates.append(_clean_section_heading(first_segment))
+    candidates.extend(extractor(content, topic, page_no))
+
+    cleaned: List[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        candidate = re.sub(r"\([^)]{1,8}\)", "", str(candidate))
+        candidate = re.sub(r"\b\d{4}\s*[-–]\s*(?:present|\d{4})\b", "", candidate, flags=re.IGNORECASE)
+        title = _concept_title_from_text(candidate, "")
+        key = _concept_key(title)
+        if title and key and _is_teachable_title(title) and key not in seen:
+            cleaned.append(title)
+            seen.add(key)
+    return cleaned
+
+
+def _clean_section_heading(raw_heading: str) -> str:
+    heading = re.sub(r"\([^)]{1,16}\)", "", str(raw_heading or ""))
+    heading = re.sub(r"\b\d{4}\s*[-–]\s*(?:present|\d{4})\b", "", heading, flags=re.IGNORECASE)
+    heading = re.sub(r"\s+", " ", heading).strip(" .:-\t")
+    if not heading:
+        return ""
+
+    words = re.findall(r"[A-Za-z][A-Za-z0-9&/#-]*", heading)
+    lowered = [word.lower() for word in words]
+    singulars = [_singular_token(word) for word in lowered]
+    for size in range(min(6, len(words) // 2), 0, -1):
+        if singulars[:size] == singulars[size:size * 2]:
+            heading = " ".join(words[:size])
+            words = words[:size]
+            break
+
+    heading = re.split(
+        r"\b(?:also known|also called|is|are|was|were|has|have|allows?|used to|are used|is used|refers to|means|shows|selects?|targets?|matches?|contains?|includes?|works?|often|another|below|example)\b",
+        heading,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].strip(" .:-\t")
+    words = re.findall(r"[A-Za-z][A-Za-z0-9&/#-]*", heading)
+    if len(words) >= 3 and words[-1].lower() in {word.lower() for word in words[:-1]}:
+        heading = " ".join(words[:-1])
+    return heading
+
+
+def _generic_page_group_title(page: Dict[str, Any], topic: str, slide_deck: bool) -> Optional[str]:
+    content = re.sub(r"\s+", " ", str(page.get("content") or "")).strip()
+    lowered = content.lower()
+    if not content or lowered.startswith("quiz"):
+        return None
+    topic_title = _concept_title_from_text(re.sub(r"\([^)]*\)", "", str(topic or "")), "Topic")
+    if re.search(r"\b(brief history|history|timeline|evolution|before\b|from .+ to .+)\b", lowered):
+        return f"{topic_title} Evolution"
+    if re.search(r"\b(pros and cons|advantages and disadvantages|benefits and limitations|strengths and weaknesses)\b", lowered):
+        return f"{topic_title} Pros And Cons"
+    if re.search(r"\b(why|benefits?|purpose|motivation|use cases?|applications?)\b", lowered):
+        return f"{topic_title} Benefits And Use Cases"
+    candidates = _page_title_candidates(page, topic, slide_deck)
+    return candidates[0] if candidates else None
+
+
+def _add_unmapped_page_nodes(
+    nodes: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+    topic: str,
+    domain: str,
+) -> List[Dict[str, Any]]:
+    assigned_pages = {page for node in nodes for page in _node_source_page_set(node)}
+    grouped: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    slide_deck = _looks_like_slide_deck(pages)
+    for page in pages:
+        page_no = int(page.get("page_number") or 0)
+        if page_no <= 0 or page_no in assigned_pages:
+            continue
+        title = _generic_page_group_title(page, topic, slide_deck)
+        if not title and int(page.get("text_length") or len(str(page.get("content") or ""))) < 80:
+            continue
+        if not title:
+            candidates = _page_title_candidates(page, topic, slide_deck)
+            title = candidates[0] if candidates else None
+        if not title:
+            continue
+        key = _concept_key(title)
+        if not key:
+            continue
+        if key not in grouped:
+            grouped[key] = {
+                "id": "",
+                "title": title,
+                "domain": domain,
+                "modality": classify_concept_modality(title, str(page.get("content") or ""), domain),
+                "source_pages": [],
+                "source_excerpts": [],
+                "objective_ids": [],
+                "teaching_order": 0,
+                "warnings": ["created_for_unmapped_source_page"],
+            }
+            order.append(key)
+        grouped[key]["source_pages"].append(page_no)
+
+    additions = [grouped[key] for key in order]
+    for node in additions:
+        source_pages = sorted(_node_source_page_set(node))
+        node["source_pages"] = source_pages
+        node["source_excerpts"] = _source_excerpts_for_pages(pages, source_pages)
+    return nodes + additions
+
+
+def _choose_split_title(
+    parent_title: str,
+    candidates: List[str],
+    fallback_title: str,
+) -> str:
+    parent_tokens = _roadmap_title_tokens(parent_title)
+    for candidate in candidates:
+        candidate = _concept_title_from_text(candidate, "")
+        if re.match(r"^(quiz|page)\b", candidate, flags=re.IGNORECASE):
+            continue
+        if not _is_teachable_title(candidate):
+            continue
+        candidate_tokens = _roadmap_title_tokens(candidate)
+        if not candidate_tokens:
+            continue
+        if candidate_tokens == parent_tokens:
+            continue
+        if candidate_tokens.issubset(parent_tokens) and len(candidate_tokens) <= 1:
+            continue
+        return candidate
+    return fallback_title
+
+
+def _split_oversized_source_nodes(
+    nodes: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+    topic: str,
+    domain: str,
+) -> List[Dict[str, Any]]:
+    page_by_number = {int(page.get("page_number") or 0): page for page in pages}
+    slide_deck = _looks_like_slide_deck(pages)
+    split_nodes: List[Dict[str, Any]] = []
+
+    for node in nodes:
+        source_pages = sorted(_node_source_page_set(node))
+        if not source_pages:
+            split_nodes.append(node)
+            continue
+        span = max(source_pages) - min(source_pages) + 1
+        title = str(node.get("title") or "")
+        title_tokens = _roadmap_title_tokens(title)
+        broad_selector = "selector" in title_tokens and len(source_pages) >= 8
+        should_split = len(source_pages) >= 10 or span >= 14 or broad_selector
+        if not should_split:
+            split_nodes.append(node)
+            continue
+
+        groups: Dict[str, Dict[str, Any]] = {}
+        order: List[str] = []
+        current_title = title
+        for page_no in source_pages:
+            page = page_by_number.get(page_no, {"page_number": page_no, "content": ""})
+            chosen_title = _choose_split_title(
+                title,
+                _page_title_candidates(page, topic, slide_deck),
+                current_title,
+            )
+            current_title = chosen_title
+            key = _concept_key(chosen_title)
+            if not key:
+                continue
+            if key not in groups:
+                child = dict(node)
+                child["title"] = chosen_title
+                child["source_pages"] = []
+                child["source_excerpts"] = []
+                child["objective_ids"] = []
+                child["warnings"] = sorted(set((node.get("warnings") or []) + ["split_from_oversized_atomic_note"]))
+                child["modality"] = classify_concept_modality(chosen_title, str(page.get("content") or ""), domain)
+                groups[key] = child
+                order.append(key)
+            groups[key]["source_pages"].append(page_no)
+
+        children = [groups[key] for key in order]
+        if len(children) <= 1:
+            split_nodes.append(node)
+            continue
+        if len(children) > 24:
+            split_nodes.append(node)
+            continue
+
+        parent_objectives = list(node.get("objective_ids") or [])
+        for idx, child in enumerate(children):
+            child_pages = sorted({int(p) for p in child.get("source_pages", []) if str(p).isdigit()})
+            child["source_pages"] = child_pages
+            child["source_excerpts"] = _source_excerpts_for_pages(pages, child_pages)
+            child["objective_ids"] = parent_objectives if idx == 0 else []
+            split_nodes.append(child)
+
+    return split_nodes
+
+
+def _assign_unmapped_pages_to_nearest_nodes(
+    nodes: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not nodes:
+        return nodes
+    assigned_pages = {page for node in nodes for page in _node_source_page_set(node)}
+    for page_no in _source_page_numbers(pages):
+        if page_no in assigned_pages:
+            continue
+        node = _nearest_node_for_page(nodes, page_no)
+        if not node:
+            continue
+        node_pages = set(_node_source_page_set(node))
+        node_pages.add(page_no)
+        node["source_pages"] = sorted(node_pages)
+        warnings = set(node.get("warnings") or [])
+        warnings.add("unmapped_page_assigned_by_proximity")
+        node["warnings"] = sorted(warnings)
+    for node in nodes:
+        source_pages = sorted(_node_source_page_set(node))
+        node["source_pages"] = source_pages
+        node["source_excerpts"] = _source_excerpts_for_pages(pages, source_pages) or node.get("source_excerpts", [])
+    return nodes
+
+
+def _specificity_score_for_overlap(node: Dict[str, Any]) -> int:
+    tokens = _roadmap_title_tokens(str(node.get("title") or ""))
+    score = len(tokens)
+    if tokens & {"element", "class", "id", "descendant", "child", "adjacent", "sibling", "attribute", "universal", "grouping", "specificity", "cascade"}:
+        score += 4
+    if tokens in ({"css"}, {"selector"}, {"css", "selector"}, {"basic"}, {"syntax"}):
+        score -= 4
+    if len(_node_source_page_set(node)) >= 10:
+        score -= 2
+    return score
+
+
+def _trim_broad_parent_page_overlaps(nodes: List[Dict[str, Any]], pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not nodes:
+        return nodes
+    exact_groups: Dict[str, Dict[str, Any]] = {}
+    exact_order: List[str] = []
+    for node in nodes:
+        key = _roadmap_cluster_key(str(node.get("title") or ""))
+        if not key:
+            continue
+        if key not in exact_groups:
+            exact_groups[key] = dict(node)
+            exact_order.append(key)
+            continue
+        existing = exact_groups[key]
+        existing["source_pages"] = sorted(_node_source_page_set(existing) | _node_source_page_set(node))
+        existing["source_excerpts"] = _source_excerpts_for_pages(pages, existing["source_pages"])
+        existing["objective_ids"] = list(dict.fromkeys((existing.get("objective_ids") or []) + (node.get("objective_ids") or [])))
+        existing["warnings"] = sorted(set((existing.get("warnings") or []) + (node.get("warnings") or [])))
+    nodes = [exact_groups[key] for key in exact_order]
+    page_owner: Dict[int, Dict[str, Any]] = {}
+    for node in sorted(nodes, key=lambda item: (-_specificity_score_for_overlap(item), int(item.get("teaching_order") or 9999))):
+        for page_no in _node_source_page_set(node):
+            page_owner.setdefault(page_no, node)
+
+    trimmed: List[Dict[str, Any]] = []
+    for node in nodes:
+        pages_for_node = sorted(_node_source_page_set(node))
+        if not pages_for_node:
+            continue
+        owned = [page_no for page_no in pages_for_node if page_owner.get(page_no) is node]
+        if not owned:
+            owned = pages_for_node[:2]
+        if len(pages_for_node) >= 8 and len(owned) < len(pages_for_node):
+            warnings = set(node.get("warnings") or [])
+            warnings.add("overlap_trimmed_to_specific_atomic_notes")
+            node["warnings"] = sorted(warnings)
+        node["source_pages"] = sorted(set(owned))
+        node["source_excerpts"] = _source_excerpts_for_pages(pages, node["source_pages"]) or node.get("source_excerpts", [])
+        trimmed.append(node)
+    return trimmed
+
+
+def _ensure_all_pages_covered_after_trim(
+    nodes: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    covered = {page_no for node in nodes for page_no in _node_source_page_set(node)}
+    for page_no in _source_page_numbers(pages):
+        if page_no in covered:
+            continue
+        node = _nearest_node_for_page(nodes, page_no)
+        if not node:
+            continue
+        node_pages = set(_node_source_page_set(node))
+        node_pages.add(page_no)
+        node["source_pages"] = sorted(node_pages)
+        warnings = set(node.get("warnings") or [])
+        warnings.add("coverage_page_restored_after_overlap_trim")
+        node["warnings"] = sorted(warnings)
+        covered.add(page_no)
+    for node in nodes:
+        source_pages = sorted(_node_source_page_set(node))
+        node["source_pages"] = source_pages
+        node["source_excerpts"] = _source_excerpts_for_pages(pages, source_pages) or node.get("source_excerpts", [])
+    return nodes
+
+
+def finalize_source_roadmap_nodes(
+    nodes: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+    topic: str,
+    domain: str,
+) -> List[Dict[str, Any]]:
+    finalized = _split_oversized_source_nodes([dict(node) for node in nodes], pages, topic, domain)
+    finalized = _add_unmapped_page_nodes(finalized, pages, topic, domain)
+    finalized = _assign_unmapped_pages_to_nearest_nodes(finalized, pages)
+    finalized = _trim_broad_parent_page_overlaps(finalized, pages)
+    finalized = _ensure_all_pages_covered_after_trim(finalized, pages)
+
+    def order_key(node: Dict[str, Any]) -> Tuple[int, str]:
+        pages_for_node = sorted(_node_source_page_set(node))
+        return (min(pages_for_node) if pages_for_node else 9999, str(node.get("title") or "").lower())
+
+    finalized.sort(key=order_key)
+    for idx, node in enumerate(finalized, start=1):
+        node["id"] = f"concept_{idx}"
+        node["teaching_order"] = idx
+        node["domain"] = node.get("domain") or domain
+        source_pages = sorted(_node_source_page_set(node))
+        node["source_pages"] = source_pages
+        node["source_excerpts"] = _source_excerpts_for_pages(pages, source_pages) or node.get("source_excerpts", [])
+        source_context = " ".join(ex.get("text", "") for ex in node.get("source_excerpts", []))
+        node["modality"] = node.get("modality") or classify_concept_modality(node.get("title", ""), source_context, domain)
+        node.setdefault("objective_ids", [])
+        node.setdefault("warnings", [])
+    return finalized
+
+
+def _coverage_item_type(text: str) -> str:
+    lowered = str(text or "").lower()
+    if re.search(r"[A-Za-z]\w*\s*[=+*/-]\s*[A-Za-z0-9]", text or ""):
+        return "formula"
+    if any(token in lowered for token in [" versus ", " vs ", "compare", "differentiate", "contrast"]):
+        return "comparison"
+    if any(token in lowered for token in ["step", "process", "procedure", "sequence", "workflow", "event handling"]):
+        return "process"
+    if any(token in lowered for token in ["example", "case", "scenario"]):
+        return "example"
+    if any(token in lowered for token in ["define", "definition", " means ", " is ", " are ", "refers to"]):
+        return "definition"
+    return "concept"
+
+
+def _coverage_importance(text: str, *, is_objective: bool = False, in_heading: bool = False) -> str:
+    lowered = str(text or "").lower()
+    if is_objective or in_heading:
+        return "high"
+    if re.search(r"[A-Za-z]\w*\s*[=+*/-]\s*[A-Za-z0-9]", text or ""):
+        return "high"
+    if any(token in lowered for token in ["define", "explain", "describe", "differentiate", "derive", "compare"]):
+        return "high"
+    if len(str(text or "").split()) >= 18:
+        return "medium"
+    return "low"
+
+
+def _page_heading(page_content: str, page_number: int) -> str:
+    for raw_line in str(page_content or "").splitlines():
+        line = re.sub(r"\s+", " ", raw_line).strip(" .:-\t")
+        if not line:
+            continue
+        if re.match(r"^(objectives?|after successful completion)\b", line, flags=re.IGNORECASE):
+            continue
+        title = _concept_title_from_text(line, f"Page {page_number}")
+        if title and _is_teachable_title(title):
+            return title
+    return f"Page {page_number} Source Content"
+
+
+def _best_node_for_page(nodes: List[Dict[str, Any]], page_number: int) -> Optional[Dict[str, Any]]:
+    candidates = [
+        node for node in nodes
+        if page_number in {int(p) for p in node.get("source_pages", []) if str(p).isdigit()}
+    ]
+    if not candidates:
+        return _nearest_node_for_page(nodes, page_number)
+    candidates.sort(key=lambda node: (int(node.get("teaching_order") or 9999), str(node.get("title") or "")))
+    return candidates[0]
+
+
+def build_source_coverage_items(
+    pages: List[Dict[str, Any]],
+    objectives: List[Dict[str, Any]],
+    nodes: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Builds a source-item ledger where every meaningful page is accounted for.
+
+    The ledger is intentionally deterministic. AI may improve names later, but it does
+    not get to decide whether a source item silently disappears.
+    """
+    items: List[Dict[str, Any]] = []
+    objective_by_page: Dict[int, List[Dict[str, Any]]] = {}
+    for objective in objectives:
+        page_number = int(objective.get("page_number") or 1)
+        objective_by_page.setdefault(page_number, []).append(objective)
+
+    for page in pages:
+        page_number = int(page.get("page_number") or len(items) + 1)
+        content = re.sub(r"\s+", " ", str(page.get("content") or "")).strip()
+        if not content:
+            items.append({
+                "id": f"src_page_{page_number}",
+                "page_number": page_number,
+                "text": f"Page {page_number} has no extractable text.",
+                "type": "warning",
+                "importance": "high",
+                "status": "warning",
+                "assigned_note_id": None,
+                "assigned_note_title": None,
+                "reason": "empty_or_unreadable_page",
+            })
+            continue
+
+        assigned_node = _best_node_for_page(nodes, page_number)
+        assigned_id = assigned_node.get("id") if assigned_node else None
+        assigned_title = assigned_node.get("title") if assigned_node else None
+
+        for objective in objective_by_page.get(page_number, []):
+            text = str(objective.get("text") or "").strip()
+            if not text:
+                continue
+            items.append({
+                "id": f"src_obj_{objective.get('objective_id') or page_number}_{len(items) + 1}",
+                "page_number": page_number,
+                "text": text,
+                "type": "objective",
+                "importance": "high",
+                "status": "covered" if assigned_node else "warning",
+                "assigned_note_id": assigned_id,
+                "assigned_note_title": assigned_title,
+                "reason": "learning_objective",
+            })
+
+        heading = _page_heading(str(page.get("content") or ""), page_number)
+        item_type = _coverage_item_type(content)
+        importance = _coverage_importance(content, in_heading=bool(heading))
+        items.append({
+            "id": f"src_page_{page_number}",
+            "page_number": page_number,
+            "text": content[:320],
+            "title": heading,
+            "type": item_type,
+            "importance": importance,
+            "status": "covered" if assigned_node else "warning",
+            "assigned_note_id": assigned_id,
+            "assigned_note_title": assigned_title,
+            "reason": "page_content_mapped_to_nearest_atomic_note" if assigned_node else "no_atomic_note_mapped_to_page",
+        })
+
+    for node in nodes:
+        pages_for_node = [int(p) for p in node.get("source_pages", []) if str(p).isdigit()]
+        if not pages_for_node:
+            continue
+        items.append({
+            "id": f"src_node_{node['id']}",
+            "page_number": min(pages_for_node),
+            "text": " ".join(str(ex.get("text", "")) for ex in node.get("source_excerpts", []) or [])[:320],
+            "title": node.get("title"),
+            "type": "atomic_concept",
+            "importance": "high" if node.get("objective_ids") else "medium",
+            "status": "covered",
+            "assigned_note_id": node.get("id"),
+            "assigned_note_title": node.get("title"),
+            "reason": "planned_atomic_note",
+        })
+
+    return items
+
+
+def _chapter_title_from_nodes(nodes: List[Dict[str, Any]], index: int) -> str:
+    if not nodes:
+        return f"Chapter {index}"
+    first = str(nodes[0].get("title") or "Foundations")
+    last = str(nodes[-1].get("title") or first)
+    if len(nodes) == 1 or _roadmap_token_similarity(_roadmap_title_tokens(first), _roadmap_title_tokens(last)) >= 0.34:
+        core = first
+    else:
+        first_terms = [token.title() for token in sorted(_roadmap_title_tokens(first))[:2]]
+        last_terms = [token.title() for token in sorted(_roadmap_title_tokens(last))[:2]]
+        core = " And ".join([" ".join(first_terms), " ".join(last_terms)]).strip()
+    core = re.sub(r"\s+", " ", core).strip(" .:-\t") or "Foundations"
+    return f"Chapter {index}: {core}"
+
+
+def build_nested_chapters(job: Dict[str, Any], nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not nodes:
+        return []
+    ordered = sorted(nodes, key=lambda node: int(node.get("teaching_order") or 9999))
+    target_size = 5
+    if len(ordered) <= 6:
+        target_size = max(3, len(ordered))
+    elif len(ordered) >= 18:
+        target_size = 6
+
+    groups: List[List[Dict[str, Any]]] = []
+    current: List[Dict[str, Any]] = []
+    current_pages: set[int] = set()
+    for node in ordered:
+        node_pages = {int(p) for p in node.get("source_pages", []) if str(p).isdigit()}
+        first_page = min(node_pages) if node_pages else None
+        last_current_page = max(current_pages) if current_pages else None
+        should_split = (
+            current
+            and len(current) >= 3
+            and (
+                len(current) >= target_size
+                or (
+                    first_page is not None
+                    and last_current_page is not None
+                    and first_page - last_current_page >= 3
+                )
+            )
+        )
+        if should_split:
+            groups.append(current)
+            current = []
+            current_pages = set()
+        current.append(node)
+        current_pages.update(node_pages)
+    if current:
+        groups.append(current)
+
+    chapters: List[Dict[str, Any]] = []
+    for idx, group in enumerate(groups, start=1):
+        pages = sorted({int(p) for node in group for p in node.get("source_pages", []) if str(p).isdigit()})
+        chapter_id = f"chapter_{idx:02d}"
+        chapters.append({
+            "id": chapter_id,
+            "order": idx,
+            "title": _chapter_title_from_nodes(group, idx),
+            "source_pages": pages,
+            "atomic_notes": [
+                {
+                    "id": node.get("id"),
+                    "title": node.get("title"),
+                    "path": _source_note_rel_path(job, node.get("title", "Untitled Concept")),
+                    "domain": node.get("domain"),
+                    "modality": node.get("modality"),
+                    "source_pages": node.get("source_pages", []),
+                    "status": "ready",
+                }
+                for node in group
+            ],
+            "quiz_policy": "unlock_after_atomic_notes_mastered",
+        })
+    return chapters
 
 
 def _refine_concept_graph(
@@ -1395,7 +1999,7 @@ class SourceAtomicNoteCompiler:
 
     def _strip_visible_citations(self, text: str) -> str:
         stripped = re.sub(r"\s*\[PAGE\s+\d+\]", "", str(text or ""), flags=re.IGNORECASE)
-        stripped = re.sub(r"\s{2,}", " ", stripped)
+        stripped = re.sub(r"[ \t]{2,}", " ", stripped)
         stripped = re.sub(r" *\n *", "\n", stripped)
         return stripped.strip()
 
@@ -1592,6 +2196,70 @@ class SourceAtomicNoteCompiler:
             errors.append("prompt_leakage")
         return not errors, errors
 
+    def _heal_quiz_metadata_in_content(self, content: str) -> str:
+        if "```interactive-quiz" not in content:
+            return content
+        quiz_match = re.search(r"```interactive-quiz\s*(.*?)```", content, flags=re.DOTALL | re.IGNORECASE)
+        if not quiz_match:
+            return content
+        try:
+            parsed = json.loads(quiz_match.group(1).strip())
+            if not isinstance(parsed, list):
+                return content
+            expected_by_type = {
+                "mcq": ("recognize", "choice"),
+                "true_false": ("recognize", "choice"),
+                "fill_in": ("recall", "blank"),
+                "matching": ("compare", "match"),
+                "order": ("trace", "order"),
+                "writing": ("explain", "short_text"),
+                "scenario": ("apply", "long_text"),
+                "synthesis": ("construct", "long_text"),
+                "calculation": ("solve", "short_text"),
+                "data_analysis": ("diagnose", "table_editor"),
+                "trace": ("trace", "short_text"),
+                "debug": ("debug", "long_text"),
+                "code": ("construct", "code_editor"),
+                "find_error": ("diagnose", "long_text"),
+            }
+            healed_list = []
+            for item in parsed:
+                if not isinstance(item, dict):
+                    healed_list.append(item)
+                    continue
+                healed_item = dict(item)
+                q_type = str(healed_item.get("type", "")).lower().strip()
+                if not q_type:
+                    q_format = str(healed_item.get("format", "")).lower().strip()
+                    if "choice" in q_format:
+                        q_type = "mcq"
+                    elif "blank" in q_format:
+                        q_type = "fill_in"
+                    elif "match" in q_format:
+                        q_type = "matching"
+                    elif "order" in q_format:
+                        q_type = "order"
+                    elif "short_text" in q_format or "recall" in str(healed_item.get("family", "")).lower():
+                        q_type = "writing"
+                    else:
+                        q_type = "writing"
+                    healed_item["type"] = q_type
+                expected = expected_by_type.get(q_type)
+                if expected:
+                    healed_item["family"] = expected[0]
+                    healed_item["format"] = expected[1]
+                else:
+                    healed_item["type"] = "writing"
+                    healed_item["family"] = "explain"
+                    healed_item["format"] = "short_text"
+                healed_list.append(healed_item)
+            fixed_json = json.dumps(healed_list, ensure_ascii=False, indent=2)
+            start_idx = quiz_match.start()
+            end_idx = quiz_match.end()
+            return content[:start_idx] + "```interactive-quiz\n" + fixed_json + "\n```" + content[end_idx:]
+        except Exception:
+            return content
+
     def repair_or_replace_content(
         self,
         content: str,
@@ -1600,6 +2268,7 @@ class SourceAtomicNoteCompiler:
         profile: Dict[str, Any],
         strict_ai: bool = False,
     ) -> Dict[str, Any]:
+        content = self._heal_quiz_metadata_in_content(content)
         valid, errors = self.validate_content(content, node, profile)
         if valid:
             note = self.compile_fallback_note(job, node, profile)
@@ -1607,6 +2276,8 @@ class SourceAtomicNoteCompiler:
             note["fallback"] = False
             note["frontmatter"]["fallback_generation"] = False
             return note
+        if strict_ai:
+            raise SourceAIGenerationError(f"AI note generation failed validation: {','.join(errors)}")
         note = self.compile_fallback_note(job, node, profile)
         note["validation_errors"] = errors
         note["frontmatter"]["fallback_reason"] = ",".join(errors)
@@ -1625,6 +2296,7 @@ class SourceAtomicNoteCompiler:
             if strict_ai:
                 note["validation_errors"] = ["ai_unavailable"]
                 note["frontmatter"]["fallback_reason"] = "ai_unavailable"
+                raise SourceAIGenerationError("AI generator not available in strict mode")
             return note
         try:
             prompt = self.build_ai_prompt(job, node, profile)
@@ -1634,6 +2306,10 @@ class SourceAtomicNoteCompiler:
                 content = self._trim_ai_preamble(ai_generator(self.build_ai_repair_prompt(prompt, content, errors)))
             return self.repair_or_replace_content(content, job, node, profile, strict_ai=strict_ai)
         except Exception as exc:
+            if strict_ai:
+                if isinstance(exc, SourceAIGenerationError):
+                    raise
+                raise SourceAIGenerationError(f"AI note generation failed: {exc}") from exc
             note = self.compile_fallback_note(job, node, profile)
             note["validation_errors"] = [f"ai_failure:{type(exc).__name__}"]
             note["frontmatter"]["fallback_reason"] = "ai_failure"
@@ -1648,15 +2324,29 @@ class SourceAtomicNoteCompiler:
             return payload_str
         mental_model = data.get("mental_model", "")
         how_it_works = data.get("how_it_works", "")
-        quiz = data.get("quiz", [])
+        sections = data.get("sections")
+        if isinstance(sections, list) and len(sections) >= 3:
+            h1 = sections[0].get("title", "How it Works")
+            p1 = sections[0].get("content", "")
+            h2 = sections[1].get("title", "Core Mechanism")
+            p2 = sections[1].get("content", "")
+            h3 = sections[2].get("title", "Practical Impact")
+            p3 = sections[2].get("content", "")
+        else:
+            h1, h2, h3 = "How the Economics Actually Work", "Core Mechanism", "Practical Impact"
+            p1, p2, p3 = how_it_works, "Secondary concept details.", "Tertiary concept details."
         lines = [
             "## Mental Model\n",
             f"{mental_model}\n",
-            "## How the Economics Actually Work\n",
-            f"{how_it_works}\n",
+            f"## {h1}\n",
+            f"{p1}\n",
+            f"## {h2}\n",
+            f"{p2}\n",
+            f"## {h3}\n",
+            f"{p3}\n",
             "## The Proving Grounds\n",
             "```interactive-quiz",
-            json.dumps(quiz, indent=2),
+            json.dumps(data.get("quiz", []), indent=2),
             "```"
         ]
         return "\n".join(lines)
@@ -2590,6 +3280,8 @@ class SourceLearningJobService:
                 roadmap_refiner=roadmap_refiner,
                 strict_ai=strict_ai,
             )
+            nodes = finalize_source_roadmap_nodes(nodes, pages, topic, domain)
+            edges = _edges_for_nodes(nodes)
             nodes, edges = scope_concept_graph_ids(job_id, nodes, edges)
             warnings.extend(drift_warnings)
             warnings.extend(refine_warnings)
@@ -2651,6 +3343,9 @@ class SourceLearningJobService:
                 section["pages"] = json.loads(section.get("pages") or "[]")
                 section["citations"] = json.loads(section.get("citations") or "[]")
             coverage = self._rows(conn, "SELECT * FROM coverage_matrix_rows WHERE job_id = ? ORDER BY row_type, id", (job_id,))
+            pages = self._rows(conn, "SELECT page_number, content, text_length FROM source_pages WHERE job_id = ? ORDER BY page_number", (job_id,))
+            nested_chapters = build_nested_chapters(job, nodes)
+            source_items = build_source_coverage_items(pages, objectives, nodes)
             tutor_link = conn.execute("SELECT * FROM source_job_tutor_links WHERE job_id = ?", (job_id,)).fetchone()
             high_warnings = [w for w in warnings if w["severity"] == "high" and not w["resolved"]]
             remaining = [
@@ -2689,8 +3384,15 @@ class SourceLearningJobService:
                     "source_pages": n["source_pages"],
                     "status": "ready",
                 } for n in nodes],
+                "chapters": nested_chapters,
                 "concept_graph": {"nodes": nodes, "edges": self._rows(conn, "SELECT from_node_id, to_node_id, edge_type FROM concept_graph_edges WHERE job_id = ?", (job_id,))},
-                "coverage": {"rows": coverage, "remaining": remaining},
+                "coverage": {
+                    "rows": coverage,
+                    "source_items": source_items,
+                    "covered_source_items": len([item for item in source_items if item.get("status") in {"covered", "merged", "ignored"}]),
+                    "total_source_items": len(source_items),
+                    "remaining": remaining,
+                },
                 "warnings": warnings,
                 "placement": _placement_from_job(job),
                 "current_tutor_link": dict(tutor_link) if tutor_link else None,
@@ -3085,6 +3787,7 @@ class SourceLearningJobService:
     def _build_hub_file(self, job: Dict[str, Any], job_id: str, hub_title: str, note_links: List[str]) -> str:
         placement = job.get("placement") or _placement_from_job(job)
         topic = job.get("topic") or job.get("title") or hub_title
+        chapters = job.get("chapters") or build_nested_chapters(job, (job.get("concept_graph") or {}).get("nodes") or [])
         metadata = {
             "title": hub_title,
             "type": "Hub",
@@ -3105,11 +3808,27 @@ class SourceLearningJobService:
                 continue
             yaml_lines.append(f"{key}: {json.dumps(value)}")
         yaml_lines.append("---")
+        roadmap_lines: List[str] = []
+        if chapters:
+            for chapter in chapters:
+                source_pages = chapter.get("source_pages") or []
+                pages_label = f" _(pages {', '.join(map(str, source_pages))})_" if source_pages else ""
+                roadmap_lines.append(f"### {chapter.get('title', 'Chapter')}{pages_label}")
+                for note in chapter.get("atomic_notes") or []:
+                    title = lo.normalize_title(note.get("title") or "Untitled Concept")
+                    note_pages = note.get("source_pages") or []
+                    note_pages_label = f" — pages {', '.join(map(str, note_pages))}" if note_pages else ""
+                    roadmap_lines.append(f"- [[{title}]]{note_pages_label}")
+                roadmap_lines.append("")
+        else:
+            roadmap_lines = [*[f"- {link}" for link in note_links], ""]
         body = [
             f"# {str(topic).replace('_', ' ')}",
             "",
             "[[Chapter_01_Source_Roadmap]]",
             "",
+            "## Chapter Roadmap",
+            *roadmap_lines,
             "## Atomic Notes",
             *[f"- {link}" for link in note_links],
             "",

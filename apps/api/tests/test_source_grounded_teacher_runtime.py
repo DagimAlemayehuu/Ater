@@ -1,6 +1,7 @@
 import tempfile
 import sqlite3
 import re
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -263,6 +264,112 @@ def test_source_tutor_advance_updates_source_job_link_to_next_canonical_note(_mo
     linked = service.get_job(job["job_id"])["current_tutor_link"]
     assert linked["current_note_path"] == next_path
     assert linked["current_concept_node_id"].endswith("_concept_2")
+
+
+def test_source_tutor_stops_for_chapter_quiz_between_nested_source_chapters(tmp_path, monkeypatch):
+    root = tmp_path
+    db_path = root / "Inbox" / "ater_queue.db"
+    db_path.parent.mkdir(parents=True)
+    manager = TutorSessionManager(db_path, root)
+    now = "2026-07-06T00:00:00"
+    paths = [
+        "Notes/external/General/Unit/01_Source_Roadmap/Alpha.md",
+        "Notes/external/General/Unit/01_Source_Roadmap/Beta.md",
+        "Notes/external/General/Unit/01_Source_Roadmap/Gamma.md",
+    ]
+    for path, qid in zip(paths, ["alpha_q1", "beta_q1", "gamma_q1"]):
+        note_path = root / path
+        note_path.parent.mkdir(parents=True, exist_ok=True)
+        note_path.write_text(
+            f"```interactive-quiz\n[{json.dumps({'id': qid, 'question': 'Recall?', 'answer': 'Yes'})}]\n```",
+            encoding="utf-8",
+        )
+    hub_path = root / "Unit_Hub.md"
+    hub_path.write_text("# Unit\n", encoding="utf-8")
+
+    fake_job = {
+        "job_id": "srcjob_nested",
+        "file_name": "Unit.pdf",
+        "placement": {
+            "learning_scope": "external",
+            "external_domain": "General",
+            "learning_path": "Unit",
+            "chapter": "01_Source_Roadmap",
+        },
+        "concept_graph": {
+            "nodes": [
+                {"id": "concept_1", "title": "Alpha", "teaching_order": 1, "source_pages": [1]},
+                {"id": "concept_2", "title": "Beta", "teaching_order": 2, "source_pages": [2]},
+                {"id": "concept_3", "title": "Gamma", "teaching_order": 3, "source_pages": [3]},
+            ]
+        },
+        "chapters": [
+            {
+                "id": "chapter_01",
+                "title": "Chapter 1: Alpha And Beta",
+                "atomic_notes": [
+                    {"id": "concept_1", "title": "Alpha", "path": paths[0]},
+                    {"id": "concept_2", "title": "Beta", "path": paths[1]},
+                ],
+            },
+            {
+                "id": "chapter_02",
+                "title": "Chapter 2: Gamma",
+                "atomic_notes": [
+                    {"id": "concept_3", "title": "Gamma", "path": paths[2]},
+                ],
+            },
+        ],
+        "coverage": {"rows": []},
+        "warnings": [],
+    }
+    monkeypatch.setattr(SourceLearningJobService, "get_job", lambda self, job_id: fake_job)
+
+    manager.conn.execute(
+        "CREATE TABLE IF NOT EXISTS source_job_tutor_links (job_id TEXT PRIMARY KEY, tutor_session_id TEXT, current_concept_node_id TEXT, current_note_path TEXT, updated_at TEXT)"
+    )
+    manager.conn.execute(
+        """
+        INSERT INTO tutor_sessions (
+            session_id, hub_path, current_note_path, completed_notes, wagers, score, status,
+            updated_at, active_note_unlocks, consecutive_failures, active_question_overrides,
+            generated_ahead_paths, transfer_gate_outcomes, offline_readiness, source_job_id,
+            current_concept_node_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "sess_nested",
+            "Unit_Hub.md",
+            paths[1],
+            json.dumps([paths[0]]),
+            json.dumps({"beta_q1": {"correct": True}}),
+            0,
+            "active",
+            now,
+            json.dumps(paths[:2]),
+            json.dumps({}),
+            json.dumps({}),
+            json.dumps(paths[:2]),
+            json.dumps({}),
+            json.dumps({}),
+            "srcjob_nested",
+            "concept_2",
+        ),
+    )
+    manager.conn.execute(
+        "INSERT INTO source_job_tutor_links VALUES (?, ?, ?, ?, ?)",
+        ("srcjob_nested", "sess_nested", "concept_2", paths[1], now),
+    )
+    manager.conn.commit()
+
+    advanced = manager.advance_note("sess_nested")
+    assert advanced["can_advance"] is True
+    assert advanced["status"] == "consolidation_quiz"
+    assert advanced["current_note_path"] == paths[1]
+
+    quiz = manager.start_consolidation_quiz("sess_nested")
+    assert quiz["chapter_title"] == "Chapter 1: Alpha And Beta"
+    assert {question["note_id"] for question in quiz["questions"]} == {paths[0], paths[1]}
 
 
 def test_fallback_economics_note_uses_source_facts_not_generic_boilerplate():

@@ -150,8 +150,31 @@ export function LearningWorkspace({
 
   const tree = useMemo(() => {
     const sourceJob = tutorSession?.source_job
+    const chapters = Array.isArray(sourceJob?.chapters) ? sourceJob.chapters : []
     const roadmapItems = Array.isArray(tutorSession?.roadmap) ? tutorSession.roadmap : []
     const sourceNodes = Array.isArray(sourceJob?.concept_graph?.nodes) ? sourceJob.concept_graph.nodes : []
+
+    if (chapters.length > 0) {
+      return chapters.map((chapter: any, chapterIndex: number): NavNode => ({
+        label: chapter.title || `Chapter ${chapterIndex + 1}`,
+        target: null,
+        depth: 0,
+        children: (chapter.atomic_notes || []).map((item: any, index: number): NavNode => {
+          const roadmapItem = roadmapItems.find((r: any) => getNoteStem(r.path || r.title || '') === getNoteStem(item.path || item.title || ''))
+          return {
+            label: item.title || titleFromPath(item.path) || `Lesson ${index + 1}`,
+            target: item.path || roadmapItem?.path || null,
+            depth: 1,
+            children: [],
+            isChecked: roadmapItem?.status === 'completed',
+          }
+        }),
+        isChecked: (chapter.atomic_notes || []).every((item: any) => {
+          const roadmapItem = roadmapItems.find((r: any) => getNoteStem(r.path || r.title || '') === getNoteStem(item.path || item.title || ''))
+          return roadmapItem?.status === 'completed'
+        }),
+      }))
+    }
 
     const canonicalItems = roadmapItems.length > 0
       ? roadmapItems

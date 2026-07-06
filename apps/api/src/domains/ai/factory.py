@@ -201,6 +201,15 @@ class ModelFactory:
         if base_url and provider in ["openai", "custom"]:
             config["base_url"] = base_url
 
+        # Handle response_mime_type formatting standardization
+        if "response_mime_type" in kwargs:
+            mime = kwargs.pop("response_mime_type")
+            if provider == "google":
+                config["response_mime_type"] = mime
+            elif provider in ["openai", "openrouter", "custom"]:
+                if mime == "application/json":
+                    config.setdefault("model_kwargs", {})["response_format"] = {"type": "json_object"}
+
         # Handle max_tokens parameter standardization
         if "max_tokens" in kwargs:
             max_tok = kwargs.pop("max_tokens")
