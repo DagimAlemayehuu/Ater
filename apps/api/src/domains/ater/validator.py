@@ -873,30 +873,14 @@ class AterValidator:
                 if data is not None:
                     return True, data, None
 
-        # Attempt 4: ast.literal_eval
+        # Final Fallback recovery: try parsing as plain text if it failed JSON completely
         try:
-            import ast
-            py_str = sanitized.replace("true", "True").replace("false", "False").replace("null", "None")
-            data = ast.literal_eval(py_str)
-            # Proactively inject/heal missing 'id' keys
-            if isinstance(data, list):
-                for idx, item in enumerate(data):
-                    if isinstance(item, dict):
-                        if "id" not in item or not str(item.get("id", "")).strip():
-                            item["id"] = f"q{idx + 1}"
-            elif isinstance(data, dict):
-                if "id" not in data or not str(data.get("id", "")).strip():
-                    data["id"] = "q1"
-            return True, data, None
+            parsed = AterValidator.parse_plain_text_quiz(raw_json)
+            if parsed and len(parsed) >= 1:
+                return True, parsed, None
         except Exception:
-            # Final Fallback recovery: try parsing as plain text if it failed JSON completely
-            try:
-                parsed = AterValidator.parse_plain_text_quiz(raw_json)
-                if parsed and len(parsed) >= 1:
-                    return True, parsed, None
-            except Exception:
-                pass
-            return False, {}, f"JSON_PARSE_ERROR: {err}"
+            pass
+        return False, {}, f"JSON_PARSE_ERROR: {err}"
 
 
     @staticmethod
