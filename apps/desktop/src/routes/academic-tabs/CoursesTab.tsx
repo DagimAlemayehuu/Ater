@@ -190,25 +190,21 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         toast.error('Enter a chapter name')
         return
       }
-      setLoaderType('roadmap')
-      setChapterBusy(true)
       try {
-        const hub = await sidecarApi.createAcademicChapterHub({
-          chapter_title: name,
-          semester: semester || 'General',
-          course: cleanTitle(course.title),
-        })
         const selected = await open({
           multiple: false,
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         })
         if (!selected || Array.isArray(selected)) {
-          setChapterName('')
-          toast.success('Hub created')
-          onRefresh()
-          setShowAddHubModal(false)
           return
         }
+        setLoaderType('roadmap')
+        setChapterBusy(true)
+        const hub = await sidecarApi.createAcademicChapterHub({
+          chapter_title: name,
+          semester: semester || 'General',
+          course: cleanTitle(course.title),
+        })
         const fileName = selected.split(/[\\/]/).pop() || `${name}.pdf`
         const uploadRes = await sidecarApi.aterInboxUpload(selected, fileName, 'academic')
         const sourceJob = await sidecarApi.createSourceLearningJob({
@@ -236,26 +232,51 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
     }
 
     const continueHub = async (hub: any) => {
-      const jobId = stripWL(getVal(hub, 'source_job_id', 'Source Job ID', 'sourceJobId'))
-      if (jobId) {
-        await openSourceLesson(jobId, true)
-        return
-      }
       const hubPath = hub.path || `database/study planner/${hub.id}.md`
-      const session = await sidecarApi.getTutorSessionByHub(hubPath)
-      if (session?.source_job_id) {
-        await openSourceLesson(session.source_job_id, true)
-      } else if (session?.session_id) {
-        setActivePreview({
-          title: cleanTitle(hub.title || hub.id),
-          lessonPath: session.hub_path || hubPath,
-          notePath: session.current_note_path,
-          hubPath: session.hub_path || hubPath,
-          previewUrl: '',
-        })
-        setActiveTutorSession(session)
-      } else {
-        onOpenNote(hubPath)
+      onOpenNote(hubPath)
+    }
+
+    const handleDeleteHub = async (hub: any) => {
+      const isConfirmed = window.confirm(`Are you sure you want to delete this study hub, its PDF, and all generated notes?`);
+      if (!isConfirmed) return;
+
+      setLoaderType('roadmap');
+      setChapterBusy(true);
+
+      try {
+        // 1. Get PDF path if available
+        const jobId = stripWL(getVal(hub, 'source_job_id', 'Source Job ID', 'sourceJobId'));
+        if (jobId) {
+          try {
+            const job = await sidecarApi.getSourceLearningJob(jobId);
+            if (job && job.file_path) {
+              await sidecarApi.deleteObsidianItem(job.file_path);
+            }
+          } catch (e) {
+            console.error('Failed to delete source job PDF:', e);
+          }
+        }
+
+        // 2. Delete the hub directory or note
+        const hubPath = hub.path || `database/study planner/${hub.id}.md`;
+        const normalized = hubPath.replace(/\\/g, '/');
+        const lastSlash = normalized.lastIndexOf('/');
+        const parentDir = lastSlash !== -1 ? normalized.substring(0, lastSlash) : '';
+        const parts = parentDir.split('/');
+
+        // Only delete the entire directory if it's nested at least 5 levels: e.g., "database/study planner/Semester/Course/Chapter"
+        if (parentDir && parts.length >= 5) {
+          await sidecarApi.deleteObsidianItem(parentDir);
+        } else {
+          await sidecarApi.deleteObsidianItem(hubPath);
+        }
+
+        toast.success('Hub deleted successfully');
+        onRefresh();
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to delete hub');
+      } finally {
+        setChapterBusy(false);
       }
     }
 
@@ -399,65 +420,175 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
 
     if (activeRoadmap) {
       const sourceJob = applyRoadmapTitles(activeRoadmap.sourceJob, activeRoadmap.titles)
+      const courseName = sourceJob.placement?.course || sourceJob.domain || 'Academic'
+      const titles = getRoadmapTitles(sourceJob)
+      const chapters = Array.isArray(sourceJob.chapters) ? sourceJob.chapters : []
+      const pageCount = sourceJob.audit?.page_count || sourceJob.page_count || 0
+      const covered = sourceJob.coverage?.covered_source_items || 0
+      const total = sourceJob.coverage?.total_source_items || 0
+      const warnings = sourceJob.warnings || []
+
       return (
-        <div className="h-full flex flex-col overflow-hidden bg-background relative">
+        <div className="h-full flex flex-col overflow-hidden bg-background relative font-sans">
           {chapterBusy && <AterAILoader type={loaderType} />}
-          <div className="shrink-0 border-b border-border px-6 py-4 flex items-center justify-between gap-3">
+          <div className="shrink-0 border-b border-border px-6 py-4 flex items-center justify-between gap-3 bg-bento-panel">
             <button
               onClick={() => setActiveRoadmap(null)}
-              className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft size={13} /> Course
             </button>
             <button
               onClick={() => openSourceLesson()}
               disabled={chapterBusy}
-              className="h-9 px-5 bg-muted/30 text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-wider rounded-[6px] hover:bg-muted/50 disabled:opacity-50 flex items-center gap-2"
+              className="h-9 px-5 bg-bento-item text-foreground border border-border/60 font-bold text-[10px] uppercase tracking-widest rounded-[6px] hover:bg-bento-item/80 disabled:opacity-50 flex items-center justify-center transition-all cursor-pointer"
             >
-              <BookOpenCheck size={12} /> {chapterBusy ? 'Opening...' : 'Confirm Roadmap'}
+              {chapterBusy ? 'Opening...' : 'Confirm Roadmap'}
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-8">
-            <div className="max-w-4xl mx-auto border border-border bg-bento-card px-6 py-5 text-[13px] rounded-[12px] text-foreground flex flex-col gap-5">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <AterMarkdown content={buildRoadmapMarkdown(sourceJob, activeRoadmap.hubTitle)} />
+            <div className="max-w-4xl mx-auto flex flex-col gap-6">
+              
+              {/* Header Info Panel */}
+              <div className="p-6 border border-border bg-bento-card rounded-[12px] flex flex-col gap-4">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{courseName}</span>
+                  <h2 className="text-[18px] font-black uppercase tracking-tight text-foreground mt-0.5">
+                    {cleanTitle(activeRoadmap.hubTitle)} — Learning Roadmap
+                  </h2>
+                </div>
+                
+                {/* Stats row */}
+                <div className="flex items-center gap-6 border-t border-border/30 pt-4 flex-wrap text-[9px] font-black uppercase tracking-wider text-muted-foreground/80">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-foreground">{pageCount}</span> pages
+                  </div>
+                  <div className="h-3 w-px bg-border/40" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-foreground">{chapters.length}</span> chapters
+                  </div>
+                  <div className="h-3 w-px bg-border/40" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-foreground">{titles.length}</span> atomic notes planned
+                  </div>
+                  {total > 0 && (
+                    <>
+                      <div className="h-3 w-px bg-border/40" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-foreground">{covered}/{total}</span> source items covered
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="border-t border-border/30 pt-4 mt-2 flex justify-end">
-                <button
-                  onClick={() => void openSourceLesson()}
-                  disabled={chapterBusy}
-                  className="px-5 py-2.5 bg-bento-item border border-border text-foreground hover:bg-bento-item/80 font-bold text-[10px] uppercase tracking-widest rounded-[6px] flex items-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
-                >
-                  <BookOpenCheck size={14} />
-                  {chapterBusy ? 'Starting lesson...' : 'Confirm and Start First Lesson'}
-                </button>
+
+              {/* Warnings Panel */}
+              {warnings.length > 0 && (
+                <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-[8px] flex flex-col gap-2">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-destructive/80">Analysis Warnings</span>
+                  <div className="flex flex-col gap-1.5">
+                    {warnings.map((w: any, wIdx: number) => (
+                      <div key={wIdx} className="text-[11px] text-muted-foreground leading-relaxed flex items-start gap-2">
+                        <span className="text-destructive font-bold uppercase text-[9px] tracking-wider shrink-0">{w.severity}</span>
+                        <span>{w.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Chapter Cards */}
+              <div className="flex flex-col gap-4">
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Teachable Concepts</span>
+                {chapters.length > 0 ? (
+                  chapters.map((chapter: any, cIdx: number) => {
+                    const chapterPages = Array.isArray(chapter.source_pages) && chapter.source_pages.length
+                      ? chapter.source_pages.join(', ')
+                      : null
+                    const notes = chapter.atomic_notes || []
+
+                    return (
+                      <div key={cIdx} className="p-5 border border-border bg-bento-card rounded-[12px] flex flex-col gap-4">
+                        {/* Chapter Header */}
+                        <div className="flex items-start justify-between gap-4 border-b border-border/30 pb-3">
+                          <h3 className="text-[12px] font-black uppercase text-foreground tracking-wide leading-snug">
+                            {chapter.title || `Chapter ${cIdx + 1}`}
+                          </h3>
+                          {chapterPages && (
+                            <span className="text-[8px] font-bold uppercase px-2 py-0.5 border border-border bg-bento-item text-muted-foreground rounded-[4px] shrink-0 font-mono tracking-wider">
+                              Pages {chapterPages}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Atomic Notes List */}
+                        <div className="flex flex-col gap-2">
+                          {notes.map((note: any, nIdx: number) => {
+                            const notePages = Array.isArray(note.source_pages) && note.source_pages.length
+                              ? note.source_pages.join(', ')
+                              : null
+
+                            return (
+                              <div key={nIdx} className="flex items-center justify-between gap-4 p-2.5 bg-bento-item/25 border border-border/40 rounded-[6px] hover:border-border/80 transition-all">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-3.5 h-3.5 border border-border/60 rounded-[3px] shrink-0" />
+                                  <span className="text-[11px] font-bold text-foreground/90 truncate capitalize">
+                                    {String(note.title || '').replace(/[_-]/g, ' ')}
+                                  </span>
+                                </div>
+                                {notePages && (
+                                  <span className="text-[8px] text-muted-foreground/70 font-mono shrink-0">
+                                    pages {notePages}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="p-8 border border-dashed border-border/60 bg-bento-card/30 rounded-[12px] text-center text-muted-foreground/60 text-[11px] font-bold">
+                    No teachable concepts were returned for this source yet.
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-border bg-background/95 px-6 py-4">
-            <div className="max-w-4xl mx-auto flex items-end gap-2">
-              <textarea
-                value={roadmapInput}
-                onChange={event => setRoadmapInput(event.target.value)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault()
-                    void handleRoadmapSend()
-                  }
-                }}
-                placeholder="Talk to the AI to refine your roadmap (e.g. 'rename 2 to New Title', 'remove 3', 'add Concept', or ask for custom adjustments)..."
-                className="min-h-[42px] max-h-28 flex-1 resize-none bg-bento-card border border-border rounded-[8px] px-3 py-3 text-[12px] font-bold focus:outline-none focus:border-foreground/30 placeholder:text-muted-foreground/40"
-              />
-              <button
-                onClick={() => void handleRoadmapSend()}
-                disabled={chapterBusy}
-                className="h-[42px] w-[42px] flex items-center justify-center border border-border bg-bento-item/60 rounded-[8px] text-foreground hover:bg-bento-item disabled:opacity-50"
-                title="Send"
-              >
-                <Send size={14} />
-              </button>
+          {/* Refinement Conversation Input at Bottom */}
+          <div className="shrink-0 border-t border-border bg-bento-panel px-6 py-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="relative flex items-center bg-bento-bg border border-border focus-within:border-foreground/30 rounded-[12px] transition-all overflow-hidden">
+                <textarea
+                  value={roadmapInput}
+                  onChange={event => setRoadmapInput(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault()
+                      void handleRoadmapSend()
+                    }
+                  }}
+                  className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground"
+                  rows={1}
+                  disabled={chapterBusy}
+                />
+                <button
+                  onClick={() => void handleRoadmapSend()}
+                  disabled={chapterBusy || !roadmapInput.trim()}
+                  className={cn(
+                    "h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] transition-all duration-150 shrink-0",
+                    roadmapInput.trim() && !chapterBusy
+                      ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40 cursor-pointer"
+                      : "text-muted-foreground/30 cursor-not-allowed"
+                  )}
+                  title="Send"
+                >
+                  <Send size={14} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -510,8 +641,19 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
         {/* Hub progress */}
         <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <SectionHeader title="Study Hubs" count={courseHubs.length} />
-              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">View All →</button>
+              <div className="flex items-center gap-3">
+                <SectionHeader title="Study Hubs" count={courseHubs.length} />
+                <button
+                  onClick={() => {
+                    setChapterName('')
+                    setShowAddHubModal(true)
+                  }}
+                  className="px-3 py-1.5 border border-border bg-bento-card hover:bg-bento-item text-[9px] font-black uppercase tracking-wider rounded-[6px] text-foreground transition-all flex items-center justify-center h-7 font-sans shrink-0 cursor-pointer"
+                >
+                  Create Hub
+                </button>
+              </div>
+              <button onClick={() => navigateTo('HUBS')} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground">View All →</button>
             </div>
             {courseHubs.length === 0 ? (
               <EmptyState message="No study hubs yet." />
@@ -545,7 +687,17 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
                         }}
                         className="flex-1 h-8 flex items-center justify-center gap-1.5 border border-border rounded-[5px] text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item"
                       >
-                        <Play size={10} /> {sourceJobId ? 'Continue Lesson' : 'Open Hub'}
+                        <Play size={10} /> Continue Lesson
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void handleDeleteHub(hub)
+                        }}
+                        className="w-8 h-8 flex items-center justify-center border border-border rounded-[5px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Delete Study Hub"
+                      >
+                        <Trash2 size={11} />
                       </button>
                     </div>
                   </div>
@@ -563,7 +715,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
               onAction={() => onCreate('assignments', 'New Assignment', { Course: wrapWL(course.title) })} />
             <div className="flex flex-col gap-2">
               {pending.map((a, idx) => (
-                <div key={idx} onClick={() => onOpenNote(a.path || `database/assignments/${a.id}.md`)}
+                <div key={idx} onClick={() => navigateTo('ASSIGNMENTS', a.id)}
                   className="flex items-center gap-3 p-3 border border-border bg-bento-card rounded-[6px] cursor-pointer hover:bg-bento-item/50 transition-colors">
                   <div className="w-3.5 h-3.5 border border-border rounded-[2px] shrink-0" />
                   <span className="text-[11px] font-black uppercase flex-1 text-foreground">{cleanTitle(a.title)}</span>
@@ -574,17 +726,7 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
           </section>
         )}
 
-        <div className="flex justify-start pt-2">
-          <button
-            onClick={() => {
-              setChapterName('')
-              setShowAddHubModal(true)
-            }}
-            className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center justify-center h-5 font-sans"
-          >
-            + ADD STUDY HUB
-          </button>
-        </div>
+
 
         {showAddHubModal && (
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">

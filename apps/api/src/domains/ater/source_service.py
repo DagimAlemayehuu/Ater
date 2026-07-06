@@ -25,7 +25,7 @@ from src.domains.ater.agents import get_persona, normalize_mode
 from src.domains.ater.templates import build_skeleton_note
 from src.domains.ater.quiz_builder import build_practice_blueprint, enrich_question_v2
 
-SOURCE_LEARNING_PIPELINE_VERSION = "source-roadmap-v9"
+SOURCE_LEARNING_PIPELINE_VERSION = "source-roadmap-v11-specific-page-ownership"
 
 
 class SourceAIGenerationError(RuntimeError):
@@ -450,7 +450,23 @@ def _concept_title_from_text(text: str, fallback: str) -> str:
     if not cleaned:
         return fallback
     words = cleaned.split()
-    return " ".join(words[:9]).strip(" .:-\t").title()
+    title = " ".join(words[:9]).strip(" .:-\t").title()
+    acronym_replacements = {
+        "Id": "ID",
+        "Css": "CSS",
+        "Html": "HTML",
+        "Atc": "ATC",
+        "Ac": "AC",
+        "Avc": "AVC",
+        "Afc": "AFC",
+        "Mc": "MC",
+        "Mrs": "MRS",
+        "Mu": "MU",
+        "Tu": "TU",
+    }
+    for source, replacement in acronym_replacements.items():
+        title = re.sub(rf"\b{source}\b", replacement, title)
+    return title
 
 
 _CONCEPT_STOP_TITLES = {
@@ -530,6 +546,14 @@ def _is_teachable_title(title: str) -> bool:
     if _looks_like_code_or_selector_fragment(str(title)):
         return False
     weak_titles = {
+        "contents",
+        "content",
+        "original",
+        "essentially general",
+        "essentially adjacent",
+        "essentially attribute",
+        "essentially child",
+        "essentially sibling",
         "given as",
         "given by",
         "this shows",
@@ -557,6 +581,14 @@ def _is_teachable_title(title: str) -> bool:
     if key.startswith("fig ") or key.startswith("figure "):
         return False
     if key.startswith((
+        "if you wish ",
+        "we cannot ",
+        "disconnect the definition ",
+        "as saccount ",
+        "assigning a child object ",
+        "access specifiers ",
+        "methods declared as final ",
+        "use tools for website designing",
         "this ",
         "it ",
         "thus ",
@@ -581,6 +613,17 @@ def _is_teachable_title(title: str) -> bool:
     )):
         return False
     if "?" in str(title):
+        return False
+    if len(words := key.split()) >= 7 and not any(
+        anchor in key
+        for anchor in [
+            "marginal rate",
+            "law of",
+            "relationship between",
+            "average total cost",
+            "total average and marginal",
+        ]
+    ):
         return False
     if "certain cut flower" in key:
         return False
@@ -941,6 +984,61 @@ def _is_broad_weak_node(node: Dict[str, Any]) -> bool:
     return _node_evidence_score(node) < 3.0
 
 
+def _is_compaction_drop_title(title: str) -> bool:
+    key = _concept_key(title)
+    if not key:
+        return True
+    if key in _COMPACT_FALLBACK_DROP_KEYS:
+        return True
+    if key.startswith("minor slide heading"):
+        return True
+    if key.startswith("page "):
+        return True
+    return False
+
+
+def _source_concept_weight(node: Dict[str, Any]) -> float:
+    title = str(node.get("title") or "")
+    score = _node_evidence_score(node)
+    source_pages = [int(p) for p in node.get("source_pages", []) if str(p).isdigit()]
+    excerpts = [
+        re.sub(r"\s+", " ", str(excerpt.get("text", ""))).strip()
+        for excerpt in node.get("source_excerpts", []) or []
+        if str(excerpt.get("text", "")).strip()
+    ]
+    text = " ".join(excerpts).lower()
+    if node.get("objective_ids"):
+        score += 6.0
+    if source_pages:
+        score += 1.0
+    if len(source_pages) >= 2:
+        score += 0.5
+    if re.search(r"[A-Za-z]\w*\s*[=+*/-]\s*[A-Za-z0-9]", text):
+        score += 2.0
+    if any(token in text for token in ["define", "definition", "means", "refers to", " is ", " are "]):
+        score += 1.0
+    if any(token in text for token in ["example", "case", "scenario", "process", "procedure", "compare", "contrast", "versus", " vs "]):
+        score += 1.0
+    if _is_roadmap_fragment_title(title):
+        score -= 2.0
+    if _is_compaction_drop_title(title):
+        score -= 10.0
+    return score
+
+
+def _should_keep_source_weighted_node(node: Dict[str, Any]) -> bool:
+    title = str(node.get("title") or "")
+    if _is_compaction_drop_title(title):
+        return False
+    if _is_broad_weak_node(node):
+        return False
+    if not _node_source_page_set(node):
+        return False
+    if node.get("objective_ids"):
+        return True
+    return _source_concept_weight(node) >= 4.0
+
+
 _ROADMAP_TITLE_STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "between", "by", "for", "from", "how",
     "in", "into", "is", "it", "its", "of", "on", "or", "the", "their", "this", "to",
@@ -1039,7 +1137,7 @@ def _should_merge_roadmap_nodes(left: Dict[str, Any], right: Dict[str, Any]) -> 
         return True
     if _roadmap_token_similarity(left_core, right_core) >= 0.67:
         return True
-    if len(smaller) <= 1 and context_similarity >= 0.42:
+    if len(smaller) <= 1 and has_page_overlap and context_similarity >= 0.42:
         return True
     if (
         (_is_roadmap_fragment_title(str(left.get("title") or "")) or _is_roadmap_fragment_title(str(right.get("title") or "")))
@@ -1177,8 +1275,7 @@ def _reconcile_refined_nodes(
             continue
         if _is_broad_weak_node(node):
             continue
-        score = _node_evidence_score(node)
-        if node.get("objective_ids") or (score >= 12.0 and len(refined_nodes) < 10):
+        if _should_keep_source_weighted_node(node):
             merged.append(dict(node))
             seen.add(key)
 
@@ -1195,15 +1292,6 @@ def _reconcile_refined_nodes(
 
     merged.sort(key=order_key)
 
-    max_nodes = 18 if not _looks_like_slide_deck(pages) else 22
-    if len(merged) > max_nodes:
-        # Keep strongest evidence while preserving pedagogical order.
-        ranked_keys = {
-            _concept_key(node.get("title", ""))
-            for node in sorted(merged, key=lambda item: (-_node_evidence_score(item), order_key(item)))[:max_nodes]
-        }
-        merged = [node for node in merged if _concept_key(node.get("title", "")) in ranked_keys]
-
     for idx, node in enumerate(merged, start=1):
         node["id"] = f"concept_{idx}"
         node["teaching_order"] = idx
@@ -1218,7 +1306,7 @@ def _reconcile_refined_nodes(
     return merged
 
 
-def _compact_deterministic_nodes(nodes: List[Dict[str, Any]], max_nodes: int = 28) -> List[Dict[str, Any]]:
+def _compact_deterministic_nodes(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     compacted: List[Dict[str, Any]] = []
     seen: set[str] = set()
     for node in nodes:
@@ -1226,18 +1314,12 @@ def _compact_deterministic_nodes(nodes: List[Dict[str, Any]], max_nodes: int = 2
         key = _concept_key(title)
         if not key or key in seen:
             continue
-        if key in _COMPACT_FALLBACK_DROP_KEYS:
-            continue
-        if key.startswith("minor slide heading"):
-            continue
-        if key.startswith("page "):
+        if _is_compaction_drop_title(title):
             continue
         compacted.append(dict(node))
         seen.add(key)
-        if len(compacted) >= max_nodes:
-            break
     if not compacted:
-        compacted = [dict(node) for node in nodes[:max_nodes]]
+        compacted = [dict(node) for node in nodes]
     for idx, node in enumerate(compacted, start=1):
         node["id"] = f"concept_{idx}"
         node["teaching_order"] = idx
@@ -1266,6 +1348,26 @@ def _node_source_page_set(node: Dict[str, Any]) -> set[int]:
     return {int(p) for p in node.get("source_pages", []) if str(p).isdigit()}
 
 
+def _is_broad_family_node(node: Dict[str, Any]) -> bool:
+    tokens = _roadmap_title_tokens(str(node.get("title") or ""))
+    if not tokens:
+        return False
+    broad_families = [
+        {"css", "selector"},
+        {"selector"},
+        {"source", "style"},
+        {"style"},
+        {"interface"},
+        {"inheritance"},
+        {"polymorphism"},
+        {"utility"},
+        {"cost"},
+        {"curve"},
+        {"equilibrium"},
+    ]
+    return any(tokens == family for family in broad_families)
+
+
 def _nearest_node_for_page(nodes: List[Dict[str, Any]], page_number: int) -> Optional[Dict[str, Any]]:
     if not nodes:
         return None
@@ -1281,6 +1383,11 @@ def _nearest_node_for_page(nodes: List[Dict[str, Any]], page_number: int) -> Opt
         ranked.sort(key=lambda item: item[:3])
         return ranked[0][3]
     return nodes[0]
+
+
+def _nearest_specific_node_for_page(nodes: List[Dict[str, Any]], page_number: int) -> Optional[Dict[str, Any]]:
+    specific_nodes = [node for node in nodes if not _is_broad_family_node(node)]
+    return _nearest_node_for_page(specific_nodes, page_number)
 
 
 def _page_title_candidates(page: Dict[str, Any], topic: str, slide_deck: bool) -> List[str]:
@@ -1345,6 +1452,8 @@ def _generic_page_group_title(page: Dict[str, Any], topic: str, slide_deck: bool
     if not content or lowered.startswith("quiz"):
         return None
     topic_title = _concept_title_from_text(re.sub(r"\([^)]*\)", "", str(topic or "")), "Topic")
+    if re.search(r"\b(planning|prototyping|mockups?|wireframes?|design tools?)\b", lowered):
+        return "Planning And Prototyping"
     if re.search(r"\b(brief history|history|timeline|evolution|before\b|from .+ to .+)\b", lowered):
         return f"{topic_title} Evolution"
     if re.search(r"\b(pros and cons|advantages and disadvantages|benefits and limitations|strengths and weaknesses)\b", lowered):
@@ -1409,6 +1518,7 @@ def _choose_split_title(
     fallback_title: str,
 ) -> str:
     parent_tokens = _roadmap_title_tokens(parent_title)
+    valid_candidates: List[Tuple[bool, bool, float, str]] = []
     for candidate in candidates:
         candidate = _concept_title_from_text(candidate, "")
         if re.match(r"^(quiz|page)\b", candidate, flags=re.IGNORECASE):
@@ -1418,11 +1528,26 @@ def _choose_split_title(
         candidate_tokens = _roadmap_title_tokens(candidate)
         if not candidate_tokens:
             continue
-        if candidate_tokens == parent_tokens:
+        if candidate_tokens.issubset(parent_tokens) and len(candidate_tokens) <= 1 and len(candidate.split()) <= 1:
             continue
-        if candidate_tokens.issubset(parent_tokens) and len(candidate_tokens) <= 1:
-            continue
-        return candidate
+        valid_candidates.append((
+            candidate_tokens == parent_tokens,
+            parent_tokens.issubset(candidate_tokens) and candidate_tokens != parent_tokens,
+            _roadmap_token_similarity(parent_tokens, candidate_tokens),
+            candidate,
+        ))
+    exact = [item for item in valid_candidates if item[0]]
+    if exact:
+        exact.sort(key=lambda item: len(item[3]))
+        if _concept_key(exact[0][3]) == _concept_key(parent_title):
+            return parent_title
+        return exact[0][3]
+    overlapping = [item for item in valid_candidates if item[2] > 0]
+    if overlapping:
+        overlapping.sort(key=lambda item: (item[1], -item[2], len(item[3])))
+        return overlapping[0][3]
+    if valid_candidates:
+        return valid_candidates[0][3]
     return fallback_title
 
 
@@ -1444,8 +1569,34 @@ def _split_oversized_source_nodes(
         span = max(source_pages) - min(source_pages) + 1
         title = str(node.get("title") or "")
         title_tokens = _roadmap_title_tokens(title)
-        broad_selector = "selector" in title_tokens and len(source_pages) >= 8
-        should_split = len(source_pages) >= 10 or span >= 14 or broad_selector
+        broad_family = bool(
+            title_tokens
+            & {
+                "selector",
+                "style",
+                "interface",
+                "polymorphism",
+                "inheritance",
+                "utility",
+                "equilibrium",
+                "constraint",
+                "curve",
+                "cost",
+            }
+        )
+        candidate_group_count = 0
+        for page_no in source_pages:
+            page = page_by_number.get(page_no, {"page_number": page_no, "content": ""})
+            for candidate in _page_title_candidates(page, topic, slide_deck):
+                candidate_tokens = _roadmap_title_tokens(candidate)
+                if candidate_tokens and candidate_tokens != title_tokens:
+                    candidate_group_count += 1
+                    break
+        should_split = (
+            len(source_pages) >= 10
+            or span >= 14
+            or (broad_family and len(source_pages) >= 4 and candidate_group_count >= 3)
+        )
         if not should_split:
             split_nodes.append(node)
             continue
@@ -1506,6 +1657,10 @@ def _assign_unmapped_pages_to_nearest_nodes(
         if page_no in assigned_pages:
             continue
         node = _nearest_node_for_page(nodes, page_no)
+        if node and _is_broad_family_node(node):
+            specific_node = _nearest_specific_node_for_page(nodes, page_no)
+            if specific_node:
+                node = specific_node
         if not node:
             continue
         node_pages = set(_node_source_page_set(node))
@@ -1539,6 +1694,8 @@ def _trim_broad_parent_page_overlaps(nodes: List[Dict[str, Any]], pages: List[Di
     exact_groups: Dict[str, Dict[str, Any]] = {}
     exact_order: List[str] = []
     for node in nodes:
+        if not _is_teachable_title(str(node.get("title") or "")):
+            continue
         key = _roadmap_cluster_key(str(node.get("title") or ""))
         if not key:
             continue
@@ -1584,6 +1741,10 @@ def _ensure_all_pages_covered_after_trim(
         if page_no in covered:
             continue
         node = _nearest_node_for_page(nodes, page_no)
+        if node and _is_broad_family_node(node):
+            specific_node = _nearest_specific_node_for_page(nodes, page_no)
+            if specific_node:
+                node = specific_node
         if not node:
             continue
         node_pages = set(_node_source_page_set(node))
@@ -3177,6 +3338,7 @@ class SourceLearningJobService:
         return {
             "next_action": "start_learning",
             "pipeline_version": SOURCE_LEARNING_PIPELINE_VERSION,
+            "pipeline_version_reason": "atomic roadmap quality, title filtering, broad-node splitting, and specific page ownership",
         }
 
     def _job_needs_rebuild(self, conn, job_id: str) -> bool:

@@ -123,6 +123,8 @@ def test_source_roadmap_refiner_repairs_non_json_gemma_response(monkeypatch):
 
     assert parsed == [{"title": "Consumer Preferences", "source_pages": [3]}]
     assert len(fake_llm.calls) == 2
+    assert "10-28" not in fake_llm.calls[0][0][1]
+    assert "10-28" not in fake_llm.calls[0][1][1]
     assert "Convert this model response into valid JSON" in fake_llm.calls[1][1][1]
 
 
@@ -1278,14 +1280,281 @@ def test_source_job_roadmap_timeout_uses_compacted_deterministic_fallback(tmp_pa
     )
     titles = [item["title"] for item in refined]
 
-    assert len(titles) <= 28
     assert "Complete" not in titles
     assert "Reflexive" not in titles
     assert "Transitivity" not in titles
+    assert not any(title.startswith("Minor Slide Heading") for title in titles)
     assert any("Consumer Preferences" in title for title in titles)
     assert any("Budget" in title for title in titles)
     assert any("Equilibrium" in title for title in titles)
     assert warnings
+
+
+def test_source_roadmap_refinement_restores_all_weighted_source_concepts_without_caps():
+    from src.domains.ater.source_service import _refine_concept_graph
+
+    concept_names = [
+        "Alpha Mechanism",
+        "Beta Transfer",
+        "Gamma Constraint",
+        "Delta Feedback",
+        "Epsilon Model",
+        "Zeta Calibration",
+        "Eta Sampling",
+        "Theta Objective",
+        "Iota Pipeline",
+        "Kappa Boundary",
+        "Lambda Signal",
+        "Mu Estimator",
+        "Nu Regularizer",
+        "Xi Optimizer",
+        "Omicron Metric",
+        "Pi Classifier",
+        "Rho Encoder",
+        "Sigma Decoder",
+        "Tau Scheduler",
+        "Upsilon Buffer",
+        "Phi Transformer",
+        "Chi Validator",
+        "Psi Aggregator",
+        "Omega Policy",
+        "Vector Index",
+        "Matrix Factor",
+        "Tensor Shape",
+        "Gradient Flow",
+        "Loss Surface",
+        "Feature Store",
+        "Batch Window",
+        "Query Planner",
+        "State Machine",
+        "Error Budget",
+        "Control Plane",
+        "Data Contract",
+    ]
+    pages = [
+        {
+            "page_number": idx,
+            "content": (
+                f"{name} is a substantive source-backed idea. "
+                f"{name} shows the definition, process, and example for page {idx}."
+            ),
+        }
+        for idx, name in enumerate(concept_names, start=1)
+    ]
+    nodes = [
+        {
+            "id": f"concept_{idx}",
+            "title": name,
+            "domain": "GENERIC",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [idx],
+            "source_excerpts": [{"page": idx, "text": pages[idx - 1]["content"]}],
+            "objective_ids": [f"obj_{idx}"] if idx % 4 == 0 else [],
+            "teaching_order": idx,
+            "warnings": [],
+        }
+        for idx, name in enumerate(concept_names, start=1)
+    ]
+
+    def roadmap_refiner(_payload):
+        return [
+            {"title": "Alpha Mechanism", "source_pages": [1]},
+            {"title": "Beta Transfer", "source_pages": [2]},
+        ]
+
+    refined, edges, warnings = _refine_concept_graph(
+        "Any PDF Source",
+        [],
+        pages,
+        "GENERIC",
+        nodes,
+        roadmap_refiner=roadmap_refiner,
+    )
+
+    titles = [node["title"] for node in refined]
+    assert len(titles) == 36
+    assert titles[0] == "Alpha Mechanism"
+    assert titles[-1] == "Data Contract"
+    assert len(edges) == 35
+    assert warnings
+
+
+def test_source_roadmap_rejects_junk_fragments_and_splits_atomic_selector_family():
+    from src.domains.ater.source_service import finalize_source_roadmap_nodes
+
+    pages = [
+        {"page_number": 1, "content": "CSS Selectors\nSelectors target document elements.", "text_length": 52},
+        {"page_number": 2, "content": "Element Selectors\nElement selectors match HTML tag names.", "text_length": 58},
+        {"page_number": 3, "content": "Class Selectors\nClass selectors match reusable class attributes.", "text_length": 64},
+        {"page_number": 4, "content": "ID Selectors\nID selectors match one unique id attribute.", "text_length": 56},
+        {"page_number": 5, "content": "General Sibling Selectors\nSibling elements share the same parent.", "text_length": 70},
+        {"page_number": 6, "content": "Attribute Selectors\nAttribute selectors match elements by attributes.", "text_length": 72},
+    ]
+    nodes = [
+        {
+            "id": "concept_1",
+            "title": "Css Selectors",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [1, 2, 3, 4, 5, 6],
+            "source_excerpts": [],
+            "objective_ids": ["obj_selectors"],
+            "teaching_order": 1,
+            "warnings": [],
+        },
+        {
+            "id": "concept_2",
+            "title": "Contents",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [1],
+            "source_excerpts": [{"page": 1, "text": "Contents"}],
+            "objective_ids": [],
+            "teaching_order": 2,
+            "warnings": [],
+        },
+        {
+            "id": "concept_3",
+            "title": "Original",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [2],
+            "source_excerpts": [{"page": 2, "text": "Original"}],
+            "objective_ids": [],
+            "teaching_order": 3,
+            "warnings": [],
+        },
+        {
+            "id": "concept_4",
+            "title": "Essentially General",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [5],
+            "source_excerpts": [{"page": 5, "text": "Essentially General"}],
+            "objective_ids": [],
+            "teaching_order": 4,
+            "warnings": [],
+        },
+        {
+            "id": "concept_5",
+            "title": "If You Wish To Access The Superclass Version Of",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": [6],
+            "source_excerpts": [{"page": 6, "text": "If you wish to access the superclass version of a method, use super."}],
+            "objective_ids": [],
+            "teaching_order": 5,
+            "warnings": [],
+        },
+    ]
+
+    finalized = finalize_source_roadmap_nodes(nodes, pages, "CSS", "CS-WEB-DEV")
+    titles = [node["title"] for node in finalized]
+
+    assert "Contents" not in titles
+    assert "Original" not in titles
+    assert "Essentially General" not in titles
+    assert not any(title.startswith("If You Wish") for title in titles)
+    assert "Element Selectors" in titles
+    assert "Class Selectors" in titles
+    assert "ID Selectors" in titles
+    assert "General Sibling Selectors" in titles
+    assert "Attribute Selectors" in titles
+    assert all(len(node["source_pages"]) <= 2 for node in finalized if "Selector" in node["title"])
+
+
+def test_source_roadmap_does_not_restore_selector_family_pages_to_broad_parent():
+    from src.domains.ater.source_service import finalize_source_roadmap_nodes
+
+    page_titles = {
+        27: "CSS Selectors\nSelectors are patterns used to select elements.",
+        28: "CSS Selectors\nSelectors are patterns used to select elements.",
+        29: "Element Selectors\nElement selectors match tag names.",
+        31: "Class Selectors\nClass selectors target class attributes.",
+        32: "ID Selectors\nID selectors target id attributes.",
+        38: "Grouping Selectors\nGrouping selectors share declarations.",
+        40: "Descendant Selector\nDescendant selectors target nested elements.",
+        43: "Child Selector\nChild selectors target direct children.",
+        46: "Adjacent Selector\nAdjacent selectors target the next sibling.",
+        49: "General Sibling Selector\nGeneral sibling selectors target later siblings.",
+        51: "Attribute Selector\nAttribute selectors target attributes.",
+        52: "Attribute Selector\nTilde pattern matching.",
+        53: "Attribute Selector\nCaret pattern matching.",
+        54: "Attribute Selector\nDollar pattern matching.",
+        55: "Attribute Selector\nAsterisk pattern matching.",
+    }
+    pages = [
+        {
+            "page_number": page_no,
+            "content": page_titles.get(page_no, f"Quiz Use Selector Page {page_no}"),
+            "text_length": len(page_titles.get(page_no, "Quiz")),
+        }
+        for page_no in range(27, 61)
+    ]
+    nodes = [
+        {
+            "id": "concept_1",
+            "title": "CSS Selectors",
+            "domain": "CS-WEB-DEV",
+            "modality": "Qualitative/Definitional",
+            "source_pages": list(range(27, 61)),
+            "source_excerpts": [],
+            "objective_ids": ["obj_selectors"],
+            "teaching_order": 1,
+            "warnings": [],
+        }
+    ]
+
+    finalized = finalize_source_roadmap_nodes(nodes, pages, "CSS", "CS-WEB-DEV")
+    by_title = {node["title"]: node for node in finalized}
+
+    assert set(by_title["CSS Selectors"]["source_pages"]) <= {27, 28}
+    assert 29 in by_title["Element Selectors"]["source_pages"]
+    assert 31 in by_title["Class Selectors"]["source_pages"]
+    assert 32 in by_title["ID Selectors"]["source_pages"]
+    assert 49 in by_title["General Sibling Selector"]["source_pages"]
+    assert {51, 52, 53, 54, 55}.issubset(set(by_title["Attribute Selector"]["source_pages"]))
+
+
+def test_source_job_rebuilds_cached_roadmap_when_pipeline_version_changes(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import json
+    from src.domains.ater.source_service import SOURCE_LEARNING_PIPELINE_VERSION, SourceLearningJobService
+
+    pdf_path = tmp_path / "Inbox" / "academic" / "css.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF css source")
+
+    docs = [
+        SimpleNamespace(page_content="CSS\nOriginal\nCSS Selectors", metadata={"page": 0}),
+        SimpleNamespace(page_content="Element Selectors\nElement selectors match tags.", metadata={"page": 1}),
+    ]
+    monkeypatch.setattr("src.domains.ater.source_service.load_pdf_robust", lambda _path: docs)
+
+    service = SourceLearningJobService(tmp_path / "Inbox" / "ater_queue.db")
+    first = service.create_or_resume_from_path(str(pdf_path))
+    first_job_id = first["job_id"]
+
+    conn = service._connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE source_learning_jobs SET metadata = ? WHERE job_id = ?",
+                (json.dumps({"pipeline_version": "source-roadmap-v9"}), first_job_id),
+            )
+    finally:
+        conn.close()
+
+    rebuilt = service.create_or_resume_from_path(str(pdf_path))
+
+    assert rebuilt["job_id"] != first_job_id
+    conn = service._connect()
+    try:
+        row = conn.execute("SELECT metadata FROM source_learning_jobs WHERE job_id = ?", (rebuilt["job_id"],)).fetchone()
+        metadata = json.loads(row["metadata"])
+    finally:
+        conn.close()
+    assert metadata["pipeline_version"] == SOURCE_LEARNING_PIPELINE_VERSION
 
 
 def test_source_job_roadmap_strict_ai_refinement_raises_on_failure():

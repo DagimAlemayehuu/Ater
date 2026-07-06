@@ -135,7 +135,7 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground">Preparation</span>
-              <button onClick={() => navigateTo('PLANNER')} className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View Hubs →</button>
+              <button onClick={() => navigateTo('HUBS')} className="text-[8px] font-black uppercase text-muted-foreground hover:text-foreground">View Hubs →</button>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 border border-border bg-bento-card rounded-[8px]">

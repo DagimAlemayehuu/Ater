@@ -182,7 +182,7 @@ export function PracticeResults({
                 session.reset()
                 setView('configuring')
               }}
-              className="h-11 flex-1 bg-foreground text-background hover:bg-foreground/90 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all cursor-pointer flex items-center justify-center font-sans shadow-sm"
+              className="h-11 flex-1 bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all cursor-pointer flex items-center justify-center font-sans shadow-sm"
             >
               Practice Again
             </button>

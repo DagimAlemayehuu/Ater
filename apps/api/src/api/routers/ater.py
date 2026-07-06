@@ -232,7 +232,10 @@ def _source_roadmap_refiner(secrets: AppSecrets):
             "into a teachable, high-quality academic roadmap. Merge duplicates and remove slide labels, page titles, "
             "and generic terms or words (like 'Output', 'Clause', 'Brief History', 'Intro'). Focus strictly on substantive, "
             "teachable academic concepts and engineering paradigms. Preserve source coverage, keep every item grounded "
-            "to valid source pages, and ensure the roadmap contains 10-28 comprehensive concepts. Return JSON only."
+            "to valid source pages, and choose the number of concepts from the source evidence instead of a fixed target. "
+            "Create separate roadmap items for distinct objectives, definitions, formulas, processes, comparisons, examples, "
+            "or prerequisite concepts when the source gives them enough substance; merge only true duplicates or thin fragments. "
+            "Return JSON only."
         )
         user = {
             "topic": payload.get("topic"),
@@ -241,8 +244,9 @@ def _source_roadmap_refiner(secrets: AppSecrets):
             "source_pages": [compact_page(page) for page in payload.get("pages", [])],
             "deterministic_candidates": [compact_node(node) for node in payload.get("nodes", [])],
             "output_contract": (
-                "Return an array of 10-28 objects. Each object must have title and source_pages. "
-                "Use concise academic concept names, not sentence fragments."
+                "Return an array of objects. Each object must have title and source_pages. "
+                "Use concise academic concept names, not sentence fragments. Do not target a fixed count; "
+                "let source coverage and concept weight determine roadmap size."
             ),
         }
         res = invoke_llm_with_retry(

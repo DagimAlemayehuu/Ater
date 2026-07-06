@@ -1,8 +1,8 @@
 # SDLC State
 
-Status: idle
-Active Change:
-GitHub Issue:
+Status: planned
+Active Change: unify-source-learning-pipeline
+GitHub Issue: #94
 Branch: main
 Worktree:
 Base Branch: main
@@ -20,6 +20,6 @@ Last Cleanup: 2026-07-04 PR #91 merged at 6b34553e; repository clean on main onl
 
 ## Current Phase
 - [x] Plan
-- [x] Orchestrate
-- [x] Verify
-- [x] Archive
+- [ ] Orchestrate
+- [ ] Verify
+- [ ] Archive

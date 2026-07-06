@@ -24,15 +24,13 @@ export function PracticeHistory({
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8 pb-24">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+          <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-5">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-1.5">Practice History</p>
-              <h1 className="text-3xl font-black uppercase tracking-tight text-foreground font-sans">Practice Session Log</h1>
-              <p className="text-[9px] font-sans font-black uppercase tracking-widest text-muted-foreground/60 mt-1">Review and manage past study session logs</p>
+              <h1 className="text-2xl font-black uppercase tracking-tight text-foreground font-sans">History</h1>
             </div>
             <button
               onClick={() => setView('configuring')}
-              className="h-8 px-4 border border-foreground bg-foreground text-background hover:bg-foreground/85 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer font-sans"
+              className="h-8 px-4 border border-foreground/20 bg-bento-item text-foreground hover:bg-bento-item/80 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all flex items-center gap-1.5 cursor-pointer font-sans"
             >
               Start New Session
             </button>

@@ -62,7 +62,7 @@ export function PracticeDashboard({
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-1.5">Practice Hub</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/45 mb-1.5">Practice</p>
               <h1 className="text-3xl font-black uppercase tracking-tight text-foreground font-sans">Practice Dashboard</h1>
               <p className="text-[9px] font-sans font-black uppercase tracking-widest text-muted-foreground/60 mt-1">Spaced-repetition metrics and cognitive telemetry</p>
             </div>

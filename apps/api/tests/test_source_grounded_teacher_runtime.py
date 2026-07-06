@@ -1066,11 +1066,11 @@ def test_slide_pdf_uses_headings_and_labels_for_complete_production_cost_roadmap
         assert "Law Of Variable Proportions" in titles
         assert "Social Cost" in titles
         assert "Private Cost" in titles
-        assert "Average Fixed Cost (Afc)" in titles
-        assert "Average Variable Cost (Avc)" in titles
-        assert "Average Total Cost (Atc Or Ac)" in titles
-        assert "Marginal Cost (Mc)" in titles
-        assert "Relationship Between Avc, Atc And Mc" in titles
+        assert "Average Fixed Cost (AFC)" in titles
+        assert "Average Variable Cost (AVC)" in titles
+        assert "Average Total Cost (ATC Or AC)" in titles
+        assert "Marginal Cost (MC)" in titles
+        assert "Relationship Between AVC, ATC And MC" in titles
         assert not any(title in {"Utility", "Budget Line", "Given As", "Example 1"} for title in titles)
         assert len(titles) >= 24
         assert all(node["source_pages"] for node in job["concept_graph"]["nodes"])

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { BlockingLoader } from '@/components/ui/loading-state'
 import { usePracticeConfig } from '@/hooks/usePracticeConfig'
@@ -58,6 +59,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
     handleReviewDueCards,
   } = usePracticeConfig()
 
+  const navigate = useNavigate()
   const { setSidebarContent } = useSidebarContent()
   const [activeSubTab, setActiveSubTab] = React.useState<'configure' | 'history'>('configure')
 
@@ -66,11 +68,58 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   }, [])
 
   React.useEffect(() => {
-    setSidebarContent(null, 'practice')
+    setSidebarContent(
+      <div className="flex flex-col gap-1 w-full font-sans">
+        <div className="px-3 mb-2 flex items-center gap-2 select-none">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none">Practice</span>
+          <div className="h-px flex-1 bg-border/20" />
+        </div>
+        <button
+          onClick={() => {
+            setActiveSubTab('configure')
+            setView('configuring')
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none cursor-pointer",
+            activeSubTab === 'configure'
+              ? "bg-bento-item text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+          )}
+        >
+          <Sliders size={11} className="shrink-0 text-muted-foreground" />
+          <span>Configure</span>
+        </button>
+        <button
+          onClick={() => {
+            setActiveSubTab('history')
+            setView('history')
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none cursor-pointer",
+            activeSubTab === 'history'
+              ? "bg-bento-item text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+          )}
+        >
+          <Clock size={11} className="shrink-0 text-muted-foreground" />
+          <span>History</span>
+        </button>
+        
+        <div className="pt-4 mt-4 border-t border-border/20 px-1">
+          <button
+            onClick={() => navigate('/academic')}
+            className="w-full flex items-center justify-center py-2 border border-border text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item/30 rounded-[8px] transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>,
+      'practice'
+    )
     return () => {
       setSidebarContent(null, 'practice')
     }
-  }, [setSidebarContent])
+  }, [activeSubTab, setSidebarContent, navigate])
 
   const handleSetView = (nextView: string) => {
     if (nextView === 'dashboard' || nextView === 'configuring') {
@@ -138,36 +187,6 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
 
   return (
     <div className="h-full flex flex-col bg-bento-panel font-sans overflow-hidden">
-      {/* Tabs Header */}
-      <div className="px-10 pt-8 border-b border-border/10 flex items-center justify-between shrink-0 bg-bento-card">
-        <div className="flex gap-6">
-          <button 
-            onClick={() => {
-              setActiveSubTab('configure')
-              setView('configuring')
-            }}
-            className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-3 border-b-2 -mb-[2px] focus:outline-none font-sans", 
-              activeSubTab === 'configure' 
-                ? "text-foreground border-foreground" 
-                : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-          >
-            Configure
-          </button>
-          <button 
-            onClick={() => {
-              setActiveSubTab('history')
-              setView('history')
-            }}
-            className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-3 border-b-2 -mb-[2px] focus:outline-none font-sans", 
-              activeSubTab === 'history' 
-                ? "text-foreground border-foreground" 
-                : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-          >
-            History
-          </button>
-        </div>
-      </div>
-
       {/* Tab Body Container */}
       <div className="flex-1 overflow-hidden relative">
         {activeSubTab === 'configure' ? (

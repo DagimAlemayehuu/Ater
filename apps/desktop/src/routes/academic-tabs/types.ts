@@ -37,7 +37,10 @@ export interface VaultDatabase {
 
 export type AcademicTab =
   | 'PROGRAM'
+  | 'YEARS'
+  | 'SEMESTERS'
   | 'COURSES'
+  | 'HUBS'
   | 'PLANNER'
   | 'ASSIGNMENTS'
   | 'EXAMS'

@@ -1,52 +1,17 @@
 {
-  "status": "idle",
-  "activeChange": null,
-  "githubIssue": null,
+  "status": "planned",
+  "activeChange": "unify-source-learning-pipeline",
+  "githubIssue": "#94",
   "pr": null,
   "baseBranch": "main",
-  "branch": "main",
+  "branch": null,
   "worktree": null,
-  "currentPhase": 0,
+  "currentPhase": null,
   "retryBudget": 3,
-  "phases": [
-    {
-      "id": 1,
-      "name": "Backend Chat Storage & SQLite Schema",
-      "status": "completed"
-    },
-    {
-      "id": 2,
-      "name": "Context Packing & Memory Runtime",
-      "status": "completed"
-    },
-    {
-      "id": 3,
-      "name": "Attachments & Source Context",
-      "status": "completed"
-    },
-    {
-      "id": 4,
-      "name": "Streaming, Cancellation & Tool Auditing",
-      "status": "completed"
-    },
-    {
-      "id": 5,
-      "name": "Desktop Chat UX Migration & LocalStorage Import",
-      "status": "completed"
-    },
-    {
-      "id": 6,
-      "name": "Learning Runtime Integrations",
-      "status": "completed"
-    },
-    {
-      "id": 7,
-      "name": "Verification, Documentation & Cleanup",
-      "status": "completed"
-    }
-  ],
+  "phases": [],
   "associatedChanges": [],
   "blockers": [],
-  "preview": "pnpm dev:all",
-  "manualVerification": "pending"
+  "lastVerification": null,
+  "preview": null,
+  "manualVerification": null
 }

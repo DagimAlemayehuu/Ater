@@ -40,6 +40,10 @@ const isTemporaryLessonPath = (path?: string | null) => {
   return typeof path === 'string' && path.includes('remediation_temp')
 }
 
+const getNoteStem = (p: string) => {
+  return p.split(/[/\\]/).pop()?.replace(/\.(md|pdf)$/i, '')?.replace(/_/g, ' ')?.toLowerCase() || ''
+}
+
 export function LearningWorkspace({
   preview,
   tutorSession,
@@ -230,9 +234,6 @@ export function LearningWorkspace({
     })
   }
 
-  const getNoteStem = (p: string) => {
-    return p.split(/[/\\]/).pop()?.replace(/\.(md|pdf)$/i, '')?.replace(/_/g, ' ')?.toLowerCase() || ''
-  }
 
   const completedStems = useMemo(() => {
     return new Set(

@@ -13,6 +13,7 @@ import { fetchSidecarJson } from '@/lib/sidecarHttp'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openUrl } from '@tauri-apps/plugin-shell'
 import { useSidebarContent } from '@/context/sidebar-content-context'
+import { useNavigate } from 'react-router-dom'
 import { Settings as SettingsIcon, Key, Network, Timer, Activity } from 'lucide-react'
 
 // Local UI Components to avoid dependency issues
@@ -83,6 +84,7 @@ const cleanModel = (modelName: string, keyVal: string) => {
 }
 
 export default function Settings() {
+  const navigate = useNavigate()
   const {config, saveConfig} = useConfig()
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
   const {setSidebarContent} = useSidebarContent()
@@ -743,6 +745,28 @@ export default function Settings() {
                 )}
               </div>
             </SettingsCard>
+          </div>
+
+          {/* Academic Program Card */}
+          <div className="col-span-1">
+            <Card className="h-full border border-border bg-bento-card">
+              <CardHeader 
+                title="Academic Program" 
+                description="Initialize or reconfigure your academic program, duration, and academic level." 
+              />
+              <CardContent className="flex items-center justify-between h-[100px] text-left">
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Configure Program</p>
+                  <p className="text-[10px] text-muted-foreground/60 font-medium">Re-initialize years, semesters, and course templates.</p>
+                </div>
+                <button
+                  onClick={() => navigate('/academic?setup=1')}
+                  className="h-10 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground bg-muted/20 hover:text-foreground hover:bg-muted/30 hover:border-foreground/30 transition-all rounded-[8px] cursor-pointer"
+                >
+                  Configure
+                </button>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Diagnostics Card */}

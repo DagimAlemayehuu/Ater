@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
-import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity} from 'lucide-react'
+import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity, Award, Home, FolderOpen, Network} from 'lucide-react'
 import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO, startOfDay} from 'date-fns'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
@@ -14,8 +14,11 @@ import CoursesTab from './academic-tabs/CoursesTab'
 import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
 import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
+import YearsTab from './academic-tabs/YearsTab'
+import SemestersTab from './academic-tabs/SemestersTab'
+import AcademicCalendar from '@/components/academic/AcademicCalendar'
 // import { SIDECAR_BASE_URL } from '@/lib/sidecarApi'
-import {cleanTitle, DEFAULT_SCHEMAS, wrapWL} from './academic-tabs/utils'
+import {cleanTitle, DEFAULT_SCHEMAS, wrapWL, getBoolVal, getVal, stripWL} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { BlockingLoader } from '@/components/ui/loading-state'
@@ -48,7 +51,7 @@ export default function AcademicDashboard() {
     prev.set('tab', String(prev.get('tab') || 'PROGRAM').toUpperCase())
     return prev
   })
-  const {setRightContent} = useHeader()
+  const {setCenterContent, setRightContent} = useHeader()
   const {setIsFullscreen} = useLayout()
   const {setSidebarContent} = useSidebarContent()
   const nav = useNavigate()
@@ -244,6 +247,34 @@ export default function AcademicDashboard() {
  }, [fetchData, fetchDatabases])
 
   useEffect(() => {
+    const yearsList = data?.years || []
+    const semestersList = data?.semesters || []
+    const activeYear = yearsList.find(y => getBoolVal(y, 'Current Year', 'current_year') || stripWL(getVal(y, 'Status', 'status')).toLowerCase().includes('active')) || yearsList[0]
+    const activeProgram = activeYear ? cleanTitle(stripWL(getVal(activeYear, 'Program', 'program'))) : ''
+    const activeYearTitle = activeYear ? cleanTitle(activeYear.title || '') : ''
+    const activeSem = semestersList.find(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase().includes('active'))
+    const activeSemTitle = activeSem ? cleanTitle(activeSem.title || '') : ''
+
+    setCenterContent(
+      activeProgram ? (
+        <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60 select-none flex items-center gap-1.5 font-sans">
+          <span>{activeProgram}</span>
+          {activeYearTitle && (
+            <>
+              <span className="text-muted-foreground/30">•</span>
+              <span className="text-foreground/85">{activeYearTitle}</span>
+            </>
+          )}
+          {activeSemTitle && (
+            <>
+              <span className="text-muted-foreground/30">•</span>
+              <span className="text-foreground/85">{activeSemTitle}</span>
+            </>
+          )}
+        </div>
+      ) : null
+    )
+
     setRightContent(
       <div className="flex items-center gap-2 shrink-0">
         <button 
@@ -255,10 +286,22 @@ export default function AcademicDashboard() {
         >
           <RefreshCw size={12} />
         </button>
+
+        <button 
+          onClick={() => nav('/obsidian?graph=1')}
+          className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
+          title="Graph View"
+        >
+          <Network size={12} />
+          <span>Graph View</span>
+        </button>
       </div>
     )
-    return () => setRightContent(null)
-  }, [handleSync, setRightContent])
+    return () => {
+      setCenterContent(null)
+      setRightContent(null)
+    }
+  }, [data, activeTab, handleSync, setCenterContent, setRightContent, nav])
 
  // ── Tab definitions ────────────────────────────────────────────────────────
  const augmentedDatabases = useMemo(() => {
@@ -268,14 +311,15 @@ export default function AcademicDashboard() {
    })
  }, [databases])
 
- const tabs = React.useMemo(() => [
-  {id: 'PROGRAM' as AcademicTab, label: 'Program', icon: <GraduationCap size={11} />, dataTour: 'tab-academic-program'},
-  {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />, dataTour: 'tab-academic-courses'},
-  {id: 'PLANNER' as AcademicTab, label: 'Study Planner', icon: <CalendarDays size={11} />, dataTour: 'tab-academic-planner'},
-  {id: 'ASSIGNMENTS' as AcademicTab, label: 'Assignments', icon: <ClipboardList size={11} />, dataTour: 'tab-academic-assignments'},
-  {id: 'EXAMS' as AcademicTab, label: 'Exams', icon: <FlaskConical size={11} />, dataTour: 'tab-academic-exams'},
-  {id: 'PRACTICE' as AcademicTab, label: 'Practice', icon: <Layers size={11} />, dataTour: 'tab-academic-practice'},
-  ], [])
+   const tabs = React.useMemo(() => [
+    {id: 'PROGRAM' as AcademicTab, label: 'Home', icon: <Home size={11} />, dataTour: 'tab-academic-home'},
+    {id: 'SEMESTERS' as AcademicTab, label: 'Semesters', icon: <Layers size={11} />, dataTour: 'tab-academic-semesters'},
+    {id: 'COURSES' as AcademicTab, label: 'Courses', icon: <BookOpen size={11} />, dataTour: 'tab-academic-courses'},
+    {id: 'HUBS' as AcademicTab, label: 'Hubs', icon: <FolderOpen size={11} />, dataTour: 'tab-academic-hubs'},
+    {id: 'PLANNER' as AcademicTab, label: 'Study Planners', icon: <FolderOpen size={11} />, dataTour: 'tab-academic-planner'},
+    {id: 'ASSIGNMENTS' as AcademicTab, label: 'Assignments', icon: <ClipboardList size={11} />, dataTour: 'tab-academic-assignments'},
+    {id: 'EXAMS' as AcademicTab, label: 'Exams', icon: <FlaskConical size={11} />, dataTour: 'tab-academic-exams'},
+   ], [])
 
   useEffect(() => {
     setSidebarContent(
@@ -400,9 +444,27 @@ export default function AcademicDashboard() {
           </div>
         )}
 
+        {activeTab === 'YEARS' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <YearsTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
+          </div>
+        )}
+
+        {activeTab === 'SEMESTERS' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <SemestersTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
+          </div>
+        )}
+
         {activeTab === 'COURSES' && (
           <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
             <CoursesTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
+          </div>
+        )}
+
+        {activeTab === 'HUBS' && (
+          <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
+            <StudyPlannerTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
           </div>
         )}
 
@@ -422,12 +484,6 @@ export default function AcademicDashboard() {
           <div className="h-full bg-bento-panel rounded-[12px] border border-border/40 shadow-sm overflow-hidden">
             <ExamsTab {...tabProps} initialSelectedId={selectedItemId} onClearSelection={() => setSelectedItemId(null)} />
           </div>
-        )}
-
-        {activeTab === 'PRACTICE' && (
-         <div className="h-full overflow-hidden bg-bento-panel rounded-[12px] border border-border/40 shadow-sm">
-          <PracticeModule noAnimation={true} />
-         </div>
         )}
        </>
       )}

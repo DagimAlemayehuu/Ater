@@ -1602,6 +1602,65 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   }
 
   const openSelectedInLessonRuntime = useCallback(async () => {
+    const isCurrentHubNote = typeof selectedPath === 'string' && (
+      selectedPath.toLowerCase().includes('_hub.md') ||
+      selectedPath.toLowerCase().includes('database/study planner/') ||
+      noteMetadata?.type?.toLowerCase() === 'hub'
+    );
+
+    if (isCurrentHubNote && selectedPath) {
+      try {
+        let tutorSession = null;
+        try {
+          tutorSession = await sidecarApi.getTutorSessionByHub(selectedPath);
+        } catch (err) {
+          console.error('Failed to fetch tutor session:', err);
+        }
+
+        let hubTargetPath = tutorSession?.current_note_path;
+        if (!hubTargetPath && tutorSession?.curriculum && tutorSession.curriculum.length > 0) {
+          hubTargetPath = tutorSession.curriculum[0];
+        }
+        if (!hubTargetPath && studyTree && studyTree.length > 0) {
+          hubTargetPath = studyTree[0].target || '';
+        }
+
+        if (hubTargetPath) {
+          let targetMetadata: any = {};
+          try {
+            const noteRes = await sidecarApi.readObsidianNote(hubTargetPath);
+            if (noteRes && noteRes.metadata) {
+              targetMetadata = noteRes.metadata;
+            }
+          } catch (err) {
+            console.error('Failed to read note metadata for hubTargetPath:', err);
+          }
+          const title = cleanTitle(targetMetadata?.title || targetMetadata?.Title || hubTargetPath.split(/[/\\]/).pop()?.replace(/\.md$/i, '') || 'Lesson');
+          const preview = {
+            title,
+            lessonPath: hubTargetPath,
+            notePath: hubTargetPath,
+            hubPath: selectedPath,
+            previewUrl: '',
+          };
+          localStorage.setItem('ater_lesson_preview', JSON.stringify(preview));
+          localStorage.setItem('ater_lesson_panel_open', JSON.stringify(true));
+          localStorage.setItem('ater_study_active_note_path', hubTargetPath);
+          localStorage.setItem('ater_canonical_lesson_path', hubTargetPath);
+          localStorage.setItem('ater_original_note_path', hubTargetPath);
+          setSelectedPath(hubTargetPath);
+          setSearchParams({ path: hubTargetPath });
+          setIsLessonActive(true);
+          if (tutorSession) {
+            setActiveTutorSession(tutorSession);
+          }
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to open hub lesson:', err);
+      }
+    }
+
     let targetPath = selectedPath;
 
     // Resolve the last atomic note from the active tutor session
@@ -1697,7 +1756,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
     setSelectedPath(targetPath)
     setSearchParams({ path: targetPath })
     setIsLessonActive(true)
-  }, [setSearchParams, noteMetadata, selectedPath])
+  }, [setSearchParams, noteMetadata, selectedPath, studyTree, setActiveTutorSession])
 
   const fetchHubs = async () => {
     setLoadingHubs(true)

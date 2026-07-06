@@ -124,7 +124,7 @@ export function PracticeVault({
                 <button
                   onClick={handleVaultUploadText}
                   disabled={vaultLoading || !vaultSourceText.trim() || !vaultSourceName.trim()}
-                  className="w-full h-9 font-black uppercase tracking-widest text-[9px] bg-foreground text-background hover:bg-foreground/95 rounded-[6px] transition-all flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:pointer-events-none font-sans"
+                  className="w-full h-9 font-black uppercase tracking-widest text-[9px] bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 rounded-[6px] transition-all flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:pointer-events-none font-sans"
                 >
                   {vaultLoading ? <>{vaultStatus || 'Processing...'}</> : 'Extract & Solve Questions'}
                 </button>
@@ -166,10 +166,10 @@ export function PracticeVault({
                             <div
                               className={cn(
                                 'w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors',
-                                isSel ? 'bg-foreground border-foreground text-background' : 'border-border bg-bento-panel'
+                                isSel ? 'bg-bento-item border-foreground/35 text-foreground' : 'border-border bg-bento-panel'
                               )}
                             >
-                              {isSel && <Check size={10} className="text-background" strokeWidth={4} />}
+                              {isSel && <Check size={10} className="text-foreground" strokeWidth={4} />}
                             </div>
                             <div>
                               <div className="text-[11px] font-black uppercase tracking-tight text-foreground">
@@ -220,7 +220,7 @@ export function PracticeVault({
                     data-tour="start-practice-btn"
                     onClick={handleVaultPracticeGenerate}
                     disabled={vaultLoading || vaultSelectedFiles.length === 0}
-                    className="w-full h-10 font-black uppercase tracking-widest text-[9px] bg-foreground text-background hover:bg-foreground/90 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-30 disabled:pointer-events-none font-sans"
+                    className="w-full h-10 font-black uppercase tracking-widest text-[9px] bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 rounded-[6px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-30 disabled:pointer-events-none font-sans"
                   >
                     {vaultLoading ? (
                       <>Generating...</>

@@ -89,66 +89,7 @@ export function AppSidebar() {
       )}
     >
       <div className="flex flex-col w-full min-h-0 flex-1">
-        {/* Header controls (Toggle & Back/Forward Navigation & Calendar & Pomodoro Timer) */}
-        <div className="flex items-center justify-between px-1 h-10 w-full mb-4 shrink-0">
-          <div className="flex items-center gap-1 pl-9">
-            <div className="flex items-center gap-0.5">
-              <button
-                onClick={goBack}
-                disabled={!canGoBack}
-                className={cn(
-                  "w-8 h-8 flex items-center justify-center rounded-[6px] transition-all",
-                  canGoBack
-                    ? "text-muted-foreground hover:text-foreground hover:bg-bento-item/50"
-                    : "text-muted-foreground/20 cursor-not-allowed"
-                )}
-                title="Back"
-              >
-                <ChevronLeft size={16} strokeWidth={2} />
-              </button>
-              <button
-                onClick={goForward}
-                disabled={!canGoForward}
-                className={cn(
-                  "w-8 h-8 flex items-center justify-center rounded-[6px] transition-all",
-                  canGoForward
-                    ? "text-muted-foreground hover:text-foreground hover:bg-bento-item/50"
-                    : "text-muted-foreground/20 cursor-not-allowed"
-                )}
-                title="Forward"
-              >
-                <ChevronRight size={16} strokeWidth={2} />
-              </button>
-            </div>
 
-            {/* Calendar Button */}
-            <button
-              onClick={() => navigate('/calendar')}
-              className={cn(
-                "w-8 h-8 flex items-center justify-center rounded-[6px] transition-all cursor-pointer",
-                location.pathname === '/calendar'
-                  ? "bg-bento-item text-foreground border border-border/40"
-                  : "text-muted-foreground hover:text-foreground hover:bg-bento-item/50"
-              )}
-              title="Academic Calendar"
-            >
-              <Calendar size={16} strokeWidth={2} />
-            </button>
-          </div>
-
-          {/* Pomodoro Timer Display */}
-          <button
-            onClick={() => setShowOverlay(true)}
-            className={cn(
-              "flex items-center gap-1 rounded-[6px] border border-border/40 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item transition-all h-8 font-sans",
-              pomodoroActive && "border-foreground/20 text-foreground bg-bento-item"
-            )}
-            title="Focus Session Timer"
-          >
-            <Timer size={12} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground")} />
-            <span className="tabular-nums">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
-          </button>
-        </div>
 
         {/* CTA Button: + New Conversation */}
         <button
@@ -190,7 +131,7 @@ export function AppSidebar() {
             className={({ isActive }) => wideLinkClass(isActive)}
           >
             <BookOpenCheck size={15} className="shrink-0 text-muted-foreground" />
-            <span>Practice Hub</span>
+            <span>Practice</span>
           </NavLink>
         </div>
 
@@ -201,31 +142,7 @@ export function AppSidebar() {
         )}
       </div>
 
-      {/* Footer Area with Credit System, Theme Toggle, and Settings */}
       <div className="flex flex-col gap-1 w-full shrink-0 border-t border-border/20 pt-3 mt-auto">
-        {/* Credits */}
-        <div className="w-full px-3 py-2 text-[11px] font-bold text-left select-none text-muted-foreground">
-          <span>Credits: <span className="font-extrabold text-foreground">{creditBalance >= 99999999 ? 'UNLIMITED' : creditBalance}</span></span>
-        </div>
-
-        {/* Theme Toggle (Row design) */}
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
-        >
-          {theme === 'dark' ? (
-            <>
-              <Sun className="size-4 shrink-0 text-muted-foreground" />
-              <span>Light Mode</span>
-            </>
-          ) : (
-            <>
-              <Moon className="size-4 shrink-0 text-muted-foreground" />
-              <span>Dark Mode</span>
-            </>
-          )}
-        </button>
-
         {/* Settings Link */}
         <NavLink
           to="/settings"

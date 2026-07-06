@@ -182,7 +182,7 @@ export function PracticeSession({
                     await session.submitFeynmanChallenge()
                   }}
                   disabled={session.isFeynmanValidating || !session.feynmanExplanation.trim()}
-                  className="h-10 flex-1 bg-foreground text-background hover:bg-foreground/95 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans"
+                  className="h-10 flex-1 bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 text-[9px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans"
                 >
                   {session.isFeynmanValidating ? 'Analyzing Telemetry...' : 'Validate & Unlock'}
                 </Button>
@@ -358,7 +358,7 @@ export function PracticeSession({
                               : isWrongSelected
                               ? 'bg-destructive border-destructive text-destructive-foreground font-sans'
                               : isSelected
-                              ? 'bg-foreground border-foreground text-background font-sans'
+                              ? 'bg-bento-item border-foreground/35 text-foreground font-sans'
                               : 'border-border/40 bg-bento-panel text-muted-foreground/50 font-sans'
                           )}
                         >
@@ -773,7 +773,7 @@ export function PracticeSession({
                         ].includes(currentQuestion.type)
                       )
                     }
-                    className="h-10 px-10 bg-foreground text-background hover:bg-foreground/90 border border-foreground text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm disabled:opacity-30 disabled:pointer-events-none"
+                    className="h-10 px-10 bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm disabled:opacity-30 disabled:pointer-events-none"
                   >
                     {session.isSubmitting ? 'Submitting...' : 'Submit Answer'}
                   </Button>
@@ -802,7 +802,7 @@ export function PracticeSession({
                               currentQuestion.required_keywords.length > 0 &&
                               currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])
                             }
-                            className="h-10 px-6 bg-foreground text-background hover:bg-foreground/95 text-[9px] font-black uppercase rounded-[6px] transition-all font-sans disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
+                            className="h-10 px-6 bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 text-[9px] font-black uppercase rounded-[6px] transition-all font-sans disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
                             title={
                               Array.isArray(currentQuestion.required_keywords) &&
                               currentQuestion.required_keywords.some((kw: string) => !keywordChecks[kw])
@@ -820,7 +820,7 @@ export function PracticeSession({
                       session.scores[currentQuestion.id] !== undefined) && (
                       <Button
                         onClick={() => nextQuestion()}
-                        className="h-10 px-10 bg-foreground text-background hover:bg-foreground/95 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm"
+                        className="h-10 px-10 bg-bento-item border border-foreground/20 text-foreground hover:bg-bento-item/80 text-[10px] font-black uppercase tracking-widest rounded-[6px] transition-all font-sans cursor-pointer shadow-sm"
                       >
                         Next
                       </Button>

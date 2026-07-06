@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X, Network } from 'lucide-react'
+import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X, Network, Edit2, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { differenceInDays, startOfDay, addDays, isSameDay, startOfWeek, format } from 'date-fns'
@@ -36,8 +36,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null)
   
   // Tab control state
-  const [leftBottomTab, setLeftBottomTab]       = useState<'courses' | 'planner' | 'practice'>('courses')
-  const [activeCoursesTab, setActiveCoursesTab] = useState<'hubs' | 'inbox' | 'pdf'>('hubs')
+  const [leftBottomTab, setLeftBottomTab]       = useState<'planner' | 'exams' | 'assignments'>('planner')
+  const [activeCoursesTab, setActiveCoursesTab] = useState<'courses' | 'hubs' | 'inbox' | 'pdf'>('courses')
   const [inboxFiles, setInboxFiles]             = useState<any[]>([])
   const [pdfFiles, setPdfFiles]                 = useState<any[]>([])
 
@@ -50,6 +50,11 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [newCourseCredits, setNewCourseCredits] = useState('4')
   const [newCourseSem, setNewCourseSem]         = useState('')
   
+  const [editingCourseId, setEditingCourseId]   = useState<string | null>(null)
+  const [editCourseName, setEditCourseName]     = useState('')
+  const [editCourseCredits, setEditCourseCredits] = useState('')
+  const [editCourseSem, setEditCourseSem]       = useState('')
+
   // Planner search/filter/sort/add/edit states
   const [plannerSearch, setPlannerSearch]       = useState('')
   const [plannerSort, setPlannerSort]           = useState<'title' | 'unit' | 'course'>('title')
@@ -58,6 +63,68 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [newHubName, setNewHubName]             = useState('')
   const [newHubCourse, setNewHubCourse]         = useState('')
   const [newHubUnit, setNewHubUnit]             = useState('')
+
+  const [editingHubId, setEditingHubId]         = useState<string | null>(null)
+  const [editHubName, setEditHubName]           = useState('')
+  const [editHubCourse, setEditHubCourse]       = useState('')
+  const [editHubUnit, setEditHubUnit]           = useState('')
+  const [editHubStatus, setEditHubStatus]       = useState('')
+
+  // Hubs Tab search/filter/sort/add/edit states
+  const [hubsTabSearch, setHubsTabSearch]       = useState('')
+  const [hubsTabFilter, setHubsTabFilter]       = useState<'Active' | 'All' | 'Completed'>('Active')
+  const [hubsTabSort, setHubsTabSort]           = useState<'title' | 'unit' | 'course'>('title')
+  const [isAddingHubsTab, setIsAddingHubsTab]   = useState(false)
+  const [newHubsTabName, setNewHubsTabName]     = useState('')
+  const [newHubsTabCourse, setNewHubsTabCourse] = useState('')
+  const [newHubsTabUnit, setNewHubsTabUnit]     = useState('')
+
+  // Inbox search/sort/add/edit states
+  const [inboxSearch, setInboxSearch]           = useState('')
+  const [inboxSort, setInboxSort]               = useState<'name' | 'path'>('name')
+  const [isAddingInbox, setIsAddingInbox]       = useState(false)
+  const [newInboxName, setNewInboxName]         = useState('')
+  const [editingInboxPath, setEditingInboxPath] = useState<string | null>(null)
+  const [editInboxName, setEditInboxName]       = useState('')
+
+  // PDF search/sort/add/edit states
+  const [pdfSearch, setPdfSearch]               = useState('')
+  const [pdfSort, setPdfSort]                   = useState<'name' | 'path'>('name')
+  const [isAddingPdf, setIsAddingPdf]           = useState(false)
+  const [newPdfName, setNewPdfName]             = useState('')
+  const [editingPdfPath, setEditingPdfPath]     = useState<string | null>(null)
+  const [editPdfName, setEditPdfName]           = useState('')
+
+  // Assignments search/filter/sort/add/edit states
+  const [assignmentsSearch, setAssignmentsSearch] = useState('')
+  const [assignmentsFilter, setAssignmentsFilter] = useState<'All' | 'Active' | 'Completed'>('Active')
+  const [assignmentsSort, setAssignmentsSort]     = useState<'title' | 'dueDate' | 'course'>('dueDate')
+  const [isAddingAssignment, setIsAddingAssignment] = useState(false)
+  const [newAssignmentName, setNewAssignmentName] = useState('')
+  const [newAssignmentCourse, setNewAssignmentCourse] = useState('')
+  const [newAssignmentDueDate, setNewAssignmentDueDate] = useState('')
+  
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null)
+  const [editAssignmentName, setEditAssignmentName] = useState('')
+  const [editAssignmentCourse, setEditAssignmentCourse] = useState('')
+  const [editAssignmentDueDate, setEditAssignmentDueDate] = useState('')
+  const [editAssignmentStatus, setEditAssignmentStatus] = useState('')
+
+  // Exams search/filter/sort/add/edit states
+  const [examsSearch, setExamsSearch]             = useState('')
+  const [examsFilter, setExamsFilter]             = useState<'All' | 'Upcoming' | 'Past'>('Upcoming')
+  const [examsSort, setExamsSort]                 = useState<'title' | 'date' | 'course'>('date')
+  const [isAddingExam, setIsAddingExam]           = useState(false)
+  const [newExamName, setNewExamName]             = useState('')
+  const [newExamCourse, setNewExamCourse]         = useState('')
+  const [newExamDate, setNewExamDate]             = useState('')
+  const [newExamType, setNewExamType]             = useState('Midterm')
+
+  const [editingExamId, setEditingExamId]         = useState<string | null>(null)
+  const [editExamName, setEditExamName]           = useState('')
+  const [editExamCourse, setEditExamCourse]       = useState('')
+  const [editExamDate, setEditExamDate]           = useState('')
+  const [editExamType, setEditExamType]           = useState('Midterm')
 
   // Practice search/sort states
   const [practiceSearch, setPracticeSearch]     = useState('')
@@ -299,6 +366,151 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     
     return list
   }, [hubs, plannerSearch, plannerFilter, plannerSort])
+
+  const displayedAssignments = useMemo(() => {
+    let list = assignments
+
+    if (assignmentsSearch.trim()) {
+      const q = assignmentsSearch.toLowerCase()
+      list = list.filter(a => cleanTitle(a.title).toLowerCase().includes(q))
+    }
+
+    if (assignmentsFilter === 'Active') {
+      list = list.filter(a => !(a.done === true || a.done === 'true' || stripWL(getVal(a, 'Status', 'status')).toLowerCase().includes('complet')))
+    } else if (assignmentsFilter === 'Completed') {
+      list = list.filter(a => (a.done === true || a.done === 'true' || stripWL(getVal(a, 'Status', 'status')).toLowerCase().includes('complet')))
+    }
+
+    list = [...list].sort((a, b) => {
+      if (assignmentsSort === 'dueDate') {
+        const dateA = a.due_date ? new Date(a.due_date).getTime() : 9999999999999
+        const dateB = b.due_date ? new Date(b.due_date).getTime() : 9999999999999
+        return dateA - dateB
+      }
+      if (assignmentsSort === 'course') {
+        const courseA = stripWL(getVal(a, 'Course', 'course')) || ''
+        const courseB = stripWL(getVal(b, 'Course', 'course')) || ''
+        return courseA.localeCompare(courseB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+
+    return list
+  }, [assignments, assignmentsSearch, assignmentsFilter, assignmentsSort])
+
+  const displayedExams = useMemo(() => {
+    let list = exams
+
+    if (examsSearch.trim()) {
+      const q = examsSearch.toLowerCase()
+      list = list.filter(e => cleanTitle(e.title).toLowerCase().includes(q))
+    }
+
+    if (examsFilter === 'Upcoming') {
+      list = list.filter(e => {
+        const date = e.date ? new Date(e.date) : null
+        return date && differenceInDays(date, now) >= 0
+      })
+    } else if (examsFilter === 'Past') {
+      list = list.filter(e => {
+        const date = e.date ? new Date(e.date) : null
+        return date && differenceInDays(date, now) < 0
+      })
+    }
+
+    list = [...list].sort((a, b) => {
+      if (examsSort === 'date') {
+        const dateA = a.date ? new Date(a.date).getTime() : 9999999999999
+        const dateB = b.date ? new Date(b.date).getTime() : 9999999999999
+        return dateA - dateB
+      }
+      if (examsSort === 'course') {
+        const courseA = stripWL(getVal(a, 'Course', 'course')) || ''
+        const courseB = stripWL(getVal(b, 'Course', 'course')) || ''
+        return courseA.localeCompare(courseB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+
+    return list
+  }, [exams, examsSearch, examsFilter, examsSort])
+
+  const displayedHubsTab = useMemo(() => {
+    let list = hubs
+
+    if (hubsTabSearch.trim()) {
+      const q = hubsTabSearch.toLowerCase()
+      list = list.filter(h => cleanTitle(h.title).toLowerCase().includes(q))
+    }
+
+    if (hubsTabFilter === 'Active') {
+      list = list.filter(h => !stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    } else if (hubsTabFilter === 'Completed') {
+      list = list.filter(h => stripWL(getVal(h, 'status', 'Status')).toLowerCase().includes('complet'))
+    }
+
+    list = [...list].sort((a, b) => {
+      if (hubsTabSort === 'unit') {
+        const unitA = getVal(a, 'unit', 'Unit') || ''
+        const unitB = getVal(b, 'unit', 'Unit') || ''
+        return unitA.localeCompare(unitB)
+      }
+      if (hubsTabSort === 'course') {
+        const courseA = stripWL(getVal(a, 'course', 'Course')) || ''
+        const courseB = stripWL(getVal(b, 'course', 'Course')) || ''
+        return courseA.localeCompare(courseB)
+      }
+      return cleanTitle(a.title).localeCompare(cleanTitle(b.title))
+    })
+
+    return list
+  }, [hubs, hubsTabSearch, hubsTabFilter, hubsTabSort])
+
+  const displayedInbox = useMemo(() => {
+    let list = inboxFiles
+
+    if (inboxSearch.trim()) {
+      const q = inboxSearch.toLowerCase()
+      list = list.filter(f => {
+        const filename = f.name || f.path?.split('/').pop() || 'Untitled'
+        return filename.toLowerCase().includes(q)
+      })
+    }
+
+    list = [...list].sort((a, b) => {
+      const nameA = a.name || a.path?.split('/').pop() || 'Untitled'
+      const nameB = b.name || b.path?.split('/').pop() || 'Untitled'
+      if (inboxSort === 'path') {
+        return (a.path || '').localeCompare(b.path || '')
+      }
+      return nameA.localeCompare(nameB)
+    })
+
+    return list
+  }, [inboxFiles, inboxSearch, inboxSort])
+
+  const displayedPDFs = useMemo(() => {
+    let list = pdfFiles
+
+    if (pdfSearch.trim()) {
+      const q = pdfSearch.toLowerCase()
+      list = list.filter(f => {
+        const filename = f.name || f.path?.split('/').pop() || 'Untitled'
+        return filename.toLowerCase().includes(q)
+      })
+    }
+
+    list = [...list].sort((a, b) => {
+      const nameA = a.name || a.path?.split('/').pop() || 'Untitled'
+      const nameB = b.name || b.path?.split('/').pop() || 'Untitled'
+      if (pdfSort === 'path') {
+        return (a.path || '').localeCompare(b.path || '')
+      }
+      return nameA.localeCompare(nameB)
+    })
+
+    return list
+  }, [pdfFiles, pdfSearch, pdfSort])
 
   const displayedPractices = useMemo(() => {
     let list = apiStudyHistory?.practice || []
@@ -632,93 +844,14 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
           </div>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col space-y-6">
-            {/* Program Header */}
-            <div className="flex flex-col gap-2">
-              {/* Row 1: Years Tabs (placed above Program Name, styled smaller) */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {programYears.map((y, idx) => {
-                  const status = stripWL(getVal(y, 'Status', 'status'))
-                  const isDone = status.toLowerCase().includes('complet')
-                  const isActive = getBoolVal(y, 'Current Year', 'current_year')
-                  return (
-                    <button 
-                      key={idx} 
-                      onClick={() => setSelectedYearId(y.id)}
-                      className={cn('px-2 py-0.5 text-[7.5px] font-black uppercase tracking-widest border rounded-[4px] transition-all flex items-center gap-1 cursor-pointer font-sans h-5',
-                        isActive 
-                         ? 'border-foreground/35 bg-bento-item text-foreground ring-1 ring-inset ring-foreground/5' 
-                         : 'border-border/40 bg-bento-card text-muted-foreground/55 hover:text-foreground hover:bg-bento-item/20')}
-                    >
-                      <span>{cleanTitle(y.title)}</span>
-                      {isActive && <div className="w-0.5 h-0.5 bg-foreground rounded-full" />}
-                      {isDone && <CheckCircle size={7} className="text-foreground/70" />}
-                    </button>
-                  )
-                })}
-              </div>
 
-              {/* Row 2: Program Title and Actions (Graph View & Edit Program) */}
-              <div className="flex items-center justify-between gap-6 flex-wrap w-full">
-                <h1 className="text-3xl font-black uppercase tracking-tight text-foreground leading-none">{activeProgram || 'Your Program'}</h1>
-                
-                <div className="flex items-center gap-2">
-                  {/* Graph View Button */}
-                  <button
-                    onClick={() => navigate('/obsidian?graph=1')}
-                    className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans flex items-center gap-1.5"
-                  >
-                    <Network size={10} />
-                    Graph View
-                  </button>
-
-                  {/* Edit Program Button */}
-                  <button 
-                    onClick={() => setShowSetup(true)}
-                    className="h-7 px-3 bg-muted/20 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/40 border border-border/40 hover:border-foreground/30 rounded-[8px] transition-all font-sans"
-                  >
-                    Edit Program
-                  </button>
-                </div>
-              </div>
-
-              {/* Row 3: Active Status Details (placed in Undergraduate position, styled a little smaller) */}
-              <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                {/* Active Year button */}
-                {activeYear && (
-                  <button 
-                    onClick={() => setSelectedYearId(activeYear.id)}
-                    className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center gap-1 h-5 font-sans"
-                  >
-                    <span className="text-muted-foreground/50">Year:</span>
-                    <span>{cleanTitle(activeYear.title)}</span>
-                  </button>
-                )}
-
-                {/* Active Semester button */}
-                {activeSem && (
-                  <button 
-                    onClick={() => setSelectedSemId(activeSem.id)}
-                    className="px-2 py-0.5 border border-border/50 bg-bento-card hover:bg-bento-item/20 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground transition-all flex items-center gap-1 h-5 font-sans"
-                  >
-                    <span className="text-muted-foreground/50">Sem:</span>
-                    <span>{cleanTitle(activeSem.title)}</span>
-                  </button>
-                )}
-
-                {/* Cumulative GPA button */}
-                <div className="px-2 py-0.5 border border-border/50 bg-bento-card/30 text-[7.5px] font-black uppercase tracking-wider rounded-[4px] text-foreground flex items-center gap-1 h-5 font-sans select-none">
-                  <span className="text-muted-foreground/50">GPA:</span>
-                  <span>{getVal(activeYear, 'Cumulative GPA', 'cumulative_gpa') || '--'}</span>
-                </div>
-              </div>
-            </div>
 
             {/* Comprehensive Academic Life Hub Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 items-stretch">
               {/* Left Column: Calendar & Planner */}
               <div className="col-span-1 lg:col-span-2 flex flex-col gap-6 h-full min-h-0">
                 {/* Week Calendar */}
-                <section className="space-y-4">
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col flex-1 min-h-0 space-y-4">
                   <div className="flex justify-end items-center mb-2">
                     <div className="flex items-center gap-2">
                       <div className="flex items-center p-1 bg-muted/20 rounded-[6px] border border-border/40">
@@ -842,69 +975,332 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                   </div>
                 </section>
 
-                {/* Courses, Planner & Practice Tabbed Card */}
+                {/* Planner Card */}
+                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col flex-1 min-h-0 space-y-3">
+                  {/* Tabs Header */}
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
+                    <div className="flex gap-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-foreground font-sans">
+                        Planner
+                      </span>
+                    </div>
+                    
+                    <button 
+                      onClick={() => navigateTo('HUBS')} 
+                      className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                    >
+                      All →
+                    </button>
+                  </div>
+
+                  {/* Controls Row (Fixed) */}
+                  <div className="py-1 shrink-0 flex gap-2 flex-wrap items-center">
+                    <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                      <Search size={9} className="text-muted-foreground/45" />
+                      <input 
+                        type="text"
+                        value={plannerSearch}
+                        onChange={e => setPlannerSearch(e.target.value)}
+                        placeholder="Search..."
+                        className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                      />
+                    </div>
+
+                    <select 
+                      value={plannerFilter}
+                      onChange={e => setPlannerFilter(e.target.value as any)}
+                      className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Completed">Completed</option>
+                      <option value="All">All Statuses</option>
+                    </select>
+
+                    <select 
+                      value={plannerSort}
+                      onChange={e => setPlannerSort(e.target.value as any)}
+                      className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                    >
+                      <option value="title">Sort: Title</option>
+                      <option value="unit">Sort: Unit</option>
+                      <option value="course">Sort: Course</option>
+                    </select>
+
+                    <button 
+                      onClick={() => { setIsAddingPlannerHub(!isAddingPlannerHub); if (!isAddingPlannerHub) { setNewHubName(''); setNewHubCourse(courses[0]?.title || ''); setNewHubUnit('') } }}
+                      className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                    >
+                      <Plus size={9} /> Add
+                    </button>
+                  </div>
+
+                  {/* Tab Body (Scrollable) */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-mini pr-1 pt-1.5 space-y-3">
+                    {isAddingPlannerHub && (
+                      <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add Study Hub</span>
+                        <div className="space-y-1.5">
+                          <input 
+                            type="text"
+                            value={newHubName}
+                            onChange={e => setNewHubName(e.target.value)}
+                            placeholder="Hub title (e.g. Chapter 3 Hub)"
+                            className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <select 
+                              value={newHubCourse}
+                              onChange={e => setNewHubCourse(e.target.value)}
+                              className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
+                            >
+                              <option value="">Course...</option>
+                              {courses.map(c => (
+                                <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                              ))}
+                            </select>
+                            <input 
+                              type="text"
+                              value={newHubUnit}
+                              onChange={e => setNewHubUnit(e.target.value)}
+                              placeholder="Unit (e.g. Chapter 3)"
+                              className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button 
+                            onClick={() => { setIsAddingPlannerHub(false); setNewHubName('') }}
+                            className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              if (!newHubName.trim()) return
+                              try {
+                                await onCreate('study planner', newHubName.trim(), {
+                                  course: wrapWL(newHubCourse),
+                                  unit: newHubUnit,
+                                  status: wrapWL('Active')
+                                })
+                                toast.success('Study hub created')
+                                setNewHubName('')
+                                setIsAddingPlannerHub(false)
+                                onRefresh()
+                              } catch {
+                                toast.error('Failed to create study hub')
+                              }
+                            }}
+                            className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {displayedHubs.length === 0 ? (
+                      <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No hubs match filter</p>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-2">
+                        {displayedHubs.map((hub, idx) => {
+                          const isEditing = editingHubId === hub.id
+                          const isDone = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
+                          return (
+                            <div key={idx} onClick={() => !isEditing && onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
+                              className={cn("p-2.5 border border-border bg-bento-card rounded-[6px] transition-colors flex flex-col gap-2 font-sans relative group", 
+                                !isEditing && "hover:bg-bento-item/20 cursor-pointer")}
+                            >
+                              {isEditing ? (
+                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                  <input 
+                                    type="text"
+                                    value={editHubName}
+                                    onChange={e => setEditHubName(e.target.value)}
+                                    className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                    placeholder="Hub title"
+                                  />
+                                  <div className="grid grid-cols-3 gap-1.5">
+                                    <select 
+                                      value={editHubCourse}
+                                      onChange={e => setEditHubCourse(e.target.value)}
+                                      className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                    >
+                                      <option value="">Course...</option>
+                                      {courses.map(c => (
+                                        <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                      ))}
+                                    </select>
+                                    <input 
+                                      type="text"
+                                      value={editHubUnit}
+                                      onChange={e => setEditHubUnit(e.target.value)}
+                                      className="bg-muted/20 text-[9px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                      placeholder="Unit"
+                                    />
+                                    <select 
+                                      value={editHubStatus}
+                                      onChange={e => setEditHubStatus(e.target.value)}
+                                      className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                    >
+                                      <option value="Active">Active</option>
+                                      <option value="Completed">Completed</option>
+                                    </select>
+                                  </div>
+                                  <div className="flex justify-end gap-1.5">
+                                    <button 
+                                      onClick={() => setEditingHubId(null)}
+                                      className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button 
+                                      onClick={async () => {
+                                        if (!editHubName.trim()) return
+                                        try {
+                                          await onUpdate('study planner', hub.id, {
+                                            title: editHubName.trim(),
+                                            course: wrapWL(editHubCourse),
+                                            unit: editHubUnit,
+                                            status: wrapWL(editHubStatus)
+                                          })
+                                          toast.success('Study hub updated')
+                                          setEditingHubId(null)
+                                          onRefresh()
+                                        } catch {
+                                          toast.error('Update failed')
+                                        }
+                                      }}
+                                      className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={cn("text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans", isDone && "line-through text-muted-foreground/60")}>
+                                      {cleanTitle(hub.title || hub.id)}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                      
+                                      <button 
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          setEditingHubId(hub.id)
+                                          setEditHubName(hub.title || hub.id)
+                                          setEditHubCourse(stripWL(getVal(hub, 'course', 'Course')))
+                                          setEditHubUnit(getVal(hub, 'unit', 'Unit'))
+                                          setEditHubStatus(stripWL(getVal(hub, 'status', 'Status')) || 'Active')
+                                        }}
+                                        className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/40 hover:group-hover:text-foreground hover:bg-muted/15 rounded transition-all font-sans"
+                                      >
+                                        <Edit2 size={9} />
+                                      </button>
+                                      
+                                      <button 
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          if (confirm(`Delete study hub "${cleanTitle(hub.title || hub.id)}"?`)) {
+                                            onDelete('study planner', hub.id).then(onRefresh);
+                                          } 
+                                        }}
+                                        className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
+                                      >
+                                        <Trash2 size={9} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-between items-center text-[7.5px] font-black uppercase text-muted-foreground/50 tracking-wider">
+                                    <span>Course: {cleanTitle(stripWL(getVal(hub, 'course', 'Course')) || '--')}</span>
+                                    <span>Unit: {getVal(hub, 'unit', 'Unit') || '--'}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              {/* Right Column: Courses, Combined Tasks & Exams */}
+              <div className="col-span-1 lg:col-span-1 flex flex-col gap-6 h-full min-h-0">
+                {/* Upper Right Hub/Inbox/PDF Tabbed Interface */}
                 <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col flex-1 min-h-0 space-y-3">
                   {/* Tabs Header */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
                     <div className="flex gap-3">
                       <button 
-                        onClick={() => setLeftBottomTab('courses')}
+                        onClick={() => setActiveCoursesTab('courses')}
                         className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          leftBottomTab === 'courses' 
+                          activeCoursesTab === 'courses' 
                             ? "text-foreground border-foreground" 
                             : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
                         Courses
                       </button>
                       <button 
-                        onClick={() => setLeftBottomTab('planner')}
+                        onClick={() => setActiveCoursesTab('hubs')}
                         className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          leftBottomTab === 'planner' 
+                          activeCoursesTab === 'hubs' 
                             ? "text-foreground border-foreground" 
                             : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
-                        Planner
+                        Hubs
                       </button>
                       <button 
-                        onClick={() => setLeftBottomTab('practice')}
+                        onClick={() => setActiveCoursesTab('inbox')}
                         className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          leftBottomTab === 'practice' 
+                          activeCoursesTab === 'inbox' 
                             ? "text-foreground border-foreground" 
                             : "text-muted-foreground/45 border-transparent hover:text-foreground")}
                       >
-                        Practice
+                        Inbox
+                      </button>
+                      <button 
+                        onClick={() => setActiveCoursesTab('pdf')}
+                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
+                          activeCoursesTab === 'pdf' 
+                            ? "text-foreground border-foreground" 
+                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
+                      >
+                        PDF
                       </button>
                     </div>
-                    
-                    {leftBottomTab === 'courses' && (
+                    {activeCoursesTab === 'courses' && (
                       <button 
                         onClick={() => navigateTo('COURSES')} 
-                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer font-bold"
                       >
-                        All →
+                        Open Page →
                       </button>
                     )}
-                    {leftBottomTab === 'planner' && (
+                    {activeCoursesTab === 'hubs' && (
                       <button 
                         onClick={() => navigateTo('PLANNER')} 
-                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer font-bold"
                       >
-                        All →
+                        Open Page →
                       </button>
                     )}
-                    {leftBottomTab === 'practice' && (
+                    {(activeCoursesTab === 'inbox' || activeCoursesTab === 'pdf') && (
                       <button 
-                        onClick={() => navigateTo('PRACTICE')} 
-                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                        onClick={() => navigate('/obsidian')} 
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer font-bold"
                       >
-                        All →
+                        Open Vault →
                       </button>
                     )}
                   </div>
 
-                  {/* Controls Row (Fixed) */}
+                  {/* Tab Controls Row */}
                   <div className="py-1 shrink-0 flex gap-2 flex-wrap items-center">
-                    {leftBottomTab === 'courses' && (
+                    {activeCoursesTab === 'courses' && (
                       <>
                         <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
                           <Search size={9} className="text-muted-foreground/45" />
@@ -947,22 +1343,22 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       </>
                     )}
 
-                    {leftBottomTab === 'planner' && (
+                    {activeCoursesTab === 'hubs' && (
                       <>
                         <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
                           <Search size={9} className="text-muted-foreground/45" />
                           <input 
                             type="text"
-                            value={plannerSearch}
-                            onChange={e => setPlannerSearch(e.target.value)}
-                            placeholder="Search..."
+                            value={hubsTabSearch}
+                            onChange={e => setHubsTabSearch(e.target.value)}
+                            placeholder="Search hubs..."
                             className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
                           />
                         </div>
 
                         <select 
-                          value={plannerFilter}
-                          onChange={e => setPlannerFilter(e.target.value as any)}
+                          value={hubsTabFilter}
+                          onChange={e => setHubsTabFilter(e.target.value as any)}
                           className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
                         >
                           <option value="Active">Active</option>
@@ -971,8 +1367,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         </select>
 
                         <select 
-                          value={plannerSort}
-                          onChange={e => setPlannerSort(e.target.value as any)}
+                          value={hubsTabSort}
+                          onChange={e => setHubsTabSort(e.target.value as any)}
                           className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
                         >
                           <option value="title">Sort: Title</option>
@@ -981,7 +1377,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         </select>
 
                         <button 
-                          onClick={() => { setIsAddingPlannerHub(!isAddingPlannerHub); if (!isAddingPlannerHub) { setNewHubName(''); setNewHubCourse(courses[0]?.title || ''); setNewHubUnit('') } }}
+                          onClick={() => { setIsAddingHubsTab(!isAddingHubsTab); if (!isAddingHubsTab) { setNewHubsTabName(''); setNewHubsTabCourse(courses[0]?.title || ''); setNewHubsTabUnit('') } }}
                           className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
                         >
                           <Plus size={9} /> Add
@@ -989,24 +1385,64 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       </>
                     )}
 
-                    {leftBottomTab === 'practice' && (
+                    {activeCoursesTab === 'inbox' && (
                       <>
                         <div className="flex-1 min-w-[120px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
                           <Search size={9} className="text-muted-foreground/45" />
                           <input 
                             type="text"
-                            value={practiceSearch}
-                            onChange={e => setPracticeSearch(e.target.value)}
-                            placeholder="Search Practice..."
+                            value={inboxSearch}
+                            onChange={e => setInboxSearch(e.target.value)}
+                            placeholder="Search inbox..."
                             className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
                           />
                         </div>
 
-                        <button 
-                          onClick={() => navigateTo('PRACTICE')}
-                          className="px-2.5 py-0.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[4px] flex items-center gap-1 transition-all font-sans"
+                        <select 
+                          value={inboxSort}
+                          onChange={e => setInboxSort(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
                         >
-                          <Plus size={9} /> Start Session
+                          <option value="name">Sort: Name</option>
+                          <option value="path">Sort: Path</option>
+                        </select>
+
+                        <button 
+                          onClick={() => { setIsAddingInbox(!isAddingInbox); if (!isAddingInbox) { setNewInboxName('') } }}
+                          className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                        >
+                          <Plus size={9} /> Add Note
+                        </button>
+                      </>
+                    )}
+
+                    {activeCoursesTab === 'pdf' && (
+                      <>
+                        <div className="flex-1 min-w-[120px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={pdfSearch}
+                            onChange={e => setPdfSearch(e.target.value)}
+                            placeholder="Search PDFs..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <select 
+                          value={pdfSort}
+                          onChange={e => setPdfSort(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="name">Sort: Name</option>
+                          <option value="path">Sort: Path</option>
+                        </select>
+
+                        <button 
+                          onClick={() => { setIsAddingPdf(!isAddingPdf); if (!isAddingPdf) { setNewPdfName('') } }}
+                          className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                        >
+                          <Plus size={9} /> Add PDF
                         </button>
                       </>
                     )}
@@ -1014,7 +1450,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
                   {/* Tab Body (Scrollable) */}
                   <div className="flex-1 overflow-y-auto custom-scrollbar-mini pr-1 pt-1.5 space-y-3">
-                    {leftBottomTab === 'courses' && (
+                    {activeCoursesTab === 'courses' && (
                       <div className="flex-grow flex flex-col gap-3 font-sans">
                         {isAddingCourse && (
                           <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
@@ -1084,6 +1520,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                         ) : (
                           <div className="grid grid-cols-1 gap-2">
                             {displayedCourses.map((c, idx) => {
+                              const isEditing = editingCourseId === c.id
                               const grade       = stripWL(getVal(c, 'Grade', 'grade'))
                               const credits     = getVal(c, 'Credits', 'credits')
                               const courseTitleNorm = String(c.title || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1102,34 +1539,111 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                               const daysToExam  = nextEx?.date ? differenceInDays(new Date(nextEx.date), now) : null
 
                               return (
-                                <div key={idx} onClick={() => navigateTo('COURSES', c.id)}
-                                  className="p-2.5 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex flex-col gap-1 cursor-pointer font-sans group relative">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90 leading-tight pr-4 font-sans">{cleanTitle(c.title)}</span>
-                                    {grade && <span className={cn('px-1 py-0.5 text-[6.5px] font-black uppercase border shrink-0 font-sans', gradeColorClass(grade))}>{grade}</span>}
-                                  </div>
-                                  <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans font-medium">
-                                    <span>{credits} CR</span>
-                                    {pendingCt > 0 ? (
-                                      <span className="text-foreground">{pendingCt} due</span>
-                                    ) : daysToExam !== null && daysToExam >= 0 ? (
-                                      <span className={daysToExam <= 7 ? 'text-foreground' : 'text-muted-foreground/50'}>exam in {daysToExam}d</span>
-                                    ) : (
-                                      <span className="text-muted-foreground/30">Clear</span>
-                                    )}
-                                  </div>
+                                <div key={idx} onClick={() => !isEditing && navigateTo('COURSES', c.id)}
+                                  className={cn("p-2.5 border border-border bg-bento-item/25 rounded-[6px] transition-colors flex flex-col gap-1 font-sans relative group", 
+                                    !isEditing && "hover:bg-bento-item/50 cursor-pointer")}
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="text"
+                                        value={editCourseName}
+                                        onChange={e => setEditCourseName(e.target.value)}
+                                        className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                        placeholder="Course Title"
+                                      />
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <input 
+                                          type="text"
+                                          value={editCourseCredits}
+                                          onChange={e => setEditCourseCredits(e.target.value)}
+                                          className="bg-muted/20 text-[9px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                          placeholder="Credits"
+                                        />
+                                        <select 
+                                          value={editCourseSem}
+                                          onChange={e => setEditCourseSem(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="">Semester...</option>
+                                          {(data.semesters || []).map(s => (
+                                            <option key={s.id} value={s.title}>{cleanTitle(s.title)}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => setEditingCourseId(null)}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button 
+                                          onClick={async () => {
+                                            if (!editCourseName.trim()) return
+                                            try {
+                                              await onUpdate('courses', c.id, {
+                                                title: editCourseName.trim(),
+                                                Credits: editCourseCredits,
+                                                Semester: wrapWL(editCourseSem)
+                                              })
+                                              toast.success('Course updated')
+                                              setEditingCourseId(null)
+                                              onRefresh()
+                                            } catch {
+                                              toast.error('Update failed')
+                                            }
+                                          }}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <span className="text-[10px] font-black uppercase truncate text-foreground/90 leading-tight pr-10 font-sans">{cleanTitle(c.title)}</span>
+                                        {grade && <span className={cn('px-1 py-0.5 text-[6.5px] font-black uppercase border shrink-0 font-sans', gradeColorClass(grade))}>{grade}</span>}
+                                      </div>
+                                      <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans font-medium">
+                                        <span>{credits} CR · Sem: {cleanTitle(stripWL(getVal(c, 'Semester', 'semester')))}</span>
+                                        {pendingCt > 0 ? (
+                                          <span className="text-foreground">{pendingCt} due</span>
+                                        ) : daysToExam !== null && daysToExam >= 0 ? (
+                                          <span className={daysToExam <= 7 ? 'text-foreground' : 'text-muted-foreground/50'}>exam in {daysToExam}d</span>
+                                        ) : (
+                                          <span className="text-muted-foreground/30">Clear</span>
+                                        )}
+                                      </div>
 
-                                  <button 
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      if (confirm(`Delete course "${cleanTitle(c.title)}"?`)) {
-                                        onDelete('courses', c.id).then(onRefresh);
-                                      } 
-                                    }}
-                                    className="absolute top-1.5 right-1.5 p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
-                                  >
-                                    <Trash2 size={9} />
-                                  </button>
+                                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5">
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setEditingCourseId(c.id)
+                                            setEditCourseName(c.title)
+                                            setEditCourseCredits(credits)
+                                            setEditCourseSem(stripWL(getVal(c, 'Semester', 'semester')))
+                                          }}
+                                          className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/45 hover:group-hover:text-foreground hover:bg-muted/10 rounded transition-all"
+                                        >
+                                          <Edit2 size={9} />
+                                        </button>
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            if (confirm(`Delete course "${cleanTitle(c.title)}"?`)) {
+                                              onDelete('courses', c.id).then(onRefresh);
+                                            } 
+                                          }}
+                                          className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all"
+                                        >
+                                          <Trash2 size={9} />
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               )
                             })}
@@ -1138,23 +1652,23 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       </div>
                     )}
 
-                    {leftBottomTab === 'planner' && (
+                    {activeCoursesTab === 'hubs' && (
                       <div className="flex-grow flex flex-col gap-3 font-sans">
-                        {isAddingPlannerHub && (
+                        {isAddingHubsTab && (
                           <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
                             <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add Study Hub</span>
                             <div className="space-y-1.5">
                               <input 
                                 type="text"
-                                value={newHubName}
-                                onChange={e => setNewHubName(e.target.value)}
+                                value={newHubsTabName}
+                                onChange={e => setNewHubsTabName(e.target.value)}
                                 placeholder="Hub title (e.g. Chapter 3 Hub)"
                                 className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
                               />
                               <div className="grid grid-cols-2 gap-2">
                                 <select 
-                                  value={newHubCourse}
-                                  onChange={e => setNewHubCourse(e.target.value)}
+                                  value={newHubsTabCourse}
+                                  onChange={e => setNewHubsTabCourse(e.target.value)}
                                   className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
                                 >
                                   <option value="">Course...</option>
@@ -1164,8 +1678,8 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                                 </select>
                                 <input 
                                   type="text"
-                                  value={newHubUnit}
-                                  onChange={e => setNewHubUnit(e.target.value)}
+                                  value={newHubsTabUnit}
+                                  onChange={e => setNewHubsTabUnit(e.target.value)}
                                   placeholder="Unit (e.g. Chapter 3)"
                                   className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
                                 />
@@ -1173,23 +1687,23 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                             </div>
                             <div className="flex gap-2 justify-end">
                               <button 
-                                onClick={() => { setIsAddingPlannerHub(false); setNewHubName('') }}
+                                onClick={() => { setIsAddingHubsTab(false); setNewHubsTabName('') }}
                                 className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
                               >
                                 Cancel
                               </button>
                               <button 
                                 onClick={async () => {
-                                  if (!newHubName.trim()) return
+                                  if (!newHubsTabName.trim()) return
                                   try {
-                                    await onCreate('study planner', newHubName.trim(), {
-                                      course: wrapWL(newHubCourse),
-                                      unit: newHubUnit,
+                                    await onCreate('study planner', newHubsTabName.trim(), {
+                                      course: wrapWL(newHubsTabCourse),
+                                      unit: newHubsTabUnit,
                                       status: wrapWL('Active')
                                     })
                                     toast.success('Study hub created')
-                                    setNewHubName('')
-                                    setIsAddingPlannerHub(false)
+                                    setNewHubsTabName('')
+                                    setIsAddingHubsTab(false)
                                     onRefresh()
                                   } catch {
                                     toast.error('Failed to create study hub')
@@ -1203,143 +1717,123 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                           </div>
                         )}
 
-                        {displayedHubs.length === 0 ? (
-                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No hubs match filter</p>
-                        ) : (
-                          <div className="grid grid-cols-1 gap-2">
-                            {displayedHubs.map((hub, idx) => {
-                              return (
-                                <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
-                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
-                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans">{cleanTitle(hub.title || hub.id)}</span>
-                                  
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
-                                    
-                                    <button 
-                                      onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        if (confirm(`Delete study hub "${cleanTitle(hub.title || hub.id)}"?`)) {
-                                          onDelete('study planner', hub.id).then(onRefresh);
-                                        } 
-                                      }}
-                                      className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
-                                    >
-                                      <Trash2 size={9} />
-                                    </button>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {leftBottomTab === 'practice' && (
-                      <div className="flex-grow flex flex-col gap-3 font-sans">
-                        {displayedPractices.length === 0 ? (
-                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No practice history</p>
-                        ) : (
-                          <div className="grid grid-cols-1 gap-2">
-                            {displayedPractices.map((p, idx) => {
-                              const score = p.score || 0
-                              const total = p.total_questions || p.totalQuestions || 0
-                              const dateStr = p.timestamp ? format(new Date(p.timestamp), 'MMM d') : ''
-                              
-                              return (
-                                <div key={idx} onClick={() => navigateTo('PRACTICE')}
-                                  className="p-2.5 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex flex-col gap-1 cursor-pointer group relative font-sans">
-                                  <div className="flex items-start justify-between gap-2 pr-4">
-                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90 leading-tight">
-                                      {cleanTitle(p.title || p.note_path?.split('/').pop()?.replace('.md', '') || 'Practice Session')}
-                                    </span>
-                                    {total > 0 && (
-                                      <span className="px-1 py-0.5 text-[6.5px] font-black uppercase border border-border bg-bento-item text-foreground shrink-0 font-sans">
-                                        {score}/{total}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans font-medium">
-                                    <span>Recall Practice</span>
-                                    <span>{dateStr}</span>
-                                  </div>
-
-                                  <button 
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      if (confirm('Delete practice history record?')) {
-                                        handleDeletePractice(p.path);
-                                      } 
-                                    }}
-                                    className="absolute top-1.5 right-1.5 p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all font-sans"
-                                  >
-                                    <Trash2 size={9} />
-                                  </button>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                  </div>
-                </section>
-              </div>
-
-              {/* Right Column: Courses, Combined Tasks & Exams */}
-              <div className="col-span-1 lg:col-span-1 flex flex-col gap-6 h-full min-h-0">
-                {/* Upper Right Hub/Inbox/PDF Tabbed Interface */}
-                <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col h-[220px] shrink-0 space-y-3">
-                  {/* Tabs Header */}
-                  <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
-                    <div className="flex gap-3">
-                      <button 
-                        onClick={() => setActiveCoursesTab('hubs')}
-                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          activeCoursesTab === 'hubs' 
-                            ? "text-foreground border-foreground" 
-                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-                      >
-                        Hubs
-                      </button>
-                      <button 
-                        onClick={() => setActiveCoursesTab('inbox')}
-                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          activeCoursesTab === 'inbox' 
-                            ? "text-foreground border-foreground" 
-                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-                      >
-                        Inbox
-                      </button>
-                      <button 
-                        onClick={() => setActiveCoursesTab('pdf')}
-                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          activeCoursesTab === 'pdf' 
-                            ? "text-foreground border-foreground" 
-                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-                      >
-                        PDF
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Tab Body (Scrollable) */}
-                  <div className="flex-1 overflow-y-auto custom-scrollbar-mini pr-1 pt-1.5 space-y-3">
-                    {activeCoursesTab === 'hubs' && (
-                      <div className="flex-grow flex flex-col gap-3 font-sans">
-                        {hubs.length === 0 ? (
+                        {displayedHubsTab.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No study hubs</p>
                         ) : (
                           <div className="grid grid-cols-1 gap-2">
-                            {hubs.map((hub, idx) => {
+                            {displayedHubsTab.map((hub, idx) => {
+                              const isEditing = editingHubId === hub.id
                               const isDone = stripWL(getVal(hub, 'status', 'Status')).toLowerCase().includes('complet')
                               return (
-                                <div key={idx} onClick={() => onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
-                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
-                                  <span className={cn("text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans", isDone && "line-through text-muted-foreground/60")}>{cleanTitle(hub.title || hub.id)}</span>
-                                  <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                <div key={idx} onClick={() => !isEditing && onOpenNote(hub.path || `database/study planner/${hub.id}.md`)}
+                                  className={cn("p-2.5 border border-border bg-bento-card rounded-[6px] transition-colors flex flex-col gap-1.5 font-sans relative group", 
+                                    !isEditing && "hover:bg-bento-item/20 cursor-pointer")}
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="text"
+                                        value={editHubName}
+                                        onChange={e => setEditHubName(e.target.value)}
+                                        className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                      />
+                                      <div className="grid grid-cols-3 gap-1.5">
+                                        <select 
+                                          value={editHubCourse}
+                                          onChange={e => setEditHubCourse(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="">Course...</option>
+                                          {courses.map(c => (
+                                            <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                          ))}
+                                        </select>
+                                        <input 
+                                          type="text"
+                                          value={editHubUnit}
+                                          onChange={e => setEditHubUnit(e.target.value)}
+                                          className="bg-muted/20 text-[9px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                          placeholder="Unit"
+                                        />
+                                        <select 
+                                          value={editHubStatus}
+                                          onChange={e => setEditHubStatus(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="Active">Active</option>
+                                          <option value="Completed">Completed</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => setEditingHubId(null)}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button 
+                                          onClick={async () => {
+                                            if (!editHubName.trim()) return
+                                            try {
+                                              await onUpdate('study planner', hub.id, {
+                                                title: editHubName.trim(),
+                                                course: wrapWL(editHubCourse),
+                                                unit: editHubUnit,
+                                                status: wrapWL(editHubStatus)
+                                              })
+                                              toast.success('Study hub updated')
+                                              setEditingHubId(null)
+                                              onRefresh()
+                                            } catch {
+                                              toast.error('Update failed')
+                                            }
+                                          }}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className={cn("text-[10px] font-black uppercase truncate text-foreground/90 pr-10 font-sans", isDone && "line-through text-muted-foreground/60")}>
+                                          {cleanTitle(hub.title || hub.id)}
+                                        </span>
+                                        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                                          <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                          <button 
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              setEditingHubId(hub.id)
+                                              setEditHubName(hub.title || hub.id)
+                                              setEditHubCourse(stripWL(getVal(hub, 'course', 'Course')))
+                                              setEditHubUnit(getVal(hub, 'unit', 'Unit'))
+                                              setEditHubStatus(stripWL(getVal(hub, 'status', 'Status')) || 'Active')
+                                            }}
+                                            className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/45 hover:group-hover:text-foreground hover:bg-muted/10 rounded transition-all"
+                                          >
+                                            <Edit2 size={9} />
+                                          </button>
+                                          <button 
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              if (confirm(`Delete study hub "${cleanTitle(hub.title || hub.id)}"?`)) {
+                                                onDelete('study planner', hub.id).then(onRefresh);
+                                              } 
+                                            }}
+                                            className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all"
+                                          >
+                                            <Trash2 size={9} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-between items-center text-[7px] font-black uppercase text-muted-foreground/50 tracking-wider">
+                                        <span>Course: {cleanTitle(stripWL(getVal(hub, 'course', 'Course')) || '--')}</span>
+                                        <span>Unit: {getVal(hub, 'unit', 'Unit') || '--'}</span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               )
                             })}
@@ -1350,17 +1844,124 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
                     {activeCoursesTab === 'inbox' && (
                       <div className="flex-grow flex flex-col gap-3 font-sans">
-                        {inboxFiles.length === 0 ? (
+                        {isAddingInbox && (
+                          <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Create Inbox Note</span>
+                            <input 
+                              type="text"
+                              value={newInboxName}
+                              onChange={e => setNewInboxName(e.target.value)}
+                              placeholder="Note filename (e.g. Lecture Notes)"
+                              className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => setIsAddingInbox(false)}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!newInboxName.trim()) return
+                                  try {
+                                    await sidecarApi.createObsidianFile(`database/inbox/${newInboxName.trim()}.md`, `# ${newInboxName.trim()}`)
+                                    toast.success('Inbox note created')
+                                    setNewInboxName('')
+                                    setIsAddingInbox(false)
+                                    // Refresh files
+                                    sidecarApi.aterListInbox().then(res => setInboxFiles(res?.files || []))
+                                  } catch {
+                                    toast.error('Failed to create note')
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {displayedInbox.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">Inbox is empty</p>
                         ) : (
                           <div className="grid grid-cols-1 gap-2">
-                            {inboxFiles.map((file, idx) => {
+                            {displayedInbox.map((file, idx) => {
                               const filename = file.name || file.path?.split('/').pop() || 'Untitled'
+                              const isEditing = editingInboxPath === file.path
                               return (
-                                <div key={idx} onClick={() => onOpenNote(file.path)}
-                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
-                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans">{cleanTitle(filename)}</span>
-                                  <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                <div key={idx} onClick={() => !isEditing && onOpenNote(file.path)}
+                                  className={cn("p-2.5 border border-border bg-bento-card rounded-[6px] transition-colors flex flex-col gap-1.5 font-sans relative group", 
+                                    !isEditing && "hover:bg-bento-item/20 cursor-pointer")}
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="text"
+                                        value={editInboxName}
+                                        onChange={e => setEditInboxName(e.target.value)}
+                                        className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                      />
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => setEditingInboxPath(null)}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button 
+                                          onClick={async () => {
+                                            if (!editInboxName.trim()) return
+                                            try {
+                                              const dir = file.path.substring(0, file.path.lastIndexOf('/'))
+                                              const newPath = `${dir}/${editInboxName.trim()}.md`
+                                              await sidecarApi.moveObsidianItem(file.path, newPath)
+                                              toast.success('File renamed')
+                                              setEditingInboxPath(null)
+                                              sidecarApi.aterListInbox().then(res => setInboxFiles(res?.files || []))
+                                            } catch {
+                                              toast.error('Rename failed')
+                                            }
+                                          }}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-10 font-sans">{cleanTitle(filename)}</span>
+                                      
+                                      <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                                        <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setEditingInboxPath(file.path)
+                                            setEditInboxName(filename.replace(/\.md$/, ''))
+                                          }}
+                                          className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/45 hover:group-hover:text-foreground hover:bg-muted/10 rounded transition-all"
+                                        >
+                                          <Edit2 size={9} />
+                                        </button>
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            if (confirm(`Delete inbox note "${filename}"?`)) {
+                                              sidecarApi.deleteObsidianItem(file.path).then(() => {
+                                                sidecarApi.aterListInbox().then(res => setInboxFiles(res?.files || []))
+                                              })
+                                            } 
+                                          }}
+                                          className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all"
+                                        >
+                                          <Trash2 size={9} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })}
@@ -1371,17 +1972,132 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
                     {activeCoursesTab === 'pdf' && (
                       <div className="flex-grow flex flex-col gap-3 font-sans">
-                        {pdfFiles.length === 0 ? (
+                        {isAddingPdf && (
+                          <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add PDF placeholder</span>
+                            <input 
+                              type="text"
+                              value={newPdfName}
+                              onChange={e => setNewPdfName(e.target.value)}
+                              placeholder="PDF filename (e.g. Syllabus)"
+                              className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => setIsAddingPdf(false)}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!newPdfName.trim()) return
+                                  try {
+                                    await sidecarApi.createObsidianFile(`database/pdf/${newPdfName.trim()}.pdf`, '')
+                                    toast.success('PDF placeholder created')
+                                    setNewPdfName('')
+                                    setIsAddingPdf(false)
+                                    // Refresh files
+                                    sidecarApi.listObsidianFiles().then(res => {
+                                      const pdfs = (res?.files || []).filter((f: any) => !f.is_dir && f.path.toLowerCase().endsWith('.pdf'))
+                                      setPdfFiles(pdfs)
+                                    })
+                                  } catch {
+                                    toast.error('Failed to create PDF')
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {displayedPDFs.length === 0 ? (
                           <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No PDFs in vault</p>
                         ) : (
                           <div className="grid grid-cols-1 gap-2">
-                            {pdfFiles.map((file, idx) => {
+                            {displayedPDFs.map((file, idx) => {
                               const filename = file.name || file.path?.split('/').pop() || 'Untitled'
+                              const isEditing = editingPdfPath === file.path
                               return (
-                                <div key={idx} onClick={() => onOpenNote(file.path)}
-                                  className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
-                                  <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-4 font-sans">{cleanTitle(filename)}</span>
-                                  <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                <div key={idx} onClick={() => !isEditing && onOpenNote(file.path)}
+                                  className={cn("p-2.5 border border-border bg-bento-card rounded-[6px] transition-colors flex flex-col gap-1.5 font-sans relative group", 
+                                    !isEditing && "hover:bg-bento-item/20 cursor-pointer")}
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="text"
+                                        value={editPdfName}
+                                        onChange={e => setEditPdfName(e.target.value)}
+                                        className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                      />
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => setEditingPdfPath(null)}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button 
+                                          onClick={async () => {
+                                            if (!editPdfName.trim()) return
+                                            try {
+                                              const dir = file.path.substring(0, file.path.lastIndexOf('/'))
+                                              const newPath = `${dir}/${editPdfName.trim()}.pdf`
+                                              await sidecarApi.moveObsidianItem(file.path, newPath)
+                                              toast.success('PDF renamed')
+                                              setEditingPdfPath(null)
+                                              sidecarApi.listObsidianFiles().then(res => {
+                                                const pdfs = (res?.files || []).filter((f: any) => !f.is_dir && f.path.toLowerCase().endsWith('.pdf'))
+                                                setPdfFiles(pdfs)
+                                              })
+                                            } catch {
+                                              toast.error('Rename failed')
+                                            }
+                                          }}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-10 font-sans">{cleanTitle(filename)}</span>
+                                      <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                                        <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors font-sans" />
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setEditingPdfPath(file.path)
+                                            setEditPdfName(filename.replace(/\.pdf$/, ''))
+                                          }}
+                                          className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/45 hover:group-hover:text-foreground hover:bg-muted/10 rounded transition-all"
+                                        >
+                                          <Edit2 size={9} />
+                                        </button>
+                                        <button 
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            if (confirm(`Delete PDF "${filename}"?`)) {
+                                              sidecarApi.deleteObsidianItem(file.path).then(() => {
+                                                sidecarApi.listObsidianFiles().then(res => {
+                                                  const pdfs = (res?.files || []).filter((f: any) => !f.is_dir && f.path.toLowerCase().endsWith('.pdf'))
+                                                  setPdfFiles(pdfs)
+                                                })
+                                              })
+                                            } 
+                                          }}
+                                          className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all"
+                                        >
+                                          <Trash2 size={9} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })}
@@ -1395,7 +2111,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                 {/* Combined Assignments & Exams Card */}
                 <section className="p-5 border border-border bg-bento-card rounded-[8px] flex flex-col space-y-4 flex-1 min-h-0">
                   {/* Tabs Header */}
-                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2 shrink-0">
                     <div className="flex gap-3">
                       <button 
                         onClick={() => setSidebarTab('assignments')}
@@ -1419,53 +2135,308 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                     {sidebarTab === 'assignments' && (
                       <button 
                         onClick={() => navigateTo('ASSIGNMENTS')} 
-                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer font-bold"
                       >
-                        Open →
+                        Open Page →
                       </button>
                     )}
                     {sidebarTab === 'exams' && (
                       <button 
                         onClick={() => navigateTo('EXAMS')} 
-                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
+                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer font-bold"
                       >
-                        Open →
+                        Open Page →
                       </button>
                     )}
                   </div>
 
-                  {/* Tab Body */}
-                  <div className="flex-grow overflow-y-auto custom-scrollbar-mini pr-1 pt-2">
+                  {/* Tab Controls Row */}
+                  <div className="py-1 shrink-0 flex gap-2 flex-wrap items-center">
                     {sidebarTab === 'assignments' && (
-                      <div>
-                        {pendingAssignments.length === 0 ? (
-                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No pending assignments</p>
+                      <>
+                        <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={assignmentsSearch}
+                            onChange={e => setAssignmentsSearch(e.target.value)}
+                            placeholder="Search tasks..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <select 
+                          value={assignmentsFilter}
+                          onChange={e => setAssignmentsFilter(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Completed">Completed</option>
+                          <option value="All">All Statuses</option>
+                        </select>
+
+                        <select 
+                          value={assignmentsSort}
+                          onChange={e => setAssignmentsSort(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="dueDate">Sort: Due Date</option>
+                          <option value="title">Sort: Title</option>
+                          <option value="course">Sort: Course</option>
+                        </select>
+
+                        <button 
+                          onClick={() => { setIsAddingAssignment(!isAddingAssignment); if (!isAddingAssignment) { setNewAssignmentName(''); setNewAssignmentCourse(courses[0]?.title || ''); setNewAssignmentDueDate('') } }}
+                          className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                        >
+                          <Plus size={9} /> Add
+                        </button>
+                      </>
+                    )}
+
+                    {sidebarTab === 'exams' && (
+                      <>
+                        <div className="flex-1 min-w-[100px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
+                          <Search size={9} className="text-muted-foreground/45" />
+                          <input 
+                            type="text"
+                            value={examsSearch}
+                            onChange={e => setExamsSearch(e.target.value)}
+                            placeholder="Search exams..."
+                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
+                          />
+                        </div>
+
+                        <select 
+                          value={examsFilter}
+                          onChange={e => setExamsFilter(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="Upcoming">Upcoming</option>
+                          <option value="Past">Past</option>
+                          <option value="All">All Exams</option>
+                        </select>
+
+                        <select 
+                          value={examsSort}
+                          onChange={e => setExamsSort(e.target.value as any)}
+                          className="bg-bento-card text-[9.5px] font-bold text-foreground border border-border px-1.5 py-0.5 rounded-[4px] focus:outline-none hover:bg-bento-item/50 transition-colors cursor-pointer"
+                        >
+                          <option value="date">Sort: Date</option>
+                          <option value="title">Sort: Title</option>
+                          <option value="course">Sort: Course</option>
+                        </select>
+
+                        <button 
+                          onClick={() => { setIsAddingExam(!isAddingExam); if (!isAddingExam) { setNewExamName(''); setNewExamCourse(courses[0]?.title || ''); setNewExamDate(''); setNewExamType('Midterm') } }}
+                          className="px-2 py-0.5 bg-muted/20 text-[9px] font-black uppercase tracking-widest border border-border hover:bg-muted/40 hover:text-foreground rounded-[4px] flex items-center gap-1 transition-all"
+                        >
+                          <Plus size={9} /> Add
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Tab Body */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar-mini pr-1 pt-1.5 space-y-3">
+                    {sidebarTab === 'assignments' && (
+                      <div className="space-y-3 font-sans">
+                        {isAddingAssignment && (
+                          <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add Assignment</span>
+                            <div className="space-y-1.5">
+                              <input 
+                                type="text"
+                                value={newAssignmentName}
+                                onChange={e => setNewAssignmentName(e.target.value)}
+                                placeholder="Assignment title..."
+                                className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <select 
+                                  value={newAssignmentCourse}
+                                  onChange={e => setNewAssignmentCourse(e.target.value)}
+                                  className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
+                                >
+                                  <option value="">Course...</option>
+                                  {courses.map(c => (
+                                    <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                  ))}
+                                </select>
+                                <input 
+                                  type="date"
+                                  value={newAssignmentDueDate}
+                                  onChange={e => setNewAssignmentDueDate(e.target.value)}
+                                  className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => { setIsAddingAssignment(false); setNewAssignmentName('') }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!newAssignmentName.trim()) return
+                                  try {
+                                    await onCreate('assignments', newAssignmentName.trim(), {
+                                      Course: wrapWL(newAssignmentCourse),
+                                      due_date: newAssignmentDueDate,
+                                      done: wrapWL('false')
+                                    })
+                                    toast.success('Assignment created')
+                                    setNewAssignmentName('')
+                                    setIsAddingAssignment(false)
+                                    onRefresh()
+                                  } catch {
+                                    toast.error('Failed to create assignment')
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {displayedAssignments.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No assignments match filter</p>
                         ) : (
                           <div className="space-y-2">
-                            {pendingAssignments.map((a, idx) => {
+                            {displayedAssignments.map((a, idx) => {
                               const daysLeft = getDaysUntil(a.due_date)
+                              const isEditing = editingAssignmentId === a.id
                               return (
-                                <div key={idx} onClick={() => navigateTo('ASSIGNMENTS', a.id)}
-                                  className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <button onClick={(e) => toggleAssignment(a, e)}
-                                      className={cn("w-4 h-4 border rounded-[3px] flex items-center justify-center shrink-0 transition-colors bg-bento-card",
-                                        a.done ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground")}
-                                    >
-                                      {a.done && <Check size={9} strokeWidth={4} className="text-background" />}
-                                    </button>
-                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(a.title)}</span>
-                                  </div>
-                                  {daysLeft !== null && (
-                                    <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
-                                      daysLeft < 0 
-                                        ? "bg-foreground text-background border-foreground font-black" 
-                                        : daysLeft <= 3 
-                                          ? "bg-foreground/5 border-foreground/20 text-foreground" 
-                                          : "bg-muted/10 border-border/40 text-muted-foreground/60"
-                                    )}>
-                                      {daysLeft < 0 ? "Late" : `${daysLeft}d`}
-                                    </span>
+                                <div key={idx} onClick={() => !isEditing && navigateTo('ASSIGNMENTS', a.id)}
+                                  className={cn("p-2.5 border border-border bg-bento-item/25 rounded-[6px] transition-colors flex flex-col gap-2 font-sans relative group", 
+                                    !isEditing && "hover:bg-bento-item/50 cursor-pointer")}
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="text"
+                                        value={editAssignmentName}
+                                        onChange={e => setEditAssignmentName(e.target.value)}
+                                        className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                      />
+                                      <div className="grid grid-cols-3 gap-1.5">
+                                        <select 
+                                          value={editAssignmentCourse}
+                                          onChange={e => setEditAssignmentCourse(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="">Course...</option>
+                                          {courses.map(c => (
+                                            <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                          ))}
+                                        </select>
+                                        <input 
+                                          type="date"
+                                          value={editAssignmentDueDate}
+                                          onChange={e => setEditAssignmentDueDate(e.target.value)}
+                                          className="bg-muted/20 text-[9px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                        />
+                                        <select 
+                                          value={editAssignmentStatus}
+                                          onChange={e => setEditAssignmentStatus(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="false">Active</option>
+                                          <option value="true">Completed</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => setEditingAssignmentId(null)}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button 
+                                          onClick={async () => {
+                                            if (!editAssignmentName.trim()) return
+                                            try {
+                                              await onUpdate('assignments', a.id, {
+                                                title: editAssignmentName.trim(),
+                                                Course: wrapWL(editAssignmentCourse),
+                                                due_date: editAssignmentDueDate,
+                                                done: wrapWL(editAssignmentStatus)
+                                              })
+                                              toast.success('Assignment updated')
+                                              setEditingAssignmentId(null)
+                                              onRefresh()
+                                            } catch {
+                                              toast.error('Update failed')
+                                            }
+                                          }}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <button onClick={(e) => toggleAssignment(a, e)}
+                                            className={cn("w-4 h-4 border rounded-[3px] flex items-center justify-center shrink-0 transition-colors bg-bento-card",
+                                              a.done ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground")}
+                                          >
+                                            {a.done && <Check size={9} strokeWidth={4} className="text-background" />}
+                                          </button>
+                                          <span className={cn("text-[10px] font-black uppercase truncate text-foreground/90 pr-10", a.done && "line-through text-muted-foreground/60")}>
+                                            {cleanTitle(a.title)}
+                                          </span>
+                                        </div>
+                                        
+                                        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                                          {daysLeft !== null && (
+                                            <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
+                                              daysLeft < 0 
+                                                ? "bg-foreground text-background border-foreground font-black" 
+                                                : daysLeft <= 3 
+                                                  ? "bg-foreground/5 border-foreground/20 text-foreground" 
+                                                  : "bg-muted/10 border-border/40 text-muted-foreground/60"
+                                            )}>
+                                              {daysLeft < 0 ? "Late" : `${daysLeft}d`}
+                                            </span>
+                                          )}
+                                          <button 
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              setEditingAssignmentId(a.id)
+                                              setEditAssignmentName(a.title)
+                                              setEditAssignmentCourse(stripWL(getVal(a, 'Course', 'course')))
+                                              setEditAssignmentDueDate(a.due_date || '')
+                                              setEditAssignmentStatus(String(a.done || 'false'))
+                                            }}
+                                            className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/45 hover:group-hover:text-foreground hover:bg-muted/10 rounded transition-all"
+                                          >
+                                            <Edit2 size={9} />
+                                          </button>
+                                          <button 
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              if (confirm(`Delete task "${cleanTitle(a.title)}"?`)) {
+                                                onDelete('assignments', a.id).then(onRefresh);
+                                              } 
+                                            }}
+                                            className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all"
+                                          >
+                                            <Trash2 size={9} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-between items-center text-[7px] font-black uppercase text-muted-foreground/40 tracking-wider">
+                                        <span>Course: {cleanTitle(stripWL(getVal(a, 'Course', 'course')) || '--')}</span>
+                                        <span>Due: {a.due_date ? format(new Date(a.due_date), 'MMM d, yyyy') : '--'}</span>
+                                      </div>
+                                    </>
                                   )}
                                 </div>
                               )
@@ -1476,29 +2447,205 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                     )}
 
                     {sidebarTab === 'exams' && (
-                      <div>
-                        {upcomingExams.length === 0 ? (
-                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No upcoming exams</p>
+                      <div className="space-y-3 font-sans">
+                        {isAddingExam && (
+                          <div className="p-3 border border-border/80 bg-bento-card rounded-[6px] space-y-2.5 font-sans shrink-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 font-sans">Add Exam</span>
+                            <div className="space-y-1.5">
+                              <input 
+                                type="text"
+                                value={newExamName}
+                                onChange={e => setNewExamName(e.target.value)}
+                                placeholder="Exam title..."
+                                className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none placeholder:text-muted-foreground/30 p-1.5 border border-border/50 rounded-[4px]"
+                              />
+                              <div className="grid grid-cols-3 gap-2">
+                                <select 
+                                  value={newExamCourse}
+                                  onChange={e => setNewExamCourse(e.target.value)}
+                                  className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
+                                >
+                                  <option value="">Course...</option>
+                                  {courses.map(c => (
+                                    <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                  ))}
+                                </select>
+                                <input 
+                                  type="date"
+                                  value={newExamDate}
+                                  onChange={e => setNewExamDate(e.target.value)}
+                                  className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                />
+                                <select 
+                                  value={newExamType}
+                                  onChange={e => setNewExamType(e.target.value)}
+                                  className="w-full bg-bento-card text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border rounded-[4px]"
+                                >
+                                  <option value="Midterm">Midterm</option>
+                                  <option value="Final">Final</option>
+                                  <option value="Quiz">Quiz</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button 
+                                onClick={() => { setIsAddingExam(false); setNewExamName('') }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border border-border hover:bg-muted/10 rounded-[4px] text-muted-foreground transition-colors font-sans"
+                              >
+                                Cancel
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!newExamName.trim()) return
+                                  try {
+                                    await onCreate('exams', newExamName.trim(), {
+                                      Course: wrapWL(newExamCourse),
+                                      date: newExamDate,
+                                      Type: wrapWL(newExamType)
+                                    })
+                                    toast.success('Exam created')
+                                    setNewExamName('')
+                                    setIsAddingExam(false)
+                                    onRefresh()
+                                  } catch {
+                                    toast.error('Failed to create exam')
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 rounded-[4px] transition-colors font-sans"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {displayedExams.length === 0 ? (
+                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans">No exams match filter</p>
                         ) : (
                           <div className="space-y-2">
-                            {upcomingExams.map((e, idx) => {
+                            {displayedExams.map((e, idx) => {
                               const daysLeft = differenceInDays(new Date(e.date), now)
+                              const isEditing = editingExamId === e.id
                               return (
-                                <div key={idx} onClick={() => navigateTo('EXAMS', e.id)}
-                                  className="p-3 border border-border bg-bento-item/25 hover:bg-bento-item/50 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans">
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black uppercase truncate text-foreground/90">{cleanTitle(e.title)}</span>
-                                    <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5">
-                                      {format(new Date(e.date), 'MMM d')}
-                                    </span>
-                                  </div>
-                                  <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
-                                    daysLeft <= 3 
-                                      ? "bg-foreground text-background border-foreground font-black" 
-                                      : "bg-muted/10 border-border/40 text-muted-foreground/60"
-                                  )}>
-                                    {daysLeft === 0 ? "Today" : `${daysLeft}d left`}
-                                  </span>
+                                <div key={idx} onClick={() => !isEditing && navigateTo('EXAMS', e.id)}
+                                  className={cn("p-2.5 border border-border bg-bento-item/25 rounded-[6px] transition-colors flex flex-col gap-2 font-sans relative group", 
+                                    !isEditing && "hover:bg-bento-item/50 cursor-pointer")}
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="text"
+                                        value={editExamName}
+                                        onChange={e => setEditExamName(e.target.value)}
+                                        className="w-full bg-muted/20 text-[10px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                      />
+                                      <div className="grid grid-cols-3 gap-1.5">
+                                        <select 
+                                          value={editExamCourse}
+                                          onChange={e => setEditExamCourse(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="">Course...</option>
+                                          {courses.map(c => (
+                                            <option key={c.id} value={c.title}>{cleanTitle(c.title)}</option>
+                                          ))}
+                                        </select>
+                                        <input 
+                                          type="date"
+                                          value={editExamDate}
+                                          onChange={e => setEditExamDate(e.target.value)}
+                                          className="bg-muted/20 text-[9px] font-bold text-foreground focus:outline-none p-1.5 border border-border/50 rounded-[4px]"
+                                        />
+                                        <select 
+                                          value={editExamType}
+                                          onChange={e => setEditExamType(e.target.value)}
+                                          className="bg-bento-card text-[9px] font-bold text-foreground border border-border p-1.5 rounded-[4px] focus:outline-none"
+                                        >
+                                          <option value="Midterm">Midterm</option>
+                                          <option value="Final">Final</option>
+                                          <option value="Quiz">Quiz</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => setEditingExamId(null)}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase border border-border rounded-[4px] text-muted-foreground"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button 
+                                          onClick={async () => {
+                                            if (!editExamName.trim()) return
+                                            try {
+                                              await onUpdate('exams', e.id, {
+                                                title: editExamName.trim(),
+                                                Course: wrapWL(editExamCourse),
+                                                date: editExamDate,
+                                                Type: wrapWL(editExamType)
+                                              })
+                                              toast.success('Exam updated')
+                                              setEditingExamId(null)
+                                              onRefresh()
+                                            } catch {
+                                              toast.error('Update failed')
+                                            }
+                                          }}
+                                          className="px-2 py-0.5 text-[8px] font-black uppercase bg-foreground text-background rounded-[4px]"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="text-[10px] font-black uppercase truncate text-foreground/90 pr-10">{cleanTitle(e.title)}</span>
+                                          <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5">
+                                            {e.date ? format(new Date(e.date), 'MMM d, yyyy') : '--'}
+                                          </span>
+                                        </div>
+                                        
+                                        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                                          <span className={cn("text-[7px] font-black uppercase px-1.5 py-0.5 rounded-[4px] border shrink-0",
+                                            daysLeft <= 3 
+                                              ? "bg-foreground text-background border-foreground font-black" 
+                                              : "bg-muted/10 border-border/40 text-muted-foreground/60"
+                                          )}>
+                                            {daysLeft === 0 ? "Today" : `${daysLeft}d left`}
+                                          </span>
+                                          <button 
+                                            onClick={(evt) => { 
+                                              evt.stopPropagation(); 
+                                              setEditingExamId(e.id)
+                                              setEditExamName(e.title)
+                                              setEditExamCourse(stripWL(getVal(e, 'Course', 'course')))
+                                              setEditExamDate(e.date || '')
+                                              setEditExamType(stripWL(getVal(e, 'Type', 'type')) || 'Midterm')
+                                            }}
+                                            className="p-1 text-muted-foreground/0 group-hover:text-muted-foreground/45 hover:group-hover:text-foreground hover:bg-muted/10 rounded transition-all"
+                                          >
+                                            <Edit2 size={9} />
+                                          </button>
+                                          <button 
+                                            onClick={(evt) => { 
+                                              evt.stopPropagation(); 
+                                              if (confirm(`Delete exam "${cleanTitle(e.title)}"?`)) {
+                                                onDelete('exams', e.id).then(onRefresh);
+                                              } 
+                                            }}
+                                            className="p-1 text-muted-foreground/0 group-hover:text-destructive/50 hover:group-hover:text-destructive hover:bg-destructive/15 rounded transition-all"
+                                          >
+                                            <Trash2 size={9} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-between items-center text-[7px] font-black uppercase text-muted-foreground/40 tracking-wider">
+                                        <span>Course: {cleanTitle(stripWL(getVal(e, 'Course', 'course')) || '--')}</span>
+                                        <span>Type: {stripWL(getVal(e, 'Type', 'type')) || '--'}</span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               )
                             })}
