@@ -17,7 +17,10 @@ from src.domains.ater.source_service import (
     build_teaching_profile,
     classify_concept_modality,
     extract_source_objectives,
+    _merge_roadmap_duplicate_clusters,
+    _is_teachable_title,
 )
+from src.domains.ater.router import DomainRouter
 from src.domains.ater.service import AterService
 from src.domains.ater.tutor_service import TutorSessionManager
 from src.api.deps import AppSecrets, get_app_secrets
@@ -367,6 +370,145 @@ def test_fallback_note_prefers_title_side_when_source_contrasts_opposing_approac
     assert "ordinalist" in option_a or "ranking bundles" in option_a
     assert "cardinal numbers" not in option_a
     assert "ranking bundles" in content
+
+
+def test_fallback_cardinal_utility_does_not_reuse_preference_template():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("ECON-MICRO", "Quantitative")
+    job = {"job_id": "srcjob_quality", "file_name": "Chapter 3 2024-1.pdf"}
+    node = {
+        "id": "concept_cardinal",
+        "title": "Cardinal Utility Theory",
+        "domain": "ECON-MICRO",
+        "modality": "Quantitative",
+        "source_pages": [12, 13, 14],
+        "source_excerpts": [
+            {
+                "page": 12,
+                "text": "Utility is measurable by arbitrary unit of measurement called utils. Utils help in understanding how much utility is derived from consumption of a product.",
+            },
+            {
+                "page": 13,
+                "text": "The cardinal utility is based on marginal utility analysis.",
+            },
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"].lower()
+
+    assert "satisfaction score" in content
+    assert "marginal utility" in content
+    assert "measurable" in content
+    assert "sorting complete baskets" not in content
+    assert "ranks whole bundles" not in content
+
+
+def test_roadmap_compression_merges_fragments_without_domain_title_table():
+    nodes = [
+        {
+            "id": "concept_1",
+            "title": "Concept Of Utility",
+            "source_pages": [8],
+            "source_excerpts": [{"page": 8, "text": "Utility is the satisfaction from consuming goods and services."}],
+        },
+        {
+            "id": "concept_2",
+            "title": "Utility",
+            "source_pages": [8],
+            "source_excerpts": [{"page": 8, "text": "Utility means satisfaction from consumption."}],
+        },
+        {
+            "id": "concept_3",
+            "title": "Cardinal Utility Theory",
+            "source_pages": [12, 13],
+            "source_excerpts": [{"page": 12, "text": "Cardinal utility measures utility numerically using utils."}],
+        },
+        {
+            "id": "concept_4",
+            "title": "Cardinal Approach",
+            "source_pages": [12],
+            "source_excerpts": [{"page": 12, "text": "The cardinal approach measures utility numerically using utils."}],
+        },
+        {
+            "id": "concept_5",
+            "title": "Indifference Curves",
+            "source_pages": [34],
+            "source_excerpts": [{"page": 34, "text": "An indifference curve contains bundles that give equal satisfaction."}],
+        },
+        {
+            "id": "concept_6",
+            "title": "Indifference Set",
+            "source_pages": [34],
+            "source_excerpts": [{"page": 34, "text": "An indifference set groups bundles that give equal satisfaction."}],
+        },
+        {
+            "id": "concept_7",
+            "title": "Case Of One Commodity(X)",
+            "source_pages": [20],
+            "source_excerpts": [{"page": 20, "text": "Case of one commodity X."}],
+        },
+    ]
+
+    merged = _merge_roadmap_duplicate_clusters(nodes, [])
+    titles = [node["title"] for node in merged]
+
+    assert "Concept Of Utility" in titles
+    assert "Utility" not in titles
+    assert "Cardinal Utility Theory" in titles
+    assert "Cardinal Approach" not in titles
+    assert "Indifference Curves" in titles
+    assert "Indifference Set" not in titles
+    assert "Case Of One Commodity(X)" not in titles
+
+
+def test_programming_pdf_routes_to_cs_and_rejects_code_line_titles():
+    text = """
+    Chapter Three Encapsulation, Inheritance, Abstraction and Polymorphism.
+    public class Plant {
+      public void meth3() { System.out.println("Plant"); }
+    }
+    Abstract classes are incomplete by themselves and subclasses provide complete implementations.
+    Interfaces define behavior contracts that implementing classes must satisfy.
+    """
+
+    assert DomainRouter().route(text, course="OOP With Java") == "CS-SOFTWARE"
+    assert _is_teachable_title("Abstract Classes") is True
+    assert _is_teachable_title("Interfaces") is True
+    assert _is_teachable_title("Public Class Plant {") is False
+    assert _is_teachable_title("Public Void Meth3() {") is False
+    assert _is_teachable_title("System.Out.Println);") is False
+    assert _is_teachable_title("Output From The Program Is Shown Here") is False
+    assert _is_teachable_title("Dollar Sign ($)") is False
+    assert _is_teachable_title("In The") is False
+
+
+def test_cs_fallback_renders_code_anchor_as_code_not_latex():
+    compiler = SourceAtomicNoteCompiler()
+    profile = build_teaching_profile("CS-SOFTWARE", "Procedural")
+    job = {"job_id": "srcjob_java", "file_name": "Chapter three.pdf"}
+    node = {
+        "id": "concept_abstract",
+        "title": "Abstract Classes",
+        "domain": "CS-SOFTWARE",
+        "modality": "Procedural",
+        "source_pages": [48],
+        "source_excerpts": [
+            {
+                "page": 48,
+                "text": "The Shape Abstract Class public abstract class Shape { public abstract double area(); public void move(){ } } Abstract classes are incomplete by themselves and rely on subclasses.",
+            }
+        ],
+        "warnings": [],
+    }
+
+    note = compiler.compile_fallback_note(job, node, profile)
+    content = note["content"]
+
+    assert "```java" in content
+    assert "$$\n" not in content
+    assert note["frontmatter"]["domain"] == "CS-SOFTWARE"
 
 
 def test_fallback_note_rejects_source_prompts_and_prefers_explanatory_facts():

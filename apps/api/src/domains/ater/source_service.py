@@ -471,9 +471,60 @@ def _concept_key(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(title or "").lower()).strip()
 
 
+def _looks_like_code_or_selector_fragment(title: str) -> bool:
+    raw = str(title or "").strip()
+    lowered = raw.lower()
+    key = _concept_key(raw)
+    if not raw:
+        return True
+    if re.match(r"^(//|/\*|\*|#include\b|import\s+|package\s+)", raw):
+        return True
+    if any(ch in raw for ch in "{};"):
+        return True
+    if re.search(r"\b(public|private|protected)\s+(?:static\s+)?(?:final\s+)?(?:class|interface|void|int|double|string|boolean|[A-Z][A-Za-z0-9_]*)\b", raw):
+        return True
+    if re.search(r"\b(class|interface)\s+[A-Z][A-Za-z0-9_]*\b", raw):
+        return True
+    if re.search(r"\b(extends|implements|new|return|void)\b", lowered):
+        return True
+    if re.search(r"\b(system\.out\.println|console\.log|println|printstacktrace)\b", lowered):
+        return True
+    acronym_match = re.search(r"\(([A-Za-z]{2,8}(?:\s+or\s+[A-Za-z]{2,8}){0,2})\)", raw, flags=re.IGNORECASE)
+    if re.search(r"\w+\s*\([^)]*\)", raw) and not acronym_match and not re.search(r"\b(function|method|constructor|selector|notation)\b", lowered):
+        return True
+    if re.search(r"^[.#$>*+~:[\]\w\s-]{1,24}$", raw) and any(ch in raw for ch in ".#$>*+~[]"):
+        return True
+    if key in {
+        "in the",
+        "for example",
+        "syntax",
+        "situations",
+        "comments",
+        "output from the program is shown here",
+        "now consider the following invocation",
+        "version and the second invokes another",
+        "suppose we create the following reference variable",
+    }:
+        return True
+    if key.startswith((
+        "suppose we ",
+        "now consider ",
+        "output from ",
+        "for example",
+        "here ",
+        "assign ",
+        "the first ",
+        "the second ",
+    )):
+        return True
+    return False
+
+
 def _is_teachable_title(title: str) -> bool:
     key = _concept_key(title)
     if not key or key in _CONCEPT_STOP_TITLES:
+        return False
+    if _looks_like_code_or_selector_fragment(str(title)):
         return False
     weak_titles = {
         "given as",
@@ -548,6 +599,8 @@ def _is_teachable_title(title: str) -> bool:
         "income",
         "graphically",
         "intercepts",
+        "displays",
+        "situations",
     }
     if len(words) == 1 and key in weak_single_words:
         return False
@@ -842,12 +895,320 @@ _COMPACT_FALLBACK_DROP_KEYS = {
     "transitivity",
 }
 
+_BROAD_ROADMAP_TITLE_PATTERNS = [
+    r"^theory of ",
+    r"^introduction to ",
+    r"^overview of ",
+    r"^chapter \d+",
+]
+
 
 def _edges_for_nodes(nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [
         {"from": nodes[i]["id"], "to": nodes[i + 1]["id"], "type": "prerequisite"}
         for i in range(len(nodes) - 1)
     ]
+
+
+def _node_evidence_score(node: Dict[str, Any]) -> float:
+    title = str(node.get("title") or "")
+    terms = {term for term in re.findall(r"[A-Za-z]{4,}", title.lower()) if term not in {"theory", "chapter", "approach"}}
+    score = 0.0
+    for excerpt in node.get("source_excerpts", []) or []:
+        text = re.sub(r"\s+", " ", str(excerpt.get("text", ""))).strip()
+        lowered = text.lower()
+        if len(text) >= 80:
+            score += 1.0
+        overlap = {term for term in terms if term in lowered}
+        score += min(4.0, len(overlap) * 1.5)
+        if re.search(r"\b(is|are|means|refers to|shows|represents|measures|ranks|equals|occurs|defined)\b", lowered):
+            score += 1.5
+        if any(token in lowered for token in ["objective", "after successful completion", "chapter three", "chapter four"]):
+            score -= 1.5
+    return score
+
+
+def _is_broad_weak_node(node: Dict[str, Any]) -> bool:
+    title = str(node.get("title") or "").strip().lower()
+    if not title:
+        return True
+    is_broad = any(re.search(pattern, title) for pattern in _BROAD_ROADMAP_TITLE_PATTERNS)
+    if not is_broad:
+        return False
+    return _node_evidence_score(node) < 3.0
+
+
+_ROADMAP_TITLE_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "between", "by", "for", "from", "how",
+    "in", "into", "is", "it", "its", "of", "on", "or", "the", "their", "this", "to",
+    "using", "with", "without",
+}
+
+_ROADMAP_DECORATOR_TOKENS = {
+    "approach", "approaches", "analysis", "basic", "case", "chapter", "concept",
+    "definition", "example", "examples", "framework", "general", "introduction",
+    "method", "methods", "model", "overview", "principle", "set", "sets", "system",
+    "theory", "topic", "type", "types",
+}
+
+
+def _singular_token(token: str) -> str:
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 4 and token.endswith("es"):
+        return token[:-2]
+    if len(token) > 3 and token.endswith("s"):
+        return token[:-1]
+    return token
+
+
+def _roadmap_title_tokens(title: str, *, include_decorators: bool = False) -> set[str]:
+    normalized = re.sub(r"[^a-z0-9\s]", " ", str(title or "").lower())
+    raw_tokens = re.findall(r"[a-z][a-z0-9]{2,}", normalized)
+    tokens = {
+        _singular_token(token)
+        for token in raw_tokens
+        if token not in _ROADMAP_TITLE_STOPWORDS
+    }
+    if include_decorators:
+        return tokens
+    return {token for token in tokens if token not in _ROADMAP_DECORATOR_TOKENS}
+
+
+def _roadmap_context_tokens(node: Dict[str, Any], limit: int = 18) -> set[str]:
+    title_tokens = _roadmap_title_tokens(str(node.get("title") or ""))
+    text = " ".join(str(ex.get("text", "")) for ex in node.get("source_excerpts", []) or [])
+    counts: Dict[str, int] = {}
+    for token in _roadmap_title_tokens(text):
+        if token in _ROADMAP_TITLE_STOPWORDS or len(token) < 3:
+            continue
+        counts[token] = counts.get(token, 0) + 1
+    ranked = sorted(counts, key=lambda token: (-counts[token], token))[:limit]
+    return title_tokens | set(ranked)
+
+
+def _roadmap_token_similarity(left: set[str], right: set[str]) -> float:
+    if not left or not right:
+        return 0.0
+    return len(left & right) / len(left | right)
+
+
+def _roadmap_page_overlap(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    left_pages = {int(p) for p in left.get("source_pages", []) if str(p).isdigit()}
+    right_pages = {int(p) for p in right.get("source_pages", []) if str(p).isdigit()}
+    return bool(left_pages and right_pages and left_pages & right_pages)
+
+
+def _is_roadmap_fragment_title(title: str) -> bool:
+    lowered = re.sub(r"\s+", " ", str(title or "").lower()).strip()
+    core = _roadmap_title_tokens(lowered)
+    all_tokens = _roadmap_title_tokens(lowered, include_decorators=True)
+    if not lowered:
+        return True
+    if re.search(r"\b(concept|principle|law|rule|theory|model|framework|mechanism)\s+of\b", lowered) and core:
+        return False
+    if re.match(r"^(case|example|introduction|overview|chapter)\b", lowered):
+        return True
+    if len(core) <= 1 and bool(all_tokens & _ROADMAP_DECORATOR_TOKENS):
+        return True
+    if len(core) == 1 and re.search(r"\([^)]{1,8}\)", lowered):
+        return True
+    return False
+
+
+def _should_merge_roadmap_nodes(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    left_core = _roadmap_title_tokens(str(left.get("title") or ""))
+    right_core = _roadmap_title_tokens(str(right.get("title") or ""))
+    if not left_core or not right_core:
+        return False
+    if left_core == right_core:
+        return True
+
+    smaller, larger = (left_core, right_core) if len(left_core) <= len(right_core) else (right_core, left_core)
+    has_page_overlap = _roadmap_page_overlap(left, right)
+    context_similarity = _roadmap_token_similarity(_roadmap_context_tokens(left), _roadmap_context_tokens(right))
+
+    if smaller.issubset(larger) and (has_page_overlap or context_similarity >= 0.32):
+        return True
+    if _roadmap_token_similarity(left_core, right_core) >= 0.67:
+        return True
+    if len(smaller) <= 1 and context_similarity >= 0.42:
+        return True
+    if (
+        (_is_roadmap_fragment_title(str(left.get("title") or "")) or _is_roadmap_fragment_title(str(right.get("title") or "")))
+        and has_page_overlap
+        and context_similarity >= 0.26
+    ):
+        return True
+    return False
+
+
+def _roadmap_cluster_key(title: str) -> str:
+    tokens = sorted(_roadmap_title_tokens(title))
+    return " ".join(tokens) if tokens else _concept_key(title)
+
+
+def _canonical_roadmap_title(_cluster_key: str, group: List[Dict[str, Any]], current_title: str) -> str:
+    if not group:
+        return current_title
+    group.sort(key=lambda item: (-_roadmap_title_score(item), len(str(item.get("title", "")))))
+    return str(group[0].get("title") or current_title)
+
+
+def _roadmap_title_score(node: Dict[str, Any]) -> float:
+    title = str(node.get("title") or "")
+    lowered = title.lower()
+    score = _node_evidence_score(node)
+    word_count = len(title.split())
+    core_count = len(_roadmap_title_tokens(title))
+    if 2 <= word_count <= 6:
+        score += 1.0
+    if 2 <= core_count <= 5:
+        score += 1.0
+    if len(_roadmap_title_tokens(title, include_decorators=True) & _ROADMAP_DECORATOR_TOKENS) and core_count >= 2:
+        score += 0.5
+    if re.search(r"\b(concept|principle|law|rule|theory|model|framework|mechanism)\s+of\b", lowered):
+        score += 2.0
+    if core_count <= 1:
+        score -= 1.5
+    if _is_roadmap_fragment_title(title):
+        score -= 3.0
+    if re.search(r"\b(of a|of an|of the)\b", lowered) and word_count > 5:
+        score -= 1.0
+    return score
+
+
+def _merge_roadmap_duplicate_clusters(nodes: List[Dict[str, Any]], pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    indexed = [node for node in nodes if _roadmap_cluster_key(str(node.get("title", "")))]
+    parent = list(range(len(indexed)))
+
+    def find(idx: int) -> int:
+        while parent[idx] != idx:
+            parent[idx] = parent[parent[idx]]
+            idx = parent[idx]
+        return idx
+
+    def union(left: int, right: int) -> None:
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parent[right_root] = left_root
+
+    for left_idx, left in enumerate(indexed):
+        for right_idx in range(left_idx + 1, len(indexed)):
+            if _should_merge_roadmap_nodes(left, indexed[right_idx]):
+                union(left_idx, right_idx)
+
+    clusters: Dict[int, List[Dict[str, Any]]] = {}
+    order: List[int] = []
+    for idx, node in enumerate(indexed):
+        root = find(idx)
+        if root not in clusters:
+            clusters[root] = []
+            order.append(root)
+        clusters[root].append(node)
+
+    merged: List[Dict[str, Any]] = []
+    for root in order:
+        group = clusters[root]
+        if len(group) == 1 and _is_roadmap_fragment_title(str(group[0].get("title") or "")) and _node_evidence_score(group[0]) < 4.0:
+            continue
+        group.sort(key=lambda item: (-_roadmap_title_score(item), len(str(item.get("title", "")))))
+        best = dict(group[0])
+        source_pages = set()
+        source_excerpts: List[Dict[str, Any]] = []
+        objective_ids: List[str] = []
+        warnings: List[str] = []
+        for item in group:
+            source_pages.update(int(p) for p in item.get("source_pages", []) if str(p).isdigit())
+            for excerpt in item.get("source_excerpts", []) or []:
+                if excerpt and not any(existing.get("page") == excerpt.get("page") for existing in source_excerpts):
+                    source_excerpts.append(excerpt)
+            for objective_id in item.get("objective_ids", []) or []:
+                if objective_id not in objective_ids:
+                    objective_ids.append(objective_id)
+            for warning in item.get("warnings", []) or []:
+                if warning not in warnings:
+                    warnings.append(warning)
+        best["source_pages"] = sorted(source_pages)
+        best["source_excerpts"] = sorted(source_excerpts, key=lambda ex: int(ex.get("page", 9999)))[:4]
+        best["objective_ids"] = objective_ids
+        best["warnings"] = warnings
+        best["title"] = _canonical_roadmap_title(_roadmap_cluster_key(best.get("title", "")), group, best.get("title", ""))
+        merged.append(best)
+    return merged
+
+
+def _reconcile_refined_nodes(
+    refined_nodes: List[Dict[str, Any]],
+    deterministic_nodes: List[Dict[str, Any]],
+    pages: List[Dict[str, Any]],
+    domain: str,
+) -> List[Dict[str, Any]]:
+    deterministic_by_key = {_concept_key(node.get("title", "")): node for node in deterministic_nodes}
+    merged: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for node in refined_nodes:
+        key = _concept_key(node.get("title", ""))
+        if not key or key in seen:
+            continue
+        deterministic = deterministic_by_key.get(key)
+        candidate = {**(deterministic or {}), **node}
+        if deterministic:
+            candidate["source_pages"] = sorted({int(p) for p in (deterministic.get("source_pages") or []) + (node.get("source_pages") or []) if str(p).isdigit()})
+            candidate["source_excerpts"] = deterministic.get("source_excerpts") or node.get("source_excerpts") or []
+            candidate["objective_ids"] = deterministic.get("objective_ids") or node.get("objective_ids") or []
+        if _is_broad_weak_node(candidate):
+            continue
+        merged.append(candidate)
+        seen.add(key)
+
+    for node in deterministic_nodes:
+        key = _concept_key(node.get("title", ""))
+        if not key or key in seen:
+            continue
+        if _is_broad_weak_node(node):
+            continue
+        score = _node_evidence_score(node)
+        if score >= 2.0 or node.get("objective_ids"):
+            merged.append(dict(node))
+            seen.add(key)
+
+    if not merged:
+        merged = [dict(node) for node in deterministic_nodes if not _is_broad_weak_node(node)] or deterministic_nodes[:]
+
+    def order_key(node: Dict[str, Any]) -> Tuple[int, int, str]:
+        pages_for_node = [int(p) for p in node.get("source_pages", []) if str(p).isdigit()]
+        first_page = min(pages_for_node) if pages_for_node else 9999
+        objective_priority = 0 if node.get("objective_ids") else 1
+        return (first_page, objective_priority, str(node.get("title", "")).lower())
+
+    merged = _merge_roadmap_duplicate_clusters(merged, pages)
+
+    merged.sort(key=order_key)
+
+    max_nodes = 18 if not _looks_like_slide_deck(pages) else 22
+    if len(merged) > max_nodes:
+        # Keep strongest evidence while preserving pedagogical order.
+        ranked_keys = {
+            _concept_key(node.get("title", ""))
+            for node in sorted(merged, key=lambda item: (-_node_evidence_score(item), order_key(item)))[:max_nodes]
+        }
+        merged = [node for node in merged if _concept_key(node.get("title", "")) in ranked_keys]
+
+    for idx, node in enumerate(merged, start=1):
+        node["id"] = f"concept_{idx}"
+        node["teaching_order"] = idx
+        node["domain"] = node.get("domain") or domain
+        source_pages = sorted({int(p) for p in node.get("source_pages", []) if str(p).isdigit()})
+        node["source_pages"] = source_pages
+        node["source_excerpts"] = _source_excerpts_for_pages(pages, source_pages) or node.get("source_excerpts", [])
+        source_context = " ".join(ex.get("text", "") for ex in node.get("source_excerpts", []))
+        node["modality"] = node.get("modality") or classify_concept_modality(node.get("title", ""), source_context, node["domain"])
+        node.setdefault("objective_ids", [])
+        node.setdefault("warnings", [])
+    return merged
 
 
 def _compact_deterministic_nodes(nodes: List[Dict[str, Any]], max_nodes: int = 28) -> List[Dict[str, Any]]:
@@ -998,7 +1359,16 @@ def _refine_concept_graph(
     for idx, node in enumerate(refined_nodes, start=1):
         node["id"] = f"concept_{idx}"
         node["teaching_order"] = idx
-    return refined_nodes, _edges_for_nodes(refined_nodes), []
+    reconciled_nodes = _reconcile_refined_nodes(refined_nodes, nodes, pages, domain)
+    warnings: List[Dict[str, Any]] = []
+    if len(reconciled_nodes) > len(refined_nodes):
+        warnings.append({
+            "concept": topic,
+            "dimension": "roadmap",
+            "severity": "low",
+            "description": "Deterministic source-backed concepts were restored after AI roadmap refinement.",
+        })
+    return reconciled_nodes, _edges_for_nodes(reconciled_nodes), warnings
 
 
 class SourceAtomicNoteCompiler:
@@ -1483,10 +1853,11 @@ class SourceAtomicNoteCompiler:
         fact = re.sub(r"(?<=:)\s*\d+\.\s*", " ", fact)
         fact = re.sub(r"\s+\d+\.\s*", ". ", fact)
         fact = re.sub(r"\s+", " ", fact).strip(" .")
+        title_pattern = re.escape(str(title or "").strip())
+        if title_pattern:
+            fact = re.sub(rf"^{title_pattern}\s*[:.\-–]?\s*", "", fact, flags=re.IGNORECASE).strip(" .")
         if len(fact) > 180:
             fact = fact[:177].rsplit(" ", 1)[0] + "..."
-        if not fact.lower().startswith(title.lower()):
-            return fact
         return fact
 
     def _build_fallback_quiz(self, title: str, facts: List[Dict[str, Any]], source_pages: List[int]) -> List[Dict[str, Any]]:
@@ -1607,15 +1978,54 @@ class SourceAtomicNoteCompiler:
             return "Utility tracks satisfaction or usefulness to the consumer, not the market price alone."
         return f"The answer must preserve this source-grounded relationship: {primary_text}"
 
+    def _econ_concept_kind(self, title: str, facts: List[str]) -> str:
+        lowered_title = str(title or "").lower()
+        lowered_all = f"{lowered_title} {' '.join(facts)}".lower()
+        if "budget" in lowered_title or "budget line" in lowered_title:
+            return "budget"
+        if "equilibrium" in lowered_title or "optimal choice" in lowered_title:
+            return "equilibrium"
+        if "indifference" in lowered_title:
+            return "indifference"
+        if "marginal rate of substitution" in lowered_title or lowered_title.endswith("mrs"):
+            return "mrs"
+        if "diminishing marginal utility" in lowered_title or "law of diminishing" in lowered_title:
+            return "ldmu"
+        if "total and marginal" in lowered_title or lowered_title in {"total utility", "marginal utility"}:
+            return "total_marginal_utility"
+        if "cardinal" in lowered_title and "ordinal" in lowered_title:
+            return "cardinal_vs_ordinal"
+        if "cardinal" in lowered_title:
+            return "cardinal_utility"
+        if "ordinal" in lowered_title:
+            return "ordinal_utility"
+        if "utility" in lowered_title:
+            return "utility"
+        if "axiom" in lowered_title or "assumption" in lowered_title and "preference" in lowered_title:
+            return "preference_axioms"
+        if "preference" in lowered_title:
+            return "preferences"
+        if any(token in lowered_all for token in ["budget", "income", "price", "affordable"]):
+            return "budget"
+        if any(token in lowered_all for token in ["utility", "satisfaction", "utils", "marginal"]):
+            return "utility"
+        return "general"
+
     def _concept_task(self, title: str, facts: List[str]) -> str:
-        haystack = f"{title} {' '.join(facts)}".lower()
-        if any(token in haystack for token in ["budget", "income", "price", "affordable", "unaffordable"]):
+        kind = self._econ_concept_kind(title, facts)
+        if kind == "budget":
             return "separating affordable choices from choices ruled out by income and prices"
-        if any(token in haystack for token in ["equilibrium", "optimal", "maximize", "maximum"]):
+        if kind == "equilibrium":
             return "identifying the condition where the consumer has no better affordable choice"
-        if any(token in haystack for token in ["preference", "prefer", "rank", "ordinal", "bundle"]):
+        if kind in {"preferences", "preference_axioms", "ordinal_utility", "indifference"}:
             return "tracking how the consumer compares and ranks bundles before making a choice"
-        if any(token in haystack for token in ["utility", "satisfaction", "marginal", "total"]):
+        if kind == "mrs":
+            return "measuring how much of one good the consumer gives up to gain more of another while staying equally satisfied"
+        if kind == "ldmu":
+            return "showing that each additional unit can add less extra satisfaction than the previous unit"
+        if kind == "total_marginal_utility":
+            return "separating accumulated satisfaction from the extra satisfaction added by one more unit"
+        if kind in {"utility", "cardinal_utility", "cardinal_vs_ordinal"}:
             return "connecting satisfaction from consumption to the rule or comparison used in the model"
         return "preserving the source's exact relationship between the concept, its conditions, and its consequence"
 
@@ -1647,7 +2057,8 @@ class SourceAtomicNoteCompiler:
 
     def _build_fallback_content(self, title: str, facts: List[Dict[str, Any]], quiz: List[Dict[str, Any]], node: Dict[str, Any], profile: Dict[str, Any]) -> str:
         fact_texts = [self._clean_fact(fact["text"], title) for fact in facts]
-        first = fact_texts[0] if fact_texts else f"The source introduces {title} as a required concept for this chapter."
+        fact_texts = [fact for fact in fact_texts if fact and not fact.lower().startswith("the source introduces")]
+        first = fact_texts[0] if fact_texts else self._thin_source_anchor(title, node)
         second = fact_texts[1] if len(fact_texts) > 1 else first
         third = fact_texts[2] if len(fact_texts) > 2 else second
         concept_task = self._concept_task(title, fact_texts)
@@ -1670,14 +2081,43 @@ class SourceAtomicNoteCompiler:
             f"{quiz_block}"
         )
 
+    def _thin_source_anchor(self, title: str, node: Dict[str, Any]) -> str:
+        excerpts = " ".join(str(ex.get("text", "")) for ex in node.get("source_excerpts", []) or [])
+        cleaned = self._normalize_source_excerpt(excerpts)
+        sentences = []
+        for raw in re.split(r"(?<=[.!?])\s+|[•●\uf0a7\uf0b7\uf0a8]+", cleaned):
+            fact = self._clean_fact(raw, title)
+            if fact and not self._reject_source_fact(fact):
+                sentences.append(fact)
+        if sentences:
+            return sentences[0]
+        return f"{title} is the chapter concept being isolated from the available source pages; use the surrounding roadmap concepts to give it precise meaning."
+
     def _mental_model(self, title: str, node: Dict[str, Any], facts: List[str]) -> str:
         domain = str(node.get("domain") or "").upper()
         lowered = f"{title} {' '.join(facts)}".lower()
         if domain.startswith("ECON") or any(t in lowered for t in ["consumer", "utility", "budget", "preference"]):
-            if "preference" in lowered:
+            kind = self._econ_concept_kind(title, facts)
+            if kind in {"preferences", "preference_axioms"}:
                 return f"Imagine a person sorting complete baskets of goods from most wanted to least wanted before checking the price tags. {title} is that sorting rule. It does not ask what the person can afford yet; it asks how the person ranks whole bundles when comparing them."
-            if "budget" in lowered:
+            if kind == "budget":
                 return f"Imagine drawing a fence around every bundle a person can actually buy with their income. {title} is that affordability fence. Preferences say what the consumer wants, but this concept says which wanted bundles are possible."
+            if kind == "cardinal_utility":
+                return f"Imagine putting a rough satisfaction score on each bite, glass, or bundle. {title} treats satisfaction as something you can measure in units, so the learner can compare how much utility is gained and how much extra utility the next unit adds."
+            if kind == "ordinal_utility":
+                return f"Imagine a consumer making a ranked list without needing exact happiness numbers. {title} says the order matters more than the size of the score: first choice, second choice, tied choices, and worse choices."
+            if kind == "cardinal_vs_ordinal":
+                return f"Imagine two ways to describe taste. One gives satisfaction scores; the other only ranks options. {title} is the fork between measuring utility with numbers and comparing utility by order of preference."
+            if kind == "ldmu":
+                return f"Imagine eating slices of pizza when you are hungry. The first slice helps a lot, the second still helps, and later slices may add less. {title} is the pattern where the extra satisfaction from each added unit tends to fall."
+            if kind == "total_marginal_utility":
+                return f"Imagine keeping two counters while consuming a good. One counter tracks total satisfaction so far; the other tracks only what the newest unit added. {title} is the discipline of not mixing those counters."
+            if kind == "indifference":
+                return f"Imagine drawing a line through bundles the consumer would accept equally. {title} groups different combinations that feel just as good to the consumer, even though the mix of goods changes."
+            if kind == "mrs":
+                return f"Imagine trading some soda for more pizza while trying to stay just as happy. {title} measures the trade the consumer is willing to make between two goods without changing total satisfaction."
+            if kind == "equilibrium":
+                return f"Imagine the consumer searching inside the affordability fence for the best reachable basket. {title} is the stopping point where the preferred affordable bundle has been found."
             return f"Imagine the consumer as a decision-maker comparing options, satisfaction, and limits. {title} is one piece of that decision machine. The goal is to know what the concept measures, what it compares, and what mistake it prevents."
         if domain.startswith("CS"):
             return f"Imagine a machine that receives inputs, transforms them through rules, and produces an output. {title} is best learned by naming the input, the transformation, the output, and the failure case."
@@ -1690,6 +2130,17 @@ class SourceAtomicNoteCompiler:
     def _intuition_section(self, title: str, first: str, node: Dict[str, Any]) -> str:
         domain = str(node.get("domain") or "").upper()
         if domain.startswith("ECON"):
+            kind = self._econ_concept_kind(title, [first])
+            if kind == "cardinal_utility":
+                return f"Start with satisfaction as a measurable idea. The source anchor is: {first}. In the cardinal approach, utility is treated as countable enough to support marginal utility analysis, so the learner should ask how much satisfaction is gained and how that amount changes."
+            if kind == "ordinal_utility":
+                return f"Start with ranking, not measuring. The source anchor is: {first}. Ordinal utility cares whether one bundle is preferred to another, not how many exact units of happiness separate them."
+            if kind == "ldmu":
+                return f"Start with the next unit, not the whole pile. The source anchor is: {first}. The law is about the added satisfaction from one more unit and whether that added satisfaction declines as consumption increases."
+            if kind == "budget":
+                return f"Start with affordability. The source anchor is: {first}. A budget concept does not say what the consumer likes most; it says which bundles prices and income allow."
+            if kind == "equilibrium":
+                return f"Start with the best reachable choice. The source anchor is: {first}. Equilibrium joins preference and constraint: the consumer wants the best bundle, but only among affordable options."
             return f"Start with the economic object being studied, then ask what relationship the concept adds. Here, the usable source fact is: {first}. Read that as a rule about decisions, not as decoration. If the concept is about preferences, it ranks desirability. If it is about budgets, it limits affordability. If it is about utility, it describes satisfaction."
         if domain.startswith("CS"):
             return f"Start by separating the name of the system from the behavior it performs. The usable source fact is: {first}. A good explanation should say what data enters, what operation happens, and what output or state change proves the operation worked."
@@ -1701,6 +2152,13 @@ class SourceAtomicNoteCompiler:
         domain = str(node.get("domain") or "").upper()
         source_clues = self._source_clues(facts)
         if domain.startswith("ECON"):
+            kind = self._econ_concept_kind(title, facts)
+            if kind in {"cardinal_utility", "utility", "ldmu", "total_marginal_utility"}:
+                return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Use it by separating total satisfaction, added satisfaction, and price. The common failure is to treat utility as the same thing as money, even though utility is about satisfaction from consumption."
+            if kind in {"budget", "equilibrium"}:
+                return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Use it by separating desire from feasibility: preferences rank bundles, the budget filters bundles, and equilibrium selects the best affordable bundle."
+            if kind in {"ordinal_utility", "indifference", "mrs", "cardinal_vs_ordinal"}:
+                return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Use it by reading rankings, equal-satisfaction bundles, or tradeoffs as comparisons, not as exact happiness measurements unless the concept explicitly says cardinal."
             return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. To use the concept correctly, first name the economic objects, then name the relationship between them, then keep that relationship separate from later constraints such as income, prices, or equilibrium conditions."
         if domain.startswith("CS"):
             return f"The mechanism is {concept_task}. {second}. The clean source clues are: {source_clues}. Trace it like execution: input, rule, intermediate state, output, then edge case. If you cannot identify those five parts, you have only memorized the label."
@@ -1716,24 +2174,50 @@ class SourceAtomicNoteCompiler:
 
     def _formal_section(self, title: str, formal: str, node: Dict[str, Any]) -> str:
         lowered = title.lower()
+        domain = str(node.get("domain") or "").upper()
+        kind = self._econ_concept_kind(title, [formal])
+        if domain.startswith("CS"):
+            return (
+                f"The formal anchor is: {formal}. In a programming concept, preserve the exact syntax only when it explains the rule. "
+                "Then translate the syntax into input, operation, output, and failure case so the learner can trace it without memorizing the slide."
+            )
         if "preference" in lowered:
             return (
                 f"The formal anchor is: {formal}. In consumer theory, write bundle comparisons as compact sentences. "
                 "`X > Y` or `X ≻ Y` means X is strictly preferred to Y. `X ~ Y` means the consumer is indifferent between them. "
                 "`X >= Y` or `X ⪰ Y` means X is at least as good as Y. The symbols are not arithmetic; they encode a ranking of complete bundles."
             )
-        if "budget" in lowered:
+        if kind == "budget":
             return (
                 f"The formal anchor is: {formal}. A budget relationship usually connects income, prices, and quantities. "
                 "The key test is whether a bundle is affordable, not whether it is desirable."
             )
-        if "marginal" in lowered:
+        if kind in {"ldmu", "total_marginal_utility", "mrs"}:
             return f"The formal anchor is: {formal}. Marginal means extra change from one more unit, so practice should distinguish total accumulated amount from the additional amount."
+        if kind == "cardinal_utility":
+            return f"The formal anchor is: {formal}. Cardinal analysis treats utility as measurable enough to compare amounts, then uses marginal utility to reason about the added satisfaction from extra consumption."
+        if kind == "ordinal_utility":
+            return f"The formal anchor is: {formal}. Ordinal analysis preserves order of preference, so the formal move is ranking bundles rather than assigning exact utility units."
+        if kind == "equilibrium":
+            return f"The formal anchor is: {formal}. Equilibrium should be read as a condition: the chosen bundle must be affordable and no other affordable bundle should be preferred."
         return f"The formal anchor is: {formal}. If this is an equation, condition, ranking, schema, rule, or named relationship, preserve its structure exactly before paraphrasing it."
 
     def _fallback_artifact(self, title: str, facts: List[str], formal: str) -> str:
         lowered = f"{title} {' '.join(facts)} {formal}".lower()
-        if "preference" in lowered:
+        kind = self._econ_concept_kind(title, facts + [formal])
+        if re.search(r"\b(public|private|protected|class|interface|extends|implements|void|new|return|System\.out\.println)\b", formal):
+            return f"```java\n{formal}\n```"
+        if re.search(r"\b(function|const|let|var|document\.|querySelector|addEventListener)\b|[.#][A-Za-z][\\w-]*\\s*\\{", formal):
+            return f"```javascript\n{formal}\n```"
+        if any(token in lowered for token in ["css", "style sheet", "selector", "html", "attribute selector"]):
+            return (
+                "| Web Layer | What It Controls | Mistake To Avoid |\n"
+                "|---|---|---|\n"
+                "| HTML | Document structure and meaning | Do not use structure tags only for visual styling. |\n"
+                "| CSS | Presentation, layout, and cascade | Do not confuse source order, specificity, and inheritance. |\n"
+                "| Browser/user styles | Defaults before author CSS overrides them | Do not assume every visible style came from your stylesheet. |"
+            )
+        if kind in {"preferences", "preference_axioms", "ordinal_utility", "indifference"}:
             return (
                 "| Symbol | Read It As | What It Tests |\n"
                 "|---|---|---|\n"
@@ -1741,7 +2225,7 @@ class SourceAtomicNoteCompiler:
                 "| `X ~ Y` | X and Y are equally desirable | The consumer is indifferent. |\n"
                 "| `X ⪰ Y` | X is at least as good as Y | Weak preference includes strict preference or indifference. |"
             )
-        if "budget" in lowered:
+        if kind == "budget":
             return (
                 "```mermaid\n"
                 "flowchart LR\n"
@@ -1749,6 +2233,32 @@ class SourceAtomicNoteCompiler:
                 "  Prices[Prices] --> Constraint\n"
                 "  Constraint --> Affordable[Affordable Bundles]\n"
                 "  Constraint --> Unaffordable[Unaffordable Bundles]\n"
+                "```"
+            )
+        if kind in {"cardinal_utility", "ldmu", "total_marginal_utility"}:
+            return (
+                "| Quantity | Plain Meaning | Mistake To Avoid |\n"
+                "|---|---|---|\n"
+                "| Total utility | Satisfaction accumulated from all consumed units | Do not call it the extra gain from one more unit. |\n"
+                "| Marginal utility | Extra satisfaction from the next unit | Do not confuse it with total satisfaction. |\n"
+                "| Diminishing marginal utility | Later units add less extra satisfaction | Do not claim total utility must always fall. |"
+            )
+        if kind == "cardinal_vs_ordinal":
+            return (
+                "| Approach | What It Preserves | Typical Test |\n"
+                "|---|---|---|\n"
+                "| Cardinal utility | Measurable satisfaction units | Compare how much utility changes. |\n"
+                "| Ordinal utility | Ranking of bundles | Decide which bundle is preferred or indifferent. |\n"
+                "| Common trap | Mixing scores with rankings | Do not demand exact numbers from an ordinal model. |"
+            )
+        if kind == "equilibrium":
+            return (
+                "```mermaid\n"
+                "flowchart TD\n"
+                "  Preferences[Preferences rank bundles] --> Candidate[Best-looking bundles]\n"
+                "  Budget[Budget constraint filters affordability] --> Candidate\n"
+                "  Candidate --> Equilibrium[Best affordable bundle]\n"
+                "  Equilibrium --> Check[No preferred affordable alternative]\n"
                 "```"
             )
         if re.search(r"[A-Za-z]\w*\s*[=+*/-]\s*[A-Za-z0-9]", formal):

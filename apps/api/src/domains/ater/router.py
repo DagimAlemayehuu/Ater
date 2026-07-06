@@ -30,6 +30,32 @@ class DomainRouter:
                     if len(word) > 3 and word not in self.keyword_map:
                         self.keyword_map[word] = mode
 
+    def _programming_signal_score(self, text: str, course: str = "") -> float:
+        sample = f"{course}\n{text or ''}"[:20000]
+        lowered = sample.lower()
+        score = 0.0
+        phrase_signals = [
+            "object oriented", "object-oriented", "inheritance", "encapsulation",
+            "polymorphism", "abstract class", "interface", "constructor",
+            "extends", "implements", "public class", "private class",
+            "void main", "system.out.println", "method invocation",
+        ]
+        for signal in phrase_signals:
+            if signal in lowered:
+                score += 3.0
+        code_patterns = [
+            r"\b(public|private|protected)\s+(?:static\s+)?(?:final\s+)?(?:class|interface|void|int|double|string|boolean)\b",
+            r"\bclass\s+[A-Z][A-Za-z0-9_]*\s*(?:extends|implements|\{)",
+            r"\b(?:if|for|while|switch)\s*\(",
+            r"\b[A-Za-z_][A-Za-z0-9_]*\s*\([^)]*\)\s*\{",
+            r"\bSystem\.out\.println\s*\(",
+            r"//[^\n]{3,}",
+            r";\s*(?:\n|$)",
+        ]
+        for pattern in code_patterns:
+            score += min(8.0, len(re.findall(pattern, sample)) * 1.5)
+        return score
+
     def route(self, text: str, parent_mode: str = None, course: str = "") -> str:
         """
         Analyzes text and returns the most likely DOMAIN_MATRIX key.
@@ -101,6 +127,9 @@ class DomainRouter:
             for keyword, mode in course_map:
                 if keyword in c_lower:
                     return mode
+
+        if self._programming_signal_score(text, course) >= 8.0:
+            return "CS-SOFTWARE"
 
         # 2. Keyword Frequency Analysis
         text_lower = text.lower()
