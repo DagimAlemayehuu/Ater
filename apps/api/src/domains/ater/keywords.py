@@ -1,5 +1,7 @@
 # src/domains/ater/keywords.py
 
+import re
+
 """
 The definitive keyword map for the Ater Domain Router.
 Covers the breadth of human knowledge across Natural Sciences, Formal Sciences, 
@@ -141,11 +143,15 @@ DOMAIN_KEYWORDS = {
 }
 
 from typing import List, Dict, Any
+import math
+import re as _re
+
 
 def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 1000) -> List[str]:
     """
     Slices a continuous text string into overlapping chunks.
     Cleans leading/trailing whitespace and garbage characters.
+    chunk_size and overlap are in characters.
     """
     if not text:
         return []
@@ -153,33 +159,121 @@ def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 1000) -> List[s
     start = 0
     while start < len(text):
         end = min(start + chunk_size, len(text))
-        chunk = text[start:end]
-        # Clean trailing and leading newlines/junk character boundaries from each slice
-        chunk = chunk.strip()
+        chunk = text[start:end].strip()
         if chunk:
             chunks.append(chunk)
-        # Advance by chunk_size - overlap
         if end == len(text):
             break
         start += (chunk_size - overlap)
     return chunks
 
+
+def compute_note_budget(full_text: str) -> int:
+    """
+    Compute the ideal number of atomic notes for a PDF based on content length.
+    Rule: ~1 note per 400 words of actual content (words, not chars).
+    Floor: 5 notes. No ceiling — coverage is always the goal.
+    """
+    word_count = len(full_text.split())
+    budget = max(5, word_count // 400)
+    print(f"[note_budget] PDF word count: {word_count} → target note budget: {budget}")
+    return budget
+
+
+def _build_vocab(notes: List[Dict[str, Any]]) -> Dict[str, int]:
+    """Build a shared vocabulary index from note titles and descriptions."""
+    vocab: Dict[str, int] = {}
+    for note in notes:
+        text = f"{note.get('title', '')} {note.get('description', '')}"
+        for w in _re.findall(r'[a-z]{3,}', text.lower()):
+            if w not in vocab:
+                vocab[w] = len(vocab)
+    return vocab
+
+
+def _tfidf_vector(text: str, vocab: Dict[str, int]) -> Dict[int, float]:
+    """Build a simple TF vector over the shared vocab."""
+    words = _re.findall(r'[a-z]{3,}', text.lower())
+    tf: Dict[int, float] = {}
+    for w in words:
+        if w in vocab:
+            idx = vocab[w]
+            tf[idx] = tf.get(idx, 0) + 1
+    total = sum(tf.values()) or 1
+    return {k: v / total for k, v in tf.items()}
+
+
+def _cosine(v1: Dict[int, float], v2: Dict[int, float]) -> float:
+    """Cosine similarity between two sparse TF vectors."""
+    if not v1 or not v2:
+        return 0.0
+    dot = sum(v1.get(k, 0.0) * v2.get(k, 0.0) for k in v2)
+    mag1 = math.sqrt(sum(x * x for x in v1.values()))
+    mag2 = math.sqrt(sum(x * x for x in v2.values()))
+    if mag1 == 0 or mag2 == 0:
+        return 0.0
+    return dot / (mag1 * mag2)
+
+
+def _semantic_dedup(notes: List[Dict[str, Any]], threshold: float = 0.82) -> List[Dict[str, Any]]:
+    """
+    Remove semantic duplicates using lightweight TF cosine similarity.
+    For each pair of notes with similarity > threshold, keep the one with
+    more source_pages (richer evidence); discard the weaker duplicate.
+    O(n^2) — acceptable for typical note counts (< 500).
+    """
+    if len(notes) <= 1:
+        return notes
+
+    vocab = _build_vocab(notes)
+    vectors = []
+    for note in notes:
+        text = f"{note.get('title', '')} {note.get('description', '')}"
+        vectors.append(_tfidf_vector(text, vocab))
+
+    removed: set = set()
+    n = len(notes)
+    for i in range(n):
+        if i in removed:
+            continue
+        for j in range(i + 1, n):
+            if j in removed:
+                continue
+            sim = _cosine(vectors[i], vectors[j])
+            if sim >= threshold:
+                # Keep the note with more source evidence
+                pages_i = len(notes[i].get('source_pages', []))
+                pages_j = len(notes[j].get('source_pages', []))
+                loser = j if pages_i >= pages_j else i
+                winner = i if loser == j else j
+                removed.add(loser)
+                print(
+                    f"[semantic_dedup] Merged '{notes[loser]['title']}' into "
+                    f"'{notes[winner]['title']}' (sim={sim:.2f})"
+                )
+
+    return [note for idx, note in enumerate(notes) if idx not in removed]
+
+
 def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Merges duplicate concept dicts using Title_Case_With_Underscores.
-    - Concatenates unique source_contexts.
-    - Unions and sorts source_pages.
-    - Deduplicates prerequisites.
+    Pipeline:
+      1. Lexical merge by sanitized title (merge contexts, pages, prereqs)
+      2. Garbage-title filter (course codes, slide numbers, sentence frags)
+      3. Semantic dedup — catches same-concept different-title duplicates
+         using lightweight TF cosine similarity (threshold=0.82)
+    Coverage is the goal: no hard note count cap is applied.
     """
-    merged = {}
+    merged: Dict[str, Any] = {}
     from .validator import AterValidator
-    
+
     for note in atomic_notes:
         raw_title = note.get("title", "")
         sanitized_title = AterValidator.sanitize_title(raw_title)
         if not sanitized_title:
             continue
-            
+
         if sanitized_title not in merged:
             merged[sanitized_title] = {
                 "title": sanitized_title,
@@ -192,16 +286,16 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             }
         else:
             existing = merged[sanitized_title]
-            
+
             # Combine source contexts cleanly with double newlines
             existing_contexts = [c.strip() for c in existing["source_context"].split("\n\n") if c.strip()]
             new_context = (note.get("source_context") or "").strip()
             if new_context and new_context not in existing_contexts:
                 existing_contexts.append(new_context)
             existing["source_context"] = "\n\n".join(existing_contexts)
-            
+
             # Union pages while preserving priority order
-            seen_pages = set()
+            seen_pages: set = set()
             merged_pages = []
             for p in existing.get("source_pages", []):
                 if str(p).isdigit():
@@ -216,20 +310,19 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                         seen_pages.add(p_int)
                         merged_pages.append(p_int)
             existing["source_pages"] = merged_pages
-            
+
             # Deduplicate prerequisites
             existing_prereqs = set(existing["prerequisites"])
-            new_prereqs = note.get("prerequisites") or []
-            for pr in new_prereqs:
+            for pr in (note.get("prerequisites") or []):
                 existing_prereqs.add(pr)
             existing["prerequisites"] = list(existing_prereqs)
-            
-            # Save the longer description
+
+            # Keep the longer description
             desc1 = existing["description"] or ""
             desc2 = note.get("description") or ""
             if len(desc2) > len(desc1):
                 existing["description"] = desc2
-                
+
             # Mode & Modality fallbacks
             if not existing["mode"] and note.get("mode"):
                 existing["mode"] = note.get("mode")
@@ -238,88 +331,51 @@ def reduce_concepts(atomic_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     result = list(merged.values())
 
-    # ── BUDGET CAP (Dynamic Sweet Spot) ──────────────────────
-    # Dynamically scale MAX_NOTES based on the total unique pages scanned in the document.
-    all_pages = set()
-    for note in result:
-        for p in note.get("source_pages", []):
-            if str(p).isdigit():
-                all_pages.add(int(p))
-                
-    # Sovereign Sweet Spot: 4 to 15 notes per unit
-    total_pages = len(all_pages)
-    if total_pages > 0:
-        dynamic_cap = max(4, min(15, int(total_pages * 0.3) + 4))
-    else:
-        dynamic_cap = 8
-    
-    MAX_NOTES = dynamic_cap
-    if len(result) > MAX_NOTES:
-        # Build prerequisite centrality map: how many notes list each concept as a dependency
-        prereq_counts: Dict[str, int] = {}
-        for note in result:
-            for p in (note.get("prerequisites") or []):
-                prereq_counts[p] = prereq_counts.get(p, 0) + 1
+    # ── METADATA / GARBAGE TITLE FILTER (Python-level, LLM-agnostic) ─────────
+    _METADATA_PATTERN = _re.compile(
+        r"^(?:"
+        r"(?:[A-Z][a-z]?[_\s:]*\d+(?:[_:\s]|$))"
+        r"|(?:Lecture|Week|Slide|Chapter|Unit|Module"
+        r"|Section|Lab|Quiz|Test|Exam|Hw|Ps|Assignment)[_\s]*\d+"
+        r"|(?:Part|Topic)[_\s]*\d+"
+        r"|Essentially[_\s]"
+        r"|\d+[_\s]"
+        r"|(?:If|As|When|For|In|Using|Creating|Given"
+        r"|Since|Although|Because|While|After|Before)"
+        r"[_\s](?:[A-Z][a-z_]+[_\s]){2}"
+        r")",
+        _re.IGNORECASE,
+    )
 
-        def _concept_score(note: Dict[str, Any]) -> float:
-            page_coverage = len(set(note.get("source_pages") or []))          # breadth
-            context_depth = len(note.get("source_context") or "") / 200       # substance
-            centrality    = prereq_counts.get(note["title"], 0)               # architectural importance
-            return (page_coverage * 3.0) + context_depth + (centrality * 2.0)
+    _GENERIC_TITLES = {
+        "Contents", "Introduction", "Summary", "Overview", "Appendix",
+        "Outline", "Preface", "Index", "Foreword", "Conclusion",
+        "References", "Bibliography", "Objectives", "Topics",
+    }
 
-        result.sort(key=_concept_score, reverse=True)
-        kept_notes = result[:MAX_NOTES]
-        dropped_notes = result[MAX_NOTES:]
-        
-        # Merge dropped concepts into kept concepts to preserve coverage!
-        {n["title"] for n in kept_notes}
-        for d_note in dropped_notes:
-            d_title = d_note["title"]
-            d_desc = d_note.get("description", "").strip()
-            if not d_desc:
-                continue
-            
-            # Find the best matching kept note to absorb this term.
-            # Strategy: 1. A kept note that lists this dropped note as a prerequisite,
-            #           2. A kept note that shares the same source pages.
-            absorber = None
-            
-            # Check 1: Prerequisite relationship
-            for k_note in kept_notes:
-                k_prereqs = [p.replace("[[", "").replace("]]", "") for p in (k_note.get("prerequisites") or [])]
-                if d_title in k_prereqs:
-                    absorber = k_note
-                    break
-            
-            # Check 2: Shared page overlap
-            if not absorber:
-                d_pages = set(d_note.get("source_pages") or [])
-                best_overlap = 0
-                for k_note in kept_notes:
-                    k_pages = set(k_note.get("source_pages") or [])
-                    overlap = len(d_pages.intersection(k_pages))
-                    if overlap > best_overlap:
-                        best_overlap = overlap
-                        absorber = k_note
-            
-            # Fallback Check 3: Absorb in the first kept note
-            if not absorber and kept_notes:
-                absorber = kept_notes[0]
-                
-            if absorber:
-                # Inject subconcept definition directly into source context of absorber
-                prefix = absorber.get("source_context", "").strip()
-                subconcept_text = f"\n\n[SUBCONCEPT DEFINITION] {d_title}: {d_desc}"
-                absorber["source_context"] = prefix + subconcept_text
-                
-                # Union the pages
-                seen = set(absorber.get("source_pages") or [])
-                for p in d_note.get("source_pages", []):
-                    if p not in seen:
-                        absorber.setdefault("source_pages", []).append(p)
-                        
-        result = kept_notes
-        print(f"[reduce_concepts] Budget cap: kept top {MAX_NOTES}, consolidated {len(dropped_notes)} secondary concepts.")
+    def _is_garbage_title(title: str) -> bool:
+        if _METADATA_PATTERN.match(title):
+            return True
+        if title in _GENERIC_TITLES:
+            return True
+        if "," in title or "." in title:
+            return True
+        word_count = len([w for w in title.split("_") if w])
+        if word_count >= 7:
+            return True
+        return False
 
+    before_filter = len(result)
+    result = [n for n in result if not _is_garbage_title(n["title"])]
+    if len(result) < before_filter:
+        print(f"[reduce_concepts] Garbage filter removed {before_filter - len(result)} artefact titles.")
+
+    # ── SEMANTIC DEDUP (catches same concept with different title) ─────────────
+    before_semantic = len(result)
+    result = _semantic_dedup(result)
+    if len(result) < before_semantic:
+        print(f"[reduce_concepts] Semantic dedup removed {before_semantic - len(result)} near-duplicate concepts.")
+
+    print(f"[reduce_concepts] Final concept count: {len(result)} (coverage-first — no cap applied).")
     return result
 

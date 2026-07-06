@@ -186,14 +186,6 @@ export function AppSidebar() {
 
 
           <NavLink
-            to="/notebooks"
-            className={({ isActive }) => wideLinkClass(isActive)}
-          >
-            <Library size={15} className="shrink-0 text-muted-foreground" />
-            <span>NotebookLM</span>
-          </NavLink>
-
-          <NavLink
             to="/practice"
             className={({ isActive }) => wideLinkClass(isActive)}
           >

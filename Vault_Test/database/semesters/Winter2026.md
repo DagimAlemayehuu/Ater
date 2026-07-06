@@ -1,6 +1,5 @@
 ---
-Season: ''
 Status: "[[Active]]"
-Year: "[[Year_Ii]]"
+Year: "[[Year II]]"
 ---
 

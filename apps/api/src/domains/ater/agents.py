@@ -651,28 +651,37 @@ class ArchitectAgent:
 
     async def generate_partial_plan(self, document_text: str, forced_mode: str = None) -> PartialPlan:
         modes_str = ", ".join(DOMAIN_MATRIX.keys())
-        
+
         mode_instruction = f"mode: EXACTLY one code from this list: {modes_str}"
         forced_mode = normalize_mode(forced_mode, "") if forced_mode else ""
         if forced_mode and forced_mode in VALID_MODES:
             mode_instruction = f"mode: You MUST use `{forced_mode}` for all notes in this plan. This is the Law of Cognitive Anchoring. DO NOT use generic analogies (like coffee shops); anchor everything to the {forced_mode} persona."
 
         system = (
-            "You are the Ater Curriculum Architect. Your job is SELECTIVE EXTRACTION, not cataloguing.\n"
-            "Extract ONLY the 1-3 most foundational concepts from this text chunk.\n"
-            "SELECTION RULE: A concept earns a note ONLY if a student CANNOT understand the chapter without it. "
-            "Skip: supporting terms, named persons, historical events, examples, and peripheral mentions.\n"
-            "Ask yourself: 'Is this a PILLAR the whole chapter rests on, or just a detail?' Only pillars get notes.\n"
+            "You are the Ater Curriculum Architect. Your ONLY job is GRANULAR, COMPLETE EXTRACTION.\n"
+            "For EVERY distinct teachable concept in this text, create ONE dedicated atomic note.\n\n"
+            "GRANULARITY LAW (NON-NEGOTIABLE):\n"
+            "- If a topic has sub-types, EACH sub-type gets its OWN note.\n"
+            "  Example: 'CSS Selectors' is NOT one note. It must be broken into:\n"
+            "  'Element_Selectors', 'Class_Selectors', 'Id_Selectors', 'Attribute_Selectors',\n"
+            "  'Pseudo_Class_Selectors', 'Pseudo_Element_Selectors', 'Combinator_Selectors', etc.\n"
+            "- A note covering 3+ pages almost certainly needs to be split.\n"
+            "- When in doubt: MORE notes, not fewer. Coverage beats brevity.\n\n"
+            "METADATA FILTER — FORBIDDEN in titles:\n"
+            "  course codes, lecture numbers, week/slide markers, generic words like\n"
+            "  'Essentially', 'General', 'Overview', 'Introduction', 'Summary', 'Basically'.\n"
+            "  Title must name a SPECIFIC learnable concept, not a topic category.\n\n"
+            "SKIP entirely: named persons, historical anecdotes, peripheral examples.\n\n"
             "RULES:\n"
-            "1. Titles: 1-3 words, Title_Case_With_Underscores.\n"
+            "1. Titles: 1-3 SPECIFIC words, Title_Case_With_Underscores. NEVER generic words.\n"
             "2. " + mode_instruction + "\n"
-            "3. prerequisites: list dependencies. Do not leave empty for compound concepts.\n"
+            "3. prerequisites: list concrete title dependencies.\n"
             "4. concept_modality: EXACTLY one: 'Quantitative', 'Qualitative/Definitional', 'Procedural', 'Comparative', 'Causal/Historical'.\n"
-            "5. source_context: PARAPHRASE the core idea in 1 sentence (do NOT copy direct quotes). Add page numbers as integers.\n"
+            "5. source_context: 1 sentence paraphrase of the core idea. Add source_pages as integers.\n"
             "6. OUTPUT: Pure JSON ONLY. No markdown, no explanation.\n"
             '{"course_title": "...", "academic_level": "...", "epistemic_stance": "...", '
-            '"atomic_notes":[{"title":"...","description":"...","mode":"...","concept_modality":"Qualitative/Definitional","prerequisites":[],'
-            '"source_context":"...","source_pages":[]}],"possible_questions":[]}'
+            '\"atomic_notes\":[{\"title\":\"...\",\"description\":\"...\",\"mode\":\"...\",\"concept_modality\":\"Qualitative/Definitional\",\"prerequisites\":[],'
+            '\"source_context\":\"...\",\"source_pages\":[]}],\"possible_questions\":[]}'
         )
 
         last_error = None
@@ -681,7 +690,9 @@ class ArchitectAgent:
                 retry_note = f"\nPREVIOUS ERROR: {last_error}\nReturn ONLY pure JSON, no markdown.\n" if last_error else ""
                 res = await self.llm.ainvoke([
                     ("system", system + retry_note),
-                    ("human", f"Document:\n{document_text[:10000]}")
+                    # Use full chunk — do NOT truncate here; chunk_text already
+                    # sized the input correctly for the model's context window.
+                    ("human", f"Document:\n{document_text}")
                 ])
                 data = self._parse_json(res.content)
 
@@ -1774,3 +1785,111 @@ Return ONLY pure JSON. No markdown. No explanation."""
                 "primary_discipline": "General Academic",
                 "secondary_disciplines": []
             }
+
+
+class CoverageVerifierAgent:
+    """
+    Post-planning coverage auditor.
+
+    After the ArchitectAgent extracts notes from chunks, this agent performs a
+    second-pass verification: it reviews the ContextBriefing + extracted note
+    titles and identifies teachable concepts that were missed.
+
+    Designed for weak/free LLMs:
+    - Small prompt (~400 tokens in, ~300 out)
+    - Pure JSON output
+    - Max 15 missing concepts per call
+    - Silent failure: always returns empty list on any error
+    """
+
+    def __init__(self, llm: BaseChatModel):
+        self.llm = llm
+
+    async def find_missing_concepts(
+        self,
+        context_briefing: dict,
+        extracted_titles: List[str],
+        full_text_sample: str,
+        detected_mode: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Identify concepts present in the document but missing from the plan.
+        Returns list of missing concept dicts compatible with AtomicNoteSchema.
+        """
+        if not extracted_titles:
+            return []
+
+        titles_str = "\n".join(
+            f"- {t.replace('_', ' ')}" for t in extracted_titles[:80]
+        )
+        discipline = context_briefing.get("primary_discipline", "General Academic")
+        summary = context_briefing.get("summary", "")[:400]
+        keywords = ", ".join(context_briefing.get("keywords", [])[:12])
+
+        sample = full_text_sample[:7000]
+        if len(full_text_sample) > 7000:
+            sample += "\n...\n" + full_text_sample[-3000:]
+
+        system = (
+            f"You are a Coverage Auditor for a {discipline} course.\n"
+            f"Document summary: {summary}\n"
+            f"Core keywords: {keywords}\n\n"
+            "A study plan was built from this PDF. Your job: find important teachable "
+            "concepts clearly present in the document that are MISSING from the plan.\n\n"
+            "ALREADY IN PLAN (do NOT suggest these again):\n"
+            f"{titles_str}\n\n"
+            "STRICT RULES:\n"
+            "1. Only suggest concepts a student MUST study to understand the full document.\n"
+            "2. Skip: supporting examples, author names, historical anecdotes, page metadata.\n"
+            "3. Titles: 1-3 words, Title_Case_With_Underscores format.\n"
+            "4. Return ONLY a pure JSON array. No markdown. No explanation.\n"
+            "5. If nothing is missing, return: []\n"
+            "6. Maximum 15 items. Be selective — only critical gaps.\n"
+            f'7. Each item format: {{"title": "Concept_Name", "description": "one sentence", '
+            f'"source_pages": [], "mode": "{detected_mode}", '
+            '"concept_modality": "Qualitative/Definitional", "prerequisites": []}}'
+        )
+
+        try:
+            await governor.get_permit(expected_tokens=350)
+            res = await self.llm.ainvoke([
+                ("system", system),
+                ("human", f"DOCUMENT EXCERPT:\n{sample}")
+            ])
+            raw = (res.content or "").strip()
+
+            start = raw.find("[")
+            end = raw.rfind("]")
+            if start == -1 or end == -1:
+                return []
+
+            json_str = raw[start:end + 1]
+            json_str = "".join(c if ord(c) < 128 else " " for c in json_str)
+
+            import json as _json
+            missing = _json.loads(json_str)
+            if not isinstance(missing, list):
+                return []
+
+            valid = []
+            for item in missing:
+                if not isinstance(item, dict):
+                    continue
+                title = str(item.get("title", "")).strip()
+                if not title or len(title) < 2:
+                    continue
+                words = re.split(r"[\s_\-]+", title)
+                item["title"] = "_".join(w.capitalize() for w in words if w)
+                item.setdefault("description", "Coverage gap — identified by auditor.")
+                item.setdefault("source_pages", [])
+                item.setdefault("mode", detected_mode)
+                item.setdefault("concept_modality", "Qualitative/Definitional")
+                item.setdefault("prerequisites", [])
+                valid.append(item)
+
+            print(f"[CoverageVerifier] Found {len(valid)} missing concepts.")
+            return valid
+
+        except Exception as e:
+            print(f"[CoverageVerifier] Failed silently: {e}")
+            return []

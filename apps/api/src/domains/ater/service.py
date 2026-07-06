@@ -23,7 +23,7 @@ from .session_store import SessionStore
 from .vault_manager import VaultManager
 from .deployer import AterDeployer
 from src.domains.ai.factory import ModelFactory
-from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, EpistemicClassifierAgent, MetaScannerAgent, get_professional_domain, get_persona, normalize_mode
+from .agents import ArchitectAgent, TheoryAgent, PractitionerAgent, QuestionAgent, CriticAgent, HubAgent, VerifierAgent, EpistemicClassifierAgent, MetaScannerAgent, CoverageVerifierAgent, get_professional_domain, get_persona, normalize_mode
 from .router import router
 from .templates import render_atomic_note, build_skeleton_note, build_dynamic_section_plan
 from .healer import LogicHealer
@@ -39,7 +39,7 @@ logger = logging.getLogger("Ater")
 ATER_TIMEOUT = 600       # 10 minutes — headroom for large PDFs
 ATER_MAX_RETRIES = 10     # Retry on transient failures (524, timeout, rate-limit)
 ATER_RETRY_BACKOFF = 15  # Seconds between retries (doubles each attempt)
-MAX_SOURCE_CHARS = 80000  # Characters to include in prompt (Lowered for 30k TPM Free Tier)
+MAX_SOURCE_CHARS = 200000  # Characters passed to the full pipeline. Adaptive chunking ensures all content is processed.
 
 class SynthesisNoteResponse(BaseModel):
     integrated_analogy: str = Field(description="Exactly 3-5 sentences of a vivid, concrete, integrated analogy explaining how the member concepts interact. Bullet points are prohibited.")
@@ -148,6 +148,7 @@ class AterService:
         self.epistemic_classifier_agent = EpistemicClassifierAgent(llm=self.llm) if self.llm else None
         self.verifier_agent = VerifierAgent(llm=self.llm) if self.llm else None
         self.meta_scanner_agent = MetaScannerAgent(llm=self.llm) if self.llm else None
+        self.coverage_verifier_agent = CoverageVerifierAgent(llm=self.llm) if self.llm else None
         self.governor = governor
         # Register the active key with the governor so daily quota is tracked per-key
         if secrets.ai_key:
@@ -444,6 +445,11 @@ class AterService:
             self.meta_scanner_agent = MetaScannerAgent(llm=self.llm)
         elif self.meta_scanner_agent:
             self.meta_scanner_agent.llm = self.llm
+
+        if not self.coverage_verifier_agent and self.llm:
+            self.coverage_verifier_agent = CoverageVerifierAgent(llm=self.llm)
+        elif self.coverage_verifier_agent:
+            self.coverage_verifier_agent.llm = self.llm
         
         # Update structured output if needed
         if self.architect_agent and self.llm:
@@ -1501,34 +1507,100 @@ class AterService:
     async def group_concepts_into_chapters(self, topic: str, concepts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not concepts:
             return []
-            
+
+        # ── Deterministic chapter title derivation (LLM-agnostic fallback) ──
+        _STOP_WORDS = {
+            "of", "the", "a", "an", "and", "or", "in", "to", "for", "with",
+            "by", "on", "at", "from", "is", "are", "its", "their", "this",
+            "that", "which", "as", "be", "vs", "versus", "into",
+        }
+        def _derive_chapter_title(note_titles: List[str]) -> str:
+            """Build a clean chapter title from the dominant content words in its notes."""
+            word_freq: Dict[str, int] = {}
+            for raw in note_titles:
+                words = re.split(r"[_\s]+", raw.replace("_", " "))
+                for w in words:
+                    w_clean = w.strip("()[]:")
+                    if w_clean and w_clean.lower() not in _STOP_WORDS and len(w_clean) > 2:
+                        word_freq[w_clean.capitalize()] = word_freq.get(w_clean.capitalize(), 0) + 1
+            if not word_freq:
+                return note_titles[0].replace("_", " ") if note_titles else "Chapter Overview"
+            # Pick top 3 words by frequency, prefer longer words on ties
+            top = sorted(word_freq.items(), key=lambda x: (x[1], len(x[0])), reverse=True)[:3]
+            top_words = [w for w, _ in top]
+            if len(top_words) == 1:
+                return top_words[0]
+            if len(top_words) == 2:
+                return f"{top_words[0]} And {top_words[1]}"
+            return f"{top_words[0]}, {top_words[1]} And {top_words[2]}"
+
+        def _is_garbled_title(title: str) -> bool:
+            """Detect titles with too many ALL-CAPS words or reversed-fragment patterns."""
+            if not title:
+                return True
+            words = [w for w in title.split() if w.isalpha()]
+            if not words:
+                return True
+            caps_words = [w for w in words if w.isupper() and len(w) > 1]
+            # If more than 1/3 of alpha words are fully uppercased → garbled
+            if len(caps_words) > max(1, len(words) // 3):
+                return True
+            # Title is suspiciously short (1 word that isn't a content word)
+            if len(words) == 1 and words[0].lower() in _STOP_WORDS:
+                return True
+            return False
+
+        def _clean_chapter_title(title: str, note_titles: List[str]) -> str:
+            """Return the title if clean, otherwise derive one from note content."""
+            if _is_garbled_title(title):
+                derived = _derive_chapter_title(note_titles)
+                print(f"[Ater Service] Chapter title sanitized: '{title}' → '{derived}'")
+                return derived
+            # Ensure proper Title Case even for acceptable LLM titles
+            words = title.split()
+            fixed = []
+            for i, w in enumerate(words):
+                if w.lower() in _STOP_WORDS and i != 0 and i != len(words) - 1:
+                    fixed.append(w.lower())
+                else:
+                    fixed.append(w.capitalize())
+            return " ".join(fixed)
+
         try:
             structured_llm = self.planner_llm.with_structured_output(ChapterGroupingResponse)
             
             system_prompt = (
-                f"You are Ater's Curriculum Planner. Your task is to organize a set of extracted concepts for the topic '{topic}' "
-                "into 3 to 6 logical sequential chapters. Each chapter should have a clear theme and group 2 to 4 related atomic notes.\n"
-                "Constraints:\n"
-                "- Every note in the input list MUST be assigned to exactly one chapter. Do not omit any notes.\n"
-                "- Order the chapters in logical learning sequence (fundamentals first, then advanced/applications).\n"
-                "- Do not invent new notes not in the input list."
+                f"You are Ater's Curriculum Planner. Organize these concepts for '{topic}' "
+                "into logical sequential chapters.\n"
+                "Rules:\n"
+                "- Group 4 to 8 related notes per chapter. Scale chapters to the number of concepts.\n"
+                "- Chapter names: short (2-5 words), proper Title Case, grammatically correct.\n"
+                "  Good: 'Consumer Theory Foundations', 'Marginal Utility And Equilibrium'\n"
+                "  Bad: 'CURV MARGINAL AND CARDINALIST', 'Behavior Consumer And Assumption'\n"
+                "- Every note MUST appear in exactly one chapter. Do not drop or invent notes."
             )
             
-            concept_list_str = "\n".join([f"- {c['title']}: {c.get('description', '')}" for c in concepts])
-            user_msg = f"Extracted concepts:\n{concept_list_str}"
+            concept_list_str = "\n".join([f"- {c['title'].replace('_', ' ')}" for c in concepts])
+            user_msg = f"Concepts to organize:\n{concept_list_str}"
             
             response = await asyncio.wait_for(
                 structured_llm.ainvoke([
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg}
                 ]),
-                timeout=20
+                timeout=30
             )
             
             res_chapters = []
             for idx, ch in enumerate(response.chapters):
+                # Always derive the chapter title from note content — the weak LLM
+                # consistently produces garbled Title Case names (reversed word order,
+                # truncated words) that _is_garbled_title cannot reliably detect.
+                # The LLM grouping (which notes belong together) is kept; only the
+                # name comes from the deterministic Python derivation.
+                derived_title = _derive_chapter_title(ch.atomic_notes)
                 res_chapters.append({
-                    "title": ch.title,
+                    "title": derived_title,
                     "order": idx + 1,
                     "atomic_notes": ch.atomic_notes
                 })
@@ -1537,15 +1609,17 @@ class AterService:
         except Exception as e:
             print(f"[Ater Service] AI Chapter grouping failed: {e}. Falling back to heuristic grouping.")
             
+        # ── Heuristic fallback: cluster by page proximity, name from note content ──
         total = len(concepts)
-        notes_per_ch = max(2, min(4, total // 3))
+        notes_per_ch = max(4, min(7, total // max(1, total // 6)))
         chapters = []
         for idx in range(0, total, notes_per_ch):
             chunk = concepts[idx:idx + notes_per_ch]
             ch_num = len(chapters) + 1
             titles = [c["title"] for c in chunk]
+            derived_title = _derive_chapter_title(titles)
             chapters.append({
-                "title": f"Chapter {ch_num} - Overview of " + chunk[0]["title"].replace("_", " "),
+                "title": derived_title,
                 "order": ch_num,
                 "atomic_notes": titles
             })
@@ -1559,8 +1633,18 @@ class AterService:
         path = Path(file_path)
         session_id = str(path.absolute())
         
-        # Clear any existing session
+        # Clear any existing session in memory and disk
         AterService._sessions.pop(session_id, None)
+        try:
+            if self._session_file.exists():
+                with open(self._session_file, "r", encoding="utf-8") as f:
+                    existing = json.load(f)
+                if session_id in existing:
+                    del existing[session_id]
+                    with open(self._session_file, "w", encoding="utf-8") as f:
+                        json.dump(existing, f)
+        except Exception:
+            pass
         
         # Read full content for planning
         full_text = ""
@@ -1643,9 +1727,28 @@ class AterService:
         if course == "Computer Programming" and primary_language == "General":
             primary_language = "C++"
         
-        # --- CHUNKING LOGIC ---
-        from .keywords import chunk_text, reduce_concepts
-        text_chunks = chunk_text(full_text, chunk_size=4000, overlap=1000) or [full_text]
+        # --- ADAPTIVE CHUNKING LOGIC ---
+        # Chunk size adapts to document length so the Architect sees enough
+        # context to recognize cross-page concepts without wasting tokens.
+        # Rule:
+        #   < 20k chars  → 3000 char chunks / 400 overlap   (short handout)
+        #   20k–60k chars → 4000 char chunks / 500 overlap   (chapter-length)
+        #   60k–120k chars → 5000 char chunks / 600 overlap  (full textbook chapter)
+        #   > 120k chars   → 6000 char chunks / 800 overlap  (full textbook)
+        from .keywords import chunk_text, reduce_concepts, compute_note_budget
+        doc_len = len(full_text)
+        if doc_len < 20_000:
+            _chunk_size, _overlap = 3000, 400
+        elif doc_len < 60_000:
+            _chunk_size, _overlap = 4000, 500
+        elif doc_len < 120_000:
+            _chunk_size, _overlap = 5000, 600
+        else:
+            _chunk_size, _overlap = 6000, 800
+
+        note_budget = compute_note_budget(full_text)
+        print(f"[Ater Service] Document length: {doc_len} chars → chunk_size={_chunk_size}, overlap={_overlap}, note_budget={note_budget}")
+        text_chunks = chunk_text(full_text, chunk_size=_chunk_size, overlap=_overlap) or [full_text]
         
         extracted_course_title = "Unknown"
         extracted_academic_level = "Unknown"
@@ -1734,6 +1837,55 @@ class AterService:
         try:
             print(f"[Ater Service] Programmatically reducing {len(all_atomic_notes)} concepts...")
             all_atomic_notes = reduce_concepts(all_atomic_notes)
+
+            # ── COVERAGE VERIFICATION PASS ────────────────────────────────────
+            # After chunked extraction + dedup, run a second-pass audit to find
+            # teachable concepts that slipped through chunk boundaries.
+            # Weak-LLM safe: small prompt, max 15 suggestions, silent failure.
+            if self.coverage_verifier_agent and all_atomic_notes:
+                self.set_status(session_id, "Auditing Coverage Gaps...")
+                extracted_titles = [n["title"] for n in all_atomic_notes]
+                missing_concepts = await self.coverage_verifier_agent.find_missing_concepts(
+                    context_briefing=context_briefing.model_dump(),
+                    extracted_titles=extracted_titles,
+                    full_text_sample=full_text,
+                    detected_mode=detected_mode,
+                )
+                added_by_verifier = 0
+                existing_titles = {n["title"] for n in all_atomic_notes}
+                for mc in missing_concepts:
+                    mc_title = mc.get("title", "")
+                    if mc_title and mc_title not in existing_titles:
+                        # Build source packet for verified missing concept
+                        try:
+                            source_packet, source_page_anchors = self._build_concept_source_packet(
+                                full_text=full_text,
+                                seed_context=mc.get("description", ""),
+                                title=mc_title,
+                                source_pages=mc.get("source_pages", []),
+                            )
+                            if source_page_anchors:
+                                mc["source_context"] = source_packet
+                                mc["source_pages"] = source_page_anchors
+                        except Exception:
+                            pass
+                        # Guard: reject garbage titles from the verifier
+                        # (same filter as reduce_concepts)
+                        _generic_words = {
+                            "essentially", "general", "overview", "introduction",
+                            "summary", "basically", "misc", "other", "various",
+                            "additional", "supplementary", "extra"
+                        }
+                        title_words_lower = {w.lower() for w in mc_title.split("_") if w}
+                        if title_words_lower.issubset(_generic_words):
+                            print(f"[CoverageVerifier] Rejected garbage title: {mc_title}")
+                            continue
+                        all_atomic_notes.append(mc)
+                        existing_titles.add(mc_title)
+                        added_by_verifier += 1
+                if added_by_verifier > 0:
+                    print(f"[Ater Service] Coverage verifier added {added_by_verifier} missing concepts.")
+            # ─────────────────────────────────────────────────────────────────
 
             from .embeddings_linker import EmbeddingsLinker
             linker = EmbeddingsLinker()
@@ -1853,7 +2005,7 @@ class AterService:
             "chapters": grouped_chapters
         }
 
-        # Build batches (Phase 1: Atomic Generation, Phase 2: Probe Enrichment, Phase 3: Hub)
+        # Build batches containing ALL atomic notes (partitioned to prevent timeouts/rate limits)
         all_atomic_titles = [n["title"] for n in structured_plan["atomic_notes"]]
         hub_title_final = structured_plan["hub_note"]["title"]
         
@@ -1862,12 +2014,14 @@ class AterService:
         sniped_batches = []
         next_id = 1
         
-        # Progressive planning: Group only the first atomic note in Batch 1
-        if all_atomic_titles:
-            sniped_batches.append({"id": next_id, "notes": [all_atomic_titles[0]], "type": "atomic"})
+        # Group atomic notes into chunks of size 3 (pacing semaphore limits concurrency inside confirm_plan)
+        batch_size = 3
+        for i in range(0, len(all_atomic_titles), batch_size):
+            chunk = all_atomic_titles[i:i + batch_size]
+            sniped_batches.append({"id": next_id, "notes": chunk, "type": "atomic"})
             next_id += 1
         
-        # PASS 2: HUB (Source of Truth)
+        # Final pass compiles the Unit Hub
         sniped_batches.append({"id": next_id, "notes": [hub_title_final], "type": "hub"})
         
         structured_plan["batches"] = sniped_batches
@@ -2855,6 +3009,16 @@ generated: true"""
                                         unit=unit_num
                                     )
                                     note_abs_path = self.vm.vault_path / note_rel_path
+                                    if note_abs_path.exists():
+                                        try:
+                                            existing_text = note_abs_path.read_text(encoding="utf-8")
+                                            # If it has more than frontmatter, skip overwriting
+                                            parts = existing_text.strip().split("---")
+                                            if len(parts) >= 3 and len(parts[2].strip()) > 50:
+                                                continue
+                                        except Exception:
+                                            pass
+                                            
                                     note_abs_path.parent.mkdir(parents=True, exist_ok=True)
                                     
                                     art_pack_rel = lo.get_artifact_pack_path(note_rel_path)

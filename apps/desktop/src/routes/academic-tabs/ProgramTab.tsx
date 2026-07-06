@@ -30,14 +30,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [showSetup,      setShowSetup]          = useState(false)
   const [addingSem,      setAddingSem]          = useState(false)
   const [addingCourse,   setAddingCourse]       = useState(false)
-  const [sidebarTab,     setSidebarTab]         = useState<'assignments' | 'exams' | 'notebooklm'>('assignments')
-  const [notebooks, setNotebooks]               = useState<any[]>([])
+  const [sidebarTab,     setSidebarTab]         = useState<'assignments' | 'exams'>('assignments')
   const [sidecarPort, setSidecarPort]           = useState<number>(8765)
   const [sidecarToken, setSidecarToken]         = useState<string>('')
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null)
   
   // Tab control state
-  const [leftBottomTab, setLeftBottomTab]       = useState<'courses' | 'planner' | 'practice' | 'notebooklm'>('courses')
+  const [leftBottomTab, setLeftBottomTab]       = useState<'courses' | 'planner' | 'practice'>('courses')
   const [activeCoursesTab, setActiveCoursesTab] = useState<'hubs' | 'inbox' | 'pdf'>('hubs')
   const [inboxFiles, setInboxFiles]             = useState<any[]>([])
   const [pdfFiles, setPdfFiles]                 = useState<any[]>([])
@@ -62,7 +61,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
   // Practice search/sort states
   const [practiceSearch, setPracticeSearch]     = useState('')
-  const [notebooksSearch, setNotebooksSearch]   = useState('')
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quickHubName, setQuickHubName]         = useState('')
   const [isAddingHub, setIsAddingHub]           = useState(false)
@@ -141,54 +139,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     fetchConfig()
   }, [])
 
-  // Fetch notebooks list when sidecar is configured
-  React.useEffect(() => {
-    if (!sidecarPort) return
-    const fetchNotebooks = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:${sidecarPort}/api/notebooklm/notebooks`, {
-          headers: { 'X-Ater-Token': sidecarToken }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setNotebooks(data || [])
-        }
-      } catch (err) {
-        console.error('Error loading notebooks in ProgramTab:', err)
-      }
-    }
-    fetchNotebooks()
-  }, [sidecarPort, sidecarToken])
 
-  const handleCreateNotebook = async () => {
-    const title = window.prompt('Enter new notebook title:')
-    if (!title || !title.trim()) return
-    try {
-      const res = await fetch(`http://127.0.0.1:${sidecarPort}/api/notebooklm/notebooks`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Ater-Token': sidecarToken 
-        },
-        body: JSON.stringify({ title: title.trim() })
-      })
-      if (res.ok) {
-        toast.success('Notebook created successfully')
-        const listRes = await fetch(`http://127.0.0.1:${sidecarPort}/api/notebooklm/notebooks`, {
-          headers: { 'X-Ater-Token': sidecarToken }
-        })
-        if (listRes.ok) {
-          const listData = await listRes.json()
-          setNotebooks(listData || [])
-        }
-      } else {
-        const errData = await res.json().catch(() => ({}))
-        toast.error('Failed to create notebook: ' + (errData.detail || res.statusText))
-      }
-    } catch (err: any) {
-      toast.error('Failed to create notebook: ' + err.message)
-    }
-  }
 
   const years     = data.years     || []
   const semesters = data.semesters || []
@@ -923,15 +874,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       >
                         Practice
                       </button>
-                      <button 
-                        onClick={() => setLeftBottomTab('notebooklm')}
-                        className={cn("text-[10px] font-black uppercase tracking-widest transition-colors pb-1 border-b-2 -mb-[9px] focus:outline-none font-sans", 
-                          leftBottomTab === 'notebooklm' 
-                            ? "text-foreground border-foreground" 
-                            : "text-muted-foreground/45 border-transparent hover:text-foreground")}
-                      >
-                        NotebookLM
-                      </button>
                     </div>
                     
                     {leftBottomTab === 'courses' && (
@@ -953,14 +895,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                     {leftBottomTab === 'practice' && (
                       <button 
                         onClick={() => navigateTo('PRACTICE')} 
-                        className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
-                      >
-                        All →
-                      </button>
-                    )}
-                    {leftBottomTab === 'notebooklm' && (
-                      <button 
-                        onClick={() => navigate('/notebooks')} 
                         className="px-2.5 h-6 bg-muted/10 text-[7px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/20 border border-border/40 hover:border-foreground/30 rounded-[5px] transition-all font-sans flex items-center justify-center cursor-pointer"
                       >
                         All →
@@ -1073,28 +1007,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                           className="px-2.5 py-0.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[4px] flex items-center gap-1 transition-all font-sans"
                         >
                           <Plus size={9} /> Start Session
-                        </button>
-                      </>
-                    )}
-
-                    {leftBottomTab === 'notebooklm' && (
-                      <>
-                        <div className="flex-1 min-w-[120px] flex items-center gap-1.5 px-2 py-0.5 bg-muted/10 border border-border/40 rounded-[4px]">
-                          <Search size={9} className="text-muted-foreground/45" />
-                          <input 
-                            type="text"
-                            value={notebooksSearch}
-                            onChange={e => setNotebooksSearch(e.target.value)}
-                            placeholder="Search Notebooks..."
-                            className="bg-transparent text-[9px] font-bold text-foreground outline-none w-full placeholder:text-muted-foreground/25 font-sans"
-                          />
-                        </div>
-
-                        <button 
-                          onClick={handleCreateNotebook}
-                          className="px-2.5 py-0.5 bg-foreground text-background text-[9px] font-black uppercase tracking-widest hover:bg-foreground/90 rounded-[4px] flex items-center gap-1 transition-all font-sans"
-                        >
-                          <Plus size={9} /> Create
                         </button>
                       </>
                     )}
@@ -1372,35 +1284,6 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
                       </div>
                     )}
 
-                    {leftBottomTab === 'notebooklm' && (() => {
-                      const filteredNotebooks = notebooks.filter(nb => 
-                        cleanTitle(nb.title || '').toLowerCase().includes(notebooksSearch.toLowerCase())
-                      );
-                      return (
-                        <div className="flex-grow flex flex-col gap-3 font-sans">
-                          {filteredNotebooks.length === 0 ? (
-                            <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 py-2 font-sans font-medium">No notebooks found</p>
-                          ) : (
-                            <div className="grid grid-cols-1 gap-2">
-                              {filteredNotebooks.map((nb, idx) => {
-                                return (
-                                  <div key={idx} onClick={() => navigate('/notebooks')}
-                                    className="p-2.5 border border-border bg-bento-card hover:bg-bento-item/20 rounded-[6px] transition-colors flex items-center justify-between cursor-pointer gap-2 font-sans group relative">
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="text-[10px] font-black uppercase truncate text-foreground/90 font-sans">{cleanTitle(nb.title)}</span>
-                                      <span className="text-[7px] font-black uppercase text-muted-foreground/45 mt-0.5 font-sans">
-                                        {nb.sources_count || nb.sources?.length || 0} sources
-                                      </span>
-                                    </div>
-                                    <ChevronRight size={10} className="text-muted-foreground/30 group-hover:text-foreground/60 transition-colors shrink-0 animate-none" />
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
                   </div>
                 </section>
               </div>

@@ -1,11 +1,9 @@
 ---
-Credits: '4'
+Credits: '2'
 Difficulty: ''
 Grade: ''
-Location: ''
 Professor: ''
-Schedule: ''
 Semester: "[[Winter2026]]"
-Status: "[[Active]]"
+Status: "[[Planned]]"
 ---
 

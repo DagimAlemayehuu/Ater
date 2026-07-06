@@ -1,7 +1,11 @@
 ---
 Academic Level: "[[Undergraduate]]"
-Current Year: true
-Program: "[[Computer science]]"
-Status: "[[Active]]"
+Cumulative GPA: 0
+Current Year: false
+Earned Credits: 0
+Program: "[[Computer Science]]"
+Status: "[[Completed]]"
+Target Credits: 0
+Target Years: 4
 ---
 

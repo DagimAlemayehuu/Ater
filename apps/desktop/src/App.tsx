@@ -12,8 +12,6 @@ import AcademicDashboard from '@/routes/academic'
 import CalendarRoute from '@/routes/calendar'
 import Agents from '@/routes/agents'
 import Onboarding from '@/routes/onboarding'
-import WelcomePage from '@/routes/welcome'
-import Notebooks from '@/routes/notebooks'
 
 import { HeaderProvider } from '@/context/header-context'
 import { Toaster } from '@/components/ui/sonner'
@@ -138,17 +136,15 @@ function AppRoutes() {
                   <BlockingLoader label="Loading Module" />
                 }>
                   <Routes>
-                    <Route path="/welcome" element={<WelcomePage />} />
                     <Route path="/onboarding" element={<Onboarding />} />
                     <Route path="*" element={
-                      (!isConfigured && !config?.isDemoMode &&
-                        config?.walkthroughStatus !== 'active' &&
+                      (!isConfigured &&
                         !(import.meta.env.DEV && (
                           new URLSearchParams(window.location.search).get('bypass') === 'true' ||
                           window.location.hash.includes('bypass=true')
                         ))
                       ) ? (
-                        <Navigate to="/welcome" replace />
+                        <Navigate to="/onboarding" replace />
                       ) : (
                         <AuthenticatedLayout>
                           <Routes>
@@ -159,7 +155,6 @@ function AppRoutes() {
                             <Route path="/agents" element={<PageGuard featureSlug="ai-features"><Agents /></PageGuard>} />
                             <Route path="/teacher" element={<Navigate to="/agents?tab=ater" replace />} />
                             <Route path="/practice" element={<PageGuard featureSlug="practice-recall"><Practice /></PageGuard>} />
-                            <Route path="/notebooks" element={<PageGuard featureSlug="ai-features"><Notebooks /></PageGuard>} />
                             <Route path="/settings" element={<Settings />} />
                           </Routes>
                         </AuthenticatedLayout>

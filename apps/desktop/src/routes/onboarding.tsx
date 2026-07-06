@@ -119,7 +119,6 @@ export default function Onboarding() {
   // Step 6 — Finalize
   const [finalStatus, setFinalStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [finalError, setFinalError] = useState('')
-  const [startWithTour, setStartWithTour] = useState(false)
 
   // Sync config once loaded
   useEffect(() => {
@@ -162,18 +161,18 @@ export default function Onboarding() {
   }, [config?.obsidianVaultPath, hasCheckedOnMount])
 
   const handleNext = () => {
-    if (step === 2 && !config?.isDemoMode) {
+    if (step === 2) {
       setStep(4)
-    } else if (step === 4 && !config?.isDemoMode) {
+    } else if (step === 4) {
       setStep(6)
     } else {
       setStep((s) => s + 1)
     }
   }
   const handleBack = () => {
-    if (step === 4 && !config?.isDemoMode) {
+    if (step === 4) {
       setStep(2)
-    } else if (step === 6 && !config?.isDemoMode) {
+    } else if (step === 6) {
       setStep(4)
     } else {
       setStep((s) => s - 1)
@@ -251,7 +250,7 @@ export default function Onboarding() {
         await supabase.from('profiles').update({ is_configured: true }).eq('id', user.id)
       }
 
-      setFinalStatus('done')
+      navigate('/agents?tab=ater')
     } catch (err: any) {
       setFinalError(err?.message || 'Failed to fast-track configuration.')
       setFinalStatus('error')
@@ -441,7 +440,7 @@ export default function Onboarding() {
         academicFolderPath: 'Notes',
         autoDeploy: true,
         isProgramConfigured: true,
-        isDemoMode: startWithTour
+        isDemoMode: false
       })
 
       // 1. Initialize folders
@@ -569,7 +568,7 @@ export default function Onboarding() {
       }
 
       clearTimeout(timeoutId)
-      setFinalStatus('done')
+      navigate('/agents?tab=ater')
     } catch (err: any) {
       clearTimeout(timeoutId)
       const msg = err?.message || 'Setup failed. Check your vault path and try again.'
@@ -629,48 +628,6 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* Simulation Entry Modal (Walkthrough Step 1.6) */}
-      {!showDetectedModal && step === 1 && !config?.isDemoMode && !config?.walkthroughCompleted && config?.walkthroughMilestone === '1.6' && config?.walkthroughStatus !== 'skipped' && (
-        <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-md flex items-center justify-center p-6 select-none animate-fade-in pointer-events-auto">
-          <div className="w-full max-w-md bg-bento-panel border border-primary/20 rounded-[12px] p-8 shadow-2xl flex flex-col items-start text-left">
-            <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-3">
-              Interactive Tour
-            </div>
-            <h2 className="text-xl font-black uppercase tracking-tight text-foreground mb-4">
-              Learn the Ropes
-            </h2>
-            <p className="text-[12px] text-muted-foreground leading-relaxed mb-6 font-sans">
-              Would you like to take a guided walkthrough of the workspace using simulation data? You can safely explore the UI without affecting your actual files.
-            </p>
-
-            <div className="flex w-full gap-3">
-              <button
-                data-tour="simulation-entry"
-                onClick={async () => {
-                  // isDemoMode=true lets the route guard skip to the main workspace.
-                  // The InteractiveTour click-capture picks up data-tour="simulation-entry"
-                  // and fires the simulation_started trigger automatically.
-                  await saveConfig({ isDemoMode: true });
-                  navigate('/obsidian');
-                }}
-                className="flex-1 py-3 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest hover:opacity-90 rounded-[8px] transition-all cursor-pointer"
-              >
-                Start Guided Tour
-              </button>
-              <button
-                onClick={async () => {
-                  // Save a non-'1.6' milestone so the modal doesn't re-appear.
-                  await saveConfig({ walkthroughMilestone: 'skip', walkthroughStatus: 'skipped' } as any);
-                }}
-                className="px-5 py-3 border border-border bg-bento-item/30 text-muted-foreground hover:text-foreground hover:border-foreground/30 text-[10px] font-black uppercase tracking-widest rounded-[8px] transition-all cursor-pointer"
-              >
-                Configure Manually
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="absolute top-12 right-12 z-10">
         <ThemeSwitch />
       </div>
@@ -678,9 +635,7 @@ export default function Onboarding() {
 
         {/* Step indicator */}
         {finalStatus === 'idle' || finalStatus === 'error' ? (() => {
-          const visibleSteps = config?.isDemoMode
-            ? [1, 2, 3, 4, 5, 6]
-            : (config?.displayName ? [2, 4, 6] : [1, 2, 4, 6]);
+          const visibleSteps = config?.displayName ? [2, 4, 6] : [1, 2, 4, 6];
           const currentDisplayStep = visibleSteps.indexOf(step) + 1;
           const totalDisplaySteps = visibleSteps.length;
           if (currentDisplayStep === 0) return null;
@@ -1304,17 +1259,6 @@ export default function Onboarding() {
               </div>
             </div>
 
-            <div data-tour="demo-mode-checkbox" className="flex items-center gap-3 mb-6 select-none cursor-pointer animate-fade-in" onClick={() => setStartWithTour(!startWithTour)}>
-              <input
-                type="checkbox"
-                checked={startWithTour}
-                onChange={() => {}}
-                className="rounded border-border bg-bento-item/30 text-primary focus:ring-primary size-4"
-              />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
-                Start with Guided Walkthrough Tour (No AI Keys required)
-              </span>
-            </div>
 
             {finalError && (
               <div className="w-full px-4 py-3 border border-destructive/30 bg-destructive/10 mb-6 rounded-[8px]">
