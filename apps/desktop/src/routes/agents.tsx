@@ -2495,7 +2495,7 @@ function PlanCardView({planRaw, onUpdatePlan, sessionId}: {planRaw: string, onUp
  title: titleMatch ? cleanLink(titleMatch[1]) : cleanLink(rawContent.split('-')[0]),
  mode: modeMatch ? modeMatch[1] : null,
  parent: parentMatch ? parentMatch[1] : null,
- pages: pagesMatch ? pagesMatch[1].split(',').map(p => p.trim()).filter(p => p) : [],
+ pages: pagesMatch ? pagesMatch[1].split(',').map((p: string) => p.trim()).filter((p: string) => p) : [],
  description: description
 }
 })
@@ -2639,7 +2639,7 @@ function PlanCardView({planRaw, onUpdatePlan, sessionId}: {planRaw: string, onUp
  <div className="flex items-center gap-1.5 mt-1.5">
  <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tighter">Relevant Pages:</span>
  <div className="flex flex-wrap gap-1">
- {node.pages.map(p => (
+ {node.pages.map((p: string) => (
  <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 bg-muted text-muted-foreground border border-border hover:bg-bento-bg hover:border-muted-foreground/30  cursor-default">
  {p}
  </span>
@@ -3248,10 +3248,10 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           </div>
           <div className="flex flex-wrap gap-3">
           <CurriculumPill label="Anchor" value={anchoredHub?.title || 'Standalone'} icon={Database} isEditable={false} />
-          <CurriculumPill label="Hub Title" value={curriculum.hub_title} onChange={v => setCurriculum(p => ({...p, hub_title: v}))} icon={FileEdit} />
-          <CurriculumPill label="Course" value={curriculum.course} onChange={v => setCurriculum(p => ({...p, course: v}))} icon={BookOpen} options={availableOptions.courses} />
-          <CurriculumPill label="Unit" value={curriculum.unit} onChange={v => setCurriculum(p => ({...p, unit: v}))} icon={Tag} options={availableOptions.units} />
-          <CurriculumPill label="Semester" value={curriculum.semester} onChange={v => setCurriculum(p => ({...p, semester: v}))} icon={Calendar} options={availableOptions.semesters} />
+          <CurriculumPill label="Hub Title" value={curriculum.hub_title} onChange={v => setCurriculum((p: any) => ({...p, hub_title: v}))} icon={FileEdit} />
+          <CurriculumPill label="Course" value={curriculum.course} onChange={v => setCurriculum((p: any) => ({...p, course: v}))} icon={BookOpen} options={availableOptions.courses} />
+          <CurriculumPill label="Unit" value={curriculum.unit} onChange={v => setCurriculum((p: any) => ({...p, unit: v}))} icon={Tag} options={availableOptions.units} />
+          <CurriculumPill label="Semester" value={curriculum.semester} onChange={v => setCurriculum((p: any) => ({...p, semester: v}))} icon={Calendar} options={availableOptions.semesters} />
           </div>
           </div>
           )}
