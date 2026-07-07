@@ -6,15 +6,29 @@ Ater is a local-first personal intelligence operating system designed as a high-
 
 ## Current Repository State
 
-As of 2026-07-04, `main` is clean and synchronized with `origin/main` at `6b34553e` (`fix(security): finish remaining campaign cleanup`). The Jules cleanup campaign has been merged through PR #91, superseded PRs have been closed, local and remote feature branches have been removed, and the repository is back to a single active branch: `main`.
+*   **Current version**: v0.2.0 (in preparation for release)
+*   **Branch**: `main` is the single active branch
+*   **Release distribution**: [Ater Releases](https://github.com/DagimAlemayehuu/Ater_Releases/releases)
+*   **Platforms**: macOS Apple Silicon (DMG), Windows x64 (NSIS installer), Linux x64 (AppImage + deb)
+*   **CI matrix**:
+    *   **Backend pytest**: macOS, Ubuntu, Windows
+    *   **Desktop Vitest**: macOS, Ubuntu, Windows (including typecheck)
+    *   **Rust macOS**: Apple Silicon (macos-14)
+    *   **Rust Windows**: x64 (windows-latest)
+    *   **Playwright E2E**: Desktop, Admin, and Landing Page
+*   **Note**: Code signing is ad-hoc on macOS (no Developer ID); updater signing is active via Tauri's signing system.
 
-The latest verified CI matrix passed:
+## Quick Install (v0.2)
 
-* Backend pytest on macOS, Ubuntu, and Windows.
-* Desktop React typecheck, tests, and production build on macOS, Ubuntu, and Windows.
-* Playwright E2E.
-* Rust cargo build/test on the default runner and Windows.
-* Vercel and Vercel Preview Comments.
+Download the latest release from [Ater Releases](https://github.com/DagimAlemayehuu/Ater_Releases/releases).
+
+| Platform | File | Notes |
+| :--- | :--- | :--- |
+| **macOS Apple Silicon** | `Ater_aarch64.dmg` | Right-click → Open to bypass Gatekeeper |
+| **Windows x64** | `Ater_setup.exe` | Click 'More info' → 'Run anyway' if SmartScreen appears |
+| **Linux x64** | `Ater_*.AppImage` | `chmod +x` then run |
+
+> **Note**: This app requires an approved account. See `FRIENDS_SETUP.md` for the full onboarding guide.
 
 ---
 
@@ -39,7 +53,8 @@ Ater's components operate in a hub-and-spoke topology centered around two key da
              v
 +------------+-------------+
 |    FastAPI Python sidecar|
-|  RAG Sync, Notion Synapse|
+|  RAG Sync, Retired:       |
+|  Notion Sync             |
 |  Local ONNX Runtime ML   |
 +--------------------------+
 ```
@@ -59,7 +74,7 @@ Ater's components operate in a hub-and-spoke topology centered around two key da
 ## Deep-Dive: The Sub-Applications
 
 ### 1. High-Density Desktop Client (`apps/desktop`)
-*   **Technology Stack**: Tauri v2, React 18, Vite, TypeScript, Tailwind CSS, Monaco Editor, Zustand.
+*   **Technology Stack**: Tauri v2, React 18, Vite, TypeScript, Tailwind CSS, Monaco Editor, Zustand, Tauri updater (auto-update via Ater_Releases), PyInstaller sidecar binary (ater-api, bundled for macOS arm64 / Windows x64 / Linux x64).
 *   **Architectural Features**:
     *   **Obsidian Vault Explorer (`routes/obsidian.tsx`)**: Integrates Monaco Editor for clean markdown authoring, coupled with interactive force-graphs representing notes as node links.
     *   **Ater Architect (`routes/academic.tsx`)**: Ingests files through the custom sidebar. Displays real-time progress indicators as the Python sidecar and local vector store parse files.
@@ -81,12 +96,12 @@ Ater's components operate in a hub-and-spoke topology centered around two key da
     *   **Hardware Hash Registry**: Direct table to append malicious machine signatures straight to `public.hardware_blacklist` with automated security verification.
 
 ### 4. High-Performance Sidecar API (`apps/api`)
-*   **Technology Stack**: Python FastAPI, Uvicorn, SQLite, Notion Client (Async), Google GenAI SDK, ONNX Runtime.
+*   **Technology Stack**: Python FastAPI, Uvicorn, SQLite, Notion Client (Async - Retired), Google GenAI SDK, ONNX Runtime.
 *   **Architectural Features**:
     *   **ONNX Local Embeddings**: Built-in ONNX runtime (`export_onnx.py`, `onnx_model/`, `test_onnx.py`) to run ultra-fast, local-first embedding models, enabling fully offline semantic searches and local RAG indexing.
     *   **Ater Ingestion Engine (v33.0)**: Manages file pre-analysis via `MetaScannerAgent` briefings, multi-batch parallel note generation loops regulated by the `TokenGovernor`, and strict cognitive taxonomy locks.
     *   **Sync Interfaces**:
-        *   `GET /api/academics/dashboard`: Async connector pulling schedules, goals, and assignments directly from Notion workspace databases.
+        *   `GET /api/academics/dashboard`: Async connector pulling schedules, goals, and assignments directly from local vault (Notion Sync Retired).
         *   `GET /api/obsidian/files`: Recursively crawls and indexes the user's local Obsidian Vault files, serving a fast, structured directory tree to the Tauri desktop client.
 
 ---
