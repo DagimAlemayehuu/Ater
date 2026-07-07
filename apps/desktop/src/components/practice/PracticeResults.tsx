@@ -27,6 +27,7 @@ const TYPE_LABELS: Record<string, string> = {
   data_analysis: 'Data Analysis',
   scenario: 'Scenario',
   code: 'Code',
+  find_error: 'Find Error',
 }
 
 export function PracticeResults({

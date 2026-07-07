@@ -374,16 +374,16 @@ export function PracticeSession({
               )}
 
               {(!currentQuestion.type ||
-                ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(
+                ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code', 'find_error'].includes(
                   currentQuestion.type
                 )) && (
                 <div className="space-y-6">
-                  {['debug', 'code'].includes(currentQuestion.type) &&
-                    (currentQuestion.content || currentQuestion.codeSnippet) && (
+                  {['debug', 'code', 'find_error'].includes(currentQuestion.type) &&
+                    (currentQuestion.content || currentQuestion.codeSnippet || currentQuestion.buggyCode) && (
                       <div className="p-1 border border-border rounded-[8px] bg-bento-panel">
                         <MarkdownBlock
-                          content={`\`\`\`${currentQuestion.language || 'text'}\n${
-                            currentQuestion.content || currentQuestion.codeSnippet
+                          content={`\`\`\`${currentQuestion.language || (currentQuestion.type === 'code' ? 'typescript' : 'text')}\n${
+                            currentQuestion.content || currentQuestion.codeSnippet || currentQuestion.buggyCode
                           }\n\`\`\``}
                         />
                       </div>
@@ -770,6 +770,7 @@ export function PracticeSession({
                           'data_analysis',
                           'scenario',
                           'code',
+                          'find_error',
                         ].includes(currentQuestion.type)
                       )
                     }
@@ -780,7 +781,7 @@ export function PracticeSession({
                 ) : (
                   <div className="flex gap-2">
                     {session.scores[currentQuestion.id] === undefined &&
-                      ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(
+                      ['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code', 'find_error'].includes(
                         currentQuestion.type
                       ) && (
                         <>
@@ -814,7 +815,7 @@ export function PracticeSession({
                           </Button>
                         </>
                       )}
-                    {((!['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code'].includes(
+                    {((!['writing', 'synthesis', 'debug', 'trace', 'calculation', 'data_analysis', 'scenario', 'code', 'find_error'].includes(
                       currentQuestion.type
                     )) ||
                       session.scores[currentQuestion.id] !== undefined) && (

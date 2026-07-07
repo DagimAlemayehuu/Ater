@@ -61,11 +61,19 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
 
   const navigate = useNavigate()
   const { setSidebarContent } = useSidebarContent()
-  const [activeSubTab, setActiveSubTab] = React.useState<'configure' | 'history'>('configure')
+  const [activeSubTab, setActiveSubTab] = React.useState<'dashboard' | 'history' | 'vault'>(
+    view === 'history' ? 'history' : view === 'vault' ? 'vault' : 'dashboard'
+  )
 
   React.useEffect(() => {
-    setView('configuring')
-  }, [])
+    if (view === 'history') {
+      setActiveSubTab('history')
+    } else if (view === 'vault') {
+      setActiveSubTab('vault')
+    } else {
+      setActiveSubTab('dashboard')
+    }
+  }, [view])
 
   React.useEffect(() => {
     setSidebarContent(
@@ -76,18 +84,33 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
         </div>
         <button
           onClick={() => {
-            setActiveSubTab('configure')
-            setView('configuring')
+            setActiveSubTab('dashboard')
+            setView('dashboard')
           }}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none cursor-pointer",
-            activeSubTab === 'configure'
+            activeSubTab === 'dashboard'
               ? "bg-bento-item text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
           )}
         >
-          <Sliders size={11} className="shrink-0 text-muted-foreground" />
-          <span>Configure</span>
+          <LayoutDashboard size={11} className="shrink-0 text-muted-foreground" />
+          <span>Dashboard</span>
+        </button>
+        <button
+          onClick={() => {
+            setActiveSubTab('vault')
+            setView('vault')
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 rounded-[8px] transition-all text-[11px] font-bold text-left select-none outline-none cursor-pointer",
+            activeSubTab === 'vault'
+              ? "bg-bento-item text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-bento-item/30"
+          )}
+        >
+          <BookOpen size={11} className="shrink-0 text-muted-foreground" />
+          <span>Vault</span>
         </button>
         <button
           onClick={() => {
@@ -122,14 +145,13 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
   }, [activeSubTab, setSidebarContent, navigate])
 
   const handleSetView = (nextView: string) => {
+    setView(nextView)
     if (nextView === 'dashboard' || nextView === 'configuring') {
-      setView('configuring')
-      setActiveSubTab('configure')
+      setActiveSubTab('dashboard')
     } else if (nextView === 'history') {
-      setView('history')
       setActiveSubTab('history')
-    } else {
-      setView(nextView)
+    } else if (nextView === 'vault') {
+      setActiveSubTab('vault')
     }
   }
 
@@ -189,7 +211,19 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
     <div className="h-full flex flex-col bg-bento-panel font-sans overflow-hidden">
       {/* Tab Body Container */}
       <div className="flex-1 overflow-hidden relative">
-        {activeSubTab === 'configure' ? (
+        {view === 'dashboard' && (
+          <div className="absolute inset-0 overflow-y-auto">
+            <PracticeDashboard
+              view={view}
+              setView={handleSetView}
+              pastPractices={pastPractices}
+              analytics={analytics}
+              selectedHub={selectedHub}
+              handleReviewDueCards={handleReviewDueCards}
+            />
+          </div>
+        )}
+        {view === 'configuring' && (
           <div className="absolute inset-0 overflow-y-auto">
             <PracticeConfigurator
               setView={handleSetView}
@@ -204,7 +238,8 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
               loadHubNotes={loadHubNotes}
             />
           </div>
-        ) : (
+        )}
+        {view === 'history' && (
           <div className="absolute inset-0 overflow-y-auto">
             <PracticeHistory
               view={view}
@@ -212,6 +247,31 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
               pastPractices={pastPractices}
               handleResumePractice={handleResumePractice}
               handleDeletePractice={handleDeletePractice}
+            />
+          </div>
+        )}
+        {view === 'vault' && (
+          <div className="absolute inset-0 overflow-y-auto">
+            <PracticeVault
+              view={view}
+              setView={handleSetView}
+              hubs={hubs}
+              selectedHub={selectedHub}
+              setSelectedHub={setSelectedHub}
+              loadVaultFiles={loadVaultFiles}
+              vaultSourceName={vaultSourceName}
+              setVaultSourceName={setVaultSourceName}
+              vaultSourceText={vaultSourceText}
+              setVaultSourceText={setVaultSourceText}
+              handleVaultUploadText={handleVaultUploadText}
+              vaultLoading={vaultLoading}
+              vaultStatus={vaultStatus}
+              vaultFiles={vaultFiles}
+              vaultSelectedFiles={vaultSelectedFiles}
+              setVaultSelectedFiles={setVaultSelectedFiles}
+              vaultMode={vaultMode}
+              setVaultMode={setVaultMode}
+              handleVaultPracticeGenerate={handleVaultPracticeGenerate}
             />
           </div>
         )}

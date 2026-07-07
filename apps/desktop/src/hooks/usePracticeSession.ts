@@ -34,12 +34,12 @@ function gradeLocally(question: Question, selected: any): boolean {
   const expected = (question as any).answer;
   const resolved = resolveSelectedAnswer(question, selected);
 
-  if ((question as any).type === 'matching' && Array.isArray((question as any).pairs)) {
+  if (((question as any).type === 'matching' || (question as any).format === 'match') && Array.isArray((question as any).pairs)) {
     const selectedMap = selected || {};
-    return (question as any).pairs.every((pair: any) => selectedMap[pair.left] === pair.right);
+    return (question as any).pairs.every((pair: any) => normalizeAnswerValue(selectedMap[pair.left]) === normalizeAnswerValue(pair.right));
   }
 
-  if ((question as any).type === 'order' && Array.isArray(expected) && Array.isArray(selected)) {
+  if (((question as any).type === 'order' || (question as any).format === 'order') && Array.isArray(expected) && Array.isArray(selected)) {
     return expected.length === selected.length && expected.every((item: any, idx: number) => normalizeAnswerValue(item) === normalizeAnswerValue(selected[idx]));
   }
 
@@ -51,7 +51,17 @@ function gradeLocally(question: Question, selected: any): boolean {
     return expected.some(item => normalizeAnswerValue(item) === normalizeAnswerValue(resolved));
   }
 
-  return normalizeAnswerValue(expected) === normalizeAnswerValue(selected) || normalizeAnswerValue(expected) === normalizeAnswerValue(resolved);
+  const normalizedExpected = normalizeAnswerValue(expected);
+  const normalizedSelected = normalizeAnswerValue(selected);
+  const normalizedResolved = normalizeAnswerValue(resolved);
+
+  if ((question as any).type === 'true_false') {
+    const boolExpected = String(expected).toLowerCase() === 'true';
+    const boolSelected = String(selected).toLowerCase() === 'true';
+    return boolExpected === boolSelected;
+  }
+
+  return normalizedExpected === normalizedSelected || normalizedExpected === normalizedResolved;
 }
 
 function isObjectiveQuestion(question: Question): boolean {
@@ -106,6 +116,8 @@ function buildLocalExplanation(question: Question, selected: any, isCorrect: boo
     `Focus on the core mechanics, system dependencies, or rules that make this explanation correct. Ensure you can explain the flow from inputs to outcomes without relying on option labels.`,
   ].join('\n');
 }
+
+const SESSION_STORAGE_KEY = 'ater_practice_session';
 
 const SUPPORTED_PROVING_GROUND_TYPES = [
   'mcq',
@@ -305,6 +317,8 @@ export function usePracticeSession() {
   // Per-question history: tracks seen question types and lesson summaries to avoid repetition
   const [remediationHistory, setRemediationHistory] = useState<Record<string, { seenTypes: string[]; lessonSummaries: string[] }>>({});
 
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Timer states
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
@@ -316,6 +330,110 @@ export function usePracticeSession() {
   const questionStartTimeRef = useRef<number>(Date.now());
   const practiceStartTimeRef = useRef<number>(Date.now());
   const configRef = useRef<PracticeSessionConfig>({});
+
+  // Persistence: Load session from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setQuestions(data.questions || []);
+        setCurrentQuestionIdx(data.currentQuestionIdx || 0);
+        setNotePath(data.notePath);
+        setSessionPath(data.sessionPath);
+        setUserAnswers(data.userAnswers || {});
+        setRevealedStates(data.revealedStates || {});
+        setScores(data.scores || {});
+        setShowScore(data.showScore || false);
+        setStreak(data.streak || 0);
+        setBookmarked(new Set(data.bookmarked || []));
+        setConfidenceWagers(data.confidenceWagers || {});
+        setKeywordChecks(data.keywordChecks || {});
+        setRemediationHistory(data.remediationHistory || {});
+        setFailureAttempts(data.failureAttempts || {});
+        setMisconceptionText(data.misconceptionText || {});
+        setRemediationQuestion(data.remediationQuestion || {});
+        setRetryActive(data.retryActive || {});
+        setGlobalTimeLeft(data.globalTimeLeft);
+        setQuestionTimeLeft(data.questionTimeLeft);
+        setQuestionHint(data.questionHint || {});
+        setUnlockedNotes(new Set(data.unlockedNotes || []));
+        if (data.config) {
+          configRef.current = data.config;
+        }
+        // Reload FSRS cache if we have a session
+        if (data.questions && data.questions.length > 0) {
+          sidecarApi.srsCards().then(cacheRes => {
+            const cacheMap: Record<string, any> = {};
+            if (cacheRes && Array.isArray(cacheRes.cards)) {
+              cacheRes.cards.forEach((c: any) => {
+                cacheMap[c.note_path] = c;
+              });
+            }
+            setSrsCardsCache(cacheMap);
+          }).catch(console.error);
+        }
+      } catch (e) {
+        console.error('Failed to load practice session', e);
+      }
+    }
+    setIsInitialized(true);
+  }, []);
+
+  // Persistence: Save session to localStorage on change
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (questions.length === 0 && !showScore) {
+       localStorage.removeItem(SESSION_STORAGE_KEY);
+       return;
+    }
+    const data = {
+      questions,
+      currentQuestionIdx,
+      notePath,
+      sessionPath,
+      userAnswers,
+      revealedStates,
+      scores,
+      showScore,
+      streak,
+      bookmarked: Array.from(bookmarked),
+      confidenceWagers,
+      keywordChecks,
+      remediationHistory,
+      failureAttempts,
+      misconceptionText,
+      remediationQuestion,
+      retryActive,
+      globalTimeLeft,
+      questionTimeLeft,
+      questionHint,
+      unlockedNotes: Array.from(unlockedNotes),
+      config: configRef.current,
+    };
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+  }, [
+    isInitialized,
+    questions,
+    currentQuestionIdx,
+    notePath,
+    sessionPath,
+    userAnswers,
+    revealedStates,
+    scores,
+    showScore,
+    streak,
+    bookmarked,
+    confidenceWagers,
+    keywordChecks,
+    remediationHistory,
+    failureAttempts,
+    misconceptionText,
+    retryActive,
+    globalTimeLeft,
+    questionTimeLeft,
+    questionHint,
+  ]);
 
   // Active question shortcut
   const currentQuestion = questions[currentQuestionIdx];
@@ -806,10 +924,13 @@ export function usePracticeSession() {
     setFailureAttempts({});
     setMisconceptionText({});
     setRemediationQuestion({});
+    setQuestionHint({});
+    setRetryActive({});
     if (autoAdvanceTimeoutRef.current) {
       clearTimeout(autoAdvanceTimeoutRef.current);
       autoAdvanceTimeoutRef.current = null;
     }
+    localStorage.removeItem(SESSION_STORAGE_KEY);
   }, []);
 
   // Timer runner Effect
@@ -911,6 +1032,7 @@ export function usePracticeSession() {
     retryActive,
     isSubmitting,
     sessionPath,
+    isInitialized,
 
     startSession,
     selectAnswer,

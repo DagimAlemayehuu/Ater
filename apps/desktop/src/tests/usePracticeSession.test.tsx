@@ -293,4 +293,74 @@ describe('usePracticeSession', () => {
       user_answer: 'History and snaps',
     });
   });
+
+  it('persists session state to localStorage', async () => {
+    const { result, rerender } = renderHook(() => usePracticeSession());
+
+    await act(async () => {
+      await result.current.startSession(mockQuestions, {});
+    });
+
+    act(() => {
+      result.current.selectAnswer('B');
+    });
+
+    const saved = JSON.parse(localStorage.getItem('ater_practice_session') || '{}');
+    expect(saved.userAnswers[1]).toBe('B');
+    expect(saved.questions).toHaveLength(2);
+  });
+
+  it('restores session state from localStorage', async () => {
+    const savedData = {
+      questions: mockQuestions,
+      currentQuestionIdx: 1,
+      userAnswers: { 1: 'B' },
+      revealedStates: { 0: true },
+      scores: { 1: true },
+      streak: 1,
+      isInitialized: true
+    };
+    localStorage.setItem('ater_practice_session', JSON.stringify(savedData));
+
+    const { result } = renderHook(() => usePracticeSession());
+
+    // Wait for useEffect to load from storage
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.questions).toHaveLength(2);
+    expect(result.current.currentQuestionIdx).toBe(1);
+    expect(result.current.userAnswers[1]).toBe('B');
+    expect(result.current.scores[1]).toBe(true);
+  });
+
+  it('grades matching questions correctly', async () => {
+    const matchingQ: Question[] = [{
+      id: 'matching_1',
+      type: 'matching',
+      question: 'Match terms',
+      pairs: [
+        { left: 'A', right: '1' },
+        { left: 'B', right: '2' }
+      ],
+      answer: 'See pairs'
+    } as any];
+
+    const { result } = renderHook(() => usePracticeSession());
+
+    await act(async () => {
+      await result.current.startSession(matchingQ, {});
+    });
+
+    act(() => {
+      result.current.selectAnswer({ 'A': '1', 'B': '2' });
+    });
+
+    await act(async () => {
+      await result.current.checkAnswer();
+    });
+
+    expect(result.current.scores['matching_1']).toBe(true);
+  });
 });
