@@ -12,6 +12,20 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
+    async function verifyAdmin(userId: string) {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      if (error || profile?.role !== "Admin") {
+        setIsAuthorized(false);
+      } else {
+        setIsAuthorized(true);
+      }
+    }
+
     async function checkAuth() {
       // Allow bypass in non-production environments for testing/dev
       const isBypass = typeof window !== 'undefined' &&
@@ -30,21 +44,23 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Verify Admin role in the database
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .single();
-
-      if (error || profile?.role !== "Admin") {
-        setIsAuthorized(false);
-      } else {
-        setIsAuthorized(true);
-      }
+      await verifyAdmin(session.user.id);
     }
 
     checkAuth();
+
+    // Listen for auth state changes to prevent stale state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setIsAuthorized(false);
+      } else if (event === 'SIGNED_IN' && session) {
+        verifyAdmin(session.user.id);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Allow the login page to render its own content without layout if it's still accessed
