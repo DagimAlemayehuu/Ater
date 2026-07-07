@@ -569,6 +569,8 @@ async def update_source_learning_job_roadmap(
         return _source_job_service(secrets).update_roadmap_titles(job_id, titles)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -640,6 +642,8 @@ async def refine_source_learning_job_roadmap(
         return updated_job
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
