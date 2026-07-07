@@ -63,7 +63,7 @@ ENV/
 .python-version
 
 # Local SQLite databases/journals (from tests or runs)
-apps/api/ater.db
+*.db
 *.db-shm
 *.db-wal
 
@@ -91,3 +91,7 @@ worktrees/
 
 # Temp home directory
 .tmp_home/
+
+# Local Test State & Project Artifacts
+Vault_Test/
+binaries/
