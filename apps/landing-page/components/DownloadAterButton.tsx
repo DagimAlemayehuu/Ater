@@ -5,7 +5,7 @@ import { Cpu, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
-const FALLBACK_VERSION = 'v0.8.0';
+const FALLBACK_VERSION = 'v0.2.0';
 
 type ReleaseAsset = {
   name: string;

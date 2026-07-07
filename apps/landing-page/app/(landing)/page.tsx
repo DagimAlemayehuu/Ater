@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { TerminalAnimation } from '@/components/landing/TerminalAnimation';
 import { IndustrialButton } from '@/components/IndustrialButton';
+import { DownloadAterButton } from '@/components/DownloadAterButton';
 
 export default function Home() {
   return (
@@ -232,20 +233,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SECTION 07: WAITLIST CTA */}
+      {/* SECTION 07: WAITLIST & DOWNLOAD CTA */}
       <section className="z-70 stack-section bg-background grid-background flex flex-col items-center justify-center min-h-[100dvh] w-full border-t border-outline-variant py-8 md:py-16">
-        <div className="industrial-container w-full py-8 sm:py-12 md:py-20 flex flex-col items-center justify-center gap-3 sm:gap-6 md:gap-4 sm:p-6 md:p-8 text-center">
-          <h2 className="text-display-hero uppercase">
-            JOIN THE WAITLIST
-          </h2>
-          <p className="text-body max-w-xl leading-relaxed text-on-surface-variant">
-            Get early access to Ater today. Secure your private school vault spot before we launch to the public.
-          </p>
-          <Link href="/auth?mode=signup">
-            <IndustrialButton className="h-14 px-12">
-              JOIN THE WAITLIST
-            </IndustrialButton>
-          </Link>
+        <div className="industrial-container w-full max-w-4xl py-8 sm:py-12 md:py-20 flex flex-col items-center justify-center gap-8 sm:p-6 md:p-8 text-center">
+          <div className="flex flex-col gap-4 items-center">
+            <h2 className="text-display-hero uppercase">
+              GET STARTED WITH ATER
+            </h2>
+            <p className="text-body max-w-xl leading-relaxed text-on-surface-variant">
+              Get early access to Ater today. Secure your private school vault spot or download the beta directly.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+            <div className="flex flex-col gap-4 p-6 border border-outline-variant bg-surface">
+              <h3 className="technical-label text-primary">NEW USERS</h3>
+              <Link href="/auth?mode=signup" className="w-full">
+                <IndustrialButton className="w-full h-14">
+                  JOIN THE WAITLIST
+                </IndustrialButton>
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-4 p-6 border border-outline-variant bg-surface">
+              <h3 className="technical-label text-primary">DIRECT DOWNLOAD</h3>
+              <DownloadAterButton />
+            </div>
+          </div>
         </div>
       </section>
 
