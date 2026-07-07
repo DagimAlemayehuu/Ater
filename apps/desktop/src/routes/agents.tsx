@@ -1446,12 +1446,14 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       try {
         const created = await sidecarApi.createConversation('New Chat');
         currentId = created.id;
-        setActiveConversationId(currentId);
-        setSearchParams(prev => {
-          const next = new URLSearchParams(prev);
-          next.set('conversationId', currentId);
-          return next;
-        });
+        if (currentId) {
+          setActiveConversationId(currentId);
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('conversationId', currentId as string);
+            return next;
+          });
+        }
       } catch (err) {
         toast.error('Failed to initialize conversation');
         setIsLoading(false);
