@@ -1104,7 +1104,7 @@ def test_stale_source_job_cache_rebuilds_after_pipeline_version_change(_mock_pdf
 
         assert rebuilt["job_id"] != stale_job_id
         assert "Production Function" in titles
-        assert "Average Fixed Cost (Afc)" in titles
+        assert "Average Fixed Cost (AFC)" in titles
         assert "Utility" not in titles
         assert "Budget Line" not in titles
 

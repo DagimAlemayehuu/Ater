@@ -543,6 +543,15 @@ def _is_teachable_title(title: str) -> bool:
     key = _concept_key(title)
     if not key or key in _CONCEPT_STOP_TITLES:
         return False
+        
+    cleaned_letters = re.sub(r"[^a-zA-Z]", "", title)
+    if len(cleaned_letters) < 4:
+        if cleaned_letters.lower() not in {"html", "css", "dom", "xml", "js"}:
+            return False
+            
+    if any(token in key for token in ["present", "brief history", "2007", "199", "200"]):
+        return False
+        
     if _looks_like_code_or_selector_fragment(str(title)):
         return False
     weak_titles = {
@@ -698,6 +707,8 @@ def _extract_slide_concept_titles(content: str, topic: str, page_no: int) -> Lis
             label = line.split(":", 1)[0].strip()
         elif re.match(r"^\(?[a-z0-9]+[.)]\s+[A-Za-z]", line, flags=re.IGNORECASE):
             label = line
+        elif re.match(r"^[>\-→•]\s*([A-Z][A-Za-z0-9\s().#*&,>-]+)$", line):
+            label = re.sub(r"^[>\-→•]\s*", "", line).strip()
         else:
             continue
         label_title = _line_title_candidate(label, f"{topic} Page {page_no}")
@@ -857,6 +868,7 @@ def _build_generic_concept_nodes(
             "domain": domain,
             "modality": modality,
             "source_pages": [page_no],
+            "intro_page": page_no,
             "source_excerpts": [{"page": page_no, "text": source_text[:800]}] if source_text else [],
             "objective_ids": objective_ids,
             "teaching_order": 0,
@@ -900,7 +912,7 @@ def _build_generic_concept_nodes(
                 continue
             source_lower = source_text.lower()
             overlap = {term for term in title_terms if term in source_lower}
-            if title_phrase in source_lower or len(overlap) >= min(2, len(title_terms)):
+            if title_phrase in source_lower or (len(title_terms) >= 3 and len(overlap) == len(title_terms)):
                 node["source_pages"].append(page_no)
                 node["source_excerpts"].append({"page": page_no, "text": source_text[:800]})
             if len(node["source_excerpts"]) >= 3:
@@ -910,7 +922,8 @@ def _build_generic_concept_nodes(
         origin = item.get("origin_priority", 2)
         if origin == 0:
             return (origin, int(item.get("teaching_order") or 9999), item["title"].lower())
-        return (origin, int(item.get("origin_index") or 9999), min(item.get("source_pages") or [9999]), item["title"].lower())
+        intro = item.get("intro_page") or min(item.get("source_pages") or [9999])
+        return (origin, int(item.get("origin_index") or 9999), intro, item["title"].lower())
 
     nodes = sorted(by_key.values(), key=sort_key)
     for idx, node in enumerate(nodes, start=1):
@@ -1936,14 +1949,29 @@ def build_source_coverage_items(
 def _chapter_title_from_nodes(nodes: List[Dict[str, Any]], index: int) -> str:
     if not nodes:
         return f"Chapter {index}"
-    first = str(nodes[0].get("title") or "Foundations")
-    last = str(nodes[-1].get("title") or first)
-    if len(nodes) == 1 or _roadmap_token_similarity(_roadmap_title_tokens(first), _roadmap_title_tokens(last)) >= 0.34:
-        core = first
+    first = str(nodes[0].get("title") or "Foundations").strip()
+    last = str(nodes[-1].get("title") or first).strip()
+    
+    def clean(t: str) -> str:
+        t = re.sub(r"\s*\([^)]*\)\s*$", "", t).strip()
+        t = re.sub(r"^[>\-→•]\s*", "", t).strip()
+        if len(t) > 30:
+            words = t.split()
+            if len(words) > 4:
+                t = " ".join(words[:4]) + "..."
+        return t
+
+    first_clean = clean(first)
+    last_clean = clean(last)
+
+    if first_clean.lower() == last_clean.lower():
+        core = first_clean
     else:
-        first_terms = [token.title() for token in sorted(_roadmap_title_tokens(first))[:2]]
-        last_terms = [token.title() for token in sorted(_roadmap_title_tokens(last))[:2]]
-        core = " And ".join([" ".join(first_terms), " ".join(last_terms)]).strip()
+        if first_clean and last_clean:
+            core = f"{first_clean} to {last_clean}"
+        else:
+            core = first_clean or last_clean or "Foundations"
+            
     core = re.sub(r"\s+", " ", core).strip(" .:-\t") or "Foundations"
     return f"Chapter {index}: {core}"
 
@@ -3389,18 +3417,18 @@ class SourceLearningJobService:
         now = datetime.now().isoformat()
         conn = self._connect()
         try:
+            job_id = None
             existing = conn.execute("SELECT job_id FROM source_learning_jobs WHERE source_identity = ?", (identity,)).fetchone()
             if existing:
-                job_id = existing["job_id"]
-                if not self._job_needs_rebuild(conn, job_id):
+                existing_job_id = existing["job_id"]
+                if self._job_needs_rebuild(conn, existing_job_id):
                     with conn:
-                        conn.execute(
-                            "UPDATE source_learning_jobs SET conversation_id = COALESCE(?, conversation_id), attachment_id = COALESCE(?, attachment_id), updated_at = ? WHERE job_id = ?",
-                            (conversation_id, attachment_id, now, job_id),
-                        )
-                    return self.get_job(job_id)
-                with conn:
-                    self._delete_job_records(conn, job_id)
+                        self._delete_job_records(conn, existing_job_id)
+                    job_id = None
+                else:
+                    with conn:
+                        self._delete_job_records(conn, existing_job_id)
+                    job_id = existing_job_id
 
             ingestion = SourceIngestionService().ingest_pdf(str(path))
             pages = ingestion["pages"]
@@ -3421,7 +3449,8 @@ class SourceLearningJobService:
                 chapter_title=chapter_title,
             )
             objectives = extract_source_objectives(pages)
-            job_id = f"srcjob_{uuid.uuid4().hex[:16]}"
+            if not job_id:
+                job_id = f"srcjob_{uuid.uuid4().hex[:16]}"
             sections = build_source_map_sections(path.name, pages, id_prefix=job_id)
             warnings = [_as_dict_warning(w) for w in ingestion.get("warnings", [])]
             low_text_pages = [p["page_number"] for p in pages if 0 < p.get("text_length", 0) < 80]

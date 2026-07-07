@@ -96,7 +96,20 @@ class GoogleNativeChatModel:
             "generationConfig": generation_config,
         }
         if system_parts:
-            payload["systemInstruction"] = {"parts": [{"text": "\n\n".join(system_parts)}]}
+            if "gemma" in self.model.lower():
+                system_text = "\n\n".join(system_parts)
+                first_user_idx = -1
+                for idx, c in enumerate(contents):
+                    if c["role"] == "user":
+                        first_user_idx = idx
+                        break
+                if first_user_idx != -1:
+                    first_text = contents[first_user_idx]["parts"][0]["text"]
+                    contents[first_user_idx]["parts"][0]["text"] = f"{system_text}\n\n[System Instructions Above]\n\n{first_text}"
+                else:
+                    contents.insert(0, {"role": "user", "parts": [{"text": system_text}]})
+            else:
+                payload["systemInstruction"] = {"parts": [{"text": "\n\n".join(system_parts)}]}
         return payload
 
     def _parse_response(self, response: httpx.Response) -> SimpleNamespace:

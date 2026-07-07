@@ -70,6 +70,7 @@ def _build_source_llm(
             max_concurrency=secrets.ai_max_concurrency,
         )
         valid_key = governor.get_valid_api_key(api_key)
+        effective_mime_type = None if "gemma" in model_name.lower() else response_mime_type
         return GoogleNativeChatModel(
             model=model_name,
             api_key=valid_key,
@@ -77,7 +78,7 @@ def _build_source_llm(
             temperature=temperature,
             timeout=120,
             max_output_tokens=max_tokens,
-            response_mime_type=response_mime_type,
+            response_mime_type=effective_mime_type,
         )
 
     from src.domains.ai.factory import ModelFactory

@@ -929,7 +929,7 @@ function AterAILoader({ type }: AterAILoaderProps) {
   }, [type, stages])
 
   return (
-    <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[999] flex flex-col items-center justify-center gap-4 animate-in fade-in duration-200">
       <div className="flex flex-col items-center gap-3">
         {/* Minimal rotating circle */}
         <div className="animate-spin rounded-full h-7 w-7 border-2 border-border border-t-foreground/80" />

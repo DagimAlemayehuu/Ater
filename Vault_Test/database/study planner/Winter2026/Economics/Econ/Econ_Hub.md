@@ -1,18 +1,18 @@
 ---
-title: "Chapter_2_Hub"
+title: "Econ_Hub"
 type: "Hub"
 learning_scope: "academic"
 semester: "Winter2026"
 course: "Economics"
-unit: "Chapter_2"
-chapter_title: "Chapter_2"
+unit: "Econ"
+chapter_title: "Econ"
 status: "Not Started"
 source_job_id: ""
 current_lesson_path: ""
 chapters: []
 ---
 
-# Chapter 2
+# Econ
 
 ## Roadmap
 
