@@ -53,7 +53,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwMEQwQTg1RUNDMEVCREMKUldUYzY4RHNoUW9OUUFkNlRPOWJ1cGFJNHdNUEtqRjlRRUYrTFV1WXVoM2Q4cVduVW0vcE1USGIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFGRDAzMkM1QkZGRjlERTEKUldUaG5mKy94VExRSDczRFhSZlZrK0JLK3M5MzJ4UU1EVUtOOFhteUVkRWJJbkgxQngyb1BtVGIK",
       "endpoints": [
         "https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/update.json"
       ]
