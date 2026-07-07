@@ -87,7 +87,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
                 title="Back"
                 aria-label="Navigate back"
               >
-                <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
+                <ChevronLeft size={16} aria-hidden="true" />
               </button>
               <button
                 onClick={goForward}
@@ -101,7 +101,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
                 title="Forward"
                 aria-label="Navigate forward"
               >
-                <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
+                <ChevronRight size={16} aria-hidden="true" />
               </button>
             </nav>
 
@@ -148,7 +148,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
               title="Academic Calendar"
               aria-label="Academic Calendar"
             >
-              <Calendar size={16} strokeWidth={2} aria-hidden="true" />
+              <Calendar size={16} aria-hidden="true" />
             </button>
 
             {/* Theme Toggle Button */}
