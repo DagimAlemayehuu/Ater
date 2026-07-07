@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, {useState, useEffect} from 'react'
+import {useSearchParams} from 'react-router-dom'
 import {cn} from '@/lib/utils'
 import {useConfig, SavedApiKey, AppConfig} from '@/lib/ConfigContext'
 import {sidecarApi} from '@/lib/sidecarApi'
@@ -85,10 +86,15 @@ const cleanModel = (modelName: string, keyVal: string) => {
 
 export default function Settings() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const {config, saveConfig} = useConfig()
   const {clearHistory: clearLocalHistory} = usePomodoroStore()
   const {setSidebarContent} = useSidebarContent()
-  const [activeTab, setActiveTab] = useState('general')
+  const activeTab = searchParams.get('tab') || 'general'
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab }, { replace: true })
+  }
 
   useEffect(() => {
     setSidebarContent(
@@ -176,7 +182,7 @@ export default function Settings() {
       
       const checkPromise = check()
       const timeoutPromise = new Promise<any>((_, reject) =>
-        setTimeout(() => reject(new Error('Update check timed out')), 5000)
+        setTimeout(() => reject(new Error('Update check timed out')), 10000)
       )
       
       const update = await Promise.race([checkPromise, timeoutPromise])
@@ -184,6 +190,7 @@ export default function Settings() {
       if (update?.available) {
         setUpdateStatus('available')
         window.dispatchEvent(new CustomEvent('show-update-dialog', { detail: update }))
+        toast.info(`New version ${update.version} available!`)
       } else {
         setUpdateStatus('up-to-date')
         toast.success('Ater is up to date!')
@@ -205,6 +212,7 @@ export default function Settings() {
         console.error('[Settings Updater] Failed to check version manifest directly:', fetchErr)
       }
       
+      setUpdateStatus('idle')
       toast.error('Failed to check for updates: ' + errMsg)
     } finally {
       setIsCheckingUpdate(false)
@@ -351,10 +359,24 @@ export default function Settings() {
           pomodoroSessionsBeforeLongBreak: pomodoroEdit.sessions
         })
       } else if (editingKey === 'folder_settings') {
+        if (!vaultEdit.vaultPath.trim()) {
+          toast.error('Obsidian vault path cannot be empty.');
+          return;
+        }
+        if (!vaultEdit.academicPath.trim()) {
+          toast.error('Notes folder name cannot be empty.');
+          return;
+        }
+
         const pathChanged = vaultEdit.vaultPath !== (config?.obsidianVaultPath || '');
         if (pathChanged) {
           toast.info('Updating vault location and restarting backend services...');
-          await sidecarApi.updateVaultPath(vaultEdit.vaultPath);
+          try {
+            await sidecarApi.updateVaultPath(vaultEdit.vaultPath);
+          } catch (err: any) {
+            toast.error('Failed to update vault path in backend: ' + err.message);
+            return;
+          }
         }
         await saveConfig({
           obsidianVaultPath: vaultEdit.vaultPath,
@@ -465,6 +487,10 @@ export default function Settings() {
     try {
       let overrideConfig = undefined
       if (editingKey === 'primary_engine') {
+        if (!aiEdit.key.trim()) {
+          setTestStatus({loading: false, success: false, message: 'API Key is required for testing.'})
+          return
+        }
         overrideConfig = {
           aiProvider: aiEdit.provider,
           aiApiKey: aiEdit.key,
@@ -476,15 +502,24 @@ export default function Settings() {
           aiMaxRpd: parseOptionalNumber(aiEdit.maxRpd),
           aiMaxConcurrency: parseOptionalNumber(aiEdit.maxConcurrency),
         }
+      } else if (!config?.aiApiKey) {
+        setTestStatus({loading: false, success: false, message: 'No active API Key configured to test.'})
+        return
       }
+
       const res = await sidecarApi.testAiConnection('primary', overrideConfig)
       if (res.success) {
         setTestStatus({loading: false, success: true, message: res.message || 'Authenticated successfully. System online.'})
+        toast.success('AI Connection Test Passed')
       } else {
-        setTestStatus({loading: false, success: false, message: res.error || 'Authentication failed. Check your API key.'})
+        const errorMsg = res.error || res.message || 'Authentication failed. Check your API key.'
+        setTestStatus({loading: false, success: false, message: errorMsg})
+        toast.error('AI Connection Test Failed: ' + errorMsg)
       }
     } catch (err: any) {
-      setTestStatus({loading: false, success: false, message: err.message || 'Sidecar network error.'})
+      const errMsg = err.message || 'Sidecar network error.'
+      setTestStatus({loading: false, success: false, message: errMsg})
+      toast.error('AI Connection Test Error: ' + errMsg)
     }
   }
 
@@ -504,7 +539,15 @@ export default function Settings() {
   }
 
   const handleAddNewKey = async () => {
-    if (!newKeyName || !newKeyValue) return
+    if (!newKeyName.trim()) {
+      toast.error('Key name is required.');
+      return;
+    }
+    if (!newKeyValue.trim()) {
+      toast.error('API key value is required.');
+      return;
+    }
+
     let cleanedModel = cleanModel(newKeyModel, newKeyValue)
     if (!cleanedModel) {
       if (newKeyProvider === 'google') cleanedModel = 'gemini-2.0-flash'
