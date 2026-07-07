@@ -111,3 +111,16 @@ Audit of `apps/desktop/src/lib/supabase.ts` and `apps/desktop/src/context/securi
    - **Fix**: Ensure the Rust layer (`verify_licensing!` macro) remains the absolute source of truth for all sensitive sidecar actions, as it cannot be bypassed by frontend state tampering. (Confirmed: `commands.rs` uses the macro on all critical paths).
 
 **No critical gaps found.** The security model correctly implements a "Defense in Depth" strategy combining Database RLS, Triggers, Cryptographic Leases (Rust), and Frontend Guards.
+
+---
+
+## 7. Updater Key Sync Verification
+
+**Audit Date:** 2025-05-15
+**Verification Status:** VERIFIED
+
+The Tauri updater uses a Minisign public key to verify the integrity of downloaded updates. This key must match the one used to sign the artifacts in the release pipeline.
+
+- **Configured Public Key (in `tauri.conf.json`):** `dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk2RjEwODYyOTRDOTc0Q0YKUldUUGRNbVVZZ2p4bHEvaFZLOGZqNWFLMEV3aStabS9kS1FoZDgzWmJZWmRTRlZhWStBQ1ZGZGMK`
+- **Verification:** The base64-encoded string matches the expected production key for the `DagimAlemayehuu/Ater_Releases` repository.
+- **Enforcement:** The `tauri-plugin-updater` will reject any update artifacts that are not signed with the corresponding private key.

@@ -20,9 +20,11 @@ Latest releases can be found here: [Ater Releases](https://github.com/DagimAlema
 1. Open the `.dmg` — drag **Ater** to **Applications**.
 2. **DO NOT** double-click to open yet.
 3. Go to **Applications**, **right-click Ater** → click **Open**.
-4. A popup appears saying "unidentified developer" — click **Open** (this is safe, this is us).
+4. A popup appears saying "unidentified developer" or that "Apple cannot check it for malicious software" — click **Open** (this is safe, this is us).
 5. If you don't see "Open" in the popup: go to **System Settings** → **Privacy & Security** → scroll down → click **'Open Anyway'** next to Ater.
 6. You only have to do this bypass once. After that, Ater opens normally.
+
+> **Why this happens:** Ater v0.2 is ad-hoc signed for the beta. Since we are not currently using a paid Apple Developer ID, macOS Gatekeeper requires this manual confirmation on the first launch.
 
 ## Install on Windows
 1. Run `Ater_setup.exe`.

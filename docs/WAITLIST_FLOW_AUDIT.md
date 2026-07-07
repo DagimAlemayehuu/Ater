@@ -92,3 +92,48 @@ The fields used in code align with the schema described in triggers and policies
    - **Exact fix needed**: Add migration files that explicitly create the `public.profiles` and `public.waiting_list` tables with all necessary constraints and indices.
 
 **Summary**: The waitlist flow is functional for v0.2 but has significant risks regarding data consistency (non-atomicity) and security (client-side administrative updates).
+
+## 6. Admin Bulk Approval Runbook
+
+To bulk-approve friends during the beta phase, follow these steps in the Supabase Dashboard:
+
+1.  Open the **SQL Editor** in the Supabase Dashboard.
+2.  Paste the following SQL snippet.
+3.  Replace the placeholder emails in the `IN` clause with the actual emails you wish to approve.
+4.  Run the query.
+
+```sql
+-- Bulk Approval for Beta Friends
+-- This query approves users and sets their credit balance to 0 (Unlimited Beta Mode)
+
+BEGIN;
+
+-- 1. Update the waiting list status
+UPDATE public.waiting_list
+SET status = 'approved'
+WHERE email IN (
+  'friend1@example.com',
+  'friend2@example.com'
+);
+
+-- 2. Update user profiles to grant access
+UPDATE public.profiles
+SET
+    is_approved = true,
+    waitlist_status = 'approved',
+    credit_balance = 0 -- Beta accounts use 0 to signal unlimited access
+WHERE email IN (
+  'friend1@example.com',
+  'friend2@example.com'
+);
+
+COMMIT;
+```
+
+**Verification**:
+After running the query, you can verify the status by running:
+```sql
+SELECT email, is_approved, waitlist_status, credit_balance
+FROM public.profiles
+WHERE email IN ('friend1@example.com', 'friend2@example.com');
+```
