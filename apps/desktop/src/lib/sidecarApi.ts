@@ -257,8 +257,9 @@ export interface VaultDatabase {
     id: string;
     name: string;
     area?: string;
-    schema: Record<string, string | { type: string; source?: string }>;
-    type: 'obsidian';
+    schema: Record<string, any>;
+    type: 'obsidian' | string;
+    [key: string]: any;
 }
 
 export interface ObsidianFile {
@@ -267,11 +268,13 @@ export interface ObsidianFile {
     is_dir: boolean
     modified?: string
     size?: number
+    [key: string]: any;
 }
 
 export interface ObsidianNote {
-    metadata: Record<string, any>
+    metadata?: Record<string, any>
     content: string
+    [key: string]: any;
 }
 
 export interface SearchResult {
@@ -286,8 +289,13 @@ export interface SearchResult {
 
 export interface Hub {
     id: string;
-    name: string;
+    name?: string;
+    title: string;
+    course?: string;
+    unit?: string;
+    path: string;
     description?: string;
+    [key: string]: any;
 }
 
 export interface HubsResponse {
@@ -296,8 +304,9 @@ export interface HubsResponse {
 
 export interface HubNote {
     path: string;
-    title: string;
-    read: boolean;
+    title?: string;
+    read?: boolean;
+    [key: string]: any;
 }
 
 export interface HubNotesResponse {
@@ -305,26 +314,32 @@ export interface HubNotesResponse {
 }
 
 export interface AcademicDashboard {
-    semesters: any[];
-    courses: any[];
-    units: any[];
-    exams: any[];
-    assignments: any[];
+    years?: any[];
+    semesters?: any[];
+    courses?: any[];
+    units?: any[];
+    exams?: any[];
+    assignments?: any[];
+    [key: string]: any;
 }
 
 export interface PracticeQuestion {
-    id: string;
-    type: string;
+    id: string | number;
+    type: string | any;
     question: string;
-    options?: string[] | Record<string, string>;
+    content?: any;
+    difficulty?: any;
+    options?: any;
     answer?: any;
-    explanation?: string;
+    explanation: string;
     textWithBlanks?: string;
+    text_with_blanks?: string;
     pairs?: Array<{ left: string; right: string }>;
     steps?: string[];
     required_keywords?: string[];
     note_id?: string;
     is_remediation?: boolean;
+    [key: string]: any;
 }
 
 export interface PracticeResponse {
@@ -334,9 +349,10 @@ export interface PracticeResponse {
 
 export interface ChatMessage {
     id?: string;
-    role: string;
+    role: 'user' | 'assistant' | string;
     content: string;
     timestamp?: string;
+    created_at?: string;
     parent_message_id?: string;
     metadata?: any;
 }
@@ -357,8 +373,12 @@ export interface TutorSession {
     completed_notes: string[];
     wagers: Record<string, string>;
     score: number;
-    status: 'active' | 'completed' | 'paused';
+    status: string;
     curriculum: string[];
+    current_note_mastery?: any;
+    transfer_gate_outcomes?: any;
+    active_note_unlocks?: string[];
+    [key: string]: any;
 }
 
 export interface SRSCard {
@@ -374,10 +394,20 @@ export interface SRSCard {
 export interface SourceLearningJob {
     job_id: string;
     status: string;
+    file_path?: string;
+    title?: string;
+    topic?: string;
+    domain?: string;
+    roadmap?: any;
+    hub_path?: string;
+    warnings?: any[];
+    page_count?: number;
+    placement?: any;
     curriculum?: any;
     plan?: any;
     plan_structured?: any;
     audit?: any;
+    [key: string]: any;
 }
 
 export const sidecarApi = {
@@ -462,12 +492,12 @@ export const sidecarApi = {
         if (await isDemoActive()) {
             return {
                 databases: [
-                    { id: 'years', name: 'Years', type: 'obsidian', schema: {} },
-                    { id: 'semesters', name: 'Semesters', type: 'obsidian', schema: {} },
-                    { id: 'courses', name: 'Courses', type: 'obsidian', schema: {} },
-                    { id: 'study_sessions', name: 'Study Planner', type: 'obsidian', schema: {} },
-                    { id: 'exams', name: 'Exams', type: 'obsidian', schema: {} },
-                    { id: 'assignments', name: 'Assignments', type: 'obsidian', schema: {} }
+                    { id: 'years', name: 'Years', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'semesters', name: 'Semesters', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'courses', name: 'Courses', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'study_sessions', name: 'Study Planner', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'exams', name: 'Exams', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'assignments', name: 'Assignments', type: 'obsidian', schema: {}, area: 'academic' }
                 ]
             }
         }
@@ -950,7 +980,13 @@ export const sidecarApi = {
     listHubs: async (): Promise<HubsResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.listHubs()
         if (await isDemoActive()) {
-            return mockDemo.MOCK_HUBS;
+            return {
+                hubs: mockDemo.MOCK_HUBS.hubs.map(h => ({
+                    ...h,
+                    title: h.name,
+                    path: `Hubs/${h.name}.md`
+                }))
+            };
         }
         try {
             return await invoke<HubsResponse>('list_hubs')
@@ -984,6 +1020,8 @@ export const sidecarApi = {
                         id: 'q_mock_1',
                         type: 'mcq',
                         question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
+                        content: "",
+                        difficulty: "L1",
                         options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
                         answer: "O(log N)",
                         explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
@@ -992,6 +1030,8 @@ export const sidecarApi = {
                         id: 'q_mock_2',
                         type: 'true_false',
                         question: "Binary Search can be applied to an unsorted array as long as we know the target element exists in the array.",
+                        content: "",
+                        difficulty: "L1",
                         answer: false,
                         explanation: "Binary Search relies on the sorting invariant to discard half of the search space. Unsorted arrays require linear O(N) scanning."
                     },
@@ -999,6 +1039,8 @@ export const sidecarApi = {
                         id: 'q_mock_3',
                         type: 'fill_in',
                         question: "To calculate the midpoint without integer overflow, the standard formulation is [[low]] + ([[high]] - [[low]]) / 2.",
+                        content: "",
+                        difficulty: "L2",
                         textWithBlanks: "To calculate the midpoint without integer overflow, the standard formulation is [[low]] + ([[high]] - [[low]]) / 2.",
                         answer: ["low", "high", "low"],
                         explanation: "The addition-based midpoint formulation `(low + high) / 2` is prone to integer overflow bugs when the bounds are large."
@@ -1007,18 +1049,23 @@ export const sidecarApi = {
                         id: 'q_mock_4',
                         type: 'matching',
                         question: "Match the algorithmic time complexity classes with their corresponding asymptotic Big O notations.",
+                        content: "",
+                        difficulty: "L1",
                         pairs: [
                           { left: "Constant", right: "O(1)" },
                           { left: "Logarithmic", right: "O(log N)" },
                           { left: "Linear", right: "O(N)" },
                           { left: "Quadratic", right: "O(N^2)" }
                         ],
+                        answer: "",
                         explanation: "Constant execution is O(1). Logarithmic convergence is O(log N). Linear scaling is O(N). Nested loops scale quadratically O(N^2)."
                     },
                     {
                         id: 'q_mock_5',
                         type: 'order',
                         question: "Sort the structural execution steps of a Binary Search iteration from start to end.",
+                        content: "",
+                        difficulty: "L2",
                         steps: [
                           "Initialize low and high boundary pointers.",
                           "Calculate the midpoint index using overflow prevention.",
@@ -1037,7 +1084,10 @@ export const sidecarApi = {
                         id: 'q_mock_6',
                         type: 'writing',
                         question: "Feynman Model: In your own words, explain why logarithmic O(log N) scaling convergence is highly superior to linear O(N) iteration as N grows extremely large.",
+                        content: "",
+                        difficulty: "L3",
                         required_keywords: ["halving", "growth", "asymptotic", "scaling"],
+                        answer: "",
                         explanation: "As N scales (e.g. to a billion records), O(log N) requires at most 30 comparisons due to repeated halving, whereas O(N) requires a billion comparisons. This asymptotic growth variance makes halving exponentially faster."
                     }
                 ]
@@ -1081,6 +1131,8 @@ export const sidecarApi = {
                         id: 'q_mock_1',
                         type: 'mcq',
                         question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
+                        content: "",
+                        difficulty: "L1",
                         options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
                         answer: "O(log N)",
                         explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
@@ -2861,14 +2913,14 @@ export const sidecarApi = {
             throw err;
         }
     },
-    listConversations: async (includeArchived?: boolean): Promise<{ conversations: ChatConversation[] }> => {
+    listConversations: async (includeArchived?: boolean): Promise<ChatConversation[]> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations?include_archived=${!!includeArchived}`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson<{ conversations: ChatConversation[] }>(res);
+            return await checkedJson<ChatConversation[]>(res);
         } catch (err) {
             console.error('[Oracle Client] listConversations failed:', err);
             throw err;
@@ -2940,14 +2992,14 @@ export const sidecarApi = {
             throw err;
         }
     },
-    getMessages: async (convId: string): Promise<{ messages: ChatMessage[] }> => {
+    getMessages: async (convId: string): Promise<ChatMessage[]> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson<{ messages: ChatMessage[] }>(res);
+            return await checkedJson<ChatMessage[]>(res);
         } catch (err) {
             console.error('[Oracle Client] getMessages failed:', err);
             throw err;

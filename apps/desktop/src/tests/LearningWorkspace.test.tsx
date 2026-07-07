@@ -491,6 +491,13 @@ Git tracks project history as linked snapshots.
     })
     vi.mocked(sidecarApi.getTutorStatus).mockResolvedValue({
       session_id: 'session-transfer',
+      hub_path: 'hub.md',
+      current_note_path: 'Git_Foundations.md',
+      completed_notes: [],
+      wagers: {},
+      score: 0,
+      status: 'active',
+      curriculum: [],
       current_note_mastery: {
         note_path: 'database/General/Git/01_Foundations/Git_Foundations.md',
         recall_passed: true,
