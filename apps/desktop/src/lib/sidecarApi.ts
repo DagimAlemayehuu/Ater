@@ -67,12 +67,22 @@ async function deductCredits(featureSlug: string) {
     }
 }
 
+/**
+ * Determines if the application should use mock/demo data instead of
+ * making real native IPC or HTTP calls.
+ *
+ * demoActive is true if:
+ * 1. We are in Simulation mode (manual override).
+ * 2. We are running in a standard web browser without Tauri internals (previews/captures).
+ * 3. The user has explicitly enabled 'isDemoMode' in their local settings.
+ */
 async function isDemoActive(): Promise<boolean> {
     if (isSimulationMode()) {
         return true
     }
+    // Check for Tauri environment. If missing, we must use demo data to avoid crashes.
     if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
-        return true; // Force demo mode in standard web previews/captures
+        return true;
     }
     try {
         const store = await getAppStore()
@@ -114,15 +124,32 @@ async function checkedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
         ? `${await getSidecarBaseUrl()}${input}`
         : input
     const method = (init?.method || 'GET').toUpperCase()
-    const lockKey = method === 'GET' ? null : `${method}:${String(url)}`
+    // Mutating methods that should be locked to prevent duplicate requests
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+    const lockKey = isMutating ? `${method}:${String(url)}` : null
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000) // 15s timeout for specific sidecar routes
 
     const execute = async () => {
-        const response = await fetch(url, init)
-        if (!response.ok) {
-            const errText = await response.text().catch(() => '')
-            throw new Error(errText || `Sidecar request failed (${response.status} ${response.statusText})`)
+        try {
+            const response = await fetch(url, {
+                ...init,
+                signal: init?.signal ?? controller.signal
+            })
+            if (!response.ok) {
+                const errText = await response.text().catch(() => '')
+                throw new Error(errText || `Sidecar request failed (${response.status} ${response.statusText})`)
+            }
+            return response
+        } catch (error: any) {
+            if (error?.name === 'AbortError' || error?.message === 'The user aborted a request.') {
+                throw new Error(`Sidecar request timed out after 15s: ${method} ${url}`)
+            }
+            throw error
+        } finally {
+            clearTimeout(timeout)
         }
-        return response
     }
 
     if (!lockKey) {
@@ -257,6 +284,102 @@ export interface SearchResult {
     distance: number
 }
 
+export interface Hub {
+    id: string;
+    name: string;
+    description?: string;
+}
+
+export interface HubsResponse {
+    hubs: Hub[];
+}
+
+export interface HubNote {
+    path: string;
+    title: string;
+    read: boolean;
+}
+
+export interface HubNotesResponse {
+    notes: HubNote[];
+}
+
+export interface AcademicDashboard {
+    semesters: any[];
+    courses: any[];
+    units: any[];
+    exams: any[];
+    assignments: any[];
+}
+
+export interface PracticeQuestion {
+    id: string;
+    type: string;
+    question: string;
+    options?: string[] | Record<string, string>;
+    answer?: any;
+    explanation?: string;
+    textWithBlanks?: string;
+    pairs?: Array<{ left: string; right: string }>;
+    steps?: string[];
+    required_keywords?: string[];
+    note_id?: string;
+    is_remediation?: boolean;
+}
+
+export interface PracticeResponse {
+    quiz_path: string;
+    questions: PracticeQuestion[];
+}
+
+export interface ChatMessage {
+    id?: string;
+    role: string;
+    content: string;
+    timestamp?: string;
+    parent_message_id?: string;
+    metadata?: any;
+}
+
+export interface ChatConversation {
+    id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+    metadata?: any;
+    archived?: boolean;
+}
+
+export interface TutorSession {
+    session_id: string;
+    hub_path: string;
+    current_note_path: string;
+    completed_notes: string[];
+    wagers: Record<string, string>;
+    score: number;
+    status: 'active' | 'completed' | 'paused';
+    curriculum: string[];
+}
+
+export interface SRSCard {
+    note_path: string;
+    title: string;
+    difficulty?: number;
+    interval: number;
+    repetitions?: number;
+    last_reviewed?: string;
+    ease_factor?: number;
+}
+
+export interface SourceLearningJob {
+    job_id: string;
+    status: string;
+    curriculum?: any;
+    plan?: any;
+    plan_structured?: any;
+    audit?: any;
+}
+
 export const sidecarApi = {
     // ── Native Tauri IPC Core Commands ─────────────────────────
     init_app: async (dbPath: string): Promise<void> => {
@@ -321,6 +444,7 @@ export const sidecarApi = {
 
     // ── Native Tauri IPC Routes (Fully wired, no fake mocks!) ──
     health: async (): Promise<HealthResponse> => {
+        // Simulation mode takes precedence for specific manual testing scenarios.
         if (isSimulationMode()) return simulationSidecarApi.health()
         try {
             return await invoke<HealthResponse>('get_health')
@@ -333,7 +457,7 @@ export const sidecarApi = {
         return 'http://localhost'
     },
 
-    listVaultDatabases: async () => {
+    listVaultDatabases: async (): Promise<{ databases: VaultDatabase[] }> => {
         if (isSimulationMode()) return simulationSidecarApi.listVaultDatabases()
         if (await isDemoActive()) {
             return {
@@ -348,7 +472,7 @@ export const sidecarApi = {
             }
         }
         try {
-            return await invoke<any>('list_vault_databases')
+            return await invoke<{ databases: VaultDatabase[] }>('list_vault_databases')
         } catch (err) {
             console.error('[Tauri Native RAG] listVaultDatabases failed:', err)
             return { databases: [] }
@@ -400,20 +524,20 @@ export const sidecarApi = {
         }
     },
     
-    queryVaultDatabase: async (dbName: string) => {
+    queryVaultDatabase: async (dbName: string): Promise<{ results: any[] }> => {
         if (isSimulationMode()) return simulationSidecarApi.queryVaultDatabase(dbName)
         try {
-            return await invoke<any>('query_vault_database', { dbName })
+            return await invoke<{ results: any[] }>('query_vault_database', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] queryVaultDatabase failed:', err)
             return { results: [] }
         }
     },
     
-    listVaultDatabaseRows: async (dbName: string) => {
+    listVaultDatabaseRows: async (dbName: string): Promise<{ results: any[] }> => {
         if (isSimulationMode()) return simulationSidecarApi.listVaultDatabaseRows(dbName)
         try {
-            return await invoke<any>('list_vault_database_rows', { dbName })
+            return await invoke<{ results: any[] }>('list_vault_database_rows', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] listVaultDatabaseRows failed:', err)
             return { results: [] }
@@ -602,7 +726,7 @@ export const sidecarApi = {
         }
     },
     
-    readObsidianNote: async (path: string) => {
+    readObsidianNote: async (path: string): Promise<ObsidianNote> => {
         if (isSimulationMode()) return simulationSidecarApi.readObsidianNote(path)
         const ipcPath = await normalizeVaultIpcPath(path)
         if (await isDemoActive()) {
@@ -615,7 +739,7 @@ export const sidecarApi = {
             }
         }
         try {
-            return await invoke<any>('read_obsidian_note', { path: ipcPath })
+            return await invoke<ObsidianNote>('read_obsidian_note', { path: ipcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] readObsidianNote failed:', err)
             throw err
@@ -752,7 +876,7 @@ export const sidecarApi = {
         }
     },
 
-    aterQueueStatus: async () => {
+    aterQueueStatus: async (): Promise<any> => {
         if (isSimulationMode()) return simulationSidecarApi.aterQueueStatus()
         if (await isDemoActive()) {
             return mockDemo.MOCK_QUEUE_STATUS;
@@ -823,33 +947,33 @@ export const sidecarApi = {
         }
     },
 
-    listHubs: async () => {
+    listHubs: async (): Promise<HubsResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.listHubs()
         if (await isDemoActive()) {
             return mockDemo.MOCK_HUBS;
         }
         try {
-            return await invoke<any>('list_hubs')
+            return await invoke<HubsResponse>('list_hubs')
         } catch (err) {
             console.error('[Tauri Native RAG] listHubs failed:', err)
             return { hubs: [] }
         }
     },
     
-    listHubNotes: async (hubId: string) => {
+    listHubNotes: async (hubId: string): Promise<HubNotesResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.listHubNotes(hubId)
         if (await isDemoActive()) {
             return mockDemo.MOCK_HUB_NOTES;
         }
         try {
-            return await invoke<any>('list_hub_notes', { hubId })
+            return await invoke<HubNotesResponse>('list_hub_notes', { hubId })
         } catch (err) {
             console.error('[Tauri Native RAG] listHubNotes failed:', err)
             return { notes: [] }
         }
     },
     
-    generatePractice: async (hubId: string, config: any) => {
+    generatePractice: async (hubId: string, config: any): Promise<PracticeResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.generatePractice(hubId, config)
         await deductCredits('generate-practice')
         if (await isDemoActive()) {
@@ -920,7 +1044,7 @@ export const sidecarApi = {
             };
         }
         try {
-            return await invoke<any>('generate_practice', { hubId, configPayload: config })
+            return await invoke<PracticeResponse>('generate_practice', { hubId, configPayload: config })
         } catch (err) {
             console.error('[Tauri Native RAG] generatePractice failed:', err)
             throw err
@@ -948,9 +1072,10 @@ export const sidecarApi = {
         }
     },
     
-    getPractice: async (path: string) => {
+    getPractice: async (path: string): Promise<PracticeResponse> => {
         if (await isDemoActive()) {
             return {
+                quiz_path: path,
                 questions: [
                     {
                         id: 'q_mock_1',
@@ -964,7 +1089,7 @@ export const sidecarApi = {
             };
         }
         try {
-            return await invoke<any>('get_practice', { path })
+            return await invoke<PracticeResponse>('get_practice', { path })
         } catch (err) {
             console.error('[Tauri Native RAG] getPractice failed:', err)
             throw err
@@ -989,12 +1114,12 @@ export const sidecarApi = {
         }
     },
 
-    academicsDashboard: async () => {
+    academicsDashboard: async (): Promise<AcademicDashboard> => {
         if (await isDemoActive()) {
             return mockDemo.MOCK_ACADEMIC_DASHBOARD;
         }
         try {
-            return await invoke<any>('academics_dashboard')
+            return await invoke<AcademicDashboard>('academics_dashboard')
         } catch (err) {
             console.error('[Tauri Native RAG] academicsDashboard failed:', err)
             return { semesters: [], courses: [], units: [], exams: [], assignments: [] }
@@ -1457,9 +1582,9 @@ export const sidecarApi = {
         }
     },
 
-    vaultList: async (hubId: string) => {
+    vaultList: async (hubId: string): Promise<{ vaults: any[] }> => {
         try {
-            return await invoke<any>('vault_list', { hubId })
+            return await invoke<{ vaults: any[] }>('vault_list', { hubId })
         } catch (err) {
             console.error('[Tauri Native RAG] vaultList failed:', err)
             return { vaults: [] }
@@ -1946,7 +2071,7 @@ export const sidecarApi = {
             throw err;
         }
     },
-    startTutorSession: async (payload: { session_id: string; hub_path: string; mode?: string }) => {
+    startTutorSession: async (payload: { session_id: string; hub_path: string; mode?: string }): Promise<TutorSession> => {
         if (isSimulationMode()) {
             return {
                 session_id: payload.session_id,
@@ -1972,7 +2097,7 @@ export const sidecarApi = {
                 throw new Error(errText || `Failed to start tutor session (HTTP ${res.status})`);
             }
             invalidateTutorStatusCache();
-            return await checkedJson(res);
+            return await checkedJson<TutorSession>(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startTutorSession failed:', err);
             throw err;
@@ -2152,7 +2277,7 @@ export const sidecarApi = {
     getTutorStatusSync: () => {
         return cachedTutorStatus;
     },
-    getTutorStatus: async (session_id: string) => {
+    getTutorStatus: async (session_id: string): Promise<TutorSession> => {
         if (isSimulationMode()) {
             return {
                 session_id,
@@ -2180,13 +2305,18 @@ export const sidecarApi = {
                     const errText = await res.text();
                     throw new Error(errText || `Failed to get tutor status (HTTP ${res.status})`);
                 }
-                const data = await checkedJson(res);
+                const data = await checkedJson<TutorSession>(res);
                 cachedTutorStatus = data;
                 return data;
             } catch (err: any) {
-                cachedTutorStatusPromise = null;
                 console.error('[Tauri Native RAG] getTutorStatus failed:', err);
                 throw err;
+            } finally {
+                // Ensure the promise is cleared so subsequent calls can refresh if needed
+                // but only after a short delay to deduplicate rapid concurrent calls.
+                setTimeout(() => {
+                    cachedTutorStatusPromise = null;
+                }, 100);
             }
         })();
         return cachedTutorStatusPromise;
@@ -2479,7 +2609,7 @@ export const sidecarApi = {
         external_domain?: string;
         parent_hub_path?: string;
         chapter_title?: string;
-    }) => {
+    }): Promise<SourceLearningJob> => {
         enforceFeatureLock('file_ingestion');
         try {
             const headers = await getBaseHeaders('application/json');
@@ -2492,13 +2622,13 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to create source learning job (HTTP ${res.status})`);
             }
-            return await checkedJson(res);
+            return await checkedJson<SourceLearningJob>(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] createSourceLearningJob failed:', err);
             throw err;
         }
     },
-    getSourceLearningJob: async (jobId: string) => {
+    getSourceLearningJob: async (jobId: string): Promise<SourceLearningJob> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}`, {
@@ -2509,7 +2639,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to get source learning job (HTTP ${res.status})`);
             }
-            return await checkedJson(res);
+            return await checkedJson<SourceLearningJob>(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getSourceLearningJob failed:', err);
             throw err;
@@ -2666,7 +2796,7 @@ export const sidecarApi = {
     promoteAttachmentToSourceJob: async (attachmentId: string) => {
         return await sidecarApi.promoteAttachment(attachmentId);
     },
-    getLearnerProfile: async (topic: string) => {
+    getLearnerProfile: async (topic: string): Promise<any> => {
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
@@ -2717,7 +2847,7 @@ export const sidecarApi = {
         }
     },
     // --- Chat Runtime Client API ---
-    createConversation: async (title: string, metadata?: any) => {
+    createConversation: async (title: string, metadata?: any): Promise<ChatConversation> => {
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/chat/conversations`, {
@@ -2725,33 +2855,33 @@ export const sidecarApi = {
                 headers,
                 body: JSON.stringify({ title, metadata })
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatConversation>(res);
         } catch (err) {
             console.error('[Oracle Client] createConversation failed:', err);
             throw err;
         }
     },
-    listConversations: async (includeArchived?: boolean) => {
+    listConversations: async (includeArchived?: boolean): Promise<{ conversations: ChatConversation[] }> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations?include_archived=${!!includeArchived}`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson(res);
+            return await checkedJson<{ conversations: ChatConversation[] }>(res);
         } catch (err) {
             console.error('[Oracle Client] listConversations failed:', err);
             throw err;
         }
     },
-    getConversation: async (convId: string) => {
+    getConversation: async (convId: string): Promise<ChatConversation> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations/${convId}`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatConversation>(res);
         } catch (err) {
             console.error('[Oracle Client] getConversation failed:', err);
             throw err;
@@ -2810,20 +2940,20 @@ export const sidecarApi = {
             throw err;
         }
     },
-    getMessages: async (convId: string) => {
+    getMessages: async (convId: string): Promise<{ messages: ChatMessage[] }> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson(res);
+            return await checkedJson<{ messages: ChatMessage[] }>(res);
         } catch (err) {
             console.error('[Oracle Client] getMessages failed:', err);
             throw err;
         }
     },
-    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string, metadata?: any) => {
+    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string, metadata?: any): Promise<ChatMessage> => {
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
@@ -2831,7 +2961,7 @@ export const sidecarApi = {
                 headers,
                 body: JSON.stringify({ role, content, parent_message_id: parentMessageId, metadata })
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatMessage>(res);
         } catch (err) {
             console.error('[Oracle Client] appendMessage failed:', err);
             throw err;
