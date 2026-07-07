@@ -2484,7 +2484,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
             ul: MarkdownUl,
             ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
             li: MarkdownLi,
-            pre: ({ children }: any) => <div className="not-prose">{children}</div>,
+            pre: ({ children }: any) => <div className="not-prose overflow-x-auto">{children}</div>,
             code: CodeRenderer,
             input: MarkdownInput,
             table: ({ children, ...props }: any) => (

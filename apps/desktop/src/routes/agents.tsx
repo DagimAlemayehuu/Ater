@@ -146,9 +146,21 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
   const messages = useChatStore(state => state.messages);
   const setMessages = useChatStore(state => state.setMessages);
 
+  // Initialize activeConversationId from URL search params
+  useEffect(() => {
+    const cid = searchParams.get('conversationId');
+    if (cid && cid !== activeConversationId) {
+      setActiveConversationId(cid);
+    }
+  }, [searchParams, activeConversationId, setActiveConversationId]);
+
   const loadConversations = useCallback(async () => {
     try {
       const list = await sidecarApi.listConversations(true);
+      if (!Array.isArray(list)) {
+        setConversations([]);
+        return;
+      }
       const mapped = list.map((c: any) => ({
         id: c.id,
         title: c.title,
@@ -161,15 +173,24 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       setConversations(mapped);
     } catch (err) {
       console.error('[Oracle] Failed to list conversations:', err);
+      toast.error('Failed to load conversations.');
+      setConversations([]);
     }
   }, []);
 
   const loadMessages = useCallback(async (convId: string) => {
+    if (!convId) return;
     try {
       const msgs = await sidecarApi.getMessages(convId);
+      if (!Array.isArray(msgs)) {
+        setMessages([]);
+        return;
+      }
       setMessages(hydrateMessageActions(msgs));
     } catch (err) {
       console.error('[Oracle] Failed to get messages:', err);
+      toast.error('Failed to load messages.');
+      setMessages([]);
     }
   }, []);
 
@@ -421,7 +442,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       const userMsg = { role: 'user' as const, content: `Please process the source document: ${fileName}` }
       const assistantPlaceholder = {
         role: 'assistant' as const,
-        content: `Source Document: ${fileName}\n\nStarting background deployment...`
+        content: `Source Document: ${fileName}\n\nInitiating upload...`
       }
       const baseMessages = createdAttachmentConversation ? [] : useChatStore.getState().messages;
       currentMsgs = [...baseMessages, userMsg, assistantPlaceholder]
@@ -429,6 +450,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       setMessages(currentMsgs)
 
       // 1. Upload/Copy file natively to Inbox
+      setActiveStatus('Uploading to Inbox...');
       const learningScope = 'external' as const
       const uploadRes = await sidecarApi.aterInboxUpload(selected, fileName, learningScope)
       const inboxFilePath = uploadRes.path
@@ -437,6 +459,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       const extension = fileName.split('.').pop()?.toLowerCase();
       const fileType = extension === 'pdf' ? 'pdf' : extension === 'md' ? 'markdown' : 'text';
       try {
+        setActiveStatus('Registering attachment...');
         await sidecarApi.uploadAttachment(attachmentConversationId!, inboxFilePath, fileType);
         await refreshRuntimePanels(attachmentConversationId!);
       } catch (attachmentErr) {
@@ -444,7 +467,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       }
 
       // 2. Unified source job creation
-      setActiveStatus('Auditing source...')
+      setActiveStatus('Analyzing source and creating job...')
       currentMsgs = [...currentMsgs]
       currentMsgs[assistantIndex] = {
         role: 'assistant',
@@ -544,12 +567,20 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
 
     } catch (err: any) {
       const errMsg = err.message || 'Processing failed'
-      console.error(err)
-      const failMsgs = currentMsgs.length ? [...currentMsgs] : [...useChatStore.getState().messages]
-      failMsgs[assistantIndex] = {
-        role: 'assistant',
-        content: `Processing Failed\n\nError: ${errMsg}`
+      console.error('[Oracle] Attachment processing failed:', err)
+
+      const latestMessages = useChatStore.getState().messages;
+      const failMsgs = currentMsgs.length > assistantIndex ? [...currentMsgs] : [...latestMessages];
+      const targetIndex = currentMsgs.length > assistantIndex ? assistantIndex : failMsgs.length - 1;
+
+      if (targetIndex >= 0) {
+        failMsgs[targetIndex] = {
+          role: 'assistant',
+          content: `Processing Failed\n\nError: ${errMsg}`
+        }
+        setMessages(failMsgs)
       }
+
       if (attachmentConversationId) {
         try {
           await sidecarApi.appendMessage(attachmentConversationId, 'assistant', `Processing Failed\n\nError: ${errMsg}`);
@@ -570,6 +601,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
     if (!activeConversationId && messages.length > 0) {
       const newId = `ater-conv-${Date.now()}`;
       setActiveConversationId(newId);
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.set('conversationId', newId);
+        return next;
+      });
 
       const firstUserMsg = messages.find(m => m.role === 'user')?.content || 'New Chat';
       const title = firstUserMsg.length > 30 ? firstUserMsg.substring(0, 30) + '...' : firstUserMsg;
@@ -610,7 +646,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
 
   // Scroll to bottom
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current?.scrollIntoView) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   useEffect(() => {
@@ -658,6 +696,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
     if (!conv) return;
 
     setActiveConversationId(convId);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('conversationId', convId);
+      return next;
+    });
 
     try {
       const msgs = hydrateMessageActions(await sidecarApi.getMessages(convId));
@@ -709,6 +752,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       const created = await sidecarApi.createConversation('New Chat');
       if (created && created.id) {
         setActiveConversationId(created.id);
+        setSearchParams(prev => {
+          const next = new URLSearchParams(prev);
+          next.set('conversationId', created.id);
+          return next;
+        });
         loadConversations();
         setMessages([]);
         setPreview(null);
@@ -738,6 +786,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
         if (updated.length > 0) {
           const first = updated[0];
           setActiveConversationId(first.id);
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('conversationId', first.id);
+            return next;
+          });
           await loadMessages(first.id);
           setPreview(first.preview);
           setPanelOpen(first.panelOpen);
@@ -746,6 +799,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
           }
         } else {
           setActiveConversationId(null);
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('conversationId');
+            return next;
+          });
           setMessages([]);
           setPreview(null);
           setPanelOpen(false);
@@ -1253,6 +1311,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
   }, [searchParams, setMessages, startTeacherJobAction]);
 
   const handleSendMessage = async (textToSend?: string) => {
+    if (isLoading) return;
     const text = (textToSend || input).trim();
     if (!text) return;
 
@@ -1387,7 +1446,14 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
       try {
         const created = await sidecarApi.createConversation('New Chat');
         currentId = created.id;
-        setActiveConversationId(currentId);
+        if (currentId) {
+          setActiveConversationId(currentId);
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('conversationId', currentId as string);
+            return next;
+          });
+        }
       } catch (err) {
         toast.error('Failed to initialize conversation');
         setIsLoading(false);
@@ -2194,7 +2260,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-                placeholder="Ask Ater..."
+                placeholder={isLoading ? "Please wait..." : "Ask Ater..."}
                 className="flex-1 min-h-[44px] max-h-[120px] bg-transparent border-none p-3 text-sm focus:outline-none resize-none placeholder:text-muted-foreground/30 font-sans leading-relaxed text-foreground"
                 rows={1}
                 disabled={isLoading}
