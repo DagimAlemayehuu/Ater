@@ -34,6 +34,7 @@ export default function AcademicDashboard() {
  const isMountedRef = useRef(false)
  const dataRequestIdRef = useRef(0)
  const databaseRequestIdRef = useRef(0)
+ const pendingOpsRef = useRef<Set<string>>(new Set())
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = (String(searchParams.get('tab') || 'PROGRAM').toUpperCase()) as AcademicTab
   const setActiveTab = (tab: AcademicTab | ((prev: AcademicTab) => AcademicTab)) => {
@@ -59,32 +60,38 @@ export default function AcademicDashboard() {
 
  // ── Data fetching ──────────────────────────────────────────────────────────
  const fetchData = useCallback(async () => {
- const requestId = ++dataRequestIdRef.current
- try {
-  const dashRes = await sidecarApi.academicsDashboard()
-  if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
-  startDataTransition(() => {
-    setData(dashRes as any)
-    setLoading(false)
-  })
+  const requestId = ++dataRequestIdRef.current
+  try {
+    const [dashRes, studyRes] = await Promise.allSettled([
+      sidecarApi.academicsDashboard(),
+      sidecarApi.getStudyHistory()
+    ])
 
-  sidecarApi.getStudyHistory()
-    .then(studyRes => {
-      if (isMountedRef.current && requestId === dataRequestIdRef.current) {
-        setApiStudyHistory(studyRes || { sessions: [], telemetry: [], practice: [] })
-      }
-    })
-    .catch(() => {
-      if (isMountedRef.current && requestId === dataRequestIdRef.current) {
-        setApiStudyHistory({ sessions: [], telemetry: [], practice: [] })
-      }
-    })
- } catch {
-  if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
-  toast.error('Could not connect to vault')
-  setLoading(false)
- }
-}, [])
+    if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
+
+    if (dashRes.status === 'fulfilled') {
+      startDataTransition(() => {
+        setData(dashRes.value as any)
+        setLoading(false)
+      })
+    } else {
+      console.error('Failed to load dashboard data:', dashRes.reason)
+      toast.error('Could not connect to vault')
+      setLoading(false)
+    }
+
+    if (studyRes.status === 'fulfilled') {
+      setApiStudyHistory(studyRes.value || { sessions: [], telemetry: [], practice: [] })
+    } else {
+      console.warn('Failed to load study history:', studyRes.reason)
+      setApiStudyHistory({ sessions: [], telemetry: [], practice: [] })
+    }
+  } catch (err) {
+    if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
+    console.error('Unexpected error in fetchData:', err)
+    setLoading(false)
+  }
+ }, [])
 
  const fetchDatabases = useCallback(async () => {
  const requestId = ++databaseRequestIdRef.current
@@ -122,93 +129,141 @@ export default function AcademicDashboard() {
 
  // ── Shared handlers ────────────────────────────────────────────────────────
   const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, any>) => {
-  console.log(`[Academic] Updating ${dbId}/${itemId}:`, properties)
-  // Optimistic update
-  setData(prev => {
-  if (!prev) return prev
-  const next = {...prev}
-  let key: keyof AcademicData | undefined;
-  const dbIdLow = dbId.toLowerCase();
-  if (dbIdLow.includes('year')) key = 'years';
-  else if (dbIdLow.includes('semester')) key = 'semesters';
-  else if (dbIdLow.includes('course')) key = 'courses';
-  else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
-  else if (dbIdLow.includes('exam')) key = 'exams';
-  else if (dbIdLow.includes('assignment')) key = 'assignments';
-  
-  if (key && Array.isArray(next[key])) {
-  next[key] = (next[key] as any[]).map(item => {
-  if (item.id === itemId) {
-  const updated = {...item, ...properties}
-  if (properties.title) updated.id = properties.title
-  return updated
-}
-  return item
-})
-}
-  return next
-})
+    const opId = `update-${dbId}-${itemId}-${JSON.stringify(properties)}`
+    if (pendingOpsRef.current.has(opId)) return
+    pendingOpsRef.current.add(opId)
 
-  try {
-  if (properties.title && properties.title !== itemId) {
-  await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
-} else {
-  await sidecarApi.updateVaultRow(dbId, itemId, properties)
-}
-  fetchData()
-} catch {
-  toast.error('Update failed')
-  fetchData() // Revert to server state
-}
-}, [fetchData])
+    const prevData = data
+    setData(prev => {
+      if (!prev) return prev
+      const next = {...prev}
+      let key: keyof AcademicData | undefined;
+      const dbIdLow = dbId.toLowerCase();
+      if (dbIdLow.includes('year')) key = 'years';
+      else if (dbIdLow.includes('semester')) key = 'semesters';
+      else if (dbIdLow.includes('course')) key = 'courses';
+      else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
+      else if (dbIdLow.includes('exam')) key = 'exams';
+      else if (dbIdLow.includes('assignment')) key = 'assignments';
+
+      if (key && Array.isArray(next[key])) {
+        next[key] = (next[key] as any[]).map(item => {
+          if (item.id === itemId) {
+            const updated = {...item, ...properties}
+            if (properties.title) {
+              updated.id = properties.title
+              if (selectedItemId === itemId) {
+                setSelectedItemId(properties.title)
+              }
+            }
+            return updated
+          }
+          return item
+        })
+      }
+      return next
+    })
+
+    try {
+      if (properties.title && properties.title !== itemId) {
+        await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
+      } else {
+        await sidecarApi.updateVaultRow(dbId, itemId, properties)
+      }
+      await fetchData()
+    } catch (err) {
+      console.error('Update failed:', err)
+      toast.error('Update failed')
+      setData(prevData)
+      await fetchData()
+    } finally {
+      pendingOpsRef.current.delete(opId)
+    }
+  }, [data, fetchData, selectedItemId])
 
   const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
-  const dbIdLow = dbId.toLowerCase();
-  // Optimistic update for creation
-  setData(prev => {
-  if (!prev) return prev
-  const next = {...prev}
-  let key: keyof AcademicData | undefined;
-  if (dbIdLow.includes('year')) key = 'years';
-  else if (dbIdLow.includes('semester')) key = 'semesters';
-  else if (dbIdLow.includes('course')) key = 'courses';
-  else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
-  else if (dbIdLow.includes('exam')) key = 'exams';
-  else if (dbIdLow.includes('assignment')) key = 'assignments';
-  
-  if (key && Array.isArray(next[key])) {
-  const newItem = {id: title, title, ...props}
-  next[key] = [...(next[key] as any[]), newItem]
-}
-  return next
-})
+    const opId = `create-${dbId}-${title}`
+    if (pendingOpsRef.current.has(opId)) return null
+    pendingOpsRef.current.add(opId)
 
-  try {
-  // Fill missing schema properties with empty strings or default wraps
-  const finalProps = { ...props }
-  const schema = DEFAULT_SCHEMAS[dbIdLow] || {}
-  for (const [k, v] of Object.entries(schema)) {
-    if (!(k in finalProps)) {
-      finalProps[k] = v.type === 'relation' ? wrapWL('') : ''
+    const dbIdLow = dbId.toLowerCase();
+    const prevData = data
+    setData(prev => {
+      if (!prev) return prev
+      const next = {...prev}
+      let key: keyof AcademicData | undefined;
+      if (dbIdLow.includes('year')) key = 'years';
+      else if (dbIdLow.includes('semester')) key = 'semesters';
+      else if (dbIdLow.includes('course')) key = 'courses';
+      else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
+      else if (dbIdLow.includes('exam')) key = 'exams';
+      else if (dbIdLow.includes('assignment')) key = 'assignments';
+
+      if (key && Array.isArray(next[key])) {
+        const newItem = {id: title, title, ...props}
+        next[key] = [...(next[key] as any[]), newItem]
+      }
+      return next
+    })
+
+    try {
+      const finalProps = { ...props }
+      const schema = DEFAULT_SCHEMAS[dbIdLow] || {}
+      for (const [k, v] of Object.entries(schema)) {
+        if (!(k in finalProps)) {
+          finalProps[k] = v.type === 'relation' ? wrapWL('') : ''
+        }
+      }
+      const res = await sidecarApi.createVaultRow(dbId, title, finalProps)
+      await fetchData()
+      return res.id || null
+    } catch (err) {
+      console.error('Creation failed:', err)
+      toast.error('Creation failed')
+      setData(prevData)
+      await fetchData()
+      return null
+    } finally {
+      pendingOpsRef.current.delete(opId)
     }
-  }
-
-  const res = await sidecarApi.createVaultRow(dbId, title, finalProps)
-  fetchData()
-  return res.id || null
-} catch {
-  toast.error('Creation failed')
-  fetchData()
-  return null
-}
-}, [fetchData])
+  }, [data, fetchData])
 
   const onDelete = useCallback(async (dbId: string, itemId: string) => {
+    const opId = `delete-${dbId}-${itemId}`
+    if (pendingOpsRef.current.has(opId)) return
+    pendingOpsRef.current.add(opId)
+
+    const prevData = data
+    setData(prev => {
+      if (!prev) return prev
+      const next = {...prev}
+      let key: keyof AcademicData | undefined;
+      const dbIdLow = dbId.toLowerCase();
+      if (dbIdLow.includes('year')) key = 'years';
+      else if (dbIdLow.includes('semester')) key = 'semesters';
+      else if (dbIdLow.includes('course')) key = 'courses';
+      else if (dbIdLow.includes('study planner') || dbIdLow.includes('study_sessions')) key = 'study_sessions';
+      else if (dbIdLow.includes('exam')) key = 'exams';
+      else if (dbIdLow.includes('assignment')) key = 'assignments';
+
+      if (key && Array.isArray(next[key])) {
+        next[key] = (next[key] as any[]).filter(item => item.id !== itemId)
+      }
+      return next
+    })
+
     try {
       await sidecarApi.deleteVaultRow(dbId, itemId)
-      fetchData()
-    } catch {toast.error('Delete failed')}
-  }, [fetchData])
+      await fetchData()
+    } catch (err) {
+      console.error('Delete failed:', err)
+      toast.error('Delete failed')
+      setData(prevData)
+      await fetchData()
+    } finally {
+      pendingOpsRef.current.delete(opId)
+    }
+  }, [data, fetchData])
 
   const onScaffold = useCallback(async (name: string, years: number, level: string, currentYearIdx: number) => {
     try {

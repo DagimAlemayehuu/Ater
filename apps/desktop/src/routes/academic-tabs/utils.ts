@@ -12,12 +12,13 @@ import { parseISO, differenceInDays, isBefore, startOfDay } from 'date-fns'
 
 // ─── Wikilink helpers ──────────────────────────────────────────────────────────
 
-/** Remove [[ ]] wikilink syntax from any value */
+/** Remove [[ ]] wikilink syntax from any value. Handles aliases like [[Path|Alias]] */
 export const stripWL = (val: any): string => {
   if (val === undefined || val === null) return ''
   let s = String(val).trim()
-  s = s.replace(/\[\[(.*?)\]\]/g, '$1')
-  s = s.replace(/\[(.*?)\]/g, '$1')
+  // Match [[Path|Alias]] and extract Alias, or [[Path]] and extract Path
+  s = s.replace(/\[\[(?:.*\|)?(.*?)\]\]/g, '$1')
+  s = s.replace(/\[(?:.*\|)?(.*?)\]/g, '$1')
   s = s.replace(/[\[\]]/g, '')
   return s.trim()
 }

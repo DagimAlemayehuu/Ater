@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Trash2, Plus, Search, Layers } from 'lucide-react'
+import { Trash2, Plus, Search, Layers, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { stripWL, getVal, wrapWL, cleanTitle } from './utils'
 import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, SectionHeader } from './SharedComponents'
@@ -104,7 +104,10 @@ export default function SemestersTab({ data, databases, onUpdate, onCreate, onDe
             </div>
           </div>
           {semesterCourses.length === 0 ? (
-            <EmptyState message="No courses yet." />
+          <EmptyState
+            message="No courses yet."
+            icon={<BookOpen size={24} className="text-muted-foreground/30" />}
+          />
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {semesterCourses.map((c, idx) => {

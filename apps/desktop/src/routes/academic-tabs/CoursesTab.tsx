@@ -825,7 +825,12 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24">
-        {filtered.length === 0 && !addingCourse && <EmptyState message="No courses found." />}
+        {filtered.length === 0 && !addingCourse && (
+          <EmptyState
+            message={search ? `No courses matching "${search}"` : "No courses found."}
+            icon={<BookOpen size={24} className="text-muted-foreground/30" />}
+          />
+        )}
         <div className="grid grid-cols-3 gap-4">
           {filtered.map((course, idx) => {
             const grade       = stripWL(getVal(course, 'Grade', 'grade'))

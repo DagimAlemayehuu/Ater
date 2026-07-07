@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Check, Edit3, Plus, X, ChevronRight, AlertTriangle, Trash2 } from 'lucide-react'
+import { Check, Edit3, Plus, X, ChevronRight, AlertTriangle, Trash2, RefreshCw } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { stripWL, statusColorClass, getYearOrder, wrapWL, cleanTitle, getVal, getBoolVal } from './utils'
@@ -72,19 +72,32 @@ export function StatCard({ label, value, accent, onClick, sub }: {
 
 // ─── Editable Title ────────────────────────────────────────────────────────────
 export function EditableTitle({ value, onSave, className }: {
-  value: string; onSave: (next: string) => void; className?: string
+  value: string; onSave: (next: string) => void | Promise<void>; className?: string
 }) {
   const [editing, setEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [draft, setDraft] = useState(value)
   useEffect(() => { setDraft(value) }, [value])
 
   if (editing) {
+    const handleSave = async () => {
+      if (draft.trim() && draft !== value) {
+        setIsSaving(true)
+        try {
+          await onSave(draft.trim())
+        } finally {
+          setIsSaving(false)
+        }
+      }
+      setEditing(false)
+    }
+
     return (
       <input autoFocus value={draft}
         onChange={e => setDraft(e.target.value)}
-        onBlur={() => { if (draft.trim() && draft !== value) onSave(draft.trim()); setEditing(false) }}
+        onBlur={handleSave}
         onKeyDown={e => {
-          if (e.key === 'Enter') { if (draft.trim() && draft !== value) onSave(draft.trim()); setEditing(false) }
+          if (e.key === 'Enter') handleSave()
           if (e.key === 'Escape') { setDraft(value); setEditing(false) }
         }}
         className={cn('bg-muted/10 px-2 outline-none w-full border-none focus:ring-1 focus:ring-primary/30', className)}
@@ -92,10 +105,14 @@ export function EditableTitle({ value, onSave, className }: {
     )
   }
   return (
-    <div className={cn('cursor-pointer text-foreground block group/title relative outline-none', className)}
-      onClick={() => setEditing(true)}>
-      {cleanTitle(value)}
-      <Edit3 size={11} className="inline-block ml-2 opacity-0 group-hover/title:opacity-20" />
+    <div className={cn('cursor-pointer text-foreground flex items-center group/title relative outline-none', className, isSaving && 'opacity-50')}
+      onClick={() => !isSaving && setEditing(true)}>
+      <span>{cleanTitle(value)}</span>
+      {isSaving ? (
+        <RefreshCw size={11} className="ml-2 animate-spin text-muted-foreground" />
+      ) : (
+        <Edit3 size={11} className="ml-2 opacity-0 group-hover/title:opacity-20" />
+      )}
     </div>
   )
 }
@@ -153,10 +170,11 @@ export function CreateBanner({ label, onConfirm, onCancel, placeholder }: {
 
 // ─── Big Property Card ─────────────────────────────────────────────────────────
 export function BigPropertyCard({ label, value, schema, onUpdate }: {
-  label: string; value: any; schema?: any; onUpdate: (val: any) => void
+  label: string; value: any; schema?: any; onUpdate: (val: any) => void | Promise<void>
 }) {
   const cardId = useMemo(() => crypto.randomUUID(), [])
   const [editing, setEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [editVal, setEditVal] = useState(stripWL(value ?? ''))
 
   useEffect(() => { setEditVal(stripWL(value ?? '')) }, [value])
@@ -173,7 +191,15 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
     setEditing(true)
   }
 
-  const handleSave = (v?: any) => { onUpdate(v !== undefined ? v : editVal); setEditing(false) }
+  const handleSave = async (v?: any) => {
+    setIsSaving(true)
+    try {
+      await onUpdate(v !== undefined ? v : editVal)
+    } finally {
+      setIsSaving(false)
+      setEditing(false)
+    }
+  }
 
   const type = (schema?.type) || (typeof value === 'boolean' ? 'bool' : 'str')
   const isEmpty = value === undefined || value === null || value === ''
@@ -201,11 +227,15 @@ export function BigPropertyCard({ label, value, schema, onUpdate }: {
   }
 
   return (
-    <div className="p-2.5 px-3.5 border border-border/80 bg-bento-card rounded-[6px] flex flex-col gap-1.5 group/bigprop relative hover:bg-bento-item/30 transition-colors cursor-pointer"
-      onClick={startEdit}>
+    <div className={cn('p-2.5 px-3.5 border border-border/80 bg-bento-card rounded-[6px] flex flex-col gap-1.5 group/bigprop relative hover:bg-bento-item/30 transition-colors cursor-pointer', isSaving && 'opacity-70')}
+      onClick={() => !isSaving && startEdit()}>
       <div className="flex items-center justify-between">
         <span className="text-[7.5px] font-black uppercase tracking-[0.15em] text-muted-foreground">{displayLabel}</span>
-        <Edit3 size={8} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground/50" />
+        {isSaving ? (
+          <RefreshCw size={8} className="animate-spin text-muted-foreground" />
+        ) : (
+          <Edit3 size={8} className="text-muted-foreground/0 group-hover/bigprop:text-muted-foreground/50" />
+        )}
       </div>
 
       {editing ? (
@@ -244,6 +274,7 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
   value: string; source?: string; onSave: (val: string) => void; onCancel: () => void; label?: string
 }) {
   const [options, setOptions] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const rawValue = stripWL(value)
 
@@ -262,14 +293,18 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
 
     const loadOptions = async () => {
       if (source) {
+        setLoading(true)
         try {
           const res = await sidecarApi.getVaultOptions(source)
           if (active && res && res.options && res.options.length > 0) {
             setOptions(res.options)
+            setLoading(false)
             return
           }
         } catch (err) {
           console.error('[SelectPropertyEditor] Failed to load options:', err)
+        } finally {
+          if (active) setLoading(false)
         }
       }
       
@@ -308,8 +343,11 @@ export function SelectPropertyEditor({ value, source, onSave, onCancel, label }:
   return (
     <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-bento-panel border border-border rounded-[8px] shadow-2xl z-50 p-2"
       onClick={e => e.stopPropagation()}>
-      <input autoFocus placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-        className="w-full bg-bento-card text-[10px] font-black uppercase px-3 py-2 mb-2 border border-border rounded-[8px] focus:outline-none text-foreground" />
+      <div className="relative">
+        <input autoFocus placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full bg-bento-card text-[10px] font-black uppercase px-3 py-2 mb-2 border border-border rounded-[8px] focus:outline-none text-foreground" />
+        {loading && <RefreshCw size={10} className="absolute right-3 top-2.5 animate-spin text-muted-foreground" />}
+      </div>
       <div className="max-h-44 overflow-y-auto flex flex-col gap-0.5">
         {filtered.map(opt => (
           <div key={opt} className={cn('flex items-center justify-between group hover:bg-muted/10', rawValue === opt ? 'bg-primary/5' : '')}>

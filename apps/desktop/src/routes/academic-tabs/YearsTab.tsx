@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Trash2, Plus, Search, Award } from 'lucide-react'
+import { Trash2, Plus, Search, Award, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { stripWL, getVal, getBoolVal, wrapWL, cleanTitle } from './utils'
 import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, SectionHeader } from './SharedComponents'
@@ -110,7 +110,10 @@ export default function YearsTab({ data, databases, onUpdate, onCreate, onDelete
             </div>
           </div>
           {yearSemesters.length === 0 ? (
-            <EmptyState message="No semesters yet." />
+          <EmptyState
+            message="No semesters yet."
+            icon={<Layers size={24} className="text-muted-foreground/30" />}
+          />
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {yearSemesters.map((s, idx) => (

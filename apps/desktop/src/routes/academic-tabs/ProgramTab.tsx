@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X, Network, Edit2, ExternalLink } from 'lucide-react'
+import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X, Network, Edit2, ExternalLink, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { differenceInDays, startOfDay, addDays, isSameDay, startOfWeek, format } from 'date-fns'
@@ -28,6 +28,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
   const [selectedYearId, setSelectedYearId]     = useState<string | null>(null)
   const [selectedSemId,  setSelectedSemId]      = useState<string | null>(null)
   const [showSetup,      setShowSetup]          = useState(false)
+  const [scaffolding,    setScaffolding]        = useState(false)
   const [addingSem,      setAddingSem]          = useState(false)
   const [addingCourse,   setAddingCourse]       = useState(false)
   const [sidebarTab,     setSidebarTab]         = useState<'assignments' | 'exams'>('assignments')
@@ -840,7 +841,19 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
         {programYears.length === 0 || showSetup ? (
           <div className="flex-1 overflow-y-auto pr-1">
             {showSetup && <button onClick={() => setShowSetup(false)} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground mb-6 transition-colors">← Back to Overview</button>}
-            <ProgramSetupForm onScaffold={(n, y, l, c) => { handleScaffold(n, y, l, c); setShowSetup(false) }} />
+            {scaffolding ? (
+              <EmptyState message="Deploying roadmap..." icon={<RefreshCw size={24} className="animate-spin text-muted-foreground/30" />} />
+            ) : (
+              <ProgramSetupForm onScaffold={async (n, y, l, c) => {
+                setScaffolding(true)
+                try {
+                  await handleScaffold(n, y, l, c)
+                  setShowSetup(false)
+                } finally {
+                  setScaffolding(false)
+                }
+              }} />
+            )}
           </div>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col space-y-6">

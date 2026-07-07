@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Check, Trash2, BookOpen, Plus, Filter, Search, Clock } from 'lucide-react'
+import { Check, Trash2, BookOpen, Plus, Filter, Search, Clock, ClipboardList } from 'lucide-react'
 import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -239,7 +239,12 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
 
       {/* Items */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4 pb-24 space-y-2">
-        {filtered.length === 0 && !adding && <EmptyState message="No assignments found." />}
+        {filtered.length === 0 && !adding && (
+          <EmptyState
+            message={search ? `No assignments matching "${search}"` : filter !== 'Pending' ? "No assignments found" : "No assignments pending"}
+            icon={<ClipboardList size={24} className="text-muted-foreground/30" />}
+          />
+        )}
         {filtered.map((a, idx) => {
           const isDone     = a.done === true || a.done === 'true' || stripWL(getVal(a, 'Status', 'status')).toLowerCase().includes('complet')
           const course     = stripWL(getVal(a, 'Course', 'course'))

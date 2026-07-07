@@ -164,7 +164,7 @@ const layoutDayEvents = (dayEvents: CalendarEvent[]): PositionedEvent[] => {
 
 const groupNoteVisits = (events: CalendarEvent[]): CalendarEvent[] => {
   const otherEvents = events.filter(e => e._type !== 'Note Visit');
-  const noteVisits = events.filter(e => e._type === 'Note Visit');
+  const noteVisits = events.filter(e => e._type === 'Note Visit' && e._date);
 
   const groups: Record<string, typeof noteVisits> = {};
 
@@ -526,7 +526,8 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
   const toggleFilter = (filter: string) => setActiveFilters(p => ({ ...p, [filter]: !p[filter] }));
 
   const filteredEvents = useMemo(() => {
-    const grouped = groupNoteVisits(events);
+    const validEvents = (events || []).filter(e => e && e._date);
+    const grouped = groupNoteVisits(validEvents);
     return grouped.filter(ev => {
       const isExamOrAssign = ev._type === 'Exam' || ev._type === 'Assignment';
       const isStudy = ev._type === 'Study Session' || ev._type === 'Study';

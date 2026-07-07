@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Check, Trash2, BookOpen, Plus, Search, Target } from 'lucide-react'
+import { Check, Trash2, BookOpen, Plus, Search, Target, FlaskConical } from 'lucide-react'
 import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -246,7 +246,12 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24">
-        {filtered.length === 0 && !adding && <EmptyState message="No exams found." />}
+        {filtered.length === 0 && !adding && (
+          <EmptyState
+            message={search ? `No exams matching "${search}"` : filter === 'Upcoming' ? "No upcoming exams" : "No exams found"}
+            icon={<FlaskConical size={24} className="text-muted-foreground/30" />}
+          />
+        )}
         <div className="grid grid-cols-3 gap-4">
           {filtered.map((exam, idx) => {
             const grade    = stripWL(getVal(exam, 'Grade', 'grade'))
