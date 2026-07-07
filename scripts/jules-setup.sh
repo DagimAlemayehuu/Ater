@@ -61,3 +61,4 @@ uv --version
 cargo --version
 
 echo "==> Jules setup complete"
+
