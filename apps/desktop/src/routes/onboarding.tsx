@@ -181,7 +181,11 @@ export default function Onboarding() {
     }
     await saveConfig(updates)
   }
-  const handleBack = () => setStep((s) => Math.max(s - 1, 1))
+  const handleBack = async () => {
+    const prevStep = Math.max(step - 1, 1)
+    setStep(prevStep)
+    await saveConfig({ onboardingStep: prevStep })
+  }
 
   const checkExistingVaultConfig = async (selectedPath: string) => {
     const normalizedPath = normalizeVaultPath(selectedPath)
@@ -774,7 +778,11 @@ export default function Onboarding() {
 
             <div className="flex gap-3">
               <button
-                onClick={handleBack}
+                onClick={() => handleBack()}
+                onClick={() => handleBack()}
+                onClick={() => handleBack()}
+                onClick={() => handleBack()}
+                onClick={() => handleBack()}
                 className="py-2.5 px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground border border-border hover:border-foreground hover:text-foreground rounded-[8px] transition-colors bg-bento-item/30"
               >
                 Back
