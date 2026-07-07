@@ -1363,8 +1363,15 @@ export default function Settings() {
               <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">Configure external integrations and account connections.</p>
             </div>
 
-            <div className="border border-border/40 bg-bento-item/10 rounded-[8px] p-6 flex flex-col gap-2 text-center text-muted-foreground font-sans">
-              <p className="text-[11px] font-bold uppercase tracking-wider">No external integration services currently configured.</p>
+            <div className="border border-border/40 bg-bento-item/10 rounded-[12px] p-10 flex flex-col items-center justify-center gap-4 text-center text-muted-foreground font-sans">
+              <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center mb-2">
+                <Network size={24} className="opacity-20" />
+              </div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] opacity-40">No Active Integrations</p>
+              <p className="text-[12px] max-w-xs leading-relaxed opacity-60">
+                Legacy integrations (Notion, NotebookLM) have been retired in v0.2.
+                Ater now prioritizes local-first privacy via your Obsidian vault.
+              </p>
             </div>
           </div>
         );

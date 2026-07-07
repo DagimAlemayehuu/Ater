@@ -15,10 +15,13 @@ This document defines the client-side frameworks, route structure, state managem
 
 ## 2. Page Routes & Components
 All client-side routes reside in `apps/desktop/src/routes/`:
-* **`/academic` (Ater Architect):** Ingests PDFs and raw text, showing real-time note generation logs and compiler progress.
-* **`/practice` (Active Recall Engine):** The study canvas. Renders quizzes and Feynman writing challenges.
-* **`/notebooks` (NotebookLM Workspace):** Interface to manage imported Google notebooks, sources, and generated podcasts/visual maps.
-* **`/settings`:** Handles database configuration, Supabase sync status, and local Obsidian Vault pathing.
+* **`/agents` (Ater Chat / Oracle):** The primary conversational interface. Houses the Ater Oracle agent for contextual RAG and active learning support.
+* **`/academic` (Ater Architect):** Core ingestion pipeline. Processes PDFs and raw text into atomic markdown notes within the vault.
+* **`/practice` (Active Recall Engine):** Spaced-repetition study canvas. Renders adaptive quizzes and Feynman writing challenges.
+* **`/obsidian` (Vault):** Local file explorer and markdown editor for the user's Obsidian-compatible knowledge base.
+* **`/calendar`:** Visual timeline of study sessions, upcoming exams, and academic milestones.
+* **`/settings`:** Manages API keys, local vault pathing, Pomodoro durations, and system diagnostics.
+* **`/onboarding`:** Initialization sequence for first-time setup and hardware binding.
 
 ---
 
