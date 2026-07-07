@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { invoke } from '@tauri-apps/api/core'
 import { supabase } from '@/lib/supabase'
 import { getAppStore } from '@/lib/store'
-import { isSimulationMode } from '@/lib/appMode'
+import { isSimulationMode, isBetaMode } from '@/lib/appMode'
 
 
 export type LockStatus = 'Active' | 'FeatureLocked' | 'Bricked' | 'LeaseExpired'
@@ -296,10 +296,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
   isFeatureLocked: (feature: string) => {
     if (isSimulationMode()) return false
+    if (isBetaMode()) return false
     const { status, lockedFeatures, creditBalance } = get()
     if (status === 'Bricked' || (status === 'LeaseExpired' && feature === 'full-system-lockout')) return true
     
     // Master Mapping logic for robust hackproof lockout checks
+    // In beta mode (isBetaMode() handled above), creditBalance is 0 by design — do not treat it as a lock.
     const isAiLocked = lockedFeatures.some(f => ['ai_locked', 'ai-features', 'ai-ingestion'].includes(f)) || creditBalance <= 0
     const isAcademicLocked = lockedFeatures.some(f => ['academic_locked', 'academic-dashboard', 'interactive_quiz'].includes(f))
     const isExplorerLocked = lockedFeatures.some(f => ['explorer_locked', 'explorer-lockout', 'file_ingestion', 'vector_search'].includes(f))

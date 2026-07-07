@@ -132,7 +132,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     machineId: '',
     displayName: '',
     isProgramConfigured: false,
-    appMode: 'real',
+    appMode: 'beta',
     isDemoMode: false,
 };
 

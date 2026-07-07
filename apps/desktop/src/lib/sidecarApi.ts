@@ -11,7 +11,7 @@ import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
 import { realSupabase } from '@/lib/supabase'
 import { toVaultRelativePath } from '@/lib/vaultPath'
-import { isSimulationMode } from '@/lib/appMode'
+import { isSimulationMode, isBetaMode } from '@/lib/appMode'
 import { simulationSidecarApi } from '@/lib/simulation/adapter'
 
 function enforceFeatureLock(featureSlug: string) {
@@ -22,6 +22,10 @@ function enforceFeatureLock(featureSlug: string) {
 
 async function deductCredits(featureSlug: string) {
     if (import.meta.env.DEV) {
+        return;
+    }
+
+    if (isBetaMode()) {
         return;
     }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useSecurityStore } from '@/context/securityStore'
 import { LockoutScreen } from './ui/LockoutScreen'
-import { isSimulationMode } from '@/lib/appMode'
+import { isSimulationMode, isBetaMode } from '@/lib/appMode'
 
 interface PageGuardProps {
   featureSlug: string
@@ -56,7 +56,7 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
       let title = "Module Restricted"
       let description = "Access to this interface domain has been restricted by administration."
 
-      if (creditBalance <= 0) {
+      if (!isBetaMode() && creditBalance <= 0) {
         title = "You're out of credits"
         description = "You have run out of credits. Please purchase more credits on your dashboard to continue using AI tools."
       } else if (featureSlug === 'ai-ingestion' || featureSlug === 'oracle-chat' || featureSlug === 'ai-features' || featureSlug === 'ai_locked') {

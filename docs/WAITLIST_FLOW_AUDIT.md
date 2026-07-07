@@ -30,6 +30,8 @@ The flow technically works but relies on a database trigger that might not have 
 
 ## 2. Admin Approval Flow
 
+**Beta policy: Set credit_balance = 0 when approving users in beta. The desktop app runs in beta mode and shows ∞ regardless. When production billing is activated, admins will top up accounts with real credits.**
+
 The admin approval process is managed in the Admin dashboard.
 
 - **Component**: `WaitlistManager` in `apps/admin/src/app/waitlist/page.tsx`
