@@ -5,14 +5,15 @@ import process from 'node:process'
 const targetMap = {
   'darwin-arm64': { triple: 'aarch64-apple-darwin', ext: '' },
   'darwin-x64': { triple: 'x86_64-apple-darwin', ext: '' },
+  'linux-x64': { triple: 'x86_64-unknown-linux-gnu', ext: '' },
   'win32-x64': { triple: 'x86_64-pc-windows-msvc', ext: '.exe' },
   'win32-arm64': { triple: 'aarch64-pc-windows-msvc', ext: '.exe' }
 }
 
 const releaseTargets = [
   targetMap['darwin-arm64'],
-  targetMap['darwin-x64'],
-  targetMap['win32-x64']
+  targetMap['win32-x64'],
+  targetMap['linux-x64']
 ]
 
 function currentTarget() {

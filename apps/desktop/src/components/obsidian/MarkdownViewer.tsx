@@ -2391,6 +2391,51 @@ const MarkdownInput = ({ node, type, checked, ...props }: any) => {
     return null;
 };
 
+const MarkdownUl = ({ children, className }: any) => {
+    const context = React.useContext(MarkdownContext);
+    const isHubNote = context.path?.toLowerCase().includes('hub.md') || context.path?.toLowerCase().includes('_hub');
+    const isTaskList = className?.includes('contains-task-list') || isHubNote;
+    return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-0" : "list-disc pl-5")}>{children}</ul>
+};
+
+const MarkdownImage = ({ src, alt }: any) => {
+    const context = React.useContext(MarkdownContext);
+    const { config } = useConfig();
+    const [imgUrl, setImgUrl] = useState(src);
+
+    useEffect(() => {
+        let active = true;
+        const resolveUrl = async () => {
+            if (!src || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) return;
+
+            try {
+                const port = await invoke<number>('get_sidecar_port').catch(() => 8765);
+                const token = await invoke<string>('get_sidecar_token').catch(() => '');
+                if (!active) return;
+
+                const vaultPath = config?.obsidianVaultPath || '';
+                const cleanSrc = src.replace(/\\/g, '/');
+                const relativePath = cleanSrc.startsWith('/') ? cleanSrc : `/${cleanSrc}`;
+                const authQuery = vaultPath ? `?vault_path=${encodeURIComponent(vaultPath)}` : '';
+                const tokenQuery = token ? `${authQuery ? '&' : '?'}sidecar_token=${encodeURIComponent(token)}` : '';
+
+                setImgUrl(`http://127.0.0.1:${port}/api/obsidian/serve${relativePath}${authQuery}${tokenQuery}`);
+            } catch (err) {
+                console.error('[ImgRenderer] Failed to resolve local image src:', err);
+            }
+        };
+        void resolveUrl();
+        return () => { active = false; };
+    }, [src, context.path, config?.obsidianVaultPath]);
+
+    return (
+        <div className="my-6 flex flex-col items-center">
+            <img src={imgUrl} alt={alt} className="max-w-[85%] rounded-[8px] border border-border shadow-sm" />
+            {alt && <span className="text-[10px] text-muted-foreground mt-2 italic">{alt}</span>}
+        </div>
+    );
+};
+
 interface AterMarkdownProps {
     content: string
     path?: string
@@ -2436,12 +2481,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
             h2: MarkdownH2,
             h3: MarkdownH3,
             h4: ({ children }: any) => <h4 className="text-[11px] font-black mt-5 mb-2 uppercase tracking-[0.2em] text-muted-foreground/60">{children}</h4>,
-            ul: ({ children, className }: any) => {
-                const context = React.useContext(MarkdownContext);
-                const isHubNote = context.path?.toLowerCase().includes('hub.md') || context.path?.toLowerCase().includes('_hub');
-                const isTaskList = className?.includes('contains-task-list') || isHubNote;
-                return <ul className={cn("space-y-1 mb-4 text-[13px] text-foreground", isTaskList ? "list-none pl-0" : "list-disc pl-5")}>{children}</ul>
-            },
+            ul: MarkdownUl,
             ol: ({ children }: any) => <ol className="list-decimal pl-5 space-y-1 mb-4 text-[13px] text-foreground">{children}</ol>,
             li: MarkdownLi,
             pre: ({ children }: any) => <div className="not-prose">{children}</div>,
@@ -2578,48 +2618,7 @@ export const AterMarkdown = memo(({ content, path, onNavigate, onSendMessage, on
                     {children}
                 </a>
             ),
-            img: ({ src, alt }: any) => {
-                const context = React.useContext(MarkdownContext);
-                const { config } = useConfig();
-                const [imgUrl, setImgUrl] = useState(src);
-                const [sidecarPort, setSidecarPort] = useState(8765);
-                const [sidecarToken, setSidecarToken] = useState('');
-
-                useEffect(() => {
-                    let active = true;
-                    const resolveUrl = async () => {
-                        if (!src || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) return;
-                        
-                        try {
-                            const port = await invoke<number>('get_sidecar_port').catch(() => 8765);
-                            const token = await invoke<string>('get_sidecar_token').catch(() => '');
-                            if (!active) return;
-                            setSidecarPort(port);
-                            setSidecarToken(token);
-
-                            const vaultPath = config?.obsidianVaultPath || '';
-                            const cleanSrc = src.replace(/\\/g, '/');
-                            const relativePath = cleanSrc.startsWith('/') ? cleanSrc : `/${cleanSrc}`;
-                            
-                            const authQuery = vaultPath ? `?vault_path=${encodeURIComponent(vaultPath)}` : '';
-                            const tokenQuery = token ? `${authQuery ? '&' : '?'}sidecar_token=${encodeURIComponent(token)}` : '';
-                            
-                            setImgUrl(`http://127.0.0.1:${port}/api/obsidian/serve${relativePath}${authQuery}${tokenQuery}`);
-                        } catch (err) {
-                            console.error('[ImgRenderer] Failed to resolve local image src:', err);
-                        }
-                    };
-                    void resolveUrl();
-                    return () => { active = false; };
-                }, [src, context.path, config?.obsidianVaultPath]);
-
-                return (
-                    <div className="my-6 flex flex-col items-center">
-                        <img src={imgUrl} alt={alt} className="max-w-[85%] rounded-[8px] border border-border shadow-sm" />
-                        {alt && <span className="text-[10px] text-muted-foreground mt-2 italic">{alt}</span>}
-                    </div>
-                );
-            }
+            img: MarkdownImage
         };
         return comps;
     }, [components]);

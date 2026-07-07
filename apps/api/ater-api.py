@@ -48,6 +48,7 @@ try:
     parser = argparse.ArgumentParser(description="Ater Sidecar API")
     parser.add_argument("--port", type=int, default=8765, help="Port to run the sidecar on")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind to")
+    parser.add_argument("--health-check", action="store_true", help="Import the FastAPI app and exit")
     # parse_known_args avoids crash if Tauri passes extra args
     args, _ = parser.parse_known_args()
 
@@ -65,6 +66,10 @@ try:
     except Exception as e:
         logger.error(f"FATAL: Unexpected error importing app: {e}", exc_info=True)
         sys.exit(1)
+
+    if args.health_check:
+        logger.info("Health check passed; exiting without starting uvicorn.")
+        sys.exit(0)
 
     uvicorn.run(
         app,

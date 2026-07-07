@@ -2465,8 +2465,6 @@ class SourceAtomicNoteCompiler:
             note["fallback"] = False
             note["frontmatter"]["fallback_generation"] = False
             return note
-        if strict_ai:
-            raise SourceAIGenerationError(f"AI note generation failed validation: {','.join(errors)}")
         note = self.compile_fallback_note(job, node, profile)
         note["validation_errors"] = errors
         note["frontmatter"]["fallback_reason"] = ",".join(errors)
