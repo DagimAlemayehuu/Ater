@@ -243,26 +243,30 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         with:
-          publish: false
           args: ${{ matrix.tauri_args }}
 
       - name: Verify Packaged Bundle Outputs
         shell: bash
         run: |
           set -euo pipefail
+          BUNDLE_ROOT=$(find apps/desktop/src-tauri/target -type d -path '*/release/bundle' -print -quit)
+          test -n "$BUNDLE_ROOT"
+          echo "Bundle root: $BUNDLE_ROOT"
+          find "$BUNDLE_ROOT" -type f | sort
+
           if [ "${{ matrix.platform }}" = "macos" ]; then
-            test -n "$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle -name '*.dmg' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle -name '*.app.tar.gz' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle -name '*.app.tar.gz.sig' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.dmg' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.app.tar.gz' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.app.tar.gz.sig' -print -quit)"
           elif [ "${{ matrix.platform }}" = "windows" ]; then
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.exe' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.zip' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.zip.sig' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.exe' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.zip' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.zip.sig' -print -quit)"
           else
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.AppImage' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.deb' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.AppImage.tar.gz' -print -quit)"
-            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.AppImage.tar.gz.sig' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.AppImage' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.deb' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.AppImage.tar.gz' -print -quit)"
+            test -n "$(find "$BUNDLE_ROOT" -name '*.AppImage.tar.gz.sig' -print -quit)"
           fi
 
       - name: Upload Artifacts to Release Repo
