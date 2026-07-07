@@ -47,11 +47,11 @@ const SettingsCard = ({title, value, children, onEdit, isEditing, onSave, onCanc
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <button onClick={onSave} className="h-8 px-4 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 rounded-[8px] transition-all">Save</button>
-              <button onClick={onCancel} className="h-8 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Abort</button>
+              <button onClick={onSave} aria-label={`Save ${title}`} className="h-8 px-4 bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 rounded-[8px] transition-all">Save</button>
+              <button onClick={onCancel} aria-label={`Cancel editing ${title}`} className="h-8 px-4 bg-muted/20 text-muted-foreground border border-border/40 text-[9px] font-black uppercase tracking-widest hover:text-foreground hover:bg-muted/30 rounded-[8px] transition-all">Abort</button>
             </>
           ) : (
-            <button onClick={onEdit} className="h-8 px-4 text-[9px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all">Edit</button>
+            <button onClick={onEdit} aria-label={`Edit ${title}`} className="h-8 px-4 text-[9px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/20 hover:border-foreground/30 rounded-[8px] transition-all">Edit</button>
           )}
         </div>
       </div>
@@ -608,8 +608,8 @@ export default function Settings() {
                 <div className="space-y-2" data-tour="settings-obsidian-path">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Obsidian Folder</label>
                   <div className="flex gap-2">
-                    <div className="flex-1 px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px] overflow-hidden text-left">
-                      <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.vaultPath : config?.obsidianVaultPath || 'Not selected'}</span>
+                    <div className="flex-1 px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px] overflow-hidden text-left" title={editingKey === 'folder_settings' ? vaultEdit.vaultPath : config?.obsidianVaultPath || 'Not selected'}>
+                      <p className="truncate">{editingKey === 'folder_settings' ? vaultEdit.vaultPath : config?.obsidianVaultPath || 'Not selected'}</p>
                     </div>
                     <button
                       disabled={editingKey !== 'folder_settings'}
@@ -620,6 +620,7 @@ export default function Settings() {
                         } catch (err) {console.error(err);}
                       }}
                       className="px-6 py-3 bg-bento-item/50 text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bento-item rounded-[8px] transition-colors disabled:opacity-50"
+                      aria-label="Select Obsidian Folder"
                     >
                       Select
                     </button>
@@ -630,8 +631,8 @@ export default function Settings() {
                 <div className="space-y-2" data-tour="settings-inbox-path">
                   <label className="text-[10px] font-black text-foreground uppercase tracking-widest block text-left">Inbox Folder (For scanning PDFs)</label>
                   <div className="flex gap-2">
-                    <div className="flex-1 px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px] overflow-hidden text-left">
-                      <span className="truncate">{editingKey === 'folder_settings' ? vaultEdit.inboxPath : config?.inboxPath || 'Default (Inbox/)'}</span>
+                    <div className="flex-1 px-4 py-3 bg-bento-item/20 text-[13px] font-mono text-muted-foreground border border-border rounded-[8px] overflow-hidden text-left" title={editingKey === 'folder_settings' ? vaultEdit.inboxPath : config?.inboxPath || 'Default (Inbox/)'}>
+                      <p className="truncate">{editingKey === 'folder_settings' ? vaultEdit.inboxPath : config?.inboxPath || 'Default (Inbox/)'}</p>
                     </div>
                     <button
                       disabled={editingKey !== 'folder_settings'}
@@ -642,6 +643,7 @@ export default function Settings() {
                         } catch (err) {console.error(err);}
                       }}
                       className="px-6 py-3 bg-bento-item/50 text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bento-item rounded-[8px] transition-colors disabled:opacity-50"
+                      aria-label="Select Inbox Folder"
                     >
                       Select
                     </button>
@@ -675,6 +677,7 @@ export default function Settings() {
                         ? "bg-primary text-primary-foreground border-primary" 
                         : "bg-bento-item text-muted-foreground border-border hover:bg-bento-item/80"
                     )}
+                    aria-label={`Toggle auto-scan folder: ${(editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) ? 'On' : 'Off'}`}
                   >
                     {(editingKey === 'folder_settings' ? vaultEdit.autoDeploy : config?.autoDeploy) ? 'On' : 'Off'}
                   </button>
@@ -703,6 +706,7 @@ export default function Settings() {
                     ? "bg-bento-item text-muted-foreground border border-border" 
                     : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 )}
+                aria-label={isCheckingUpdate ? 'Checking for updates' : updateStatus === 'up-to-date' ? 'System is up to date' : 'Check for updates'}
               >
                 {isCheckingUpdate ? (
                   <span className="animate-pulse">Checking...</span>
@@ -762,6 +766,7 @@ export default function Settings() {
                 <button
                   onClick={() => navigate('/academic?setup=1')}
                   className="h-10 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground bg-muted/20 hover:text-foreground hover:bg-muted/30 hover:border-foreground/30 transition-all rounded-[8px] cursor-pointer"
+                  aria-label="Re-configure academic program"
                 >
                   Configure
                 </button>
@@ -783,6 +788,7 @@ export default function Settings() {
               <button
                 onClick={handleExportLogs}
                 className="h-10 px-6 text-[10px] font-black uppercase tracking-widest border border-border/40 text-muted-foreground bg-muted/20 hover:text-foreground hover:bg-muted/30 hover:border-foreground/30 transition-all rounded-[8px]"
+                aria-label="Save system logs to file"
               >
                 Save Logs
               </button>
@@ -1158,9 +1164,9 @@ export default function Settings() {
                         <span className="text-[11px] font-bold uppercase tracking-wider text-foreground truncate max-w-[150px]">{k.name}</span>
                         <span className="text-[9px] px-1.5 py-0.5 border border-border bg-bento-panel rounded-[4px] font-bold uppercase text-muted-foreground">{k.provider}</span>
                       </div>
-                      <div className="text-[12px] font-mono text-muted-foreground truncate">••••••••{k.key.slice(-4)}</div>
+                      <div className="text-[12px] font-mono text-muted-foreground truncate" title={`Key ending in ${k.key.slice(-4)}`}>••••••••{k.key.slice(-4)}</div>
                       {(k.model || k.maxTpm || k.maxRpm) && (
-                        <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate">
+                        <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate" title={`${k.model || 'model unset'}${k.maxTpm ? ` · ${k.maxTpm} TPM` : ''}${k.maxRpm ? ` · ${k.maxRpm} RPM` : ''}`}>
                           {k.model || 'model unset'}{k.maxTpm ? ` · ${k.maxTpm} TPM` : ''}{k.maxRpm ? ` · ${k.maxRpm} RPM` : ''}
                         </div>
                       )}

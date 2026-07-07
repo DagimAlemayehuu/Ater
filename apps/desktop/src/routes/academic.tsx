@@ -284,15 +284,16 @@ export default function AcademicDashboard() {
           className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer" 
           title="Sync Vault Databases"
         >
-          <RefreshCw size={12} />
+          <RefreshCw size={12} aria-hidden="true" />
         </button>
 
         <button 
           onClick={() => nav('/obsidian?graph=1')}
           className="h-8 px-3 flex items-center justify-center rounded-[8px] bg-muted/30 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-bento-item hover:border-foreground/30 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer flex items-center gap-1.5"
           title="Graph View"
+          aria-label="Graph View"
         >
-          <Network size={12} />
+          <Network size={12} aria-hidden="true" />
           <span>Graph View</span>
         </button>
       </div>

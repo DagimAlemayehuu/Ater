@@ -100,6 +100,11 @@
   }
 
   /* Global transitions on all elements are removed to make theme switching instant and boost rendering performance. */
+
+  /* Focus States - High visibility industrial ring */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-foreground ring-offset-2 ring-offset-background;
+  }
 }
 
 /* GPU Acceleration & Performance Optimizations */

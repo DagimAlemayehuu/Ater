@@ -198,8 +198,9 @@ const FileTreeItem = React.memo(({
               }}
               className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
               title="New file"
+              aria-label={`New file in ${node.name}`}
             >
-              <Plus size={10} />
+              <Plus size={10} aria-hidden="true" />
             </button>
           )}
           <button
@@ -209,15 +210,17 @@ const FileTreeItem = React.memo(({
             }}
             className="p-0.5 hover:bg-accent hover:text-foreground rounded-[8px] "
             title="Rename"
+            aria-label={`Rename ${node.name}`}
           >
-            <Edit3 size={10} />
+            <Edit3 size={10} aria-hidden="true" />
           </button>
           <button
             onClick={(e) => onDelete(node.path, node.isFolder)}
             className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-[8px] "
             title="Delete"
+            aria-label={`Delete ${node.name}`}
           >
-            <Trash2 size={10} strokeWidth={2.5} />
+            <Trash2 size={10} strokeWidth={2.5} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -541,12 +544,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                    onClick={() => setIsEditing(true)}
                    className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
                    title="Edit Note"
+                   aria-label="Edit Note"
                  >
-                    <Edit3 size={14} />
+                    <Edit3 size={14} aria-hidden="true" />
                  </button>
                  {(noteMetadata?.source_file || noteMetadata?.source) && (
                    <button
                       data-tour="btn-jump-pdf"
+                        aria-label="Jump to Source PDF"
                       onClick={async () => {
                         const src = noteMetadata.source_file || noteMetadata.source
                         if (!src) return;
@@ -598,7 +603,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                      className="w-8 h-8 flex items-center justify-center bg-background border border-border text-muted-foreground rounded-[8px] hover:text-foreground hover:border-primary  shadow-sm"
                      title="Jump to Source PDF"
                    >
-                     <FileText size={14} />
+                     <FileText size={14} aria-hidden="true" />
                    </button>
                  )}
                    <button
@@ -611,8 +616,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                          : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
                       )}
                       title="Toggle Properties"
+                      aria-label="Toggle Properties"
                     >
-                      <Info size={14} />
+                      <Info size={14} aria-hidden="true" />
                     </button>
                </div>
              )}
@@ -652,8 +658,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              <button
                onClick={() => pdfRef.current?.handlePrev()}
                className="p-1 hover:bg-background rounded-[8px]  text-muted-foreground hover:text-foreground"
+               aria-label="Previous page"
              >
-               <ChevronLeft size={12} />
+               <ChevronLeft size={12} aria-hidden="true" />
              </button>
              <div className="flex items-center gap-1 min-w-[32px] justify-center px-1">
                <span className="text-[10px] font-black text-foreground tabular-nums">{pdfState.page}</span>
@@ -663,8 +670,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
              <button
                onClick={() => pdfRef.current?.handleNext()}
                className="p-1 hover:bg-background rounded-[8px]  text-muted-foreground hover:text-foreground"
+               aria-label="Next page"
              >
-               <ChevronRight size={12} />
+               <ChevronRight size={12} aria-hidden="true" />
              </button>
            </div>
             </div>
@@ -680,8 +688,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
                 : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
              )}
              title={isFullscreen ? "Exit Focus Mode" : "Focus Mode"}
+             aria-label={isFullscreen ? "Exit Focus Mode" : "Focus Mode"}
            >
-             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+             {isFullscreen ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />}
            </button>
          )}
        </div>
@@ -2221,23 +2230,26 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
             <button
               className="p-1 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-muted/30 shrink-0"
               title="New Note"
+              aria-label="New Note"
               onClick={() => {setCreatingInPath(null); setCreatingType('file'); setNewItemName('');}}
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
             <button
               className="p-1 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-muted/30 shrink-0"
               title="New Folder"
+              aria-label="New Folder"
               onClick={() => {setCreatingInPath(null); setCreatingType('folder'); setNewItemName('');}}
             >
-              <FolderPlus className="w-3.5 h-3.5" />
+              <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
             <button
               className="p-1 text-muted-foreground hover:text-foreground rounded-[4px] hover:bg-muted/30 shrink-0"
               title="Refresh Vault"
+              aria-label="Refresh Vault"
               onClick={fetchFiles}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
             <button
               className={cn(
@@ -2248,8 +2260,9 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
               )}
               onClick={() => setShowGraphView(!showGraphView)}
               title="Toggle Graph View"
+              aria-label="Toggle Graph View"
             >
-              <Network className="w-3.5 h-3.5" />
+              <Network className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>

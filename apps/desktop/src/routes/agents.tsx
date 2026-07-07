@@ -799,16 +799,18 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                     onClick={() => window.dispatchEvent(new Event('ater-clear-chat'))}
                     className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
                     title="Clear Active Chat"
+                    aria-label="Clear Active Chat"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={12} aria-hidden="true" />
                   </button>
                 )}
                 <button
                   onClick={handleNewChat}
                   className="p-1 hover:bg-muted rounded-[6px] text-muted-foreground hover:text-foreground transition-colors"
                   title="New Chat"
+                  aria-label="New Chat"
                 >
-                  <Plus size={14} />
+                  <Plus size={14} aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -838,8 +840,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                         onClick={(e) => handleDeleteConversation(e, conv.id)}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded-[4px] transition-all ml-1 shrink-0"
                         title="Delete Chat"
+                        aria-label={`Delete chat: ${conv.title || 'Untitled Chat'}`}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={12} aria-hidden="true" />
                       </button>
                     </div>
                   );
@@ -1810,8 +1813,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                                   setEditingContent(msg.content);
                                 }}
                                 className="text-[10px] text-muted-foreground hover:text-foreground font-bold flex items-center gap-1 bg-muted/10 hover:bg-muted/30 px-2 py-0.5 rounded-[4px] border border-border/20 transition-all"
+                                aria-label="Edit message"
                               >
-                                <FileEdit size={10} />
+                                <FileEdit size={10} aria-hidden="true" />
                                 Edit
                               </button>
                             </div>
@@ -1857,12 +1861,14 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                                   type="button"
                                   onClick={() => toggleToolTimeline(msg.id!)}
                                   className="w-full h-8 px-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                                  aria-expanded={isToolTimelineOpen}
+                                  aria-label="Toggle tool timeline"
                                 >
                                   <span className="flex items-center gap-2">
-                                    <Activity size={12} />
+                                    <Activity size={12} aria-hidden="true" />
                                     Tool Timeline
                                   </span>
-                                  <ChevronDown size={12} className={cn("transition-transform", isToolTimelineOpen && "rotate-180")} />
+                                  <ChevronDown size={12} className={cn("transition-transform", isToolTimelineOpen && "rotate-180")} aria-hidden="true" />
                                 </button>
                                 {isToolTimelineOpen && (
                                   <div className="border-t border-border/40 px-3 py-2 space-y-2">
@@ -2020,10 +2026,11 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                               }));
                             }}
                             className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Previous version"
                           >
-                            <ChevronLeft size={10} />
+                            <ChevronLeft size={10} aria-hidden="true" />
                           </button>
-                          <span className="font-bold tabular-nums">{siblingIndex + 1} / {siblings.length}</span>
+                          <span className="font-bold tabular-nums" aria-label={`Version ${siblingIndex + 1} of ${siblings.length}`}>{siblingIndex + 1} / {siblings.length}</span>
                           <button
                             onClick={() => {
                               const nextIdx = (siblingIndex + 1) % siblings.length;
@@ -2033,8 +2040,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                               }));
                             }}
                             className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Next version"
                           >
-                            <ChevronRight size={10} />
+                            <ChevronRight size={10} aria-hidden="true" />
                           </button>
                         </div>
                       )}
@@ -2042,8 +2050,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                         <button
                           onClick={() => handleRegenerateMessage(msg.id!)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground hover:text-foreground font-bold flex items-center gap-1 bg-muted/10 hover:bg-muted/30 px-2 py-0.5 rounded-[4px] border border-border/20 transition-all"
+                          aria-label="Regenerate response"
                         >
-                          <RefreshCw size={10} />
+                          <RefreshCw size={10} aria-hidden="true" />
                           Regenerate
                         </button>
                       )}
@@ -2081,8 +2090,10 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                         "h-7 px-2 rounded-[6px] border text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors",
                         memoryPanelOpen ? "bg-muted/40 border-foreground/30 text-foreground" : "bg-muted/10 border-border/40 text-muted-foreground hover:text-foreground"
                       )}
+                      aria-expanded={memoryPanelOpen}
+                      aria-label={`Toggle memories panel (${memories.length} memories)`}
                     >
-                      <BrainCircuit size={12} />
+                      <BrainCircuit size={12} aria-hidden="true" />
                       Memories
                       <span className="tabular-nums">{memories.length}</span>
                     </button>
@@ -2093,8 +2104,10 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                         "h-7 px-2 rounded-[6px] border text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors",
                         attachmentsPanelOpen ? "bg-muted/40 border-foreground/30 text-foreground" : "bg-muted/10 border-border/40 text-muted-foreground hover:text-foreground"
                       )}
+                      aria-expanded={attachmentsPanelOpen}
+                      aria-label={`Toggle sources panel (${attachments.length} sources)`}
                     >
-                      <Paperclip size={12} />
+                      <Paperclip size={12} aria-hidden="true" />
                       Sources
                       <span className="tabular-nums">{attachments.length}</span>
                     </button>
@@ -2105,8 +2118,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                     disabled={!activeConversationId}
                     className="h-7 w-7 rounded-[6px] border border-border/40 bg-muted/10 text-muted-foreground hover:text-foreground disabled:opacity-40 flex items-center justify-center"
                     title="Refresh chat runtime context"
+                    aria-label="Refresh chat runtime context"
                   >
-                    <RefreshCw size={12} />
+                    <RefreshCw size={12} aria-hidden="true" />
                   </button>
                 </div>
 
@@ -2136,8 +2150,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                             onClick={() => deleteMemory(memory.id)}
                             className="h-6 w-6 rounded-[4px] border border-border/30 text-muted-foreground hover:text-destructive flex items-center justify-center"
                             title="Delete memory"
+                            aria-label="Delete memory"
                           >
-                            <Trash2 size={11} />
+                            <Trash2 size={11} aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -2185,8 +2200,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                 disabled={isLoading}
                 className="h-9 w-9 ml-1.5 flex items-center justify-center rounded-[8px] hover:bg-bento-item text-muted-foreground hover:text-foreground transition-all duration-150 shrink-0"
                 title="Attach Source Document (PDF, TXT, MD)"
+                aria-label="Attach Source Document (PDF, TXT, MD)"
               >
-                <Paperclip size={15} />
+                <Paperclip size={15} aria-hidden="true" />
               </button>
               <textarea
                 ref={textareaRef}
@@ -2216,8 +2232,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                   }}
                   className="h-9 px-4 mr-1.5 flex items-center justify-center rounded-[8px] bg-red-950/20 text-red-500 hover:bg-red-950/40 border border-red-500/20 shrink-0"
                   title="Cancel Generation"
+                    aria-label="Cancel Generation"
                 >
-                  <X size={14} />
+                    <X size={14} aria-hidden="true" />
                 </button>
               ) : (
                 <button
@@ -2229,8 +2246,9 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
                       ? "bg-muted/50 text-foreground hover:bg-bento-item border border-border/40"
                       : "text-muted-foreground/30 cursor-not-allowed"
                   )}
+                    aria-label="Send message"
                 >
-                  <Send size={14} />
+                    <Send size={14} aria-hidden="true" />
                 </button>
               )}
             </div>

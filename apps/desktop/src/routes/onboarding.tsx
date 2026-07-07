@@ -640,7 +640,7 @@ export default function Onboarding() {
           const totalDisplaySteps = visibleSteps.length;
           if (currentDisplayStep === 0) return null;
           return (
-            <div className="flex items-center gap-3 mb-10 flex-wrap">
+            <div className="flex items-center gap-3 mb-10 flex-wrap" aria-label="Onboarding Progress">
               {visibleSteps.map((s, idx) => (
                 <div key={s} className="flex items-center gap-3">
                   <div
@@ -652,8 +652,10 @@ export default function Onboarding() {
                         ? "bg-muted-foreground/60"
                         : "bg-border"
                     )}
+                    aria-label={`Step ${idx + 1}`}
+                    aria-current={step === s ? 'step' : undefined}
                   />
-                  {idx < totalDisplaySteps - 1 && <div className="w-6 h-px bg-border" />}
+                  {idx < totalDisplaySteps - 1 && <div className="w-6 h-px bg-border" aria-hidden="true" />}
                 </div>
               ))}
               <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">

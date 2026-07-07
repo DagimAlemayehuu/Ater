@@ -61,19 +61,20 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans p-3 gap-3 relative">
       {!isFullscreen && (
-        <header className="h-14 bg-bento-panel border border-border/40 rounded-[12px] shadow-sm flex items-center justify-between px-4 py-3 shrink-0">
+        <header className="min-h-14 h-auto bg-bento-panel border border-border/40 rounded-[12px] shadow-sm flex flex-wrap items-center justify-between px-4 py-3 shrink-0 gap-2">
           {/* Left Section: Sidebar Collapse Toggle, Global Nav & Pomodoro */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <button
               onClick={toggleSidebar}
               className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-bento-item text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               title={isSidebarCollapsed ? "Expand Sidebar" : "Hide Sidebar"}
+              aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Hide Sidebar"}
             >
-              {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+              {isSidebarCollapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
             </button>
 
             {/* Global History Navigation (Back/Forward) */}
-            <div className="flex items-center gap-0.5 border-l border-border/20 pl-3">
+            <nav aria-label="History" className="flex items-center gap-0.5 border-l border-border/20 pl-3">
               <button
                 onClick={goBack}
                 disabled={!canGoBack}
@@ -84,8 +85,9 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
                     : "text-muted-foreground/20 cursor-not-allowed"
                 )}
                 title="Back"
+                aria-label="Navigate back"
               >
-                <ChevronLeft size={16} strokeWidth={2} />
+                <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
               </button>
               <button
                 onClick={goForward}
@@ -97,10 +99,11 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
                     : "text-muted-foreground/20 cursor-not-allowed"
                 )}
                 title="Forward"
+                aria-label="Navigate forward"
               >
-                <ChevronRight size={16} strokeWidth={2} />
+                <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
               </button>
-            </div>
+            </nav>
 
             {/* Pomodoro Focus Timer Display */}
             <button
@@ -110,8 +113,9 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
                 pomodoroActive && "border-foreground/20 text-foreground bg-bento-item"
               )}
               title="Focus Session Timer"
+              aria-label="Focus Session Timer"
             >
-              <Timer size={12} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground")} />
+              <Timer size={12} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground")} aria-hidden="true" />
               <span className="tabular-nums font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
             </button>
             
@@ -124,7 +128,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
           </div>
 
           {/* Right Section: Page Header Actions, Calendar, Theme Switcher & Minimal Credits */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             {/* Right Content Slot */}
             {rightContent && (
               <div className="flex items-center gap-2 border-r border-border/20 pr-3">
@@ -142,8 +146,9 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
                   : "text-muted-foreground hover:text-foreground hover:bg-bento-item/50"
               )}
               title="Academic Calendar"
+              aria-label="Academic Calendar"
             >
-              <Calendar size={16} strokeWidth={2} />
+              <Calendar size={16} strokeWidth={2} aria-hidden="true" />
             </button>
 
             {/* Theme Toggle Button */}
@@ -151,8 +156,9 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-bento-item text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
             >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              {theme === 'dark' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
             </button>
             
             {/* Minimal Credits Display */}
