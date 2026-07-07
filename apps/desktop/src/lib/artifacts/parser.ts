@@ -1,6 +1,7 @@
 import type { ArtifactChapter, ExtractedArtifacts, InteractiveArtifact, SandboxSpec } from './types'
 
 const attr = (tag: string, name: string): string | undefined => {
+  if (!tag) return undefined
   const match = tag.match(new RegExp(`${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))
   return match?.[2] ? decodeEntities(match[2]).trim() : undefined
 }
@@ -134,7 +135,10 @@ const parseChapters = (artifactBody: string, artifactIndex: number): ArtifactCha
   return chapters
 }
 
-export function extractArtifacts(source: string): ExtractedArtifacts {
+export function extractArtifacts(source: string | null | undefined): ExtractedArtifacts {
+  if (!source || typeof source !== 'string') {
+    return { artifacts: [], sandboxSpecs: [] }
+  }
   const completed = completeForParsing(source)
   const artifacts: InteractiveArtifact[] = []
   const artifactRegex = /(<artifact\b[^>]*>)([\s\S]*?)<\/artifact>/gi

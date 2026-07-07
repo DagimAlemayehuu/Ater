@@ -55,6 +55,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
     }, []);
     
     const [iframeLoaded, setIframeLoaded] = useState(false);
+    const [timeoutError, setTimeoutError] = useState(false);
     const prevPathRef = useRef(path);
     const firstPageRef = useRef(initialPage);
 
@@ -65,10 +66,23 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
 
     useEffect(() => {
         setIframeLoaded(false);
+        setTimeoutError(false);
         setPage(firstPageRef.current);
         setPageCount(null);
         setFloatPos(null);
     }, [path]);
+
+    useEffect(() => {
+        if (iframeLoaded || timeoutError) return;
+
+        // Start safety timeout for iframe load
+        const timer = setTimeout(() => {
+            console.warn("[PdfViewer] Iframe load timeout reached.");
+            setTimeoutError(true);
+        }, 12000);
+
+        return () => clearTimeout(timer);
+    }, [path, iframeLoaded, timeoutError]);
 
     useEffect(() => {
         setPage(initialPage);
@@ -76,6 +90,7 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
 
     const handleIframeLoad = () => {
         setIframeLoaded(true);
+        setTimeoutError(false);
         setTimeout(() => {
             handleJump(initialPage);
         }, 60);
@@ -371,18 +386,40 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(({ path, title
                             </div>
                         ) : (
                             <>
-                                {(!iframeLoaded) ? (
-                                    <PanelLoader label="Loading engine..." />
-                                ) : null}
-                                {backendUrl && (
-                                    <iframe 
-                                        ref={iframeRef} 
-                                        src={backendUrl} 
-                                        onLoad={handleIframeLoad}
-                                        className={`w-full h-full border-none overflow-hidden bg-card ${(!iframeLoaded) ? 'invisible absolute' : ''}`}
-                                        title={title} 
-                                        allowFullScreen 
-                                    />
+                                {timeoutError ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                                        <div className="size-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                                            <Maximize2 className="text-destructive size-8" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-lg font-black uppercase tracking-tight text-foreground">PDF Engine Failed to Load</h3>
+                                            <p className="text-xs text-muted-foreground max-w-xs mx-auto uppercase font-bold leading-relaxed">
+                                                The sidecar service took too long to respond or the file is corrupted.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => window.location.reload()}
+                                            className="px-6 py-2 bg-foreground text-background text-[10px] font-black uppercase tracking-widest rounded-[8px] hover:opacity-90 transition-all"
+                                        >
+                                            Reload Interface
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {(!iframeLoaded) ? (
+                                            <PanelLoader label="Loading engine..." />
+                                        ) : null}
+                                        {backendUrl && (
+                                            <iframe
+                                                ref={iframeRef}
+                                                src={backendUrl}
+                                                onLoad={handleIframeLoad}
+                                                className={`w-full h-full border-none overflow-hidden bg-card ${(!iframeLoaded) ? 'invisible absolute' : ''}`}
+                                                title={title}
+                                                allowFullScreen
+                                            />
+                                        )}
+                                    </>
                                 )}
                             </>
                         )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, ChevronRight, Code2, Eye, Loader2, PanelRightClose, RotateCcw, WifiOff } from 'lucide-react'
 import { AterMarkdown } from './MarkdownViewer'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,43 @@ const parseRepairChapters = (code: string, fallback: ArtifactChapter[]): Artifac
   }))
 }
 
+class SandboxErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center border border-destructive/20 bg-destructive/5 rounded-[8px] space-y-3 m-4">
+          <AlertTriangle className="text-destructive" size={24} />
+          <div className="space-y-1">
+            <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Sandbox Crash</h4>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-md leading-relaxed">
+              The sandbox viewer encountered a critical rendering error.
+            </p>
+            {this.state.error && (
+              <p className="text-[9px] font-mono text-destructive/60 mt-2 truncate max-w-xs overflow-hidden">
+                {this.state.error.message}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="h-8 px-4 rounded-[6px] border border-border bg-bento-card hover:bg-accent text-[9px] font-black uppercase tracking-widest text-foreground transition-none shadow-sm"
+          >
+            Retry Viewer
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 interface UnifiedSandboxViewerProps {
   shielded?: boolean
   onClose?: () => void
@@ -27,7 +64,15 @@ interface UnifiedSandboxViewerProps {
   variant?: 'sidebar' | 'inline'
 }
 
-export function UnifiedSandboxViewer({ shielded = false, onClose, customArtifacts, variant = 'sidebar' }: UnifiedSandboxViewerProps) {
+export function UnifiedSandboxViewer(props: UnifiedSandboxViewerProps) {
+  return (
+    <SandboxErrorBoundary>
+      <UnifiedSandboxContent {...props} />
+    </SandboxErrorBoundary>
+  )
+}
+
+function UnifiedSandboxContent({ shielded = false, onClose, customArtifacts, variant = 'sidebar' }: UnifiedSandboxViewerProps) {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const { resolvedTheme } = useTheme()
