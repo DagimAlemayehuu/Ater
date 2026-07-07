@@ -7,6 +7,7 @@
 
 import { getAppStore } from '@/lib/store'
 import { invoke } from '@tauri-apps/api/core'
+import { Question as PracticeQuestionType } from '@/types/practice'
 import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
 import { realSupabase } from '@/lib/supabase'
@@ -323,24 +324,7 @@ export interface AcademicDashboard {
     [key: string]: any;
 }
 
-export interface PracticeQuestion {
-    id: string | number;
-    type: string | any;
-    question: string;
-    content?: any;
-    difficulty?: any;
-    options?: any;
-    answer?: any;
-    explanation: string;
-    textWithBlanks?: string;
-    text_with_blanks?: string;
-    pairs?: Array<{ left: string; right: string }>;
-    steps?: string[];
-    required_keywords?: string[];
-    note_id?: string;
-    is_remediation?: boolean;
-    [key: string]: any;
-}
+export type PracticeQuestion = PracticeQuestionType;
 
 export interface PracticeResponse {
     quiz_path: string;
@@ -349,7 +333,7 @@ export interface PracticeResponse {
 
 export interface ChatMessage {
     id?: string;
-    role: 'user' | 'assistant' | string;
+    role: 'user' | 'assistant';
     content: string;
     timestamp?: string;
     created_at?: string;
@@ -1022,8 +1006,8 @@ export const sidecarApi = {
                         question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
                         content: "",
                         difficulty: "L1",
-                        options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
-                        answer: "O(log N)",
+                        options: { "A": "O(1)", "B": "O(log N)", "C": "O(N)", "D": "O(N log N)" },
+                        answer: "B",
                         explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
                     },
                     {
@@ -1032,7 +1016,7 @@ export const sidecarApi = {
                         question: "Binary Search can be applied to an unsorted array as long as we know the target element exists in the array.",
                         content: "",
                         difficulty: "L1",
-                        answer: false,
+                        answer: "false",
                         explanation: "Binary Search relies on the sorting invariant to discard half of the search space. Unsorted arrays require linear O(N) scanning."
                     },
                     {
@@ -1133,8 +1117,8 @@ export const sidecarApi = {
                         question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
                         content: "",
                         difficulty: "L1",
-                        options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
-                        answer: "O(log N)",
+                        options: { "A": "O(1)", "B": "O(log N)", "C": "O(N)", "D": "O(N log N)" },
+                        answer: "B",
                         explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
                     }
                 ]

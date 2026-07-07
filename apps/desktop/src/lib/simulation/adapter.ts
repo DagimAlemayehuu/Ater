@@ -223,12 +223,12 @@ What failure would users observe if two leaders committed different commands at 
     questions: [
       {
         id: 'sim-mcq-1',
-        type: 'multiple-choice',
+        type: 'mcq',
         question: 'Which property prevents two replicas from deciding different committed values?',
         content: '',
         difficulty: 'L1',
-        options: ['Availability', 'Agreement', 'Throughput', 'Fanout'],
-        answer: 'Agreement',
+        options: { "A": 'Availability', "B": 'Agreement', "C": 'Throughput', "D": 'Fanout' },
+        answer: 'B',
         explanation: 'Agreement is the consensus property that forbids conflicting decisions.',
       },
       {
@@ -249,12 +249,12 @@ What failure would users observe if two leaders committed different commands at 
     questions: [
       {
         id: 'sim-mcq-1',
-        type: 'multiple-choice',
+        type: 'mcq',
         question: 'Which property prevents two replicas from deciding different committed values?',
         content: '',
         difficulty: 'L1',
-        options: ['Availability', 'Agreement', 'Throughput', 'Fanout'],
-        answer: 'Agreement',
+        options: { "A": 'Availability', "B": 'Agreement', "C": 'Throughput', "D": 'Fanout' },
+        answer: 'B',
         explanation: 'Agreement is the consensus property that forbids conflicting decisions.',
       },
       {
