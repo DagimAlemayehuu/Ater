@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Cpu, Monitor } from 'lucide-react';
+import { Cpu, Monitor, Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
@@ -13,15 +13,24 @@ type ReleaseAsset = {
 };
 
 export function DownloadAterButton() {
-  const [downloads, setDownloads] = useState({
+  const [downloads, setDownloads] = useState<{
+    mac: string;
+    windows: string;
+    linuxAppImage: string | null;
+    linuxDeb: string | null;
+    version: string;
+    loading: boolean;
+  }>({
     mac: 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater-aarch64.dmg',
     windows: 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater_setup.exe',
+    linuxAppImage: null,
+    linuxDeb: null,
     version: FALLBACK_VERSION,
     loading: true
   });
 
   const [showGuide, setShowGuide] = useState(false);
-  const [guideTab, setGuideTab] = useState<'mac' | 'win'>('mac');
+  const [guideTab, setGuideTab] = useState<'mac' | 'win' | 'linux'>('mac');
   const [copiedCmd, setCopiedCmd] = useState(false);
 
   useEffect(() => {
@@ -74,9 +83,21 @@ export function DownloadAterButton() {
           a.name.endsWith('.exe')
         );
 
+        // Find Linux AppImage (.AppImage)
+        const appImageAsset = assets.find((a: ReleaseAsset) =>
+          a.name.endsWith('.AppImage')
+        );
+
+        // Find Linux Debian package (.deb)
+        const debAsset = assets.find((a: ReleaseAsset) =>
+          a.name.endsWith('.deb')
+        );
+
         setDownloads({
           mac: macAsset ? macAsset.browser_download_url : 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater-aarch64.dmg',
           windows: winAsset ? winAsset.browser_download_url : 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater_setup.exe',
+          linuxAppImage: appImageAsset ? appImageAsset.browser_download_url : null,
+          linuxDeb: debAsset ? debAsset.browser_download_url : null,
           version: version,
           loading: false
         });
@@ -129,6 +150,24 @@ export function DownloadAterButton() {
       icon: Monitor
     }
   ];
+
+  if (downloads.linuxAppImage) {
+    downloadList.push({
+      label: 'Linux (AppImage)',
+      info: `Portable Binary | ${downloads.version}`,
+      url: downloads.linuxAppImage,
+      icon: Terminal
+    });
+  }
+
+  if (downloads.linuxDeb) {
+    downloadList.push({
+      label: 'Linux (Debian)',
+      info: `Deb Package | ${downloads.version}`,
+      url: downloads.linuxDeb,
+      icon: Terminal
+    });
+  }
 
   return (
     <div className="w-full space-y-4">
@@ -198,6 +237,15 @@ export function DownloadAterButton() {
                 >
                   WINDOWS
                 </button>
+                <button
+                  onClick={() => setGuideTab('linux')}
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.2em] pb-1.5 transition-all border-b-2 uppercase cursor-pointer",
+                    guideTab === 'linux' ? "border-primary text-primary" : "border-transparent opacity-40 hover:opacity-100"
+                  )}
+                >
+                  LINUX
+                </button>
               </div>
 
               {/* Tab Content */}
@@ -230,7 +278,7 @@ export function DownloadAterButton() {
                     </li>
                   </ol>
                 </div>
-              ) : (
+              ) : guideTab === 'win' ? (
                 <div className="space-y-4 text-[11px] leading-relaxed text-body">
                   <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
                     If Windows blocks launch:
@@ -249,6 +297,43 @@ export function DownloadAterButton() {
                       The installer will finish normally.
                     </li>
                   </ol>
+                </div>
+              ) : (
+                <div className="space-y-4 text-[11px] leading-relaxed text-body">
+                  <p className="font-bold text-primary uppercase tracking-wider !text-[10px]">
+                    Linux setup instructions:
+                  </p>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <p className="text-[9px] font-black tracking-widest opacity-40 uppercase">AppImage setup</p>
+                      <ol className="list-decimal pl-4 space-y-2 text-[10px] opacity-80">
+                        <li>
+                          Open terminal in your download folder.
+                        </li>
+                        <li>
+                          Run: <code className="bg-background px-1 border border-outline-variant">chmod +x Ater_*.AppImage</code>
+                        </li>
+                        <li>
+                          Launch: <code className="bg-background px-1 border border-outline-variant">./Ater_*.AppImage</code>
+                        </li>
+                      </ol>
+                    </div>
+
+                    <div className="space-y-2 border-t border-outline-variant/30 pt-4">
+                      <p className="text-[9px] font-black tracking-widest opacity-40 uppercase">Debian / Ubuntu setup</p>
+                      <ol className="list-decimal pl-4 space-y-2 text-[10px] opacity-80">
+                        <li>
+                          Open terminal in your download folder.
+                        </li>
+                        <li>
+                          Run: <code className="bg-background px-1 border border-outline-variant">sudo dpkg -i Ater_*.deb</code>
+                        </li>
+                        <li>
+                          Launch Ater from your application menu.
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

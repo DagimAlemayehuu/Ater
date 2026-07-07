@@ -1,0 +1,100 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Cpu, Monitor } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+
+const FALLBACK_VERSION = 'v0.8.0';
+
+type ReleaseAsset = {
+  name: string;
+  browser_download_url: string;
+};
+
+export function DownloadAterButton() {
+  const [downloads, setDownloads] = useState({
+    mac: 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater-aarch64.dmg',
+    windows: 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater_setup.exe',
+    version: FALLBACK_VERSION,
+    loading: true
+  });
+
+  const [showGuide, setShowGuide] = useState(false);
+  const [guideTab, setGuideTab] = useState<'mac' | 'win'>('mac');
+  const [copiedCmd, setCopiedCmd] = useState(false);
+
+  useEffect(() => {
+    async function fetchLatest() {
+      try {
+        // Only fetch if we're in a browser environment
+        if (typeof window === 'undefined') return;
+
+        const response = await fetch('https://api.github.com/repos/DagimAlemayehuu/Ater_Releases/releases/latest');
+
+        if (!response.ok) {
+          console.warn(`GitHub API returned ${response.status}. Using database configuration fallback.`);
+
+          let dbVersion = FALLBACK_VERSION;
+          try {
+            const { data: settingsData } = await supabase
+              .from('app_settings')
+              .select('config')
+              .eq('id', 'global_config')
+              .single();
+            if (settingsData?.config?.engine_version) {
+              dbVersion = settingsData.config.engine_version.startsWith('v')
+                ? settingsData.config.engine_version
+                : `v${settingsData.config.engine_version}`;
+            }
+          } catch (e) {
+            console.error("Failed to fetch engine version from Supabase", e);
+          }
+
+          setDownloads(prev => ({
+            ...prev,
+            version: dbVersion,
+            loading: false
+          }));
+          return;
+        }
+
+        const data = await response.json();
+
+        const assets = data.assets || [];
+        const version = data.tag_name || FALLBACK_VERSION;
+
+        // Find the Silicon Mac DMG (aarch64 and .dmg)
+        const macAsset = assets.find((a: ReleaseAsset) =>
+          a.name.toLowerCase().includes('aarch64') && a.name.endsWith('.dmg')
+        );
+
+        // Find the Windows Setup EXE (.exe)
+        const winAsset = assets.find((a: ReleaseAsset) =>
+          a.name.endsWith('.exe')
+        );
+
+        setDownloads({
+          mac: macAsset ? macAsset.browser_download_url : 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater-aarch64.dmg',
+          windows: winAsset ? winAsset.browser_download_url : 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/Ater_setup.exe',
+          version: version,
+          loading: false
+        });
+      } catch (error) {
+        console.error("Failed to fetch latest Ater release", error);
+
+        let dbVersion = FALLBACK_VERSION;
+        try {
+          const { data: settingsData } = await supabase
+            .from('app_settings')
+            .select('config')
+            .eq('id', 'global_config')
+            .single();
+          if (settingsData?.config?.engine_version) {
+            dbVersion = settingsData.config.engine_version.startsWith('v')
+              ? settingsData.config.engine_version
+              : `v${settingsData.config.engine_version}`;
+          }
+        } catch (e) {
+          console.error("Failed to fetch engine version from Supabase", e);
+        }
