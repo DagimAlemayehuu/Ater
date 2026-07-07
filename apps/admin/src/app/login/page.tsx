@@ -7,7 +7,8 @@ export default function AdminLogin() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to home immediately since login is no longer required
+    // In production, we would use supabase.auth.signInWithOAuth() or similar.
+    // For now, we redirect to home which will trigger the AdminGuard check.
     router.replace("/");
   }, [router]);
 

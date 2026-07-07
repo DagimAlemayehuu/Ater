@@ -43,21 +43,11 @@ export default function WaitlistManager() {
     }
 
     const activation_code = action === "approved" ? codeForApproval(current) : null;
-    const { error } = await supabase
-      .from("waiting_list")
-      .update({ status: action, activation_code })
-      .eq("id", id);
-
-    if (!error) {
-      await supabase
-        .from("profiles")
-        .update({
-          activation_code,
-          is_approved: action === "approved",
-          waitlist_status: action,
-        })
-        .eq("email", current.email);
-    }
+    const { error } = await supabase.rpc("handle_waitlist_decision", {
+      p_id: id,
+      p_status: action,
+      p_activation_code: activation_code,
+    });
 
     if (!error) {
       setEntries((prev) =>

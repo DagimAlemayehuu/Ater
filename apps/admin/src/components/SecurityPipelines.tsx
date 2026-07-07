@@ -77,12 +77,21 @@ export function SecurityPipelines() {
 
   // Blacklist a device
   async function blacklistDevice() {
-    if (!newDeviceHash.trim()) return
+    const hash = newDeviceHash.trim();
+    if (!hash) return;
+
+    // Validate SHA-256 hex format (64 characters)
+    const isHex = /^[0-9a-fA-F]{64}$/.test(hash);
+    if (!isHex) {
+      setErrorMessage('Invalid format: Device signature must be a 64-character SHA-256 hex string.');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('hardware_blacklist')
         .insert({
-          machine_id_hash: newDeviceHash.trim(),
+          machine_id_hash: hash,
           reason: banReason.trim() || 'Manual admin block'
         })
       if (!error) {
@@ -91,7 +100,11 @@ export function SecurityPipelines() {
         setSuccessMessage('Hardware footprint blacklisted successfully.')
         fetchBlacklist()
       } else {
-        setErrorMessage(error.message)
+        if (error.code === '23505') {
+          setErrorMessage('This device signature is already blacklisted.');
+        } else {
+          setErrorMessage(error.message);
+        }
       }
     } catch (e: unknown) {
       console.error('[Security] Failed to ban device:', e)
