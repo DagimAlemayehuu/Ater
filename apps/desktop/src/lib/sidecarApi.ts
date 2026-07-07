@@ -129,10 +129,9 @@ async function checkedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
     const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
     const lockKey = isMutating ? `${method}:${String(url)}` : null
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000) // 15s timeout for specific sidecar routes
-
     const execute = async () => {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
         try {
             const response = await fetch(url, {
                 ...init,

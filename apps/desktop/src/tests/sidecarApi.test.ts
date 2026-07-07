@@ -305,6 +305,33 @@ describe('sidecarApi - Native Tauri IPC Client', () => {
         }
     });
 
+    it('starts mutation timeout after the request lock is acquired', async () => {
+        vi.useFakeTimers();
+
+        let resolveFirst!: (response: Response) => void;
+        const fetchMock = vi.spyOn(globalThis, 'fetch')
+            .mockImplementationOnce(() => new Promise<Response>(resolve => {
+                resolveFirst = resolve;
+            }))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }));
+
+        try {
+            const first = sidecarApi.appendMessage('conv-timeout-lock', 'user', 'first');
+            const second = sidecarApi.appendMessage('conv-timeout-lock', 'user', 'second');
+
+            await vi.advanceTimersByTimeAsync(14900);
+            resolveFirst(new Response(JSON.stringify({ success: true }), { status: 200 }));
+            await vi.advanceTimersByTimeAsync(200);
+
+            await expect(first).resolves.toEqual({ success: true });
+            await expect(second).resolves.toEqual({ success: true });
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        } finally {
+            fetchMock.mockRestore();
+            vi.useRealTimers();
+        }
+    });
+
     it('invalidates tutor status cache on mutation', async () => {
         const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
             return new Response(JSON.stringify({ session_id: 's1', status: 'active' }), { status: 200 });
