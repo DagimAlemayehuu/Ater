@@ -107,11 +107,11 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
               onClick={() => setShowOverlay(true)}
               className={cn(
                 "flex items-center gap-1.5 rounded-[6px] border border-border/40 px-2 h-8 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-bento-item transition-all font-sans cursor-pointer",
-                pomodoroActive && "border-foreground/20 text-foreground bg-bento-item"
+                pomodoroActive && "border-foreground/20 text-foreground bg-bento-item shadow-[0_0_15px_rgba(255,255,255,0.03)]"
               )}
               title="Focus Session Timer"
             >
-              <Timer size={12} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground")} />
+              <Timer size={12} className={cn("text-muted-foreground/40 shrink-0", pomodoroActive && "text-foreground animate-pulse")} />
               <span className="tabular-nums font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
             </button>
             

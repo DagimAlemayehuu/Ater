@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils';
 export default function PomodoroController() {
   const { config } = useConfig();
   const { 
-    timeLeft, isActive, mode, sessionCount, isMuted, showOverlay, showStats, currentHub,
-    setTimeLeft, setMode, setSessionCount, setIsActive, addHistory, setShowOverlay
+    timeLeft, isActive, mode, sessionCount, isMuted, showOverlay, showStats, currentHub, lastTickTimestamp,
+    setTimeLeft, setIsActive, setShowOverlay, completeSession, tick
   } = usePomodoroStore();
 
   const settings = {
@@ -63,24 +63,10 @@ export default function PomodoroController() {
   }, [isMuted]);
 
   const switchMode = useCallback(() => {
-    if (mode === 'focus') {
-      if (sessionCount % settings.sessionsBeforeLong === 0) {
-        setMode('long_break');
-        setTimeLeft(settings.longBreak);
-      } else {
-        setMode('short_break');
-        setTimeLeft(settings.shortBreak);
-      }
-      addHistory({ hub: currentHub || 'Flow', duration: settings.focus / 60 });
-      setSessionCount(prev => prev + 1);
-      playSound('break');
-    } else {
-      setMode('focus');
-      setTimeLeft(settings.focus);
-      setIsActive(false);
-      playSound('work');
-    }
-  }, [mode, sessionCount, settings, setMode, setTimeLeft, setSessionCount, playSound, currentHub, addHistory, setIsActive]);
+    const isFocus = mode === 'focus';
+    completeSession(settings);
+    playSound(isFocus ? 'break' : 'work');
+  }, [mode, settings, completeSession, playSound]);
 
   // Synchronize timeLeft with new settings when timer is inactive and settings duration changes
   const prevSettingsTimeRef = useRef(settings.focus);
@@ -120,21 +106,27 @@ export default function PomodoroController() {
     if (isActive) {
       interval = setInterval(() => {
         const now = Date.now();
+
+        // 1. Check for expiration via drift-sync ref
         if (expectedEndTimeRef.current) {
           const remaining = Math.max(0, Math.ceil((expectedEndTimeRef.current - now) / 1000));
-          if (remaining !== timeLeft) {
-            setTimeLeft(remaining);
-          }
+
           if (remaining === 0) {
             clearInterval(interval);
             expectedEndTimeRef.current = null;
             switchMode();
+            return;
+          }
+
+          // 2. Heartbeat tick to update store (triggers persistence of lastTickTimestamp)
+          if (remaining !== timeLeft) {
+            tick(remaining);
           }
         }
-      }, 200); // 5Hz polling guarantees high precision and responsive UI updates
+      }, 500); // 2Hz polling is sufficient for precision with drift-sync logic
     }
     return () => clearInterval(interval);
-  }, [isActive, timeLeft, setTimeLeft, switchMode]);
+  }, [isActive, timeLeft, tick, switchMode]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

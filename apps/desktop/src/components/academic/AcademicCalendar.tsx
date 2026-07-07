@@ -543,20 +543,20 @@ export default function AcademicCalendar({ events, onSelectEvent }: AcademicCale
   }, [events, activeFilters]);
 
   const handlePrevious = () => {
-    if (view === 'day') setCurrentDate(subDays(currentDate, 1));
-    else if (view === 'week') setCurrentDate(subWeeks(currentDate, 1));
-    else if (view === 'month') setCurrentDate(subMonths(currentDate, 1));
-    else if (view === 'year') setCurrentDate(subYears(currentDate, 1));
+    if (view === 'day') setCurrentDate(subDays(startOfDay(currentDate), 1));
+    else if (view === 'week') setCurrentDate(subWeeks(startOfWeek(currentDate, { weekStartsOn: 1 }), 1));
+    else if (view === 'month') setCurrentDate(subMonths(startOfMonth(currentDate), 1));
+    else if (view === 'year') setCurrentDate(subYears(startOfDay(new Date(currentDate.getFullYear(), 0, 1)), 1));
   };
 
   const handleNext = () => {
-    if (view === 'day') setCurrentDate(addDays(currentDate, 1));
-    else if (view === 'week') setCurrentDate(addWeeks(currentDate, 1));
-    else if (view === 'month') setCurrentDate(addMonths(currentDate, 1));
-    else if (view === 'year') setCurrentDate(addYears(currentDate, 1));
+    if (view === 'day') setCurrentDate(addDays(startOfDay(currentDate), 1));
+    else if (view === 'week') setCurrentDate(addWeeks(startOfWeek(currentDate, { weekStartsOn: 1 }), 1));
+    else if (view === 'month') setCurrentDate(addMonths(startOfMonth(currentDate), 1));
+    else if (view === 'year') setCurrentDate(addYears(startOfDay(new Date(currentDate.getFullYear(), 0, 1)), 1));
   };
 
-  const handleToday = () => setCurrentDate(new Date());
+  const handleToday = () => setCurrentDate(startOfDay(new Date()));
 
   useEffect(() => {
     setSidebarContent(

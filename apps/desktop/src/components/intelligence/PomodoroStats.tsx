@@ -137,7 +137,19 @@ export default function PomodoroStats() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {filteredHistory.length === 0 && (
+          <div className="absolute inset-0 z-50 bg-bento-panel/60 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
+            <div className="w-16 h-16 rounded-full bg-bento-item border border-border/40 flex items-center justify-center mb-6">
+              <Clock size={32} className="text-muted-foreground/20" />
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-[0.3em] text-foreground mb-2">No focus data found</h3>
+            <p className="text-[10px] font-bold text-muted-foreground/50 max-w-[280px] leading-relaxed uppercase tracking-widest">
+              Complete your first focus session to see your spatial analytics profile here.
+            </p>
+          </div>
+        )}
+
         {activeTab === 'OVERALL' && (
           <div className="flex-1 flex p-10 gap-10">
             <div className="flex-1 flex flex-col space-y-10 overflow-hidden">

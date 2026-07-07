@@ -58,21 +58,21 @@ export default function CalendarRoute() {
           : `Session: ${h.hub || 'Focus'}`
     })),
     // API History (Persistent)
-    ...(apiStudyHistory?.sessions || []).map(s => ({
+    ...(apiStudyHistory?.sessions || []).filter(Boolean).map(s => ({
       id: s.id,
       title: `${s.hub_id || 'Focus'} Session`,
       _type: 'Study Session',
       _date: s.timestamp || new Date().toISOString(),
       duration: s.duration_seconds
     })),
-    ...(apiStudyHistory?.telemetry || []).map(t => ({
+    ...(apiStudyHistory?.telemetry || []).filter(Boolean).map(t => ({
       id: t.id,
       title: `Read: ${t.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || 'Note'}`,
       _type: 'Note Visit',
       _date: t.timestamp || new Date().toISOString(),
       duration: t.duration_seconds
     })),
-    ...(apiStudyHistory?.practice || []).map(p => ({
+    ...(apiStudyHistory?.practice || []).filter(Boolean).map(p => ({
       id: p.id,
       title: `Recall: ${p.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub_id || 'Quiz'}`,
       _type: 'Practice',
