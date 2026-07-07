@@ -1,13 +1,23 @@
+import {
+  HubsResponse,
+  HubNotesResponse,
+  AcademicDashboard,
+  PracticeResponse,
+  TutorSession,
+  ObsidianNote,
+  VaultDatabase,
+  HealthResponse
+} from '../sidecarApi'
 import { getSimulationState, patchSimulationNote } from './state'
 
 let currentSimBatch = 0
 
 export const simulationSidecarApi = {
-  health: async () => ({ status: 'ok', version: 'simulation' }),
+  health: async (): Promise<HealthResponse> => ({ status: 'ok', version: 'simulation' }),
 
   listObsidianFiles: async () => ({ files: getSimulationState().files }),
 
-  readObsidianNote: async (path: string) => {
+  readObsidianNote: async (path: string): Promise<ObsidianNote> => {
     const cleanPath = path.replace(/\\/g, '/')
     const note = getSimulationState().notesByPath[cleanPath]
     return note ? { metadata: note.metadata, content: note.content } : { metadata: {}, content: '' }
@@ -47,7 +57,7 @@ export const simulationSidecarApi = {
       .map((note) => ({ path: note.path, title: note.title })),
   }),
 
-  listVaultDatabases: async () => ({
+  listVaultDatabases: async (): Promise<{ databases: VaultDatabase[] }> => ({
     databases: [
       { id: 'years', name: 'Years', type: 'obsidian', schema: {} },
       { id: 'semesters', name: 'Semesters', type: 'obsidian', schema: {} },
@@ -56,11 +66,11 @@ export const simulationSidecarApi = {
     ],
   }),
 
-  queryVaultDatabase: async (dbName: string) => simulationSidecarApi.listVaultDatabaseRows(dbName),
+  queryVaultDatabase: async (dbName: string): Promise<{ results: any[] }> => simulationSidecarApi.listVaultDatabaseRows(dbName),
 
-  listVaultDatabaseRows: async (dbName: string) => {
+  listVaultDatabaseRows: async (dbName: string): Promise<{ results: any[] }> => {
     const { profile } = getSimulationState()
-    const rows: Record<string, unknown[]> = {
+    const rows: Record<string, any[]> = {
       years: [{ id: 'year_3', title: 'Year III', Status: '[[Active]]', Program: `[[${profile.program}]]` }],
       semesters: [{ id: 'semester_6', title: profile.semester, Status: '[[Active]]' }],
       courses: [{ id: 'cs_342', title: profile.course, semester: profile.semester, Credits: '4' }],
@@ -88,15 +98,17 @@ export const simulationSidecarApi = {
     notes: getSimulationState().notes.map((note) => ({ path: note.path, title: note.title })),
   }),
 
-  listHubs: async () => ({
+  listHubs: async (): Promise<HubsResponse> => ({
     hubs: getSimulationState().hubs.map((hub) => ({
       id: hub.id,
       name: hub.title,
+      title: hub.title,
+      path: `Hubs/${hub.title}.md`,
       description: hub.description,
     })),
   }),
 
-  listHubNotes: async (_hubId: string) => ({
+  listHubNotes: async (_hubId: string): Promise<HubNotesResponse> => ({
     notes: getSimulationState().notes.map((note) => ({
       path: note.path,
       title: note.title,
@@ -211,37 +223,48 @@ What failure would users observe if two leaders committed different commands at 
     questions: [
       {
         id: 'sim-mcq-1',
-        type: 'multiple-choice',
+        type: 'mcq',
         question: 'Which property prevents two replicas from deciding different committed values?',
-        options: ['Availability', 'Agreement', 'Throughput', 'Fanout'],
-        answer: 'Agreement',
+        content: '',
+        difficulty: 'L1',
+        options: { "A": 'Availability', "B": 'Agreement', "C": 'Throughput', "D": 'Fanout' },
+        answer: 'B',
         explanation: 'Agreement is the consensus property that forbids conflicting decisions.',
       },
       {
         id: 'sim-feynman-1',
         type: 'writing',
         question: 'Explain Raft leader election to a junior engineer using one concrete failure example.',
+        content: '',
+        difficulty: 'L2',
+        answer: '',
+        explanation: '',
         required_keywords: ['term', 'majority', 'timeout', 'log'],
       },
     ],
   }),
 
-  generatePractice: async (_hubId?: string, _config?: unknown) => ({
+  generatePractice: async (_hubId?: string, _config?: unknown): Promise<PracticeResponse> => ({
     quiz_path: 'simulation_practice.json',
     questions: [
       {
         id: 'sim-mcq-1',
-        type: 'multiple-choice',
+        type: 'mcq',
         question: 'Which property prevents two replicas from deciding different committed values?',
-        options: ['Availability', 'Agreement', 'Throughput', 'Fanout'],
-        answer: 'Agreement',
+        content: '',
+        difficulty: 'L1',
+        options: { "A": 'Availability', "B": 'Agreement', "C": 'Throughput', "D": 'Fanout' },
+        answer: 'B',
         explanation: 'Agreement is the consensus property that forbids conflicting decisions.',
       },
       {
         id: 'sim-feynman-1',
         type: 'writing',
         question: 'Explain Raft leader election to a junior engineer using one concrete failure example.',
+        content: '',
+        difficulty: 'L2',
         required_keywords: ['term', 'majority', 'timeout', 'log'],
+        answer: '',
         explanation: 'A strong answer names election terms, randomized timeout, majority votes, and stale-log protection.',
       },
     ],

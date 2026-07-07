@@ -7,6 +7,7 @@
 
 import { getAppStore } from '@/lib/store'
 import { invoke } from '@tauri-apps/api/core'
+import { Question as PracticeQuestionType } from '@/types/practice'
 import { useSecurityStore } from '@/context/securityStore'
 import * as mockDemo from './mockDemoData'
 import { realSupabase } from '@/lib/supabase'
@@ -67,12 +68,22 @@ async function deductCredits(featureSlug: string) {
     }
 }
 
+/**
+ * Determines if the application should use mock/demo data instead of
+ * making real native IPC or HTTP calls.
+ *
+ * demoActive is true if:
+ * 1. We are in Simulation mode (manual override).
+ * 2. We are running in a standard web browser without Tauri internals (previews/captures).
+ * 3. The user has explicitly enabled 'isDemoMode' in their local settings.
+ */
 async function isDemoActive(): Promise<boolean> {
     if (isSimulationMode()) {
         return true
     }
+    // Check for Tauri environment. If missing, we must use demo data to avoid crashes.
     if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
-        return true; // Force demo mode in standard web previews/captures
+        return true;
     }
     try {
         const store = await getAppStore()
@@ -114,15 +125,31 @@ async function checkedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
         ? `${await getSidecarBaseUrl()}${input}`
         : input
     const method = (init?.method || 'GET').toUpperCase()
-    const lockKey = method === 'GET' ? null : `${method}:${String(url)}`
+    // Mutating methods that should be locked to prevent duplicate requests
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+    const lockKey = isMutating ? `${method}:${String(url)}` : null
 
     const execute = async () => {
-        const response = await fetch(url, init)
-        if (!response.ok) {
-            const errText = await response.text().catch(() => '')
-            throw new Error(errText || `Sidecar request failed (${response.status} ${response.statusText})`)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
+        try {
+            const response = await fetch(url, {
+                ...init,
+                signal: init?.signal ?? controller.signal
+            })
+            if (!response.ok) {
+                const errText = await response.text().catch(() => '')
+                throw new Error(errText || `Sidecar request failed (${response.status} ${response.statusText})`)
+            }
+            return response
+        } catch (error: any) {
+            if (error?.name === 'AbortError' || error?.message === 'The user aborted a request.') {
+                throw new Error(`Sidecar request timed out after 15s: ${method} ${url}`)
+            }
+            throw error
+        } finally {
+            clearTimeout(timeout)
         }
-        return response
     }
 
     if (!lockKey) {
@@ -230,8 +257,9 @@ export interface VaultDatabase {
     id: string;
     name: string;
     area?: string;
-    schema: Record<string, string | { type: string; source?: string }>;
-    type: 'obsidian';
+    schema: Record<string, any>;
+    type: 'obsidian' | string;
+    [key: string]: any;
 }
 
 export interface ObsidianFile {
@@ -240,11 +268,13 @@ export interface ObsidianFile {
     is_dir: boolean
     modified?: string
     size?: number
+    [key: string]: any;
 }
 
 export interface ObsidianNote {
-    metadata: Record<string, any>
+    metadata?: Record<string, any>
     content: string
+    [key: string]: any;
 }
 
 export interface SearchResult {
@@ -255,6 +285,112 @@ export interface SearchResult {
     folder: string
     metadata: string
     distance: number
+}
+
+export interface Hub {
+    id: string;
+    name?: string;
+    title: string;
+    course?: string;
+    unit?: string;
+    path: string;
+    description?: string;
+    [key: string]: any;
+}
+
+export interface HubsResponse {
+    hubs: Hub[];
+}
+
+export interface HubNote {
+    path: string;
+    title?: string;
+    read?: boolean;
+    [key: string]: any;
+}
+
+export interface HubNotesResponse {
+    notes: HubNote[];
+}
+
+export interface AcademicDashboard {
+    years?: any[];
+    semesters?: any[];
+    courses?: any[];
+    units?: any[];
+    exams?: any[];
+    assignments?: any[];
+    [key: string]: any;
+}
+
+export type PracticeQuestion = PracticeQuestionType;
+
+export interface PracticeResponse {
+    quiz_path: string;
+    questions: PracticeQuestion[];
+}
+
+export interface ChatMessage {
+    id?: string;
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp?: string;
+    created_at?: string;
+    parent_message_id?: string;
+    metadata?: any;
+}
+
+export interface ChatConversation {
+    id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+    metadata?: any;
+    archived?: boolean;
+}
+
+export interface TutorSession {
+    session_id: string;
+    hub_path: string;
+    current_note_path: string;
+    completed_notes: string[];
+    wagers: Record<string, string>;
+    score: number;
+    status: string;
+    curriculum: string[];
+    current_note_mastery?: any;
+    transfer_gate_outcomes?: any;
+    active_note_unlocks?: string[];
+    [key: string]: any;
+}
+
+export interface SRSCard {
+    note_path: string;
+    title: string;
+    difficulty?: number;
+    interval: number;
+    repetitions?: number;
+    last_reviewed?: string;
+    ease_factor?: number;
+}
+
+export interface SourceLearningJob {
+    job_id: string;
+    status: string;
+    file_path?: string;
+    title?: string;
+    topic?: string;
+    domain?: string;
+    roadmap?: any;
+    hub_path?: string;
+    warnings?: any[];
+    page_count?: number;
+    placement?: any;
+    curriculum?: any;
+    plan?: any;
+    plan_structured?: any;
+    audit?: any;
+    [key: string]: any;
 }
 
 export const sidecarApi = {
@@ -321,6 +457,7 @@ export const sidecarApi = {
 
     // ── Native Tauri IPC Routes (Fully wired, no fake mocks!) ──
     health: async (): Promise<HealthResponse> => {
+        // Simulation mode takes precedence for specific manual testing scenarios.
         if (isSimulationMode()) return simulationSidecarApi.health()
         try {
             return await invoke<HealthResponse>('get_health')
@@ -333,22 +470,22 @@ export const sidecarApi = {
         return 'http://localhost'
     },
 
-    listVaultDatabases: async () => {
+    listVaultDatabases: async (): Promise<{ databases: VaultDatabase[] }> => {
         if (isSimulationMode()) return simulationSidecarApi.listVaultDatabases()
         if (await isDemoActive()) {
             return {
                 databases: [
-                    { id: 'years', name: 'Years', type: 'obsidian', schema: {} },
-                    { id: 'semesters', name: 'Semesters', type: 'obsidian', schema: {} },
-                    { id: 'courses', name: 'Courses', type: 'obsidian', schema: {} },
-                    { id: 'study_sessions', name: 'Study Planner', type: 'obsidian', schema: {} },
-                    { id: 'exams', name: 'Exams', type: 'obsidian', schema: {} },
-                    { id: 'assignments', name: 'Assignments', type: 'obsidian', schema: {} }
+                    { id: 'years', name: 'Years', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'semesters', name: 'Semesters', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'courses', name: 'Courses', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'study_sessions', name: 'Study Planner', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'exams', name: 'Exams', type: 'obsidian', schema: {}, area: 'academic' },
+                    { id: 'assignments', name: 'Assignments', type: 'obsidian', schema: {}, area: 'academic' }
                 ]
             }
         }
         try {
-            return await invoke<any>('list_vault_databases')
+            return await invoke<{ databases: VaultDatabase[] }>('list_vault_databases')
         } catch (err) {
             console.error('[Tauri Native RAG] listVaultDatabases failed:', err)
             return { databases: [] }
@@ -400,20 +537,20 @@ export const sidecarApi = {
         }
     },
     
-    queryVaultDatabase: async (dbName: string) => {
+    queryVaultDatabase: async (dbName: string): Promise<{ results: any[] }> => {
         if (isSimulationMode()) return simulationSidecarApi.queryVaultDatabase(dbName)
         try {
-            return await invoke<any>('query_vault_database', { dbName })
+            return await invoke<{ results: any[] }>('query_vault_database', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] queryVaultDatabase failed:', err)
             return { results: [] }
         }
     },
     
-    listVaultDatabaseRows: async (dbName: string) => {
+    listVaultDatabaseRows: async (dbName: string): Promise<{ results: any[] }> => {
         if (isSimulationMode()) return simulationSidecarApi.listVaultDatabaseRows(dbName)
         try {
-            return await invoke<any>('list_vault_database_rows', { dbName })
+            return await invoke<{ results: any[] }>('list_vault_database_rows', { dbName })
         } catch (err) {
             console.error('[Tauri Native RAG] listVaultDatabaseRows failed:', err)
             return { results: [] }
@@ -602,7 +739,7 @@ export const sidecarApi = {
         }
     },
     
-    readObsidianNote: async (path: string) => {
+    readObsidianNote: async (path: string): Promise<ObsidianNote> => {
         if (isSimulationMode()) return simulationSidecarApi.readObsidianNote(path)
         const ipcPath = await normalizeVaultIpcPath(path)
         if (await isDemoActive()) {
@@ -615,7 +752,7 @@ export const sidecarApi = {
             }
         }
         try {
-            return await invoke<any>('read_obsidian_note', { path: ipcPath })
+            return await invoke<ObsidianNote>('read_obsidian_note', { path: ipcPath })
         } catch (err) {
             console.error('[Tauri Native RAG] readObsidianNote failed:', err)
             throw err
@@ -752,7 +889,7 @@ export const sidecarApi = {
         }
     },
 
-    aterQueueStatus: async () => {
+    aterQueueStatus: async (): Promise<any> => {
         if (isSimulationMode()) return simulationSidecarApi.aterQueueStatus()
         if (await isDemoActive()) {
             return mockDemo.MOCK_QUEUE_STATUS;
@@ -823,33 +960,39 @@ export const sidecarApi = {
         }
     },
 
-    listHubs: async () => {
+    listHubs: async (): Promise<HubsResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.listHubs()
         if (await isDemoActive()) {
-            return mockDemo.MOCK_HUBS;
+            return {
+                hubs: mockDemo.MOCK_HUBS.hubs.map(h => ({
+                    ...h,
+                    title: h.name,
+                    path: `Hubs/${h.name}.md`
+                }))
+            };
         }
         try {
-            return await invoke<any>('list_hubs')
+            return await invoke<HubsResponse>('list_hubs')
         } catch (err) {
             console.error('[Tauri Native RAG] listHubs failed:', err)
             return { hubs: [] }
         }
     },
     
-    listHubNotes: async (hubId: string) => {
+    listHubNotes: async (hubId: string): Promise<HubNotesResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.listHubNotes(hubId)
         if (await isDemoActive()) {
             return mockDemo.MOCK_HUB_NOTES;
         }
         try {
-            return await invoke<any>('list_hub_notes', { hubId })
+            return await invoke<HubNotesResponse>('list_hub_notes', { hubId })
         } catch (err) {
             console.error('[Tauri Native RAG] listHubNotes failed:', err)
             return { notes: [] }
         }
     },
     
-    generatePractice: async (hubId: string, config: any) => {
+    generatePractice: async (hubId: string, config: any): Promise<PracticeResponse> => {
         if (isSimulationMode()) return simulationSidecarApi.generatePractice(hubId, config)
         await deductCredits('generate-practice')
         if (await isDemoActive()) {
@@ -860,21 +1003,27 @@ export const sidecarApi = {
                         id: 'q_mock_1',
                         type: 'mcq',
                         question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
-                        options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
-                        answer: "O(log N)",
+                        content: "",
+                        difficulty: "L1",
+                        options: { "A": "O(1)", "B": "O(log N)", "C": "O(N)", "D": "O(N log N)" },
+                        answer: "B",
                         explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
                     },
                     {
                         id: 'q_mock_2',
                         type: 'true_false',
                         question: "Binary Search can be applied to an unsorted array as long as we know the target element exists in the array.",
-                        answer: false,
+                        content: "",
+                        difficulty: "L1",
+                        answer: "false",
                         explanation: "Binary Search relies on the sorting invariant to discard half of the search space. Unsorted arrays require linear O(N) scanning."
                     },
                     {
                         id: 'q_mock_3',
                         type: 'fill_in',
                         question: "To calculate the midpoint without integer overflow, the standard formulation is [[low]] + ([[high]] - [[low]]) / 2.",
+                        content: "",
+                        difficulty: "L2",
                         textWithBlanks: "To calculate the midpoint without integer overflow, the standard formulation is [[low]] + ([[high]] - [[low]]) / 2.",
                         answer: ["low", "high", "low"],
                         explanation: "The addition-based midpoint formulation `(low + high) / 2` is prone to integer overflow bugs when the bounds are large."
@@ -883,18 +1032,23 @@ export const sidecarApi = {
                         id: 'q_mock_4',
                         type: 'matching',
                         question: "Match the algorithmic time complexity classes with their corresponding asymptotic Big O notations.",
+                        content: "",
+                        difficulty: "L1",
                         pairs: [
                           { left: "Constant", right: "O(1)" },
                           { left: "Logarithmic", right: "O(log N)" },
                           { left: "Linear", right: "O(N)" },
                           { left: "Quadratic", right: "O(N^2)" }
                         ],
+                        answer: "",
                         explanation: "Constant execution is O(1). Logarithmic convergence is O(log N). Linear scaling is O(N). Nested loops scale quadratically O(N^2)."
                     },
                     {
                         id: 'q_mock_5',
                         type: 'order',
                         question: "Sort the structural execution steps of a Binary Search iteration from start to end.",
+                        content: "",
+                        difficulty: "L2",
                         steps: [
                           "Initialize low and high boundary pointers.",
                           "Calculate the midpoint index using overflow prevention.",
@@ -913,14 +1067,17 @@ export const sidecarApi = {
                         id: 'q_mock_6',
                         type: 'writing',
                         question: "Feynman Model: In your own words, explain why logarithmic O(log N) scaling convergence is highly superior to linear O(N) iteration as N grows extremely large.",
+                        content: "",
+                        difficulty: "L3",
                         required_keywords: ["halving", "growth", "asymptotic", "scaling"],
+                        answer: "",
                         explanation: "As N scales (e.g. to a billion records), O(log N) requires at most 30 comparisons due to repeated halving, whereas O(N) requires a billion comparisons. This asymptotic growth variance makes halving exponentially faster."
                     }
                 ]
             };
         }
         try {
-            return await invoke<any>('generate_practice', { hubId, configPayload: config })
+            return await invoke<PracticeResponse>('generate_practice', { hubId, configPayload: config })
         } catch (err) {
             console.error('[Tauri Native RAG] generatePractice failed:', err)
             throw err
@@ -948,23 +1105,26 @@ export const sidecarApi = {
         }
     },
     
-    getPractice: async (path: string) => {
+    getPractice: async (path: string): Promise<PracticeResponse> => {
         if (await isDemoActive()) {
             return {
+                quiz_path: path,
                 questions: [
                     {
                         id: 'q_mock_1',
                         type: 'mcq',
                         question: "What is the worst-case time complexity of Binary Search on a sorted array of size N?",
-                        options: ["O(1)", "O(log N)", "O(N)", "O(N log N)"],
-                        answer: "O(log N)",
+                        content: "",
+                        difficulty: "L1",
+                        options: { "A": "O(1)", "B": "O(log N)", "C": "O(N)", "D": "O(N log N)" },
+                        answer: "B",
                         explanation: "Binary search divides the search space in half at each step, yielding O(log N) worst-case time complexity."
                     }
                 ]
             };
         }
         try {
-            return await invoke<any>('get_practice', { path })
+            return await invoke<PracticeResponse>('get_practice', { path })
         } catch (err) {
             console.error('[Tauri Native RAG] getPractice failed:', err)
             throw err
@@ -989,12 +1149,12 @@ export const sidecarApi = {
         }
     },
 
-    academicsDashboard: async () => {
+    academicsDashboard: async (): Promise<AcademicDashboard> => {
         if (await isDemoActive()) {
             return mockDemo.MOCK_ACADEMIC_DASHBOARD;
         }
         try {
-            return await invoke<any>('academics_dashboard')
+            return await invoke<AcademicDashboard>('academics_dashboard')
         } catch (err) {
             console.error('[Tauri Native RAG] academicsDashboard failed:', err)
             return { semesters: [], courses: [], units: [], exams: [], assignments: [] }
@@ -1457,9 +1617,9 @@ export const sidecarApi = {
         }
     },
 
-    vaultList: async (hubId: string) => {
+    vaultList: async (hubId: string): Promise<{ vaults: any[] }> => {
         try {
-            return await invoke<any>('vault_list', { hubId })
+            return await invoke<{ vaults: any[] }>('vault_list', { hubId })
         } catch (err) {
             console.error('[Tauri Native RAG] vaultList failed:', err)
             return { vaults: [] }
@@ -1946,7 +2106,7 @@ export const sidecarApi = {
             throw err;
         }
     },
-    startTutorSession: async (payload: { session_id: string; hub_path: string; mode?: string }) => {
+    startTutorSession: async (payload: { session_id: string; hub_path: string; mode?: string }): Promise<TutorSession> => {
         if (isSimulationMode()) {
             return {
                 session_id: payload.session_id,
@@ -1972,7 +2132,7 @@ export const sidecarApi = {
                 throw new Error(errText || `Failed to start tutor session (HTTP ${res.status})`);
             }
             invalidateTutorStatusCache();
-            return await checkedJson(res);
+            return await checkedJson<TutorSession>(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] startTutorSession failed:', err);
             throw err;
@@ -2152,7 +2312,7 @@ export const sidecarApi = {
     getTutorStatusSync: () => {
         return cachedTutorStatus;
     },
-    getTutorStatus: async (session_id: string) => {
+    getTutorStatus: async (session_id: string): Promise<TutorSession> => {
         if (isSimulationMode()) {
             return {
                 session_id,
@@ -2180,13 +2340,18 @@ export const sidecarApi = {
                     const errText = await res.text();
                     throw new Error(errText || `Failed to get tutor status (HTTP ${res.status})`);
                 }
-                const data = await checkedJson(res);
+                const data = await checkedJson<TutorSession>(res);
                 cachedTutorStatus = data;
                 return data;
             } catch (err: any) {
-                cachedTutorStatusPromise = null;
                 console.error('[Tauri Native RAG] getTutorStatus failed:', err);
                 throw err;
+            } finally {
+                // Ensure the promise is cleared so subsequent calls can refresh if needed
+                // but only after a short delay to deduplicate rapid concurrent calls.
+                setTimeout(() => {
+                    cachedTutorStatusPromise = null;
+                }, 100);
             }
         })();
         return cachedTutorStatusPromise;
@@ -2479,7 +2644,7 @@ export const sidecarApi = {
         external_domain?: string;
         parent_hub_path?: string;
         chapter_title?: string;
-    }) => {
+    }): Promise<SourceLearningJob> => {
         enforceFeatureLock('file_ingestion');
         try {
             const headers = await getBaseHeaders('application/json');
@@ -2492,13 +2657,13 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to create source learning job (HTTP ${res.status})`);
             }
-            return await checkedJson(res);
+            return await checkedJson<SourceLearningJob>(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] createSourceLearningJob failed:', err);
             throw err;
         }
     },
-    getSourceLearningJob: async (jobId: string) => {
+    getSourceLearningJob: async (jobId: string): Promise<SourceLearningJob> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}`, {
@@ -2509,7 +2674,7 @@ export const sidecarApi = {
                 const errText = await res.text();
                 throw new Error(errText || `Failed to get source learning job (HTTP ${res.status})`);
             }
-            return await checkedJson(res);
+            return await checkedJson<SourceLearningJob>(res);
         } catch (err: any) {
             console.error('[Tauri Native RAG] getSourceLearningJob failed:', err);
             throw err;
@@ -2666,7 +2831,7 @@ export const sidecarApi = {
     promoteAttachmentToSourceJob: async (attachmentId: string) => {
         return await sidecarApi.promoteAttachment(attachmentId);
     },
-    getLearnerProfile: async (topic: string) => {
+    getLearnerProfile: async (topic: string): Promise<any> => {
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
@@ -2717,7 +2882,7 @@ export const sidecarApi = {
         }
     },
     // --- Chat Runtime Client API ---
-    createConversation: async (title: string, metadata?: any) => {
+    createConversation: async (title: string, metadata?: any): Promise<ChatConversation> => {
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/chat/conversations`, {
@@ -2725,33 +2890,33 @@ export const sidecarApi = {
                 headers,
                 body: JSON.stringify({ title, metadata })
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatConversation>(res);
         } catch (err) {
             console.error('[Oracle Client] createConversation failed:', err);
             throw err;
         }
     },
-    listConversations: async (includeArchived?: boolean) => {
+    listConversations: async (includeArchived?: boolean): Promise<ChatConversation[]> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations?include_archived=${!!includeArchived}`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatConversation[]>(res);
         } catch (err) {
             console.error('[Oracle Client] listConversations failed:', err);
             throw err;
         }
     },
-    getConversation: async (convId: string) => {
+    getConversation: async (convId: string): Promise<ChatConversation> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations/${convId}`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatConversation>(res);
         } catch (err) {
             console.error('[Oracle Client] getConversation failed:', err);
             throw err;
@@ -2810,20 +2975,20 @@ export const sidecarApi = {
             throw err;
         }
     },
-    getMessages: async (convId: string) => {
+    getMessages: async (convId: string): Promise<ChatMessage[]> => {
         try {
             const headers = await getBaseHeaders();
             const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
                 method: 'GET',
                 headers
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatMessage[]>(res);
         } catch (err) {
             console.error('[Oracle Client] getMessages failed:', err);
             throw err;
         }
     },
-    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string, metadata?: any) => {
+    appendMessage: async (convId: string, role: string, content: string, parentMessageId?: string, metadata?: any): Promise<ChatMessage> => {
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/chat/conversations/${convId}/messages`, {
@@ -2831,7 +2996,7 @@ export const sidecarApi = {
                 headers,
                 body: JSON.stringify({ role, content, parent_message_id: parentMessageId, metadata })
             });
-            return await checkedJson(res);
+            return await checkedJson<ChatMessage>(res);
         } catch (err) {
             console.error('[Oracle Client] appendMessage failed:', err);
             throw err;

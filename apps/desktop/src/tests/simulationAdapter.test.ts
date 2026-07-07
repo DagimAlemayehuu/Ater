@@ -19,7 +19,7 @@ describe('simulation sidecar adapter', () => {
       curriculum: expect.objectContaining({ hub_title: 'Distributed Systems' }),
     })
     await expect(simulationSidecarApi.generatePracticeQuestions()).resolves.toMatchObject({
-      questions: expect.arrayContaining([expect.objectContaining({ type: 'multiple-choice' })]),
+      questions: expect.arrayContaining([expect.objectContaining({ type: 'mcq' })]),
     })
   })
 

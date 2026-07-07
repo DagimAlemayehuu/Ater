@@ -22,9 +22,10 @@ export async function fetchSidecarJson<T = any>(
       throw new Error(`Sidecar request failed (${response.status}): ${text || response.statusText}`)
     }
 
-    return await response.json()
+    const data = await response.json()
+    return data as T
   } catch (error: any) {
-    if (error?.name === 'AbortError') {
+    if (error?.name === 'AbortError' || error?.message === 'The user aborted a request.') {
       throw new Error('Timed out waiting for the local Ater sidecar. Restart Ater and try again.')
     }
     if (String(error?.message || '').startsWith('Sidecar request failed')) {
