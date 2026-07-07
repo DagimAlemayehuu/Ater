@@ -236,6 +236,7 @@ def test_refine_source_learning_job_roadmap_success(mock_service_factory, mock_g
         "instruction": "rename 2 to New Concept 2",
         "current_titles": ["Concept 1", "Concept 2"]
     }
+    headers["X-AI-Key"] = "test-key"
     
     response = client.post("/api/ater/source/jobs/srcjob_123/roadmap/refine", json=payload, headers=headers)
     assert response.status_code == 200

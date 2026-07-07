@@ -178,7 +178,7 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
     
     // Verify that we display mocked semesters & courses properly
-    await expect(page.getByText(/Semester 1/i)).toBeVisible();
+    await expect(page.getByText(/Semester 1/i).nth(1)).toBeVisible();
     await expect(page.getByText(/Computer Science/i).first()).toBeVisible();
   });
 

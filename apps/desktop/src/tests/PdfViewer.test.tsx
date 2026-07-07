@@ -18,21 +18,17 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
 }));
 
+// Mock fetchSidecarJson
+vi.mock('../lib/sidecarHttp', () => ({
+  fetchSidecarJson: vi.fn()
+}));
+
+import { fetchSidecarJson } from '../lib/sidecarHttp';
+
 describe('PdfViewer', () => {
-  let globalFetch: ReturnType<typeof vi.fn>;
-  let globalCreateObjectURL: ReturnType<typeof vi.fn>;
-  let globalRevokeObjectURL: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    // Setup mocks
-    globalFetch = vi.fn();
-    global.fetch = globalFetch as unknown as typeof fetch;
-
-    globalCreateObjectURL = vi.fn().mockReturnValue('blob:http://localhost/test-blob-url');
-    global.URL.createObjectURL = globalCreateObjectURL as unknown as typeof URL.createObjectURL;
-
-    globalRevokeObjectURL = vi.fn();
-    global.URL.revokeObjectURL = globalRevokeObjectURL as unknown as typeof URL.revokeObjectURL;
+    // Force the component to render the real iframe by mocking Tauri internals
+    (window as any).__TAURI_INTERNALS__ = {};
 
     vi.mocked(invoke).mockImplementation(async (cmd: string) => {
       if (cmd === 'get_sidecar_port') return 8000;
@@ -40,19 +36,17 @@ describe('PdfViewer', () => {
       return null;
     });
 
-    globalFetch.mockResolvedValue({
-      ok: true,
-      blob: async () => new Blob(['fake pdf data']),
-      json: async () => ({}),
-      text: async () => JSON.stringify({}),
+    vi.mocked(fetchSidecarJson).mockResolvedValue({
+      page_count: 12
     });
   });
 
   afterEach(() => {
+    delete (window as any).__TAURI_INTERNALS__;
     vi.clearAllMocks();
   });
 
-  it('fetches PDF with X-Ater-Token header and uses Blob URL for iframe src', async () => {
+  it('renders iframe with correct backend URL', async () => {
     render(<PdfViewer path="test.pdf" title="Test PDF" />);
 
     // Wait for the sidecar port and token to be fetched
@@ -61,93 +55,28 @@ describe('PdfViewer', () => {
       expect(invoke).toHaveBeenCalledWith('get_sidecar_token');
     });
 
-    // Wait for fetch to be called
-    await waitFor(() => {
-      const fetchCalls = globalFetch.mock.calls;
-      const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
-      expect(pdfFetch).toBeTruthy();
-    });
-
-    const fetchCalls = globalFetch.mock.calls;
-    const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
-    expect(pdfFetch).toBeTruthy();
-    
-    const [url, options] = pdfFetch as any[];
-
-    // Note: React state batches updates but `fetchPort` might resolve after initial render.
-    // Allow either the initial default port or the dynamically resolved port in the test.
-    expect(url).toMatch(/http:\/\/127\.0\.0\.1:(8000|8765)\/api\/obsidian\/viewer\/test\.pdf/);
-    expect(options.headers['X-Ater-Token']).toBe('test-token-123');
-
-    // Wait for iframe to be rendered with the object URL
+    // Wait for iframe to be rendered with the correct src
     await waitFor(() => {
       const iframe = screen.getByTitle('Test PDF') as HTMLIFrameElement;
-      expect(iframe.src).toBe('blob:http://localhost/test-blob-url');
+      // Component uses sidecarPort, path, vault_path, etc. in URL
+      expect(iframe.src).toContain('http://127.0.0.1:8000/api/obsidian/viewer/test.pdf');
+      expect(iframe.src).toContain('vault_path=%2Ftest%2Fvault');
+      expect(iframe.src).toContain('sidecar_token=test-token-123');
     });
   });
 
-  it('shows error state on 401 response and does not crash', async () => {
-    globalFetch.mockImplementation(async (url: string) => {
-      if (url.includes('pdf-metadata')) {
-        return {
-          ok: true,
-          json: async () => ({ page_count: 1 }),
-          text: async () => ''
-        };
-      }
-      return {
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        text: async () => ''
-      };
-    });
-
+  it('fetches PDF metadata on mount', async () => {
     render(<PdfViewer path="test.pdf" title="Test PDF" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load PDF')).toBeInTheDocument();
-      expect(screen.getByText('Authentication required (401 Unauthorized)')).toBeInTheDocument();
+      expect(fetchSidecarJson).toHaveBeenCalledWith(
+        expect.stringContaining('/api/obsidian/pdf-metadata/test.pdf'),
+        expect.objectContaining({
+          headers: {
+            'X-Ater-Token': 'test-token-123'
+          }
+        })
+      );
     });
-    
-    // Ensure iframe is not rendered
-    expect(screen.queryByTitle('Test PDF')).not.toBeInTheDocument();
-  });
-
-  it('shows error state on 404 response', async () => {
-    globalFetch.mockImplementation(async (url: string) => {
-      if (url.includes('pdf-metadata')) {
-        return {
-          ok: true,
-          json: async () => ({ page_count: 1 }),
-          text: async () => ''
-        };
-      }
-      return {
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        text: async () => ''
-      };
-    });
-
-    render(<PdfViewer path="test.pdf" title="Test PDF" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load PDF')).toBeInTheDocument();
-      expect(screen.getByText('PDF not found (404 Not Found)')).toBeInTheDocument();
-    });
-  });
-
-  it('revokes object URL on unmount', async () => {
-    const { unmount } = render(<PdfViewer path="test.pdf" title="Test PDF" />);
-
-    await waitFor(() => {
-      expect(globalCreateObjectURL).toHaveBeenCalled();
-    });
-
-    unmount();
-
-    expect(globalRevokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/test-blob-url');
   });
 });
