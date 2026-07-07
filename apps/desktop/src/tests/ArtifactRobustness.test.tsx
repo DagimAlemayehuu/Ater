@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { UnifiedSandboxViewer } from '../components/obsidian/UnifiedSandboxViewer';
@@ -65,7 +65,8 @@ describe('Artifact Robustness', () => {
         title: 'Broken Art',
         versions: [{
           version: 1,
-          chapters: [{ id: 'ch-1', title: 'Ch 1', content: '...', sandbox: 'console.log(1)' }]
+          chapters: [{ id: 'ch-1', title: 'Ch 1', content: '...', sandbox: 'console.log(1)' }],
+          raw: '<artifact>...</artifact>'
         }]
       }]);
       useArtifactStore.getState().setActiveArtifact('art-1');
