@@ -293,13 +293,21 @@ export function usePracticeConfig() {
   const handleVaultPracticeGenerate = useCallback(async () => {
     if (!vaultSelectedFiles.length) return
     setIsLoading(true)
+    setView('loading')
+    setGenStatus('Initializing vault generation...')
     try {
       const res = await sidecarApi.vaultGenerate(vaultSelectedFiles, vaultMode, selectedHub)
+      if (!res.questions || res.questions.length === 0) {
+        toast.error('No questions were generated from the selected vault files.')
+        setView('vault')
+        return
+      }
       setView('session');
       (window as any).__practiceStartTime = Date.now()
       await session.startSession(res.questions || [], {}, undefined, res.quiz_path || null)
     } catch (e: any) {
       toast.error(e.message || 'Generation failed')
+      setView('vault')
     } finally {
       setIsLoading(false)
     }
@@ -401,10 +409,10 @@ export function usePracticeConfig() {
   }, [view])
 
   useEffect(() => {
-    if (view === 'session' && session.questions.length === 0) {
-      setView('configuring')
+    if (view === 'session' && session.questions.length === 0 && session.isInitialized) {
+      setView('dashboard')
     }
-  }, [view, session.questions, setView])
+  }, [view, session.questions, session.isInitialized, setView])
 
   const getCleanErrorMessage = useCallback((err: any): string => {
     if (!err) return 'Error starting.'

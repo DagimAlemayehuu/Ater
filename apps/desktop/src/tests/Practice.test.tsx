@@ -61,7 +61,7 @@ describe('Practice Session Dashboard', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/START PRACTICE/i)).toBeInTheDocument();
+      expect(screen.getByText(/Practice Dashboard/i)).toBeInTheDocument();
     });
   });
 });
