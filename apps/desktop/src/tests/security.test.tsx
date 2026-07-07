@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useSecurityStore } from '../context/securityStore';
+import { isBetaMode, setRuntimeAppMode } from '../lib/appMode';
 import { supabase } from '../lib/supabase';
 import { getAppStore } from '../lib/store';
 
@@ -92,5 +93,10 @@ describe('Security Store - checkOnlineLockout', () => {
     expect(useSecurityStore.getState().status).toBe('Active');
     expect(window.location.reload).not.toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  it('recognizes beta mode', () => {
+    setRuntimeAppMode('beta');
+    expect(isBetaMode()).toBe(true);
   });
 });

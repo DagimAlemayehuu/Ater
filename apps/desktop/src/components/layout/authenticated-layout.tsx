@@ -11,6 +11,7 @@ import { useSecurityStore } from '@/context/securityStore'
 import { useTheme } from '@/context/theme-provider'
 import { useNavigation } from '@/context/navigation-context'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
+import { isBetaMode } from '@/lib/appMode'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -156,7 +157,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
             
             {/* Minimal Credits Display */}
             <div className="text-[11px] font-bold select-none text-muted-foreground pr-1">
-              Credits: <span className="font-extrabold text-foreground">{creditBalance >= 99999999 ? 'UNLIMITED' : creditBalance}</span>
+              Credits: <span className="font-extrabold text-foreground">{isBetaMode() ? '∞' : (creditBalance >= 99999999 ? 'UNLIMITED' : creditBalance)}</span>
             </div>
           </div>
         </header>
