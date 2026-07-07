@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useSecurityStore } from '@/context/securityStore'
+import { setRuntimeAppMode } from '@/lib/appMode'
 
 // Mocking dependencies for tests
 vi.mock('@tauri-apps/api/core', () => ({
@@ -21,6 +22,7 @@ vi.mock('@/lib/store', () => ({
 describe('Security Store', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setRuntimeAppMode('real')
     useSecurityStore.setState({
       status: 'Active',
       lockedFeatures: [],
@@ -63,6 +65,23 @@ describe('Security Store', () => {
     expect(useSecurityStore.getState().isOnlineListenerRegistered).toBe(false)
     
     removeEventListenerSpy.mockRestore()
+  })
+
+  it('correctly transitions between security states', () => {
+    const store = useSecurityStore.getState()
+
+    // Default Active
+    expect(useSecurityStore.getState().status).toBe('Active')
+    expect(useSecurityStore.getState().isFeatureLocked('ai-features')).toBe(false)
+
+    // FeatureLocked
+    useSecurityStore.setState({ status: 'FeatureLocked', lockedFeatures: ['ai-features'] })
+    expect(useSecurityStore.getState().isFeatureLocked('ai-features')).toBe(true)
+    expect(useSecurityStore.getState().isFeatureLocked('other-feature')).toBe(false)
+
+    // Bricked
+    useSecurityStore.setState({ status: 'Bricked' })
+    expect(useSecurityStore.getState().isFeatureLocked('any-feature')).toBe(true)
   })
 })
 
@@ -112,7 +131,7 @@ vi.mock('@/lib/supabase', () => {
 })
 
 vi.mock('@/lib/activationMachineBinding', () => ({
-  validateActivationMachineBinding: vi.fn().mockResolvedValue(true)
+  validateActivationMachineBinding: vi.fn().mockResolvedValue('mock-machine-id')
 }))
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

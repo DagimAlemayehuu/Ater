@@ -39,6 +39,7 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
   }
 
   if (isLocked) {
+    const status = useSecurityStore.getState().status;
     const isAiFeature = [
       'ai-ingestion', 
       'oracle-chat', 
@@ -50,13 +51,16 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
       'ai_locked', 
       'explain-features',
       'full-system-lockout'
-    ].includes(featureSlug) || useSecurityStore.getState().status === 'Bricked';
+    ].includes(featureSlug) || status === 'Bricked';
 
     if (isAiFeature) {
       let title = "Module Restricted"
       let description = "Access to this interface domain has been restricted by administration."
 
-      if (!isBetaMode() && creditBalance <= 0) {
+      if (status === 'LeaseExpired') {
+        title = "Offline: AI Restricted"
+        description = "Your local security lease has expired and you are currently offline. Connect to the internet to verify your clearance and restore AI features."
+      } else if (!isBetaMode() && creditBalance <= 0) {
         title = "You're out of credits"
         description = "You have run out of credits. Please purchase more credits on your dashboard to continue using AI tools."
       } else if (featureSlug === 'ai-ingestion' || featureSlug === 'oracle-chat' || featureSlug === 'ai-features' || featureSlug === 'ai_locked') {
@@ -71,6 +75,7 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
           slug={featureSlug}
           onVerify={handleSync}
           isSyncing={isSyncing}
+          variant={status === 'LeaseExpired' ? 'warning' : 'destructive'}
         />
       )
     }

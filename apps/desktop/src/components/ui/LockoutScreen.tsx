@@ -8,6 +8,7 @@ interface LockoutScreenProps {
   onVerify?: () => void
   isSyncing?: boolean
   fullScreen?: boolean
+  variant?: 'destructive' | 'warning'
 }
 
 export function LockoutScreen({
@@ -16,11 +17,12 @@ export function LockoutScreen({
   slug,
   onVerify,
   isSyncing = false,
-  fullScreen = false
+  fullScreen = false,
+  variant = 'destructive'
 }: LockoutScreenProps) {
   const content = (
     <div className="w-full max-w-[500px] border border-border/80 p-12 bg-card space-y-8 shadow-2xl relative overflow-hidden text-center flex flex-col items-center">
-      <div className="absolute top-0 left-0 right-0 h-1 bg-destructive" />
+      <div className={`absolute top-0 left-0 right-0 h-1 ${variant === 'warning' ? 'bg-amber-500' : 'bg-destructive'}`} />
       
       {/* Centered Lock Icon */}
       <div className="size-16 rounded-full border border-border/80 flex items-center justify-center bg-accent/20">
@@ -28,8 +30,8 @@ export function LockoutScreen({
       </div>
 
       <div className="space-y-4 w-full">
-        <div className="text-[12px] font-black tracking-widest text-destructive uppercase">
-          [RESTRICTED CLEARANCE]
+        <div className={`text-[12px] font-black tracking-widest uppercase ${variant === 'warning' ? 'text-amber-500' : 'text-destructive'}`}>
+          {variant === 'warning' ? '[SYSTEM ADVISORY]' : '[RESTRICTED CLEARANCE]'}
         </div>
         <h2 className="text-[20px] font-black uppercase tracking-[0.2em] text-foreground leading-snug">
           {title}
@@ -49,7 +51,9 @@ export function LockoutScreen({
           </div>
           <div className="flex justify-between px-2">
             <span>STATUS:</span>
-            <span className="text-destructive font-black">LOCKED_BY_CONTROLLER</span>
+            <span className={`${variant === 'warning' ? 'text-amber-500' : 'text-destructive'} font-black`}>
+              {variant === 'warning' ? 'LEASE_EXPIRED' : 'LOCKED_BY_CONTROLLER'}
+            </span>
           </div>
         </div>
       )}

@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true)
     setError(null)
     console.log('[DRM] Starting activation sequence...')
+    let machineIdToSave = '';
 
     try {
       const cleanEmail = email.trim().toLowerCase();
@@ -158,25 +159,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 4. Validate and Bind Machine ID Hash
-        await validateActivationMachineBinding({
-          profileMachineId: profileData.machine_id,
-          fetchMachineId: async () => {
-            const { invoke } = await import('@tauri-apps/api/core')
-            return invoke<string>('get_machine_id')
-          },
-          bindMachineId: async (machineId) => {
-            console.log('[DRM] Binding activation key to this device...')
-            const { error: updateError } = await liveSupabase
-              .from('profiles')
-              .update({ machine_id: machineId })
-              .eq('id', authData.user.id)
-            
-            if (updateError) {
-              console.error('[DRM] Failed to bind machine ID:', updateError)
-              throw new Error('Failed to bind activation key to this device. Please try again.')
+        try {
+          machineIdToSave = await validateActivationMachineBinding({
+            profileMachineId: profileData.machine_id,
+            fetchMachineId: async () => {
+              const { invoke } = await import('@tauri-apps/api/core')
+              return invoke<string>('get_machine_id')
+            },
+            bindMachineId: async (machineId) => {
+              console.log('[DRM] Binding activation key to this device...')
+              const { error: updateError } = await liveSupabase
+                .from('profiles')
+                .update({ machine_id: machineId })
+                .eq('id', authData.user.id)
+
+              if (updateError) {
+                console.error('[DRM] Failed to bind machine ID:', updateError)
+                throw new Error('Failed to bind activation key to this device. Please try again.')
+              }
             }
-          }
-        })
+          })
+        } catch (bindingErr: any) {
+          console.error('[DRM] Machine binding failed:', bindingErr);
+          throw new Error(bindingErr.message || 'Hardware verification failed. This account may be bound to another device.');
+        }
       }
 
       // Reset any leftover simulation/tour state so the welcome screen
@@ -189,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName: derivedName,
         isDemoMode: false,
         appMode: 'real',
+        machineId: machineIdToSave,
         walkthroughCompleted: false,
         walkthroughMilestone: '1.6',
         walkthroughStatus: 'inactive',

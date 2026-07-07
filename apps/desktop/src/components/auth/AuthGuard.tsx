@@ -9,13 +9,24 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { saveConfig } = useConfig()
 
   const resetActivation = async () => {
-    await saveConfig({ 
-      isActivated: false, 
-      activationEmail: '', 
-      activationCode: '',
-      displayName: '',
-      isProgramConfigured: false
-    })
+    try {
+      await saveConfig({
+        isActivated: false,
+        activationEmail: '',
+        activationCode: '',
+        displayName: '',
+        isProgramConfigured: false,
+        appMode: 'beta',
+        isDemoMode: false,
+        machineId: ''
+      })
+      // Small delay to ensure Tauri store is flushed
+      await new Promise(resolve => setTimeout(resolve, 100))
+    } catch (e) {
+      console.error('[AuthGuard] Failed to clear session during reset:', e)
+    } finally {
+      window.location.reload()
+    }
   }
 
   if (loading) {
@@ -35,6 +46,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return <Login />
   }
 
+  const { refreshStatus } = useAuth()
   if (status === 'pending') {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-background px-8">
@@ -48,10 +60,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             Your activation is valid, but clearance is still being analyzed. We will actuate your local engine once final approval is granted.
           </p>
           
-          <div className="space-y-6 pt-4">
+          <div className="space-y-4 pt-4">
             <div className="h-[2px] w-full bg-muted overflow-hidden">
-              <div className="h-full w-1/3 bg-primary animate-none" />
+              <div className="h-full w-1/3 bg-primary animate-pulse" />
             </div>
+
+            <button
+              onClick={() => refreshStatus()}
+              className="w-full py-4 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-90"
+            >
+              Retry Clearance
+            </button>
+
             <button 
               onClick={resetActivation}
               className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-none border-b border-transparent hover:border-muted-foreground pb-0.5"

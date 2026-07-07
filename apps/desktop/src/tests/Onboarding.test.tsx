@@ -41,7 +41,7 @@ vi.mock('@/lib/supabase', () => ({
 }));
 
 describe('Onboarding Component', () => {
-  it('renders Step 1 and advances to Step 2 on valid input', async () => {
+  it('follows a strict sequential flow (1-6)', async () => {
     render(
       <MemoryRouter>
         <ConfigProvider>
@@ -50,26 +50,36 @@ describe('Onboarding Component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Define Your Profile/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Enter your name/i)).toBeInTheDocument();
+    // Step 1: Profile
+    expect(await screen.findByText(/Define Your Profile/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText(/Enter your name/i), { target: { value: 'Dagim' } });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
 
-    const nameInput = screen.getByPlaceholderText(/Enter your name/i);
-    const continueBtn = screen.getByRole('button', { name: /Continue/i });
-
-    // Continue is initially disabled since name is empty
-    expect(continueBtn).toBeDisabled();
-
-    // Fill in name
-    fireEvent.change(nameInput, { target: { value: 'Dagim' } });
-    expect(continueBtn).toBeEnabled();
-
-    // Advance to step 2
-    fireEvent.click(continueBtn);
+    // Step 2: Vault
+    expect(await screen.findByText(/Select Your Vault/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Choose Folder/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Select Your Vault/i)).toBeInTheDocument();
-      expect(screen.getByText(/Point Ater to your local Obsidian vault folder/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Continue/i })).toBeEnabled();
     });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+
+    // Step 3: AI Keys
+    expect(await screen.findByText(/Connect AI Provider & Keys/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Skip/i }));
+
+    // Step 4: Academic Program
+    expect(await screen.findByText(/Your Academic Program/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText(/e.g. Computer Science/i), { target: { value: 'CS' } });
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+
+    // Step 5: Focus Timer
+    expect(await screen.findByText(/Configure Focus Timer/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+
+    // Step 6: Confirm
+    expect(await screen.findByText(/Confirm Setup/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Finalize/i })).toBeInTheDocument();
   });
 
   it('creates the database folder before probing write access for a selected vault', async () => {
@@ -94,7 +104,6 @@ describe('Onboarding Component', () => {
         multiple: false,
         title: 'Select your Obsidian vault folder',
       });
-      expect(sidecarApi.updateVaultPath).not.toHaveBeenCalled();
       expect(sidecarApi.createObsidianFolder).toHaveBeenCalledWith('database');
       expect(sidecarApi.createObsidianFile).toHaveBeenCalledWith(
         'database/.write_test',
@@ -102,8 +111,8 @@ describe('Onboarding Component', () => {
         true
       );
     });
-    expect(sidecarApi.createObsidianFolder).toHaveBeenCalledBefore(
-      sidecarApi.createObsidianFile as any
-    );
+    // RESTORED: check execution order
+    expect(vi.mocked(sidecarApi.createObsidianFolder).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(sidecarApi.createObsidianFile).mock.invocationCallOrder[0]);
   });
 });

@@ -39,13 +39,12 @@ export default function Onboarding() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
   const [step, setStep] = useState(() => {
-    if (config?.displayName && config?.obsidianVaultPath) {
-      return 4
-    }
-    if (config?.displayName) {
-      return 2
-    }
-    return 1
+    if (config?.onboardingStep) return config.onboardingStep
+    if (!config?.displayName) return 1
+    if (!config?.obsidianVaultPath) return 2
+    if (!config?.aiApiKey && (!config?.savedApiKeys || config.savedApiKeys.length === 0)) return 3
+    if (!config?.isProgramConfigured) return 4
+    return 6
   })
 
   // Existing Vault Auto-Detection States
@@ -160,24 +159,29 @@ export default function Onboarding() {
     }
   }, [config?.obsidianVaultPath, hasCheckedOnMount])
 
-  const handleNext = () => {
-    if (step === 2) {
-      setStep(4)
-    } else if (step === 4) {
-      setStep(6)
-    } else {
-      setStep((s) => s + 1)
-    }
-  }
-  const handleBack = () => {
+  const handleNext = async () => {
+    const nextStep = Math.min(step + 1, 6)
+    setStep(nextStep)
+
+    // Persist intermediate progress
+    const updates: any = { onboardingStep: nextStep }
+    if (step === 1) updates.displayName = name
+    if (step === 2) updates.obsidianVaultPath = vaultPath
     if (step === 4) {
-      setStep(2)
-    } else if (step === 6) {
-      setStep(4)
-    } else {
-      setStep((s) => s - 1)
+      updates.programName = programName
+      updates.programLevel = programLevel
+      updates.programDuration = programDuration
+      updates.programCurrentYear = programCurrentYear
     }
+    if (step === 5) {
+      updates.pomodoroWorkDuration = workDuration
+      updates.pomodoroShortBreakDuration = shortBreak
+      updates.pomodoroLongBreakDuration = longBreak
+      updates.pomodoroSessionsBeforeLongBreak = sessionsBeforeLong
+    }
+    await saveConfig(updates)
   }
+  const handleBack = () => setStep((s) => Math.max(s - 1, 1))
 
   const checkExistingVaultConfig = async (selectedPath: string) => {
     const normalizedPath = normalizeVaultPath(selectedPath)
@@ -440,7 +444,8 @@ export default function Onboarding() {
         academicFolderPath: 'Notes',
         autoDeploy: true,
         isProgramConfigured: true,
-        isDemoMode: false
+        isDemoMode: false,
+        onboardingStep: undefined
       })
 
       // 1. Initialize folders
@@ -634,34 +639,28 @@ export default function Onboarding() {
       <div className="w-full max-w-lg mx-auto bg-bento-panel border border-border rounded-[12px] p-8 shadow-2xl my-8">
 
         {/* Step indicator */}
-        {finalStatus === 'idle' || finalStatus === 'error' ? (() => {
-          const visibleSteps = config?.displayName ? [2, 4, 6] : [1, 2, 4, 6];
-          const currentDisplayStep = visibleSteps.indexOf(step) + 1;
-          const totalDisplaySteps = visibleSteps.length;
-          if (currentDisplayStep === 0) return null;
-          return (
-            <div className="flex items-center gap-3 mb-10 flex-wrap">
-              {visibleSteps.map((s, idx) => (
-                <div key={s} className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      step === s
-                        ? "bg-foreground"
-                        : step > s
-                        ? "bg-muted-foreground/60"
-                        : "bg-border"
-                    )}
-                  />
-                  {idx < totalDisplaySteps - 1 && <div className="w-6 h-px bg-border" />}
-                </div>
-              ))}
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">
-                Step {currentDisplayStep} of {totalDisplaySteps}
-              </span>
-            </div>
-          );
-        })() : null}
+        {(finalStatus === 'idle' || finalStatus === 'error') && (
+          <div className="flex items-center gap-3 mb-10 flex-wrap">
+            {[1, 2, 3, 4, 5, 6].map((s, idx) => (
+              <div key={s} className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    step === s
+                      ? "bg-foreground"
+                      : step > s
+                      ? "bg-muted-foreground/60"
+                      : "bg-border"
+                  )}
+                />
+                {idx < 5 && <div className="w-6 h-px bg-border" />}
+              </div>
+            ))}
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-2">
+              Step {step} of 6
+            </span>
+          </div>
+        )}
 
         {/* Running state */}
         {finalStatus === 'running' && (
@@ -727,7 +726,7 @@ export default function Onboarding() {
             </div>
 
             <button
-              onClick={handleNext}
+              onClick={() => handleNext()}
               disabled={!name}
               className={cn(
                 "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
@@ -781,7 +780,7 @@ export default function Onboarding() {
                 Back
               </button>
               <button
-                onClick={handleNext}
+                onClick={() => handleNext()}
                 disabled={!vaultPath}
                 className={cn(
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
@@ -1002,7 +1001,7 @@ export default function Onboarding() {
                 Back
               </button>
               <button
-                onClick={handleNext}
+                onClick={() => handleNext()}
                 className={cn(
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
                   activeKey
@@ -1124,7 +1123,7 @@ export default function Onboarding() {
                 Back
               </button>
               <button
-                onClick={handleNext}
+                onClick={() => handleNext()}
                 disabled={!programName}
                 className={cn(
                   "py-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] border rounded-[8px] transition-colors",
@@ -1204,7 +1203,7 @@ export default function Onboarding() {
                 Back
               </button>
               <button
-                onClick={handleNext}
+                onClick={() => handleNext()}
                 className="py-2.5 px-8 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] border border-primary hover:opacity-90 rounded-[8px] transition-colors"
               >
                 Continue

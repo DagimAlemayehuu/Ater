@@ -82,6 +82,7 @@ export interface AppConfig {
     isProgramConfigured: boolean;
     appMode: AppMode;
     isDemoMode: boolean;
+    onboardingStep?: number;
 }
 
 interface ConfigContextType {
@@ -134,6 +135,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     isProgramConfigured: false,
     appMode: 'beta',
     isDemoMode: false,
+    onboardingStep: undefined,
 };
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -195,6 +197,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 const walkthroughMilestone = (await store.get<string>('walkthroughMilestone')) || '1.6';
                 const walkthroughStatus = (await store.get<string>('walkthroughStatus')) || 'inactive';
                 const walkthroughCompleted = (await store.get<boolean>('walkthroughCompleted')) ?? false;
+                const onboardingStep = await store.get<number>('onboardingStep');
                 
                 let machineId = await store.get<string>('machineId');
                 if (!machineId) {
@@ -250,6 +253,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     walkthroughMilestone,
                     walkthroughStatus,
                     walkthroughCompleted,
+                    onboardingStep,
                 };
 
                 const isBypass = import.meta.env.DEV &&
