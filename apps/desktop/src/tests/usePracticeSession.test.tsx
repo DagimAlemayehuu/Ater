@@ -57,6 +57,25 @@ const mockQuestions: Question[] = [
     explanation: 'No, markup',
     options: { True: 'True', False: 'False' },
     answer: 'False'
+  },
+  {
+    id: 3,
+    type: 'matching',
+    difficulty: 'L2',
+    question: 'Match terms',
+    pairs: [
+      { left: 'Frontend', right: 'React' },
+      { left: 'Backend', right: 'FastAPI' }
+    ],
+    answer: { Frontend: 'React', Backend: 'FastAPI' }
+  },
+  {
+    id: 4,
+    type: 'order',
+    difficulty: 'L3',
+    question: 'Order steps',
+    steps: ['Plan', 'Code', 'Test'],
+    answer: ['Plan', 'Code', 'Test']
   }
 ];
 
@@ -83,7 +102,7 @@ describe('usePracticeSession', () => {
       });
     });
 
-    expect(result.current.questions).toHaveLength(2);
+    expect(result.current.questions).toHaveLength(4);
     expect(result.current.currentQuestionIdx).toBe(0);
     expect(result.current.currentQuestion?.id).toBe(1);
     expect(result.current.globalTimeLeft).toBe(600);
@@ -157,6 +176,42 @@ describe('usePracticeSession', () => {
 
     expect(result.current.scores[2]).toBe(false);
     expect(result.current.streak).toBe(0);
+  });
+
+  it('verifies correct matching answer', async () => {
+    const { result } = renderHook(() => usePracticeSession());
+
+    await act(async () => {
+      await result.current.startSession(mockQuestions, {}, 'note_3.md', null, 2);
+    });
+
+    act(() => {
+      result.current.selectAnswer({ Frontend: 'React', Backend: 'FastAPI' });
+    });
+
+    await act(async () => {
+      await result.current.checkAnswer();
+    });
+
+    expect(result.current.scores[3]).toBe(true);
+  });
+
+  it('verifies correct order answer', async () => {
+    const { result } = renderHook(() => usePracticeSession());
+
+    await act(async () => {
+      await result.current.startSession(mockQuestions, {}, 'note_4.md', null, 3);
+    });
+
+    act(() => {
+      result.current.selectAnswer(['Plan', 'Code', 'Test']);
+    });
+
+    await act(async () => {
+      await result.current.checkAnswer();
+    });
+
+    expect(result.current.scores[4]).toBe(true);
   });
 
   it('keeps objective answers locally wrong without waiting for AI explanation grading', async () => {

@@ -130,7 +130,7 @@ const state = {
 window.__TAURI_STORE__ = {
   load: async (path, _opts) => {
     if (!storeData.has(path)) {
-      storeData.set(path, {
+      const initialData = {
         isProgramConfigured: false,
         isActivated: false,
         obsidianVaultPath: '',
@@ -140,7 +140,18 @@ window.__TAURI_STORE__ = {
         displayName: '',
         inboxPath: '',
         academicFolderPath: 'Notes',
-      });
+      };
+
+      // Seed from localStorage if available (used by Playwright to bypass onboarding)
+      const saved = localStorage.getItem('ater_mock_store');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          Object.assign(initialData, parsed);
+        } catch (e) {}
+      }
+
+      storeData.set(path, initialData);
     }
 
     return {
@@ -255,6 +266,12 @@ window.__TAURI__ = {
       // ── Core RAG & App commands ──
       if (cmd === 'init_app' || cmd === 'initialize_database') {
         return null;
+      }
+      if (cmd === 'get_sidecar_port') {
+        return 8765;
+      }
+      if (cmd === 'get_sidecar_token') {
+        return 'test-token';
       }
       if (cmd === 'get_health') {
         return { status: 'ok', version: '0.6.0' };
@@ -570,6 +587,30 @@ window.__TAURI__ = {
           progress: state.isRagSyncing ? 50 : 100,
           total: 100,
           message: state.isRagSyncing ? 'Syncing vector store...' : 'Fully synchronized.'
+        };
+      }
+      if (cmd === 'get_tutor_status') {
+        return {
+          session_id: 'sess1',
+          current_note_path: 'database/study planner/Computer_Science_Hub/DSA_Intro.md',
+          roadmap: [
+            { title: 'DSA Intro', path: 'database/study planner/Computer_Science_Hub/DSA_Intro.md', status: 'current' }
+          ],
+          curriculum: ['database/study planner/Computer_Science_Hub/DSA_Intro.md'],
+          active_note_unlocks: ['database/study planner/Computer_Science_Hub/DSA_Intro.md'],
+          completed_notes: []
+        };
+      }
+      if (cmd === 'session_by_hub') {
+        return {
+          session_id: 'sess1',
+          current_note_path: 'database/study planner/Computer_Science_Hub/DSA_Intro.md',
+          roadmap: [
+            { title: 'DSA Intro', path: 'database/study planner/Computer_Science_Hub/DSA_Intro.md', status: 'current' }
+          ],
+          curriculum: ['database/study planner/Computer_Science_Hub/DSA_Intro.md'],
+          active_note_unlocks: ['database/study planner/Computer_Science_Hub/DSA_Intro.md'],
+          completed_notes: []
         };
       }
 
