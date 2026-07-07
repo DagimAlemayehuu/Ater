@@ -1,13 +1,38 @@
 const MANIFEST_URL = 'https://github.com/DagimAlemayehuu/Ater_Releases/releases/latest/download/update.json';
-const EXPECTED_VERSION = '0.2.0';
 
 async function verifyRelease() {
+  const fs = require('fs');
+  const path = require('path');
+
+  // Load version from package.json as default
+  let expectedVersion;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+    expectedVersion = pkg.version;
+  } catch (e) {
+    expectedVersion = '0.2.0';
+  }
+
   let manifest;
-  const localFile = process.argv[2];
+  let localFile;
+
+  // Simple arg parsing: --version X or positional local file
+  const versionIdx = process.argv.indexOf('--version');
+  if (versionIdx !== -1 && process.argv[versionIdx + 1]) {
+    expectedVersion = process.argv[versionIdx + 1];
+  }
+
+  // Positional argument if not part of --version
+  const args = process.argv.slice(2).filter((arg, i, arr) => {
+    if (arg === '--version') return false;
+    if (i > 0 && arr[i-1] === '--version') return false;
+    return true;
+  });
+
+  localFile = args[0];
 
   if (localFile) {
     console.log(`Reading manifest from local file: ${localFile}...`);
-    const fs = require('fs');
     manifest = JSON.parse(fs.readFileSync(localFile, 'utf8'));
   } else {
     console.log(`Fetching manifest from ${MANIFEST_URL}...`);
@@ -25,10 +50,13 @@ async function verifyRelease() {
 
   try {
     // 1. Confirm version
-    if (manifest.version !== EXPECTED_VERSION) {
-      throw new Error(`Version mismatch. Expected ${EXPECTED_VERSION}, got ${manifest.version}`);
+    const cleanManifestVersion = manifest.version.startsWith('v') ? manifest.version.slice(1) : manifest.version;
+    const cleanExpectedVersion = expectedVersion.startsWith('v') ? expectedVersion.slice(1) : expectedVersion;
+
+    if (cleanManifestVersion !== cleanExpectedVersion) {
+      throw new Error(`Version mismatch. Expected ${cleanExpectedVersion}, got ${cleanManifestVersion}`);
     }
-    console.log(`✓ Version matches ${EXPECTED_VERSION}`);
+    console.log(`✓ Version matches ${cleanExpectedVersion}`);
 
     // 2. Verify platforms
     const platforms = manifest.platforms;
