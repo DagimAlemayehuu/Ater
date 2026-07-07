@@ -21,6 +21,8 @@ vi.mock('../lib/sidecarApi', () => ({
         siloTest: vi.fn().mockResolvedValue('Silo Test OK'),
         testAiConnection: vi.fn().mockResolvedValue({ success: true }),
         logFromJs: vi.fn(),
+        listConversations: vi.fn().mockResolvedValue([]),
+        getMessages: vi.fn().mockResolvedValue([]),
     }
 }));
 
@@ -117,6 +119,33 @@ describe('AterDashboard', () => {
         await waitFor(() => {
             expect(screen.getByText('lecture1.pdf')).toBeInTheDocument();
             expect(screen.getByText('lecture2.pdf')).toBeInTheDocument();
+        }, { timeout: 3000 });
+    });
+
+    it('syncs selected inbox file with query params', async () => {
+        (sidecarApi.aterQueueStatus as any).mockResolvedValue({
+            status: 'idle',
+            queue_size: 0,
+            pending_files: [],
+        });
+        const inboxFiles = [
+            { name: 'lecture1.pdf', path: '/vault/Inbox/lecture1.pdf' },
+        ];
+        (sidecarApi.aterListInbox as any).mockResolvedValue({ files: inboxFiles });
+
+        render(
+            <MemoryRouter initialEntries={['/agents?tab=pipeline&file=/vault/Inbox/lecture1.pdf']}>
+                <ConfigProvider>
+                    <HeaderProvider>
+                        <AterDashboard onBack={() => {}} />
+                    </HeaderProvider>
+                </ConfigProvider>
+            </MemoryRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText(/Target File/i)).toBeInTheDocument();
+            expect(screen.getByText('lecture1.pdf')).toBeInTheDocument();
         }, { timeout: 3000 });
     });
 });

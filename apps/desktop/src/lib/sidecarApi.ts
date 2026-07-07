@@ -2574,6 +2574,7 @@ export const sidecarApi = {
         }
     },
     refineSourceLearningJobRoadmap: async (jobId: string, instruction: string, currentTitles: string[]) => {
+        if (isSimulationMode()) return simulationSidecarApi.refineSourceLearningJobRoadmap(jobId, instruction, currentTitles)
         enforceFeatureLock('ai-features');
         try {
             const headers = await getBaseHeaders('application/json');

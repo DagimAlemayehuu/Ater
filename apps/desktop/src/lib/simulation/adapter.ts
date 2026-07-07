@@ -119,12 +119,23 @@ export const simulationSidecarApi = {
 
   aterGeneratePlan: async (_payload?: unknown) => {
     currentSimBatch = 0;
+    const notes = getSimulationState().notes;
+    const atomicNotesLines = notes.map((note, index) => `  - [[${note.title}]] (Mode CS): Summary of ${note.title}. Pages: [${index + 3}]`).join('\n');
+    const plan_raw = `
+<hub_note>Distributed Systems Hub</hub_note>
+<pq_note>Distributed Systems Practice</pq_note>
+<atomic_notes>
+${atomicNotesLines}
+</atomic_notes>
+    `;
+
     return {
       session_id: 'simulation-ingest-session',
+      plan_raw,
       plan: {
         hub_note: 'Distributed_Systems_Hub.md',
         practice_note: 'Distributed_Systems_Practice.md',
-        atomic_notes: getSimulationState().notes.map((note, index) => ({
+        atomic_notes: notes.map((note, index) => ({
           title: note.title,
           level: index < 2 ? 'foundation' : 'application',
           source_pages: [index + 3],
@@ -140,13 +151,26 @@ export const simulationSidecarApi = {
         ],
         hub_note: 'Distributed_Systems_Hub.md',
         pq_note: 'Distributed_Systems_Practice.md',
-        atomic_notes: getSimulationState().notes.map((note, index) => ({
+        atomic_notes: notes.map((note, index) => ({
           title: note.title,
           level: index < 2 ? 'foundation' : 'application',
           source_pages: [index + 3],
           mode: 'CS',
         })),
       }
+    };
+  },
+
+  refineSourceLearningJobRoadmap: async (sessionId: string, instruction: string, currentTitles: string[]) => {
+    return {
+      plan_raw: `
+<hub_note>Refined Distributed Systems Hub</hub_note>
+<pq_note>Refined Distributed Systems Practice</pq_note>
+<atomic_notes>
+  - [[Refined Consensus]] (Mode CS): Advanced summary of Consensus. Pages: [3]
+  - [[Advanced Raft]] (Mode CS): Deep dive into Raft. Pages: [4]
+</atomic_notes>
+      `
     };
   },
 

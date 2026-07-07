@@ -4,7 +4,7 @@ import {
  ShieldCheck, RefreshCw,
  FileText, Activity,
  Zap, Search, GraduationCap,
- User, BookOpen, BookOpenCheck, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen, BrainCircuit
+ User, BookOpen, BookOpenCheck, DollarSign, Bot, ChevronLeft, ChevronRight, ArrowRight, Settings as SettingsIcon, Target, Database, FileEdit, Edit, Tag, Calendar, LayoutDashboard, Sparkles, Plus, Info, X, Copy, Archive, Layers, ChevronDown, Check, ArrowLeft, CheckCircle, CheckCircle2, PanelRightOpen, BrainCircuit
 } from 'lucide-react'
 import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 
@@ -128,6 +128,7 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
   const activeTab = searchParams.get('tab') === 'pipeline' ? 'pipeline' : 'ater';
   const fetchInbox = useTelemetryStore(state => state.fetchInbox);
   const fetchStatus = useTelemetryStore(state => state.fetchStatus);
+  const queueStatus = useTelemetryStore(state => state.queueStatus);
 
   const toggleAutoDeploy = async () => {
     await saveConfig({ autoDeploy: !config?.autoDeploy });
@@ -849,8 +850,16 @@ function OracleView({ isHistoryOpen, setIsHistoryOpen, onNoteSelect }: OracleVie
           </div>
         ) : (
           <div className="space-y-3 px-1 py-2 text-xs">
-            <div className="flex items-center justify-between bg-muted/20 border border-border/30 px-3 py-2 rounded-[8px]">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auto-Ingest</span>
+            <div className={cn(
+              "flex items-center justify-between bg-muted/20 border px-3 py-2 rounded-[8px] transition-colors",
+              queueStatus && queueStatus.auto_process !== config?.autoDeploy ? "border-amber-500/30" : "border-border/30"
+            )}>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Auto-Ingest</span>
+                {queueStatus && queueStatus.auto_process !== config?.autoDeploy && (
+                  <span className="text-[7px] text-amber-500 font-black uppercase tracking-widest animate-pulse">Desync Detected</span>
+                )}
+              </div>
               <button
                 onClick={toggleAutoDeploy}
                 className={cn(
@@ -2414,7 +2423,12 @@ function BatchTreeView({batches, processedNotes}: {batches: any[], processedNote
 }
 
 /* ─── Plan Card View Component ─── */
-function PlanCardView({planRaw}: {planRaw: string}) {
+function PlanCardView({planRaw, onUpdatePlan, sessionId}: {planRaw: string, onUpdatePlan?: (newPlan: string) => void, sessionId?: string | null}) {
+ const [isRefining, setIsRefining] = useState(false);
+ const [refineInstruction, setRefineInstruction] = useState('');
+ const [isEditingTitles, setIsEditingTitles] = useState(false);
+ const [editableTree, setEditableTree] = useState<any[]>([]);
+
  const extract = (tag: string) => {
  const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 's')
  const match = planRaw.match(regex)
@@ -2487,10 +2501,30 @@ function PlanCardView({planRaw}: {planRaw: string}) {
 })
 }
 
- const atomicTree = atomicContent ? parseAtomicTree(atomicContent) : []
+ const atomicTree = useMemo(() => atomicContent ? parseAtomicTree(atomicContent) : [], [atomicContent]);
+
+ useEffect(() => {
+   setEditableTree(atomicTree);
+ }, [atomicTree]);
+
+ const handleSaveManualEdits = () => {
+   const newAtomicNotesContent = editableTree.map(node => {
+     const indent = '  '.repeat(node.level);
+     let line = `${indent}- [[${node.title}]]`;
+     if (node.mode) line += ` (Mode ${node.mode})`;
+     if (node.description) line += `: ${node.description}`;
+     if (node.parent) line += ` Parent: [[${node.parent}]]`;
+     if (node.pages && node.pages.length > 0) line += ` Pages: [${node.pages.join(', ')}]`;
+     return line;
+   }).join('\n');
+
+   const newPlanRaw = planRaw.replace(/<atomic_notes>(.*?)<\/atomic_notes>/s, `<atomic_notes>\n${newAtomicNotesContent}\n</atomic_notes>`);
+   onUpdatePlan?.(newPlanRaw);
+   setIsEditingTitles(false);
+ };
 
  return (
- <div className="flex flex-col overflow-y-auto custom-scrollbar pr-2 gap-6 h-full">
+ <div className="flex flex-col overflow-y-auto custom-scrollbar pr-2 gap-6 h-full pb-20">
  <div className="flex flex-col gap-3">
  {hubContent && (
  <div className="border border-border bg-bento-bg p-5 hover:border-muted-foreground/30  group">
@@ -2521,13 +2555,43 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  </div>
 
  <div className="flex flex-col gap-4 overflow-visible">
- <div className="flex items-center gap-2 px-1 shrink-0">
+ <div className="flex items-center justify-between px-1 shrink-0">
+ <div className="flex items-center gap-2">
  <Layers size={16} className="text-muted-foreground" />
  <h4 className="text-xs font-semibold uppercase tracking-tight text-muted-foreground">Notes</h4>
  </div>
+ {onUpdatePlan && (
+   <div className="flex items-center gap-2">
+     {isEditingTitles ? (
+       <>
+         <button
+           onClick={() => { setIsEditingTitles(false); setEditableTree(atomicTree); }}
+           className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
+         >
+           Cancel
+         </button>
+         <button
+           onClick={handleSaveManualEdits}
+           className="text-[9px] font-black uppercase tracking-widest text-primary hover:opacity-80"
+         >
+           Save Edits
+         </button>
+       </>
+     ) : (
+       <button
+         onClick={() => setIsEditingTitles(true)}
+         className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1"
+       >
+         <Edit size={10} />
+         Edit Titles
+       </button>
+     )}
+   </div>
+ )}
+ </div>
 
  <div className="flex flex-col gap-2">
- {atomicTree.map((node, i) => (
+ {(isEditingTitles ? editableTree : atomicTree).map((node, i) => (
  <div
  key={i}
  style={{marginLeft: `${node.level * 24}px`}}
@@ -2548,8 +2612,18 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  <FileText size={12} />
  </div>
  <div className="flex flex-col gap-1 min-w-0">
- <div className="font-bold text-[13px] text-foreground truncate group-hover:text-foreground ">
- {node.title}
+ <div className="font-bold text-[13px] text-foreground truncate group-hover:text-foreground flex-1">
+ {isEditingTitles ? (
+   <input
+     value={node.title}
+     onChange={(e) => {
+       const next = [...editableTree];
+       next[i] = { ...next[i], title: e.target.value };
+       setEditableTree(next);
+     }}
+     className="bg-muted/20 border-b border-foreground/20 focus:border-primary outline-none w-full px-1"
+   />
+ ) : node.title}
  {node.mode && (
  <span className="ml-2 text-[9px] font-black uppercase text-muted-foreground tracking-widest border border-border px-1 rounded">
  {node.mode}
@@ -2586,6 +2660,50 @@ function PlanCardView({planRaw}: {planRaw: string}) {
  ))}
  </div>
       </div>
+
+      {sessionId && onUpdatePlan && (
+        <div className="mt-8 pt-6 border-t border-border/40">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Refine Roadmap</h4>
+          <div className="flex gap-2">
+            <textarea
+              value={refineInstruction}
+              onChange={(e) => setRefineInstruction(e.target.value)}
+              placeholder="Give instructions to refine this plan (e.g. 'Add a section on Git Hooks', 'Make it more advanced')..."
+              className="flex-1 bg-muted/10 border border-border/40 rounded-[8px] p-3 text-[11px] font-medium focus:outline-none focus:border-foreground/30 resize-none h-20"
+              disabled={isRefining}
+            />
+            <button
+              onClick={async () => {
+                if (!refineInstruction.trim() || isRefining) return;
+                setIsRefining(true);
+                try {
+                  const currentTitles = atomicTree.map(n => n.title);
+                  // Using refineSourceLearningJobRoadmap if it's a source job,
+                  // but we might need a generic refinement for Ater sessions too.
+                  // For now, let's assume this is for source jobs or prompt jobs.
+                  // The API might need a session-based refinement too.
+                  // Based on memory, refineSourceLearningJobRoadmap exists.
+                  const res = await sidecarApi.refineSourceLearningJobRoadmap(sessionId, refineInstruction, currentTitles);
+                  if (res && res.plan_raw) {
+                    onUpdatePlan(res.plan_raw);
+                    setRefineInstruction('');
+                    toast.success('Roadmap refined successfully');
+                  }
+                } catch (err: any) {
+                  toast.error(err.message || 'Refinement failed');
+                } finally {
+                  setIsRefining(false);
+                }
+              }}
+              disabled={!refineInstruction.trim() || isRefining}
+              className="px-4 bg-foreground text-background text-[10px] font-black uppercase tracking-widest rounded-[8px] hover:opacity-90 disabled:opacity-50 transition-all flex flex-col items-center justify-center gap-2 w-24 shrink-0"
+            >
+              {isRefining ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              <span>{isRefining ? 'Refining' : 'Refine'}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2687,6 +2805,26 @@ function AterDashboard({onBack}: {onBack: () => void}) {
 
   const {setCenterContent, setRightContent} = useHeader()
 
+  useEffect(() => {
+    const fileParam = searchParams.get('file');
+    if (fileParam && !selectedInboxFile && inboxFiles.length > 0) {
+      const found = inboxFiles.find(f => f.path === fileParam);
+      if (found) setSelectedInboxFile(found);
+    } else if (!fileParam && selectedInboxFile) {
+      setSelectedInboxFile(null);
+    }
+  }, [searchParams, inboxFiles, selectedInboxFile]);
+
+  const updateFileParam = (file: any) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (file) {
+      nextParams.set('file', file.path);
+    } else {
+      nextParams.delete('file');
+    }
+    setSearchParams(nextParams);
+  };
+
   const parentRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
    count: batchFeed.length,
@@ -2700,8 +2838,16 @@ function AterDashboard({onBack}: {onBack: () => void}) {
   if (activeTab === 'pipeline') {
     const HeaderActions = (
      <div className="flex items-center gap-2">
-      <div className="flex items-center gap-2 bg-muted/30 border border-border/40 px-2.5 py-1 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-       <span>Auto-Ingest</span>
+      <div className={cn(
+        "flex items-center gap-2 bg-muted/30 border px-2.5 py-1 rounded-[8px] text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-colors",
+        queueStatus && queueStatus.auto_process !== config?.autoDeploy ? "border-amber-500/30" : "border-border/40"
+      )}>
+       <div className="flex flex-col">
+        <span>Auto-Ingest</span>
+        {queueStatus && queueStatus.auto_process !== config?.autoDeploy && (
+          <span className="text-[6px] text-amber-500/80 leading-none">Desync</span>
+        )}
+       </div>
        <button
         onClick={toggleAutoDeploy}
         className={cn(
@@ -2752,7 +2898,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
  setActivePlan(null)
  setStructuredPlan(null)
  setBatchFeed([])
- setSelectedInboxFile(null)
+ updateFileParam(null)
  setAterError(null)
  fetchInbox()
 }
@@ -2972,7 +3118,7 @@ function AterDashboard({onBack}: {onBack: () => void}) {
              <div
              key={f.path}
              data-tour="inbox-file-item"
-             onClick={() => {setSelectedInboxFile(f); setAterError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
+             onClick={() => {updateFileParam(f); setAterError(null); setActivePlan(null); setIsAwaitingConfirmation(false); setIsCurriculumReady(false); setBatchFeed([]);}}
              className="p-8 rounded-[12px] border border-border bg-bento-card hover:bg-accent/50 hover:border-foreground/30 cursor-pointer group flex flex-col justify-between transition-all shadow-sm"
              >
              <div>
@@ -3001,29 +3147,72 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           <div className="flex flex-col h-full overflow-hidden">
           <div className="p-6 rounded-[12px] border border-border bg-bento-card mb-8 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-4">
-          <button onClick={() => setSelectedInboxFile(null)} className="px-3 py-1.5 bg-accent border border-border rounded-[6px] text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">BACK</button>
+          <button onClick={() => updateFileParam(null)} className="px-3 py-1.5 bg-accent border border-border rounded-[6px] text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">BACK</button>
           <div>
           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Target File</p>
           <h3 className="text-base font-black uppercase tracking-tight text-foreground truncate max-w-sm">{selectedInboxFile.name}</h3>
           </div>
           </div>
           <div className="flex items-center gap-2">
-          {!isCurriculumReady && !processing && (
-          <button data-tour="process-file-btn" onClick={() => processSelectedFile()} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent/50 hover:border-foreground/40 rounded-[8px] transition-colors">Process File</button>
+          {!isCurriculumReady && (
+          <button
+            data-tour="process-file-btn"
+            onClick={() => processSelectedFile()}
+            disabled={processing}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent/50 hover:border-foreground/40 rounded-[8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing && !activePlan ? <RefreshCw size={10} className="animate-spin" /> : null}
+            Process File
+          </button>
           )}
-          {isCurriculumReady && !activePlan && !processing && (
-          <button data-tour="generate-plan-btn" onClick={startPlanning} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors">Generate Plan</button>
+          {isCurriculumReady && !activePlan && (
+          <button
+            data-tour="generate-plan-btn"
+            onClick={startPlanning}
+            disabled={processing}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing ? <RefreshCw size={10} className="animate-spin" /> : null}
+            Generate Plan
+          </button>
           )}
           {isAwaitingConfirmation && (
           <div className="flex items-center gap-2">
-          <button data-tour="confirm-deploy-btn" onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50">Confirm Setup & Deploy</button>
-          <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent rounded-[8px] transition-colors disabled:opacity-50">Deploy Step 1</button>
+          <button
+            data-tour="confirm-deploy-btn"
+            onClick={() => confirmDeployment(true)}
+            disabled={processing}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing ? <RefreshCw size={10} className="animate-spin" /> : null}
+            Confirm Setup & Deploy
+          </button>
+          <button
+            onClick={() => confirmDeployment(false)}
+            disabled={processing}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent rounded-[8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Deploy Step 1
+          </button>
           </div>
           )}
           {isAwaitingNextBatch && (
           <div className="flex items-center gap-2">
-          <button onClick={() => confirmDeployment(true)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50">Finish All</button>
-          <button onClick={() => confirmDeployment(false)} disabled={processing} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent rounded-[8px] transition-colors disabled:opacity-50">Next Step</button>
+          <button
+            onClick={() => confirmDeployment(true)}
+            disabled={processing}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary-foreground border border-primary bg-primary hover:opacity-90 rounded-[8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing ? <RefreshCw size={10} className="animate-spin" /> : null}
+            Finish All
+          </button>
+          <button
+            onClick={() => confirmDeployment(false)}
+            disabled={processing}
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-foreground border border-border bg-accent rounded-[8px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next Step
+          </button>
           </div>
           )}
           {isCompleted && (
@@ -3076,7 +3265,11 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Ready to create notes</p>
           </div>
           </div>
-          <PlanCardView planRaw={activePlan} />
+          <PlanCardView
+            planRaw={activePlan}
+            sessionId={sessionId}
+            onUpdatePlan={(newPlan) => setActivePlan(newPlan)}
+          />
           </div>
           </div>
           )}
@@ -3105,9 +3298,26 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           )}
           <div className="grid grid-cols-2 gap-3">
           {b.results.map((r: any, i: number) => (
-          <div key={i} className="p-4 border border-border rounded-[8px] bg-accent/50 flex items-center gap-3 hover:border-foreground/30 transition-colors">
-          <div className="p-2 bg-bento-panel rounded-[4px] border border-border text-muted-foreground/40"><FileText size={14} /></div>
-          <span className="text-[10px] font-black uppercase tracking-widest truncate text-foreground/80">{r.title}</span>
+          <div
+            key={i}
+            onClick={() => r.path && navigate(`/obsidian?path=${encodeURIComponent(r.path)}`)}
+            className={cn(
+              "p-4 border border-border rounded-[8px] bg-accent/50 flex items-center gap-3 hover:border-foreground/30 transition-colors",
+              r.path ? "cursor-pointer group/item" : "cursor-default"
+            )}
+          >
+            <div className="p-2 bg-bento-panel rounded-[4px] border border-border text-muted-foreground/40 group-hover/item:text-foreground/60 transition-colors">
+              <FileText size={14} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-black uppercase tracking-widest truncate block text-foreground/80">{r.title}</span>
+              {r.path && <span className="text-[8px] text-muted-foreground/40 font-bold truncate block">{r.path}</span>}
+            </div>
+            {r.path && (
+              <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
+                <ArrowRight size={12} className="text-muted-foreground" />
+              </div>
+            )}
           </div>
           ))}
           </div>
@@ -3129,9 +3339,30 @@ function AterDashboard({onBack}: {onBack: () => void}) {
           )}
 
           {aterError && (
-          <div className="p-6 rounded-[8px] bg-destructive/5 border border-destructive/20 mt-8">
-          <div className="flex items-center gap-2 mb-3 text-[10px] font-black uppercase tracking-widest text-destructive">Error</div>
-          <p className="text-[10px] font-sans text-destructive/80">{aterError}</p>
+          <div className="p-6 rounded-[8px] bg-destructive/5 border border-destructive/20 mt-8 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-destructive">
+                <X size={14} />
+                Pipeline Error
+              </div>
+              <button
+                onClick={() => {
+                  if (activePlan) confirmDeployment(false);
+                  else if (isCurriculumReady) startPlanning();
+                  else processSelectedFile();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-black uppercase tracking-widest rounded-[4px] transition-colors"
+              >
+                <RefreshCw size={10} />
+                Retry
+              </button>
+            </div>
+            <p className="text-[11px] font-bold text-destructive/80 leading-relaxed">{aterError}</p>
+            <div className="pt-2 border-t border-destructive/10">
+              <p className="text-[9px] text-destructive/40 font-black uppercase tracking-widest">
+                Check sidecar connectivity if this persists.
+              </p>
+            </div>
           </div>
           )}
           </div>

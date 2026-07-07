@@ -520,25 +520,32 @@ export function LearningWorkspace({
             />
 
             {node.target ? (
-              <button
-                onClick={() => {
-                  if (locked) {
-                    toast.error('This lesson is locked. Master previous topics first!')
-                    return
-                  }
-                  openItemByTarget(node.target!)
-                }}
-                className={cn(
-                  "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground font-medium",
-                  active && "text-foreground font-black",
-                  completed && !active && "text-muted-foreground/50 font-medium line-through",
-                  generated && "text-muted-foreground/40",
-                  status === 'locked' && "text-muted-foreground/35",
-                  unlocked && !active && !completed && "text-muted-foreground/70"
+              <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => {
+                    if (locked) {
+                      toast.error('This lesson is locked. Master previous topics first!')
+                      return
+                    }
+                    openItemByTarget(node.target!)
+                  }}
+                  className={cn(
+                    "text-left text-[11px] leading-tight truncate flex-1 hover:text-foreground font-medium",
+                    active && "text-foreground font-black",
+                    completed && !active && "text-muted-foreground/50 font-medium line-through",
+                    generated && "text-muted-foreground/40",
+                    status === 'locked' && "text-muted-foreground/35",
+                    unlocked && !active && !completed && "text-muted-foreground/70"
+                  )}
+                >
+                  {node.label.replace(/_/g, ' ')}
+                </button>
+                {status === 'generated' && (
+                  <span className="text-[7px] font-black uppercase tracking-widest text-primary/50 border border-primary/20 px-1 rounded-[2px] shrink-0">
+                    Planned
+                  </span>
                 )}
-              >
-                {node.label.replace(/_/g, ' ')}
-              </button>
+              </div>
             ) : (
               <span
                 onClick={() => toggleNode(node.label)}
