@@ -262,6 +262,21 @@ window.__TAURI__ = {
       if (cmd === 'get_machine_id') {
         return 'test-machine-id-e2e';
       }
+      if (cmd === 'get_sidecar_port') {
+        return 5000;
+      }
+      if (cmd === 'get_sidecar_token') {
+        return 'test-sidecar-token';
+      }
+      if (cmd === 'update_vault_path') {
+        return null;
+      }
+      if (cmd === 'silo_test') {
+        return 'Silo healthy';
+      }
+      if (cmd === 'log_from_js') {
+        return null;
+      }
       if (cmd === 'export_logs') {
         return '[TauriMock] Exported dynamic logs: RAG healthy, telemetry active.';
       }
@@ -296,6 +311,9 @@ window.__TAURI__ = {
         state.databases = state.databases.filter(d => d.id !== dbName);
         return { success: true };
       }
+      if (cmd === 'update_vault_row' || cmd === 'create_vault_row' || cmd === 'delete_vault_row') {
+        return { success: true };
+      }
       if (cmd === 'update_vault_database_schema') {
         const dbName = args?.dbName;
         const db = state.databases.find(d => d.id === dbName);
@@ -314,6 +332,9 @@ window.__TAURI__ = {
       // ── Option manager ──
       if (cmd === 'get_vault_options') {
         return { options: ['TagA', 'TagB', 'Core'] };
+      }
+      if (cmd === 'create_vault_option' || cmd === 'update_vault_option' || cmd === 'delete_vault_option') {
+        return { success: true };
       }
 
       // ── Graph & Backlinks ──
@@ -406,6 +427,9 @@ window.__TAURI__ = {
         const found = state.files.find(f => f.name.replace('.md', '') === pageName || f.path === pageName);
         return found ? { found: true, path: found.path } : { found: false, path: null };
       }
+      if (cmd === 'rename_vault_file') {
+        return { success: true };
+      }
 
       // ── SRS / Active Recall commands ──
       if (cmd === 'srs_cards') {
@@ -442,6 +466,12 @@ window.__TAURI__ = {
       if (cmd === 'ater_list_generated') {
         return { files: state.files.filter(f => !f.is_dir) };
       }
+      if (cmd === 'ater_inbox_upload') {
+        return { path: args?.filePath || 'inbox/uploaded.pdf' };
+      }
+      if (cmd === 'ater_interactive_quiz') {
+        return { questions: [] };
+      }
       if (cmd === 'ater_process') {
         const filePath = args?.payload?.file_path || '';
         state.queueStatus.status = 'processing';
@@ -467,6 +497,9 @@ window.__TAURI__ = {
       if (cmd === 'test_ai_connection') {
         return { success: true, message: 'Connection to Gemini is successful!' };
       }
+      if (cmd === 'ater_oracle_chat') {
+        return { response: 'Oracle mock response' };
+      }
       if (cmd === 'search_similar') {
         const query = args?.query || '';
         return Object.keys(state.notes).map((path, idx) => ({
@@ -490,6 +523,9 @@ window.__TAURI__ = {
           exams: [],
           assignments: []
         };
+      }
+      if (cmd === 'academics_sync_profile') {
+        return { success: true };
       }
       if (cmd === 'list_hubs') {
         return { hubs: state.hubs };
@@ -532,6 +568,11 @@ window.__TAURI__ = {
         }
         return { success: true };
       }
+      if (cmd === 'delete_practice') {
+        const path = args?.path;
+        state.practices = state.practices.filter(p => p.path !== path);
+        return { success: true };
+      }
       if (cmd === 'get_practice_status') {
         return { status: 'idle' };
       }
@@ -548,6 +589,9 @@ window.__TAURI__ = {
       }
       if (cmd === 'get_study_history') {
         return state.studyHistory;
+      }
+      if (cmd === 'record_performance') {
+        return { success: true };
       }
       if (cmd === 'clear_study_history') {
         state.studyHistory = { sessions: [], telemetry: [], practice: [] };
@@ -571,6 +615,35 @@ window.__TAURI__ = {
           total: 100,
           message: state.isRagSyncing ? 'Syncing vector store...' : 'Fully synchronized.'
         };
+      }
+
+      // ── Vault Ingestion commands ──
+      if (cmd === 'vault_list') {
+        return { vaults: [] };
+      }
+      if (cmd === 'vault_upload_text' || cmd === 'vault_upload_file') {
+        return { success: true };
+      }
+      if (cmd === 'vault_generate') {
+        return { success: true };
+      }
+
+      // ── AI Usage & Analytics ──
+      if (cmd === 'get_ai_usage') {
+        return {};
+      }
+      if (cmd === 'get_all_keys_usage') {
+        return [];
+      }
+
+      // ── Watcher commands ──
+      if (cmd === 'start_watching_directory' || cmd === 'stop_watching_directory') {
+        return null;
+      }
+
+      // ── Embedding commands ──
+      if (cmd === 'embed_and_store_text' || cmd === 'add_document') {
+        return null;
       }
 
       // ── Security & Licensing mock commands ──
