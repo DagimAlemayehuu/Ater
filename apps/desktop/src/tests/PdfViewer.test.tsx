@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PdfViewer } from '../components/obsidian/PdfViewer';
@@ -107,5 +107,19 @@ describe('PdfViewer', () => {
       expect(iframe.src).toContain('/viewer/other.pdf');
       expect(iframe.src).toContain('sidecar_token=test-token-123');
     });
+  });
+
+  it('shows timeout error if iframe fails to load within 12 seconds', async () => {
+    vi.useFakeTimers();
+    render(<PdfViewer path="test.pdf" title="Test PDF" />);
+
+    // Fast-forward 12 seconds
+    act(() => {
+      vi.advanceTimersByTime(12001);
+    });
+
+    expect(screen.getByText(/PDF Engine Failed to Load/i)).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

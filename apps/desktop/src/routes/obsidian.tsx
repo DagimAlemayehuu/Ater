@@ -1189,6 +1189,23 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 }
 
  const handleDeleteItem = useCallback(async (path: string, isFolder: boolean) => {
+    // 1. Lock Protection
+    try {
+      const isLocked = await checkLockState(path)
+      if (isLocked) {
+        toast.error("This lesson is locked and cannot be deleted.")
+        return
+      }
+    } catch (err) {
+      console.error("Lock check error:", err)
+    }
+
+    // 2. User Confirmation
+    const itemName = path.split(/[/\\]/).pop() || 'item';
+    if (!window.confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+      return;
+    }
+
  try {
  await sidecarApi.deleteObsidianItem(path)
  await fetchFiles()
@@ -1203,7 +1220,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
  toast.error(`Delete failed: ${err.message}`)
 }
-}, [fetchFiles, selectedPath])
+}, [fetchFiles, selectedPath, lockedNotes])
 
  const handleCreateItem = useCallback(async () => {
  if (!newItemName) {
@@ -1214,6 +1231,21 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
  const path = creatingInPath ? `${creatingInPath}/${newItemName}` : newItemName
  const fullPath = creatingType === 'file' ? (path.endsWith('.md') ? path : `${path}.md`) : path
+
+ // Lock Protection for parent folder
+ if (creatingInPath) {
+    try {
+      const isLocked = await checkLockState(creatingInPath)
+      if (isLocked) {
+        toast.error("The target folder is locked.")
+        setCreatingInPath(null)
+        setCreatingType(null)
+        return
+      }
+    } catch (err) {
+      console.error("Lock check error:", err)
+    }
+ }
 
  try {
  if (creatingType === 'file') {
@@ -1238,6 +1270,18 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  setRenamingPath(null)
  return
 }
+
+ // Lock Protection
+ try {
+   const isLocked = await checkLockState(renamingPath)
+   if (isLocked) {
+     toast.error("This lesson is locked and cannot be renamed.")
+     setRenamingPath(null)
+     return
+   }
+ } catch (err) {
+   console.error("Lock check error:", err)
+ }
 
  const parentPath = renamingPath.includes('/') ? renamingPath.substring(0, renamingPath.lastIndexOf('/')) : ''
  let newPath = parentPath ? `${parentPath}/${newItemName}` : newItemName
@@ -1997,12 +2041,12 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   const [isNoteMetadataExpanded, setIsNoteMetadataExpanded] = useState(false)
   const [contentMatchPaths, setContentMatchPaths] = useState<Set<string>>(new Set())
 
-  const matchesSearch = useCallback((node: FileNode, query: string): boolean => {
-    if (!query) return true
-    if (typeof node.path === 'string' && node.path.toLowerCase().includes((query || '').toLowerCase())) return true
+  const matchesSearch = useCallback((node: FileNode, queryLower: string): boolean => {
+    if (!queryLower) return true
+    if (typeof node.path === 'string' && node.path.toLowerCase().includes(queryLower)) return true
     if (contentMatchPaths.has(node.path)) return true
     if (node.children) {
-      return node.children.some(child => matchesSearch(child, query))
+      return node.children.some(child => matchesSearch(child, queryLower))
     }
     return false
   }, [contentMatchPaths])
@@ -2023,10 +2067,11 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
 
   const filteredFiles = useMemo(() => {
     if (!searchQuery) return fileTree
+    const queryLower = searchQuery.toLowerCase()
 
     const filterTree = (nodes: FileNode[]): FileNode[] => {
       return nodes
-        .filter(node => matchesSearch(node, searchQuery))
+        .filter(node => matchesSearch(node, queryLower))
         .map(node => ({
           ...node,
           children: node.children ? filterTree(node.children) : undefined
@@ -2051,6 +2096,26 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
 
   const sourcePath = draggedPath || e.dataTransfer.getData('text/plain')
   if (!sourcePath) return
+
+  // 0. Lock Protection
+  try {
+    const isLockedSource = await checkLockState(sourcePath)
+    if (isLockedSource) {
+      toast.error("This lesson is locked and cannot be moved.")
+      setDraggedPath(null)
+      return
+    }
+    if (targetPath) {
+      const isLockedTarget = await checkLockState(targetPath)
+      if (isLockedTarget) {
+        toast.error("The target folder is locked.")
+        setDraggedPath(null)
+        return
+      }
+    }
+  } catch (err) {
+    console.error("Lock check error:", err)
+  }
 
   // 1. Determine the target folder. If dropped on a file, use its parent folder.
   let targetFolderPath = targetPath

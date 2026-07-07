@@ -24,6 +24,8 @@ vi.mock('../lib/sidecarApi', () => ({
     testAiConnection: vi.fn().mockResolvedValue({ success: true }),
     logFromJs: vi.fn(),
     deleteObsidianItem: vi.fn().mockResolvedValue({ success: true }),
+    getTutorSessionByHub: vi.fn().mockResolvedValue(null),
+    getTutorStatus: vi.fn().mockResolvedValue(null),
   }
 }));
 

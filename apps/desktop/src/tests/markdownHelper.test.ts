@@ -50,7 +50,35 @@ describe('markdownHelper', () => {
       expect(result).toContain('title: "Serialized Title"');
       expect(result).toContain('read: false');
       expect(result).toContain('level: 1.5');
-      expect(result).toContain('tags:\n - "one"\n - "two"');
+      expect(result).toContain('tags:\n  - "one"\n  - "two"');
+    });
+
+    it('handles null, undefined and empty strings', () => {
+      const meta = {
+        nullVal: null,
+        undefVal: undefined,
+        emptyStr: ''
+      };
+      const result = serializeFrontmatter(meta);
+      expect(result).toContain('nullVal: ""');
+      expect(result).toContain('undefVal: ""');
+      expect(result).toContain('emptyStr: ""');
+    });
+
+    it('handles strings with internal quotes', () => {
+      const meta = {
+        quoted: 'He said "Hello"'
+      };
+      const result = serializeFrontmatter(meta);
+      expect(result).toContain('quoted: "He said \\"Hello\\""');
+    });
+
+    it('handles empty arrays', () => {
+      const meta = {
+        tags: []
+      };
+      const result = serializeFrontmatter(meta);
+      expect(result).toContain('tags: []');
     });
 
     it('returns empty string if metadata is empty', () => {

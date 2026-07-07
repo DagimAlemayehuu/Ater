@@ -73,25 +73,45 @@ export function parseFrontmatter(content: string): ParsedMarkdown {
  * Serializes a metadata record back into a YAML frontmatter block.
  */
 export function serializeFrontmatter(metadata: Record<string, any>): string {
-  if (Object.keys(metadata).length === 0) {
+  if (!metadata || Object.keys(metadata).length === 0) {
     return '';
   }
 
   const yamlLines = Object.entries(metadata).map(([k, v]) => {
+    // 1. Handle Null/Empty
     if (v === null || v === undefined || v === '') {
-      return `${k}: ''`;
+      return `${k}: ""`;
     }
-    if (typeof v === 'boolean' || typeof v === 'number') {
+
+    // 2. Handle Booleans
+    if (typeof v === 'boolean') {
       return `${k}: ${v}`;
     }
-    if (Array.isArray(v)) {
-      return `${k}:\n${v.map((i: any) => ` - "${String(i)}"`).join('\n')}`;
+
+    // 3. Handle Numbers
+    if (typeof v === 'number') {
+      return `${k}: ${v}`;
     }
+
+    // 4. Handle Arrays
+    if (Array.isArray(v)) {
+      if (v.length === 0) return `${k}: []`;
+      const items = v.map(i => {
+        const s = String(i).replace(/"/g, '\\"');
+        return `  - "${s}"`;
+      });
+      return `${k}:\n${items.join('\n')}`;
+    }
+
+    // 5. Handle Strings (default)
     const s = String(v);
     if (s.toLowerCase() === 'true' || s.toLowerCase() === 'false') {
       return `${k}: ${s.toLowerCase()}`;
     }
-    return `${k}: "${s}"`;
+
+    // Escape internal quotes
+    const escaped = s.replace(/"/g, '\\"');
+    return `${k}: "${escaped}"`;
   });
 
   return `---\n${yamlLines.join('\n')}\n---\n`;
