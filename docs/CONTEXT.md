@@ -26,11 +26,24 @@ MANDATORY FIRST-READ: This is the highest-priority context document. Every agent
 | **TokenGovernor** | The rate-limiting module in the sidecar that regulates parallel batch generation to avoid Gemini API quota exhaustion. | Implemented in `apps/api/src/domains/ater/governor.py`. |
 | **Hub** | An Obsidian file that aggregates wikilinks to a group of Atomic Notes within a unit. | Referenced in note frontmatter as `hub: "[[Unit_X_Hub]]"`. Scanned via `list_hubs` in `apps/desktop/src-tauri/src/commands.rs:L1239` and `list_planner_hubs` in `apps/api/src/domains/ater/service.py:L816`. |
 | **Obsidian Force-Graph** | The interactive visualization of note relationships within the vault. | Dispatched from frontend and resolved via the Tauri command `get_vault_graph` in `apps/desktop/src-tauri/src/commands.rs:L544` and sidecar endpoint `GET /vault/graph` in `apps/api/src/domains/obsidian/router.py:L923`. |
-| **Notion Sync (Retired)** | Deprecated feature that synchronized academic dashboards with Notion. Now completely removed. | Purged via `purge_notion_schema.sql` database migration which dropped `notion_sync_state`, `notion_databases` tables, and profile credentials. |
+| **Local Vector Sync** | The background process that maintains the semantic search index. Scans the vault for Markdown files, computes 384-dimensional dense vectors via the local ONNX engine, and persists them in the `note_embeddings` table. | Implemented in `VaultIndexer` within `apps/api/src/domains/ater/vault_indexer.py`. |
+| **NotebookLM (Retired)** | Deprecated feature that integrated with Google NotebookLM. Now completely removed in v0.2.0. | Historical implementation existed in `apps/api/src/domains/notebooklm` (now dead code). |
 
 ---
 
-## 2. Key Invariants
+## 2. Local Vector Sync Rules
+
+To maintain high-performance semantic search without cloud dependencies, the following rules govern the Local Vector Sync:
+
+1. **Grounded Scoping**: Only Markdown files located in the `Notes/` and `database/` subdirectories of the Obsidian Vault are indexed. System folders (e.g., `.obsidian`, `.ater`) and temporary directories are strictly excluded.
+2. **Deterministic Hashing**: The indexer computes an MD5 hash of each note's content before embedding. Vector generation is only triggered if the hash differs from the record in `ater.db`.
+3. **Dense Vector Contract**: All embeddings are 384-dimensional dense vectors, normalized to unit length. This allows semantic similarity to be computed via simple dot product (cosine similarity) in SQLite.
+4. **Content Truncation**: For embedding generation, only the first 8,000 characters of a note (including the title) are considered to maintain performance and avoid context-window overflows in the ONNX runtime.
+5. **Cold-Start Indexing**: On first application launch or vault path change, a full recursive scan of the vault is triggered. Subsequent updates are handled by the `Obsidian Watcher` service.
+
+---
+
+## 3. Key Invariants
 
 These are non-negotiable constraints. No ADR can override them. Any spec that contradicts an invariant is invalid.
 
@@ -44,7 +57,7 @@ These are non-negotiable constraints. No ADR can override them. Any spec that co
 
 ---
 
-## 3. Canonical Naming Conventions
+## 4. Canonical Naming Conventions
 
 | Pattern | Correct | Wrong |
 |---|---|---|

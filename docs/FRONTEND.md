@@ -17,18 +17,28 @@ This document defines the client-side frameworks, route structure, state managem
 All client-side routes reside in `apps/desktop/src/routes/`:
 * **`/academic` (Ater Architect):** Ingests PDFs and raw text, showing real-time note generation logs and compiler progress.
 * **`/practice` (Active Recall Engine):** The study canvas. Renders quizzes and Feynman writing challenges.
-* **`/notebooks` (NotebookLM Workspace):** Interface to manage imported Google notebooks, sources, and generated podcasts/visual maps.
+* **`/agents` (Oracle Chat):** Interface for the Socratic tutor and learning agents.
 * **`/settings`:** Handles database configuration, Supabase sync status, and local Obsidian Vault pathing.
 
 ---
 
-## 3. Client State & Integrations
-* **Global State (Zustand):**
-  * `context/securityStore.ts`: Manages device authorization, lease signatures, and DRM check statuses.
-* **Tauri IPC Bridge (`apps/desktop/src/lib/sidecarApi.ts`):**
-  * Houses all RPC calls that invoke Tauri commands in Rust or proxy requests to the FastAPI sidecar (e.g., `srsDue()`, `logPracticeAttempt()`).
-* **Route Protection (`components/PageGuard.tsx`):**
-  * Intercepts route rendering. If the security store reports unauthorized or blacklisted status, it redirects to a lockout interface.
+## 3. Client State & Security
+
+### Zustand Security Store (`securityStore.ts`)
+The `useSecurityStore` manages the application's DRM and licensing state. It is initialized on app startup and maintains the following state:
+- **`status`**: Current lockout status (`Active`, `FeatureLocked`, `Bricked`, `LeaseExpired`).
+- **`lockedFeatures`**: Array of feature slugs (e.g., `ai_locked`, `academic_locked`) restricted by administration.
+- **`creditBalance`**: Remaining AI generation credits synced from Supabase.
+- **`checkOnlineLockout`**: Periodically synchronizes the local lease with Supabase and applies cryptographic signatures via the Tauri Rust layer.
+
+### PageGuard Wrapper (`PageGuard.tsx`)
+All protected routes are wrapped in the `PageGuard` component. It enforces access control based on the security store's state:
+1. **Absolute Lockout**: If status is `Bricked`, it renders a full-screen `LockoutScreen`.
+2. **AI Lockout**: If a feature slug (like `ai-ingestion`) is locked or credits are ≤ 0, it blocks access and offers a "Verify Access" sync button.
+3. **Read-Only Mode**: For Academic or Explorer locks, it renders a warning banner at the top but allows the user to view existing data in a non-interactive mode.
+
+### Tauri IPC Bridge (`apps/desktop/src/lib/sidecarApi.ts`)
+Houses all RPC calls that invoke Tauri commands in Rust or proxy requests to the FastAPI sidecar (e.g., `srsDue()`, `logPracticeAttempt()`).
 
 ---
 
