@@ -20,19 +20,13 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 describe('PdfViewer', () => {
   let globalFetch: ReturnType<typeof vi.fn>;
-  let globalCreateObjectURL: ReturnType<typeof vi.fn>;
-  let globalRevokeObjectURL: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+
     // Setup mocks
     globalFetch = vi.fn();
     global.fetch = globalFetch as unknown as typeof fetch;
-
-    globalCreateObjectURL = vi.fn().mockReturnValue('blob:http://localhost/test-blob-url');
-    global.URL.createObjectURL = globalCreateObjectURL as unknown as typeof URL.createObjectURL;
-
-    globalRevokeObjectURL = vi.fn();
-    global.URL.revokeObjectURL = globalRevokeObjectURL as unknown as typeof URL.revokeObjectURL;
 
     vi.mocked(invoke).mockImplementation(async (cmd: string) => {
       if (cmd === 'get_sidecar_port') return 8000;
@@ -42,17 +36,17 @@ describe('PdfViewer', () => {
 
     globalFetch.mockResolvedValue({
       ok: true,
-      blob: async () => new Blob(['fake pdf data']),
-      json: async () => ({}),
+      json: async () => ({ page_count: 7 }),
       text: async () => JSON.stringify({}),
     });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    delete (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
   });
 
-  it('fetches PDF with X-Ater-Token header and uses Blob URL for iframe src', async () => {
+  it('loads metadata with X-Ater-Token header and renders tokenized iframe URL', async () => {
     render(<PdfViewer path="test.pdf" title="Test PDF" />);
 
     // Wait for the sidecar port and token to be fetched
@@ -61,93 +55,57 @@ describe('PdfViewer', () => {
       expect(invoke).toHaveBeenCalledWith('get_sidecar_token');
     });
 
-    // Wait for fetch to be called
+    // Metadata is fetched with an auth header; the viewer itself is loaded by
+    // the iframe with a tokenized URL so browser PDF plugins can stream it.
     await waitFor(() => {
       const fetchCalls = globalFetch.mock.calls;
-      const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
-      expect(pdfFetch).toBeTruthy();
+      const metadataFetch = fetchCalls.find((call: any[]) => call[0].includes('pdf-metadata/test.pdf'));
+      expect(metadataFetch?.[1]?.headers?.['X-Ater-Token']).toBe('test-token-123');
     });
 
-    const fetchCalls = globalFetch.mock.calls;
-    const pdfFetch = fetchCalls.find((call: any[]) => call[0].includes('viewer/test.pdf') && call[1]?.headers?.['X-Ater-Token']);
-    expect(pdfFetch).toBeTruthy();
-    
-    const [url, options] = pdfFetch as any[];
-
-    // Note: React state batches updates but `fetchPort` might resolve after initial render.
-    // Allow either the initial default port or the dynamically resolved port in the test.
-    expect(url).toMatch(/http:\/\/127\.0\.0\.1:(8000|8765)\/api\/obsidian\/viewer\/test\.pdf/);
-    expect(options.headers['X-Ater-Token']).toBe('test-token-123');
-
-    // Wait for iframe to be rendered with the object URL
     await waitFor(() => {
       const iframe = screen.getByTitle('Test PDF') as HTMLIFrameElement;
-      expect(iframe.src).toBe('blob:http://localhost/test-blob-url');
+      expect(iframe.src).toMatch(/http:\/\/127\.0\.0\.1:8000\/api\/obsidian\/viewer\/test\.pdf/);
+      expect(iframe.src).toContain('sidecar_token=test-token-123');
+      expect(iframe.src).toContain('vault_path=%2Ftest%2Fvault');
     });
   });
 
-  it('shows error state on 401 response and does not crash', async () => {
+  it('keeps the iframe mounted when metadata returns 401', async () => {
     globalFetch.mockImplementation(async (url: string) => {
       if (url.includes('pdf-metadata')) {
         return {
-          ok: true,
-          json: async () => ({ page_count: 1 }),
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: async () => ({}),
           text: async () => ''
         };
       }
-      return {
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        text: async () => ''
-      };
+      throw new Error(`Unexpected fetch: ${url}`);
     });
 
     render(<PdfViewer path="test.pdf" title="Test PDF" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load PDF')).toBeInTheDocument();
-      expect(screen.getByText('Authentication required (401 Unauthorized)')).toBeInTheDocument();
-    });
-    
-    // Ensure iframe is not rendered
-    expect(screen.queryByTitle('Test PDF')).not.toBeInTheDocument();
-  });
-
-  it('shows error state on 404 response', async () => {
-    globalFetch.mockImplementation(async (url: string) => {
-      if (url.includes('pdf-metadata')) {
-        return {
-          ok: true,
-          json: async () => ({ page_count: 1 }),
-          text: async () => ''
-        };
-      }
-      return {
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        text: async () => ''
-      };
-    });
-
-    render(<PdfViewer path="test.pdf" title="Test PDF" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load PDF')).toBeInTheDocument();
-      expect(screen.getByText('PDF not found (404 Not Found)')).toBeInTheDocument();
+      expect(screen.getByTitle('Test PDF')).toBeInTheDocument();
     });
   });
 
-  it('revokes object URL on unmount', async () => {
-    const { unmount } = render(<PdfViewer path="test.pdf" title="Test PDF" />);
+  it('updates the iframe URL when path changes', async () => {
+    const { rerender } = render(<PdfViewer path="test.pdf" title="Test PDF" />);
 
     await waitFor(() => {
-      expect(globalCreateObjectURL).toHaveBeenCalled();
+      const iframe = screen.getByTitle('Test PDF') as HTMLIFrameElement;
+      expect(iframe.src).toContain('/viewer/test.pdf');
     });
 
-    unmount();
+    rerender(<PdfViewer path="other.pdf" title="Other PDF" />);
 
-    expect(globalRevokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/test-blob-url');
+    await waitFor(() => {
+      const iframe = screen.getByTitle('Other PDF') as HTMLIFrameElement;
+      expect(iframe.src).toContain('/viewer/other.pdf');
+      expect(iframe.src).toContain('sidecar_token=test-token-123');
+    });
   });
 });

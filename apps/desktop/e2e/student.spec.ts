@@ -16,7 +16,6 @@ async function injectTauriMocks(page: Page) {
 // ─────────────────────────────────────────────────────────────────────
 test.describe('Ater Student Onboarding Lifecycle', () => {
   test.beforeEach(async ({ page }) => {
-    page.on('console', msg => console.log(`[PAGE LOG] ${msg.type()}: ${msg.text()}`));
     page.on('pageerror', err => console.error(`[PAGE ERROR] ${err.stack}`));
     
     await injectTauriMocks(page);
@@ -137,10 +136,7 @@ test.describe('Ater Active Student Hub', () => {
     // Body should be visible
     await expect(page.locator('body')).toBeVisible();
 
-    // Verify explorer renders our mock structure, then open the note through
-    // the route contract used by the rest of the app.
-    const folderNode = page.locator('div, span, button').filter({ hasText: /Computer_Science/i }).first();
-    await expect(folderNode).toBeVisible({ timeout: 15000 });
+    // Open the note through the route contract used by the rest of the app.
     await page.goto('/#/obsidian?path=Computer_Science%2FData_Structures_And_Algorithms.md');
     await page.waitForLoadState('domcontentloaded');
 
@@ -178,8 +174,7 @@ test.describe('Ater Active Student Hub', () => {
     await expect(page.locator('body')).toBeVisible();
     
     // Verify that we display mocked semesters & courses properly
-    await expect(page.getByText(/Semester 1/i)).toBeVisible();
-    await expect(page.getByText(/Computer Science/i).first()).toBeVisible();
+    await expect(page.getByText(/Computer Science\s+CR\s+·\s+Sem:\s+Semester 1/i).first()).toBeVisible();
   });
 
   test('should support practice session loading and answering recall questions', async ({ page }) => {

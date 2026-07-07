@@ -8,6 +8,8 @@ const path = require('path');
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY || 'DagimAlemayehuu/Ater_Releases';
 const [ORG, REPO] = GITHUB_REPOSITORY.split('/');
 const VERSION = process.argv[2] || '0.1.0';
+const assetsArgIndex = process.argv.indexOf('--assets');
+const assetsJsonPath = assetsArgIndex >= 0 ? process.argv[assetsArgIndex + 1] : process.env.RELEASE_ASSETS_JSON;
 
 const platforms = {
   'darwin-aarch64': {
@@ -21,6 +23,12 @@ const platforms = {
     sigPattern: /\.sig$/i,
     fallbackPattern: /x64-setup\.nsis\.zip\.sig$|x64\.nsis\.zip\.sig$|Ater\.zip\.sig$/i,
     urlName: `Ater_${VERSION}_x64-setup.nsis.zip`
+  },
+  'linux-x86_64': {
+    artifactDirName: 'signatures-linux-x86_64',
+    sigPattern: /\.sig$/i,
+    fallbackPattern: /x86_64\.AppImage\.tar\.gz\.sig$|amd64\.AppImage\.tar\.gz\.sig$|AppImage\.tar\.gz\.sig$/i,
+    urlName: `Ater_${VERSION}_x86_64.AppImage.tar.gz`
   }
 };
 
@@ -64,9 +72,26 @@ function logDirectory(dir, indent = '') {
   }
 }
 
+function readReleaseAssetNames(assetPath) {
+  if (!assetPath) return null;
+  if (!fs.existsSync(assetPath)) {
+    throw new Error(`Release asset manifest not found: ${assetPath}`);
+  }
+  const data = JSON.parse(fs.readFileSync(assetPath, 'utf-8'));
+  const assets = Array.isArray(data) ? data : data.assets;
+  if (!Array.isArray(assets)) {
+    throw new Error(`Release asset manifest must be an array or contain an assets array: ${assetPath}`);
+  }
+  return new Set(assets.map(asset => typeof asset === 'string' ? asset : asset.name).filter(Boolean));
+}
+
 const artifactsDir = path.join(process.cwd(), 'artifacts');
 console.log(`Scanning for signature files in: ${artifactsDir}`);
 logDirectory(artifactsDir);
+
+const releaseAssetNames = readReleaseAssetNames(assetsJsonPath);
+const missingSignatures = [];
+const missingAssets = [];
 
 Object.keys(platforms).forEach(platformKey => {
   const { artifactDirName, sigPattern, fallbackPattern, urlName } = platforms[platformKey];
@@ -87,9 +112,17 @@ Object.keys(platforms).forEach(platformKey => {
     console.log(`✅ Found signature file for ${platformKey} at: ${sigFilePath}`);
     signature = fs.readFileSync(sigFilePath, 'utf-8').trim();
   } else {
-    console.warn(`⚠️ Warning: Missing updater signature for ${platformKey}. Checked both ${specificDir} and fallback matching ${fallbackPattern}.`);
-    // Instead of throwing, we'll log it. If we have NO platforms, the update.json will just be empty for platforms.
-    // This allows the CI to finish even if one platform fails, though we want both.
+    missingSignatures.push(`${platformKey} (checked ${specificDir} and ${fallbackPattern})`);
+    return;
+  }
+
+  if (!signature) {
+    missingSignatures.push(`${platformKey} (signature file was empty)`);
+    return;
+  }
+
+  if (releaseAssetNames && !releaseAssetNames.has(urlName)) {
+    missingAssets.push(`${platformKey}: ${urlName}`);
     return;
   }
 
@@ -98,6 +131,25 @@ Object.keys(platforms).forEach(platformKey => {
     url: `https://github.com/${ORG}/${REPO}/releases/download/v${VERSION}/${urlName}`
   };
 });
+
+const expectedKeys = Object.keys(platforms);
+const actualKeys = Object.keys(updateJson.platforms);
+const missingKeys = expectedKeys.filter(key => !actualKeys.includes(key));
+
+if (missingSignatures.length || missingAssets.length || missingKeys.length) {
+  if (missingSignatures.length) {
+    console.error('Missing updater signatures:');
+    for (const item of missingSignatures) console.error(`  - ${item}`);
+  }
+  if (missingAssets.length) {
+    console.error('Missing release assets for updater URLs:');
+    for (const item of missingAssets) console.error(`  - ${item}`);
+  }
+  if (missingKeys.length) {
+    console.error(`Missing updater platform keys: ${missingKeys.join(', ')}`);
+  }
+  process.exit(1);
+}
 
 fs.writeFileSync('update.json', JSON.stringify(updateJson, null, 2));
 console.log('✅ Generated update.json:');

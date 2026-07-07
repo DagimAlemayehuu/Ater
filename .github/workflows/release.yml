@@ -54,7 +54,7 @@ jobs:
                 repo: repo,
                 tag_name: tag,
                 name: `Ater ${tag}`,
-                body: `## Ater ${tag}\n\n**System Requirements**\n- macOS: Apple Silicon (M1/M2/M3) — Intel Macs not supported\n- Windows: x64\n\nOfficial release for Ater ${tag}.`,
+                body: `## Ater ${tag}\n\n**System Requirements**\n- macOS: Apple Silicon (M1/M2/M3) — Intel Macs not supported\n- Windows: x64\n- Linux: x64 AppImage or deb\n\nOfficial release for Ater ${tag}.`,
                 draft: true
               });
               console.log(`Created release: ${release.html_url}`);
@@ -85,13 +85,41 @@ jobs:
           - os: macos-14    # Silicon (aarch64)
             platform: macos
             arch: aarch64
+            target: aarch64-apple-darwin
+            sidecar: ater-api-aarch64-apple-darwin
+            tauri_args: --target aarch64-apple-darwin
           - os: windows-latest
             platform: windows
             arch: x86_64
+            target: x86_64-pc-windows-msvc
+            sidecar: ater-api-x86_64-pc-windows-msvc.exe
+            tauri_args: ""
+          - os: ubuntu-latest
+            platform: linux
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            sidecar: ater-api-x86_64-unknown-linux-gnu
+            tauri_args: --bundles appimage,deb
 
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux Tauri dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            wget
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -107,7 +135,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
       - name: Cache Cargo
         uses: swatinem/rust-cache@v2
@@ -135,14 +163,7 @@ jobs:
       - name: Build Python Sidecar (PyInstaller)
         shell: bash
         run: |
-          # Determine the Tauri-expected binary name for this platform/arch
-          if [ "${{ matrix.platform }}" == "macos" ]; then
-            TARGET="ater-api-${{ matrix.arch }}-apple-darwin"
-          elif [ "${{ matrix.platform }}" == "windows" ]; then
-            TARGET="ater-api-x86_64-pc-windows-msvc"
-          else
-            TARGET="ater-api-x86_64-unknown-linux-gnu"
-          fi
+          TARGET="${{ matrix.sidecar }}"
 
           echo "Building binary: $TARGET"
 
@@ -164,7 +185,7 @@ jobs:
 
           # Move and rename to match Tauri's externalBin naming convention
           if [ "${{ matrix.platform }}" == "windows" ]; then
-            mv dist/ater-api.exe apps/desktop/src-tauri/binaries/$TARGET.exe
+            mv dist/ater-api.exe apps/desktop/src-tauri/binaries/$TARGET
           else
             mv dist/ater-api apps/desktop/src-tauri/binaries/$TARGET
             chmod +x apps/desktop/src-tauri/binaries/$TARGET
@@ -181,10 +202,37 @@ jobs:
           codesign --force --deep -s - "$TARGET_BIN"
           echo "Sidecar signed (ad-hoc)."
 
+      - name: Verify Sidecar Binary Health
+        shell: bash
+        run: |
+          set -euo pipefail
+          SIDECAR="apps/desktop/src-tauri/binaries/${{ matrix.sidecar }}"
+          test -f "$SIDECAR"
+          "$SIDECAR" --health-check
+
+      - name: Verify Release Resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d apps/api/onnx_model
+          test -f Ater.md
+          test -d .system/prompts
+          test -s "apps/desktop/src-tauri/binaries/${{ matrix.sidecar }}"
+
 
 
       - name: Install All Monorepo Dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify Tauri updater signing inputs
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$TAURI_SIGNING_PRIVATE_KEY"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 
       - name: Build and Package Tauri App
         uses: tauri-apps/tauri-action@v0
@@ -196,7 +244,26 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         with:
           publish: false
-          args: ${{ matrix.platform == 'macos' && '--target aarch64-apple-darwin' || '' }}
+          args: ${{ matrix.tauri_args }}
+
+      - name: Verify Packaged Bundle Outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            test -n "$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle -name '*.dmg' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle -name '*.app.tar.gz' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle -name '*.app.tar.gz.sig' -print -quit)"
+          elif [ "${{ matrix.platform }}" = "windows" ]; then
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.exe' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.zip' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.zip.sig' -print -quit)"
+          else
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.AppImage' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.deb' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.AppImage.tar.gz' -print -quit)"
+            test -n "$(find apps/desktop/src-tauri/target/release/bundle -name '*.AppImage.tar.gz.sig' -print -quit)"
+          fi
 
       - name: Upload Artifacts to Release Repo
         shell: bash
@@ -212,7 +279,7 @@ jobs:
           # when both macOS and Windows runners tried to create the same release simultaneously.
 
           if [ "${{ matrix.platform }}" == "macos" ]; then
-            DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/ -name "*.dmg" | head -n 1 || echo "")
+            DMG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/ -name "*.dmg" | head -n 1 || echo "")
             if [ -f "$DMG_PATH" ]; then
               echo "Uploading DMG: $DMG_PATH"
               gh release upload "$TAG" "$DMG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
@@ -220,7 +287,7 @@ jobs:
               gh release upload "$TAG" "Ater-${{ matrix.arch }}.dmg" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
 
-            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/ -name "*.app.tar.gz" | head -n 1 || echo "")
+            TAR_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos/ -name "*.app.tar.gz" | head -n 1 || echo "")
             if [ -f "$TAR_PATH" ]; then
               # Force versioned name for updater
               VERSION_TAR="Ater_${TAG#v}_${{ matrix.arch }}.app.tar.gz"
@@ -229,7 +296,7 @@ jobs:
               gh release upload "$TAG" "$VERSION_TAR" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
             
-            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
+            SIG_PATH=$(find apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/macos/ -name "*.app.tar.gz.sig" | head -n 1 || echo "")
             if [ -f "$SIG_PATH" ]; then
               gh release upload "$TAG" "$SIG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
@@ -254,6 +321,37 @@ jobs:
             fi
 
             SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/nsis/ -name "*.zip.sig" | head -n 1 || echo "")
+            if [ -f "$SIG_PATH" ]; then
+              gh release upload "$TAG" "$SIG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
+            fi
+          fi
+
+          if [ "${{ matrix.platform }}" == "linux" ]; then
+            APPIMAGE_PATH=$(find apps/desktop/src-tauri/target/release/bundle/appimage/ -name "*.AppImage" | head -n 1 || echo "")
+            if [ -f "$APPIMAGE_PATH" ]; then
+              echo "Uploading AppImage: $APPIMAGE_PATH"
+              gh release upload "$TAG" "$APPIMAGE_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
+              cp "$APPIMAGE_PATH" "Ater_x86_64.AppImage"
+              gh release upload "$TAG" "Ater_x86_64.AppImage" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
+            fi
+
+            DEB_PATH=$(find apps/desktop/src-tauri/target/release/bundle/deb/ -name "*.deb" | head -n 1 || echo "")
+            if [ -f "$DEB_PATH" ]; then
+              echo "Uploading deb: $DEB_PATH"
+              gh release upload "$TAG" "$DEB_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
+              cp "$DEB_PATH" "Ater_${TAG#v}_amd64.deb"
+              gh release upload "$TAG" "Ater_${TAG#v}_amd64.deb" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
+            fi
+
+            TAR_PATH=$(find apps/desktop/src-tauri/target/release/bundle/appimage/ -name "*.AppImage.tar.gz" | head -n 1 || echo "")
+            if [ -f "$TAR_PATH" ]; then
+              VERSION_TAR="Ater_${TAG#v}_x86_64.AppImage.tar.gz"
+              cp "$TAR_PATH" "$VERSION_TAR"
+              echo "Uploading versioned AppImage TAR: $VERSION_TAR"
+              gh release upload "$TAG" "$VERSION_TAR" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
+            fi
+
+            SIG_PATH=$(find apps/desktop/src-tauri/target/release/bundle/appimage/ -name "*.AppImage.tar.gz.sig" | head -n 1 || echo "")
             if [ -f "$SIG_PATH" ]; then
               gh release upload "$TAG" "$SIG_PATH" --repo "${{ env.RELEASE_REPOSITORY }}" --clobber
             fi
@@ -295,9 +393,12 @@ jobs:
       - name: Generate update.json
         env:
           GITHUB_REPOSITORY: ${{ env.RELEASE_REPOSITORY }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          TAG: ${{ github.ref_name }}
         run: |
           VERSION=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
-          node scripts/generate_update_json.js $VERSION
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets > release-assets.json
+          node scripts/generate_update_json.js $VERSION --assets release-assets.json
 
       - name: Upload update.json to Release
         uses: softprops/action-gh-release@v2
