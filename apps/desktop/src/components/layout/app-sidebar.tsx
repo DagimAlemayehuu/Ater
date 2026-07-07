@@ -1,52 +1,18 @@
-import { useState, useEffect } from 'react'
 import { NavLink, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import {
-  User, GraduationCap, Book, Library, BookOpenCheck,
-  Plus, ChevronLeft, ChevronRight, Timer,
-  Calendar, Settings, Sun, Moon, Zap
+  User, GraduationCap, BookOpenCheck,
+  Plus, Settings
 } from 'lucide-react'
-import { useNavigation } from '@/context/navigation-context'
-import { usePomodoroStore } from '@/lib/pomodoroStore'
-import { ThemeSwitch } from '@/components/theme-switch'
-import { useSecurityStore } from '@/context/securityStore'
-import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
 import { useSidebarContent } from '@/context/sidebar-content-context'
+import { useLayout } from '@/context/layout-provider'
 
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { goBack, goForward, canGoBack, canGoForward } = useNavigation();
-  const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore();
-  const creditBalance = useSecurityStore(state => state.creditBalance);
-  const { theme, setTheme } = useTheme();
   const { sidebarContent } = useSidebarContent();
-
-  // Collapsed state synced with localStorage and global event
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('ater_sidebar_collapsed');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const saved = localStorage.getItem('ater_sidebar_collapsed');
-        setIsCollapsed(saved ? JSON.parse(saved) : false);
-      } catch {}
-    };
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('ater-sidebar-toggle', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('ater-sidebar-toggle', handleStorageChange);
-    };
-  }, []);
+  const { isSidebarCollapsed: isCollapsed } = useLayout()
 
   const handleNewChatClick = () => {
     navigate('/agents?tab=ater');
@@ -60,10 +26,6 @@ export function AppSidebar() {
     setTimeout(() => {
       window.dispatchEvent(new Event('ater-toggle-history'));
     }, 50);
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   // Determine active states for query-param dependent links
@@ -80,7 +42,6 @@ export function AppSidebar() {
 
   return (
     <aside
-      onMouseEnter={() => window.focus()}
       className={cn(
         "bg-bento-panel rounded-[12px] flex flex-col justify-between shrink-0 z-40 h-full shadow-sm overflow-hidden transition-[width,padding,border-color] duration-75 ease-out",
         isCollapsed

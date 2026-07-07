@@ -18,7 +18,7 @@ type AuthenticatedLayoutProps = {
 }
 
 function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
-  const { isFullscreen } = useLayout()
+  const { isFullscreen, isSidebarCollapsed, setIsSidebarCollapsed } = useLayout()
   const { centerContent, rightContent } = useHeader()
   const creditBalance = useSecurityStore(state => state.creditBalance)
   const { theme, setTheme } = useTheme()
@@ -27,35 +27,8 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
   const { goBack, goForward, canGoBack, canGoForward } = useNavigation()
   const { timeLeft, setShowOverlay, isActive: pomodoroActive } = usePomodoroStore()
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ater_sidebar_collapsed');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const saved = localStorage.getItem('ater_sidebar_collapsed');
-        setIsSidebarCollapsed(saved ? JSON.parse(saved) : false);
-      } catch {}
-    };
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('ater-sidebar-toggle', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('ater-sidebar-toggle', handleStorageChange);
-    };
-  }, []);
-
   const toggleSidebar = () => {
-    const next = !isSidebarCollapsed;
-    localStorage.setItem('ater_sidebar_collapsed', JSON.stringify(next));
-    setIsSidebarCollapsed(next);
-    window.dispatchEvent(new Event('ater-sidebar-toggle'));
+    setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   return (
@@ -63,7 +36,7 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
       {!isFullscreen && (
         <header className="h-14 bg-bento-panel border border-border/40 rounded-[12px] shadow-sm flex items-center justify-between px-4 py-3 shrink-0">
           {/* Left Section: Sidebar Collapse Toggle, Global Nav & Pomodoro */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <button
               onClick={toggleSidebar}
               className="w-8 h-8 flex items-center justify-center rounded-[6px] hover:bg-bento-item text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -117,14 +90,14 @@ function AuthenticatedLayoutContent({ children }: AuthenticatedLayoutProps) {
             
             {/* Center Content Slot */}
             {centerContent && (
-              <div className="hidden md:flex items-center gap-2 border-l border-border/20 pl-3">
+              <div className="hidden md:flex items-center gap-2 border-l border-border/20 pl-3 min-w-0 flex-1">
                 {centerContent}
               </div>
             )}
           </div>
 
           {/* Right Section: Page Header Actions, Calendar, Theme Switcher & Minimal Credits */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             {/* Right Content Slot */}
             {rightContent && (
               <div className="flex items-center gap-2 border-r border-border/20 pr-3">
