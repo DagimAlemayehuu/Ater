@@ -26,6 +26,9 @@ type LayoutContextType = {
 
   isFullscreen: boolean
   setIsFullscreen: (isFullscreen: boolean) => void
+
+  isSidebarCollapsed: boolean
+  setIsSidebarCollapsed: (isCollapsed: boolean) => void
 }
 
 const LayoutContext = createContext<LayoutContextType | null>(null)
@@ -66,6 +69,20 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
 
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  const [isSidebarCollapsed, _setIsSidebarCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ater_sidebar_collapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const setIsSidebarCollapsed = (next: boolean) => {
+    _setIsSidebarCollapsed(next);
+    localStorage.setItem('ater_sidebar_collapsed', JSON.stringify(next));
+  };
+
   const contextValue: LayoutContextType = {
     resetLayout,
     defaultCollapsible: DEFAULT_COLLAPSIBLE,
@@ -76,6 +93,8 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     setVariant,
     isFullscreen,
     setIsFullscreen,
+    isSidebarCollapsed,
+    setIsSidebarCollapsed,
   }
 
   return <LayoutContext value={contextValue}>{children}</LayoutContext>

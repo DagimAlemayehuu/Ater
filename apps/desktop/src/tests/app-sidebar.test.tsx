@@ -27,6 +27,7 @@ vi.mock('../context/sidebar-content-context', () => ({
 }))
 
 vi.mock('../context/layout-provider', () => ({
+  useLayout: () => ({ isSidebarCollapsed: false, setIsSidebarCollapsed: vi.fn() }),
   LayoutProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }))
 

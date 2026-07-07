@@ -38,9 +38,13 @@ export default function App() {
     <ThemeProvider>
       <ConfigProvider>
         <SimulationProvider>
-          <UpdateChecker />
-          <SecurityBlocker />
-          <AppRoutes />
+          <div className="flex flex-col h-screen w-full overflow-hidden">
+            <UpdateChecker />
+            <SecurityBlocker />
+            <div className="flex-1 min-h-0">
+              <AppRoutes />
+            </div>
+          </div>
         </SimulationProvider>
       </ConfigProvider>
     </ThemeProvider>
@@ -92,7 +96,7 @@ function SecurityBlocker() {
   // 1. Expired lease offline: subtle, top-anchored layout bar, leaving workspace active.
   if (status === 'LeaseExpired') {
     return (
-      <div className="fixed top-0 left-0 right-0 z-[99999] h-9 bg-destructive/10 border-b border-destructive/30 text-destructive text-[9px] tracking-widest uppercase font-mono flex items-center justify-between px-6 select-none backdrop-blur-sm">
+      <div className="relative z-[99999] h-9 bg-destructive/10 border-b border-destructive/30 text-destructive text-[9px] tracking-widest uppercase font-mono flex items-center justify-between px-6 select-none backdrop-blur-sm shrink-0">
         <span>[DRM Warning: Offline lease expired. Server-side AI features restricted]</span>
         <button
           onClick={handleRetry}
