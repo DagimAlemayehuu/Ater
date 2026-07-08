@@ -26,14 +26,14 @@ macro_rules! verify_licensing {
             let locked = {
                 let feat_guard = $state.locked_features.lock().map_err(|e| format!("Feature status error: {}", e))?;
 
-                let is_ai_locked = feat_guard.iter().any(|f| f == "ai_locked" || f == "ai-features" || f == "ai-ingestion");
-                let is_academic_locked = feat_guard.iter().any(|f| f == "academic_locked" || f == "academic-dashboard" || f == "interactive_quiz");
-                let is_explorer_locked = feat_guard.iter().any(|f| f == "explorer_locked" || f == "explorer-lockout" || f == "file_ingestion" || f == "vector_search");
+                let is_ai_locked = feat_guard.iter().any(|f| f == "ai_locked");
+                let is_academic_locked = feat_guard.iter().any(|f| f == "academic_locked");
+                let is_explorer_locked = feat_guard.iter().any(|f| f == "explorer_locked");
 
                 let feat_str = $feature.to_string();
-                let ai_group = vec!["ai-ingestion", "oracle-chat", "practice-recall", "ater_generation", "ater_chat", "ater_oracle_chat", "ai-features", "ai_locked", "explain-features"];
-                let academic_group = vec!["interactive_quiz", "academic-dashboard", "academic_locked"];
-                let explorer_group = vec!["file_ingestion", "explorer-lockout", "explorer_locked", "vector_search"];
+                let ai_group = vec!["oracle-chat", "practice-recall", "ater_generation", "ater_chat", "ater_oracle_chat", "ai_locked", "explain-features"];
+                let academic_group = vec!["academic_locked"];
+                let explorer_group = vec!["explorer_locked"];
 
                 if is_ai_locked && ai_group.contains(&feat_str.as_str()) {
                     true
@@ -173,7 +173,7 @@ pub async fn add_document(
     content: String,
     metadata: HashMap<String, String>,
 ) -> Result<(), String> {
-    verify_licensing!(state, "file_ingestion");
+    verify_licensing!(state, "explorer_locked");
     // 1. Generate the embedding vector inside a short-lived block to drop the mutex guard before awaits
     let vector = {
         let mut ml_guard = state
@@ -249,7 +249,7 @@ pub async fn search_similar(
     query: String,
     limit: usize,
 ) -> Result<Vec<SearchResult>, String> {
-    verify_licensing!(state, "vector_search");
+    verify_licensing!(state, "explorer_locked");
     // 1. Generate the query embedding vector inside a short-lived block
     let query_vector = {
         let mut ml_guard = state
@@ -1451,7 +1451,7 @@ pub async fn update_obsidian_note(
     content: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    verify_licensing!(state, "file_ingestion");
+    verify_licensing!(state, "explorer_locked");
     let full_path = resolve_path_robust(&path, &app_handle)?;
 
     if let Some(parent) = full_path.parent() {
@@ -1490,7 +1490,7 @@ pub async fn delete_obsidian_item(
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    verify_licensing!(state, "file_ingestion");
+    verify_licensing!(state, "explorer_locked");
     let full_path = resolve_path_robust(&path, &app_handle)?;
 
     if full_path.is_dir() {
@@ -1527,7 +1527,7 @@ pub async fn create_obsidian_file(
     overwrite: bool,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    verify_licensing!(state, "file_ingestion");
+    verify_licensing!(state, "explorer_locked");
     let full_path = resolve_path_robust(&path, &app_handle)?;
 
     if full_path.exists() && !overwrite {
@@ -1571,7 +1571,7 @@ pub async fn create_obsidian_folder(
     path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    verify_licensing!(state, "file_ingestion");
+    verify_licensing!(state, "explorer_locked");
     let full_path = resolve_path_robust(&path, &app_handle)?;
 
     std::fs::create_dir_all(&full_path).map_err(|e| format!("Failed to create folder: {}", e))?;
@@ -1589,7 +1589,7 @@ pub async fn move_obsidian_item(
     new_path: String,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    verify_licensing!(state, "file_ingestion");
+    verify_licensing!(state, "explorer_locked");
     let old_full = resolve_path_robust(&old_path, &app_handle)?;
     let new_full = resolve_path_robust(&new_path, &app_handle)?;
 
@@ -2330,7 +2330,7 @@ pub async fn ater_interactive_quiz(
     sidecar_config: State<'_, crate::SidecarConfig>,
     app_handle: tauri::AppHandle,
 ) -> Result<serde_json::Value, String> {
-    verify_licensing!(state, "interactive_quiz");
+    verify_licensing!(state, "academic_locked");
     let config = load_app_config(&app_handle)?;
     let headers = get_proxy_headers(&config);
     proxy_post(
@@ -3928,7 +3928,7 @@ pub async fn get_vault_backlinks() -> Result<serde_json::Value, String> {
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct OfflineLease {
     pub user_id: String,
-    pub machine_id_hash: String,
+    pub machine_id: String,
     pub expiration: String,
     pub locked_features: Vec<String>,
     pub account_status: String,
@@ -3984,8 +3984,8 @@ fn verify_lease_internal(
     verify_ed25519_signature(lease_json.as_bytes(), signature_hex)?;
     let lease: OfflineLease = serde_json::from_str(lease_json)
         .map_err(|e| format!("Invalid lease JSON structure: {}", e))?;
-    let machine_hash = get_local_machine_id_hash()?;
-    if lease.machine_id_hash != machine_hash {
+    let machine_id = get_local_machine_id_hash()?;
+    if lease.machine_id != machine_id {
         return Err(
             "ACCESS DENIED: Hardware binding violation. Device footprint mismatch.".to_string(),
         );
@@ -4163,7 +4163,7 @@ pub async fn load_cached_security_state(
         let machine_id = get_local_machine_id_hash().unwrap_or_else(|_| "unknown-device".to_string());
         let mock_lease = serde_json::json!({
             "user_id": "debug-user-id",
-            "machine_id_hash": machine_id,
+            "machine_id": machine_id,
             "expiration": chrono::Utc::now().checked_add_signed(chrono::Duration::days(365)).unwrap().to_rfc3339(),
             "locked_features": Vec::<String>::new(),
             "account_status": "active"

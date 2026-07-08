@@ -40,13 +40,11 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
 
   if (isLocked) {
     const isAiFeature = [
-      'ai-ingestion', 
       'oracle-chat', 
       'practice-recall', 
       'ater_generation', 
       'ater_chat', 
       'ater_oracle_chat', 
-      'ai-features', 
       'ai_locked', 
       'explain-features',
       'full-system-lockout'
@@ -59,7 +57,7 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
       if (!isBetaMode() && creditBalance <= 0) {
         title = "You're out of credits"
         description = "You have run out of credits. Please purchase more credits on your dashboard to continue using AI tools."
-      } else if (featureSlug === 'ai-ingestion' || featureSlug === 'oracle-chat' || featureSlug === 'ai-features' || featureSlug === 'ai_locked') {
+      } else if (featureSlug === 'oracle-chat' || featureSlug === 'ai_locked') {
         title = "AI Features Restricted"
         description = "Your access to artificial intelligence processing models and local sidecar reasoning has been temporarily locked by the controller."
       }
@@ -79,10 +77,10 @@ export function PageGuard({ featureSlug, children }: PageGuardProps) {
     let bannerTitle = "Read-Only Mode"
     let bannerDesc = "This workspace has restricted features. Academic and Explorer components are available in view-only mode."
 
-    if (featureSlug === 'interactive_quiz' || featureSlug === 'academic-dashboard' || featureSlug === 'academic_locked') {
+    if (featureSlug === 'academic_locked') {
       bannerTitle = "Academic Workspace (Read-Only)"
       bannerDesc = "Access to creating or editing academic tasks, quizzes, and sheets is locked. Existing cards are read-only."
-    } else if (featureSlug === 'file_ingestion' || featureSlug === 'explorer-lockout' || featureSlug === 'explorer_locked') {
+    } else if (featureSlug === 'explorer_locked') {
       bannerTitle = "Obsidian Explorer (Read-Only)"
       bannerDesc = "Obsidian vault write access and file ingestion are locked. Reading existing notes is allowed."
     }
