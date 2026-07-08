@@ -216,7 +216,7 @@ Box mental model.
                 "note_path": str(note_file.relative_to(tmp_path)),
                 "variant": "deep"
             },
-            headers={"X-Vault-Path": tmpdir}
+                headers={"X-Vault-Path": tmpdir, "X-Ater-Token": "test-token"}
         )
         
         assert response.status_code == 200

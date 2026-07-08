@@ -214,7 +214,7 @@ def test_endpoint_sql_evaluation():
         },
         "query": "SELECT price FROM products WHERE id = 1;"
     }
-    response = client.post("/api/ater/playground/sql/evaluate", json=payload)
+    response = client.post("/api/ater/playground/sql/evaluate", json=payload, headers={"X-Ater-Token": "test-token"})
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
@@ -237,7 +237,7 @@ def test_endpoint_case_evaluation():
         "current_metrics": {"stability": 0.8},
         "success_conditions": {"stability": {"min": 0.5}}
     }
-    response = client.post("/api/ater/playground/case/evaluate", json=payload)
+    response = client.post("/api/ater/playground/case/evaluate", json=payload, headers={"X-Ater-Token": "test-token"})
     assert response.status_code == 200
     data = response.json()
     assert data["next_stage"] == "stage_isolated"

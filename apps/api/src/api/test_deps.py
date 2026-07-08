@@ -1,9 +1,9 @@
 import pytest
 
 
-def _default_header_kwargs():
+def _default_header_kwargs(x_ater_token=None):
     return {
-        "x_ater_token": None,
+        "x_ater_token": x_ater_token,
         "sidecar_token": None,
         "x_ai_base_url": None,
         "x_ai_max_tpm": None,
@@ -23,10 +23,10 @@ def _default_header_kwargs():
 async def test_get_app_secrets_preserves_explicit_planner_tier(monkeypatch):
     from src.api.deps import get_app_secrets
 
-    monkeypatch.delenv("ATER_SIDECAR_TOKEN", raising=False)
+    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "test-token")
 
     secrets = await get_app_secrets(
-        **_default_header_kwargs(),
+        **_default_header_kwargs(x_ater_token="test-token"),
         x_ai_provider="google",
         x_ai_key="primary-key",
         x_ai_model="Gemma-4-31b-it",
@@ -49,10 +49,10 @@ async def test_get_app_secrets_preserves_explicit_planner_tier(monkeypatch):
 async def test_get_app_secrets_defaults_gemma_primary_to_fast_google_planner(monkeypatch):
     from src.api.deps import get_app_secrets
 
-    monkeypatch.delenv("ATER_SIDECAR_TOKEN", raising=False)
+    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "test-token")
 
     secrets = await get_app_secrets(
-        **_default_header_kwargs(),
+        **_default_header_kwargs(x_ater_token="test-token"),
         x_ai_provider="google",
         x_ai_key="primary-key",
         x_ai_model="Gemma-4-31b-it",

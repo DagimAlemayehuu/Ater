@@ -76,16 +76,24 @@ def test_embeddings_linker_robustness_missing_model(monkeypatch):
     EmbeddingsLinker._tokenizer = None
     EmbeddingsLinker._load_failed = False
 
-    embeddings = linker.get_embeddings(["test text"])
-    assert embeddings.shape == (1, 384)
-    assert np.all(embeddings == 0)
-    assert EmbeddingsLinker._load_failed is True
+    try:
+        embeddings = linker.get_embeddings(["test text"])
+        assert embeddings.shape == (1, 384)
+        assert np.all(embeddings == 0)
+        assert EmbeddingsLinker._load_failed is True
+    finally:
+        # Cleanup
+        EmbeddingsLinker._load_failed = False
 
 def test_embeddings_linker_persistence_of_failure(monkeypatch):
     """Verify that EmbeddingsLinker doesn't keep retrying if load_failed is True."""
     EmbeddingsLinker._load_failed = True
 
-    linker = EmbeddingsLinker()
-    embeddings = linker.get_embeddings(["test text"])
-    assert embeddings.shape == (1, 384)
-    assert np.all(embeddings == 0)
+    try:
+        linker = EmbeddingsLinker()
+        embeddings = linker.get_embeddings(["test text"])
+        assert embeddings.shape == (1, 384)
+        assert np.all(embeddings == 0)
+    finally:
+        # Cleanup
+        EmbeddingsLinker._load_failed = False
