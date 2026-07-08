@@ -1,17 +1,16 @@
 import React, { useState, useMemo } from 'react'
-import { Trash2, Plus, Search, Layers } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Trash2, Search, Layers } from 'lucide-react'
 import { stripWL, getVal, wrapWL, cleanTitle } from './utils'
 import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, SectionHeader } from './SharedComponents'
 import type { TabProps } from './types'
 
-export default function SemestersTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo }: TabProps) {
+export default function SemestersTab({ data, onUpdate, onCreate, onDelete, navigateTo }: TabProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
 
-  const allSemesters = data.semesters || []
-  const years = data.years || []
+  const allSemesters = useMemo(() => data.semesters || [], [data.semesters])
+  const years = useMemo(() => data.years || [], [data.years])
 
   const filtered = useMemo(() => {
     let items = allSemesters

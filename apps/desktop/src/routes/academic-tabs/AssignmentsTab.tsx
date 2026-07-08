@@ -1,18 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Check, Trash2, BookOpen, Plus, Filter, Search, Clock } from 'lucide-react'
-import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
+import { Check, Trash2, Search } from 'lucide-react'
+import { parseISO, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { stripWL, getVal, getDaysUntil, isOverdue, wrapWL, cleanTitle, statusColorClass, priorityColorClass } from './utils'
-import { SectionHeader, EmptyState, BigPropertyCard, EditableTitle, CreateBanner, CountdownBadge } from './SharedComponents'
+import { stripWL, getVal, getDaysUntil, isOverdue, wrapWL, priorityColorClass } from './utils'
+import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, CountdownBadge } from './SharedComponents'
 import type { TabProps } from './types'
 
 const INTERNAL = ['id', 'title', 'path', 'last_synced', 'links', 'done']
 
-const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Completed', 'Submitted', 'Graded', 'Late']
-const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical']
-
-export default function AssignmentsTab({ data, databases, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, initialSelectedId, onClearSelection }: TabProps) {
+export default function AssignmentsTab({ data, databases, onUpdate, onCreate, onDelete, initialSelectedId, onClearSelection }: TabProps) {
   const [filter,       setFilter]       = useState<'All' | 'Pending' | 'Completed'>('Pending')
   const [courseFilter, setCourseFilter] = useState<string>('All')
   const [search,       setSearch]       = useState('')
@@ -27,10 +24,10 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
   }
   useEffect(() => { if (initialSelectedId && onClearSelection) onClearSelection() }, [initialSelectedId, onClearSelection])
 
-  const allAssignments = data.assignments || []
-  const courses        = data.courses     || []
+  const allAssignments = useMemo(() => data.assignments || [], [data.assignments])
+  const courses        = useMemo(() => data.courses     || [], [data.courses])
   const schema         = databases.find(d => d.id === 'assignments')?.schema || {}
-  const now            = startOfDay(new Date())
+  const now            = useMemo(() => startOfDay(new Date()), [])
 
   const courseOptions = useMemo(() =>
     ['All', ...Array.from(new Set(allAssignments.map(a => stripWL(getVal(a, 'Course', 'course'))).filter(Boolean)))],
@@ -64,9 +61,9 @@ export default function AssignmentsTab({ data, databases, onUpdate, onCreate, on
     })
   }, [allAssignments, filter, courseFilter, search, sortBy])
 
-  const pending    = allAssignments.filter(a => !(a.done === true || a.done === 'true'))
-  const overdue    = pending.filter(a => a.due_date && isOverdue(a.due_date))
-  const dueSoon    = pending.filter(a => { const d = getDaysUntil(a.due_date); return d !== null && d >= 0 && d <= 3 })
+  const pending    = useMemo(() => allAssignments.filter(a => !(a.done === true || a.done === 'true')), [allAssignments])
+  const overdue    = useMemo(() => pending.filter(a => a.due_date && isOverdue(a.due_date)), [pending])
+  const dueSoon    = useMemo(() => pending.filter(a => { const d = getDaysUntil(a.due_date); return d !== null && d >= 0 && d <= 3 }), [pending])
 
   // ─── Confirm done ──────────────────────────────────────────────────────────
   const handleToggleDone = async (a: any, e: React.MouseEvent) => {

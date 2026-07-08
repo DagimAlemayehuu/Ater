@@ -29,9 +29,9 @@ export default function StudyPlannerTab({ data, databases, onUpdate, onCreate, o
   }, [])
 
   // study_sessions maps to "study planner" folder
-  const allHubs    = data.study_sessions || []
-  const courses    = data.courses        || []
-  const exams      = data.exams          || []
+  const allHubs    = useMemo(() => data.study_sessions || [], [data.study_sessions])
+  const courses    = useMemo(() => data.courses        || [], [data.courses])
+  const exams      = useMemo(() => data.exams          || [], [data.exams])
   const schema     = databases.find(d => d.id === DB_ID)?.schema || {}
 
   // Sync external navigation - directly open the hub page in Obsidian

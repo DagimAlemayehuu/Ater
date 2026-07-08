@@ -10,7 +10,7 @@ export default function YearsTab({ data, databases, onUpdate, onCreate, onDelete
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
 
-  const allYears = data.years || []
+  const allYears = useMemo(() => data.years || [], [data.years])
 
   const filtered = useMemo(() => {
     let items = allYears

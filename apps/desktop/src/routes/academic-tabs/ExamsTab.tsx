@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { Check, Trash2, BookOpen, Plus, Search, Target } from 'lucide-react'
-import { format, parseISO, differenceInDays, startOfDay } from 'date-fns'
+import { Check, Trash2, Search, Target } from 'lucide-react'
+import { parseISO, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { stripWL, getVal, getDaysUntil, typeColorClass, gradeColorClass, wrapWL, cleanTitle, getNumVal, getBoolVal } from './utils'
-import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, CountdownBadge, StatusBadge } from './SharedComponents'
+import { stripWL, getVal, getDaysUntil, typeColorClass, gradeColorClass, wrapWL, cleanTitle, getNumVal } from './utils'
+import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, CountdownBadge } from './SharedComponents'
 import type { TabProps } from './types'
 
 const INTERNAL = ['id', 'title', 'path', 'last_synced', 'links']
@@ -19,11 +18,10 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
   const [adding,     setAdding]     = useState(false)
   const [showGrader, setShowGrader] = useState(false)
 
-  const allExams  = data.exams   || []
-  const courses   = data.courses || []
-  const hubs      = data.study_sessions || []
+  const allExams  = useMemo(() => data.exams          || [], [data.exams])
+  const hubs      = useMemo(() => data.study_sessions || [], [data.study_sessions])
   const schema    = databases.find(d => d.id === 'exams')?.schema || {}
-  const now       = startOfDay(new Date())
+  const now       = useMemo(() => startOfDay(new Date()), [])
 
   const courseOptions = useMemo(() =>
     ['All', ...Array.from(new Set(allExams.map(e => stripWL(getVal(e, 'Course', 'course'))).filter(Boolean)))],
@@ -40,10 +38,10 @@ export default function ExamsTab({ data, databases, onUpdate, onCreate, onDelete
       const db = b.date ? new Date(b.date).getTime() : Infinity
       return filter === 'Past' ? db - da : da - db
     })
-  }, [allExams, filter, course, search])
+  }, [allExams, filter, course, search, now])
 
-  const upcoming = allExams.filter(e => e.date && new Date(e.date) >= now)
-  const next = upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+  const upcoming = useMemo(() => allExams.filter(e => e.date && new Date(e.date) >= now), [allExams, now])
+  const next = useMemo(() => upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0], [upcoming])
 
   // ─────────────────────────────────────────────────────────────────────────
   // DETAIL VIEW

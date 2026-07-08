@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {useState, useEffect} from 'react'
+import React, {useState, useEffect, useCallback} from 'react'
 import {useSearchParams} from 'react-router-dom'
 import {cn} from '@/lib/utils'
 import {useConfig, SavedApiKey, AppConfig} from '@/lib/ConfigContext'
@@ -10,9 +10,6 @@ import {TokenTracker} from '@/components/intelligence/TokenTracker'
 import * as Tabs from '@radix-ui/react-tabs'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { fetchSidecarJson } from '@/lib/sidecarHttp'
-import { invoke } from '@tauri-apps/api/core'
-import { open as openUrl } from '@tauri-apps/plugin-shell'
 import { useSidebarContent } from '@/context/sidebar-content-context'
 import { useNavigate } from 'react-router-dom'
 import { Settings as SettingsIcon, Key, Network, Timer, Activity } from 'lucide-react'
@@ -92,9 +89,9 @@ export default function Settings() {
   const {setSidebarContent} = useSidebarContent()
   const activeTab = searchParams.get('tab') || 'general'
 
-  const setActiveTab = (tab: string) => {
+  const setActiveTab = useCallback((tab: string) => {
     setSearchParams({ tab }, { replace: true })
-  }
+  }, [setSearchParams])
 
   useEffect(() => {
     setSidebarContent(
@@ -131,7 +128,7 @@ export default function Settings() {
     return () => {
       setSidebarContent(null, 'settings')
     }
-  }, [activeTab, setSidebarContent])
+  }, [activeTab, setSidebarContent, setActiveTab])
   
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [selectedVaultKeyId, setSelectedVaultKeyId] = useState<string | null>(null)

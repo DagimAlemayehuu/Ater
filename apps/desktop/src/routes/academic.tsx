@@ -1,14 +1,11 @@
 import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
-import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity, Award, Home, FolderOpen, Network} from 'lucide-react'
-import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO, startOfDay} from 'date-fns'
+import {RefreshCw, BookOpen, ClipboardList, FlaskConical, Layers, Home, FolderOpen, Network} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {useHeader} from '@/context/header-context'
 import {useLayout} from '@/context/layout-provider'
-import {PracticeModule} from './practice'
-import {TabButton} from './academic-tabs/SharedComponents'
 import ProgramTab from './academic-tabs/ProgramTab'
 import CoursesTab from './academic-tabs/CoursesTab'
 import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
@@ -16,7 +13,6 @@ import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
 import YearsTab from './academic-tabs/YearsTab'
 import SemestersTab from './academic-tabs/SemestersTab'
-import AcademicCalendar from '@/components/academic/AcademicCalendar'
 // import { SIDECAR_BASE_URL } from '@/lib/sidecarApi'
 import {cleanTitle, DEFAULT_SCHEMAS, wrapWL, getBoolVal, getVal, stripWL} from './academic-tabs/utils'
 import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
@@ -393,44 +389,6 @@ export default function AcademicDashboard() {
   return <BlockingLoader label="Opening Academic Dashboard" />
  }
 
-  // ── Upcoming items for the calendar ───────────────────────────────────────
-  const calendarEvents = [
-    ...(data?.assignments || []).map(a => ({...a, _type: 'Assignment', _date: a.due_date})),
-    ...(data?.exams || []).map(e => ({...e, _type: 'Exam', _date: e.date})),
-    // Local Store History (Real-time)
-    ...(storeHistory || []).map(h => ({
-      ...h,
-      _type: 'Study',
-      _date: h.timestamp ? new Date(h.timestamp).toISOString() : new Date().toISOString(),
-      title: h.type === 'practice' 
-        ? `Recall: ${h.score}/${h.totalQuestions}` 
-        : h.type === 'note_focus' 
-          ? `Note: ${h.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || 'Focus'}`
-          : `Session: ${h.hub || 'Focus'}`
-    })),
-    // API History (Persistent)
-    ...(apiStudyHistory?.sessions || []).map(s => ({
-      id: s.id,
-      title: `${s.hub_id || 'Focus'} Session`,
-      _type: 'Study Session',
-      _date: s.timestamp || new Date().toISOString(),
-      duration: s.duration_seconds
-    })),
-    ...(apiStudyHistory?.telemetry || []).map(t => ({
-      id: t.id,
-      title: `Read: ${t.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || 'Note'}`,
-      _type: 'Note Visit',
-      _date: t.timestamp || new Date().toISOString(),
-      duration: t.duration_seconds
-    })),
-    ...(apiStudyHistory?.practice || []).map(p => ({
-      id: p.id,
-      title: `Recall: ${p.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub_id || 'Quiz'}`,
-      _type: 'Practice',
-      _date: p.timestamp,
-      isCorrect: p.is_correct
-    }))
-  ]
 
  return (
   <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">

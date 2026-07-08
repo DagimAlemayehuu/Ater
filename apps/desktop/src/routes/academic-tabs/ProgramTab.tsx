@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { CheckCircle, Check, Trash2, Plus, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Calendar, Clock, Search, X, Network, Edit2, ExternalLink } from 'lucide-react'
+import { Check, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, Search, X, Edit2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { differenceInDays, startOfDay, addDays, isSameDay, startOfWeek, format } from 'date-fns'
 import { stripWL, getVal, getBoolVal, getYearOrder, deriveStatus, wrapWL, cleanTitle, calcGPA, gradeColorClass, getDaysUntil } from './utils'
 import { invoke } from '@tauri-apps/api/core'
-import { SectionHeader, EmptyState, StatCard, AcademicRoadmap, ProgramSetupForm, BigPropertyCard, EditableTitle, CreateBanner } from './SharedComponents'
+import { SectionHeader, EmptyState, StatCard, ProgramSetupForm, BigPropertyCard, EditableTitle, CreateBanner } from './SharedComponents'
 import type { TabProps } from './types'
 import { useNavigate } from 'react-router-dom'
 import { sidecarApi } from '@/lib/sidecarApi'
@@ -208,13 +208,13 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
 
 
 
-  const years     = data.years     || []
-  const semesters = data.semesters || []
-  const courses   = data.courses   || []
-  const assignments = data.assignments || []
-  const exams       = data.exams || []
-  const hubs        = data.study_sessions || []
-  const now         = startOfDay(new Date())
+  const years       = useMemo(() => data.years          || [], [data.years])
+  const semesters   = useMemo(() => data.semesters      || [], [data.semesters])
+  const courses     = useMemo(() => data.courses        || [], [data.courses])
+  const assignments = useMemo(() => data.assignments    || [], [data.assignments])
+  const exams       = useMemo(() => data.exams          || [], [data.exams])
+  const hubs        = useMemo(() => data.study_sessions || [], [data.study_sessions])
+  const now         = useMemo(() => startOfDay(new Date()), [])
   const yearSchema = databases.find(d => d.id === 'years')?.schema     || {}
   const semSchema  = databases.find(d => d.id === 'semesters')?.schema || {}
 
@@ -396,7 +396,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     })
 
     return list
-  }, [assignments, assignmentsSearch, assignmentsFilter, assignmentsSort])
+  }, [assignments, assignmentsSearch, assignmentsFilter, assignmentsSort, now])
 
   const displayedExams = useMemo(() => {
     let list = exams
@@ -433,7 +433,7 @@ export default function ProgramTab({ data, databases, onUpdate, onCreate, onDele
     })
 
     return list
-  }, [exams, examsSearch, examsFilter, examsSort])
+  }, [exams, examsSearch, examsFilter, examsSort, now])
 
   const displayedHubsTab = useMemo(() => {
     let list = hubs

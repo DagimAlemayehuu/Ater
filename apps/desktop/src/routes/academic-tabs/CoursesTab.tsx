@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Search, Trash2, BookOpen, Plus, ChevronRight, Upload, Play, BookOpenCheck, Send, ArrowLeft, X } from 'lucide-react'
+import { Search, Trash2, ChevronRight, Upload, Play, Send, ArrowLeft, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { differenceInDays, startOfDay } from 'date-fns'
 import { stripWL, getVal, gradeColorClass, getDaysUntil, wrapWL, cleanTitle, calcGPA } from './utils'
@@ -8,7 +8,6 @@ import type { TabProps } from './types'
 import { sidecarApi } from '@/lib/sidecarApi'
 import { open } from '@tauri-apps/plugin-dialog'
 import { toast } from 'sonner'
-import { AterMarkdown } from '@/components/obsidian/MarkdownViewer'
 import { LearningWorkspace } from '@/components/intelligence/LearningWorkspace'
 
 export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenNote, navigateTo, onRefresh, initialSelectedId, onClearSelection }: TabProps) {
@@ -105,11 +104,11 @@ export default function CoursesTab({ data, onUpdate, onCreate, onDelete, onOpenN
   }
   useEffect(() => { if (initialSelectedId && onClearSelection) onClearSelection() }, [initialSelectedId, onClearSelection])
 
-  const allCourses    = data.courses     || []
-  const assignments   = data.assignments || []
-  const exams         = data.exams       || []
-  const hubs          = data.study_sessions || []
-  const now           = startOfDay(new Date())
+  const allCourses    = useMemo(() => data.courses        || [], [data.courses])
+  const assignments   = useMemo(() => data.assignments    || [], [data.assignments])
+  const exams         = useMemo(() => data.exams          || [], [data.exams])
+  const hubs          = useMemo(() => data.study_sessions || [], [data.study_sessions])
+  const now           = useMemo(() => startOfDay(new Date()), [])
 
   const activeSemTitles = (data.semesters || [])
     .filter(s => stripWL(getVal(s, 'Status', 'status')).toLowerCase() === 'active')
