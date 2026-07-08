@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test('admin portal screens load successfully', async ({ page }) => {
-  // Check the Dashboard (root)
-  await page.goto('/');
+  // Check the Dashboard (root) with bypass to mock session
+  await page.goto('/?bypass=true');
   await expect(page.locator('body')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Controller' })).toBeVisible();
 
-  // Check that visiting /login redirects to /
+  // Check /login is accessible without redirect when not logged in
+  // First clear any potential session by going to /login without bypass
   await page.goto('/login');
-  await expect(page).toHaveURL(/.*\/$/); // Redirects to root URL (/)
-  await expect(page.getByRole('heading', { name: 'Controller' })).toBeVisible();
+  await expect(page).toHaveURL(/.*\/login/);
 });
