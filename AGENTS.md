@@ -33,3 +33,22 @@ This file resides in the root directory because it is actively queried by the sy
 * **Plan:** Call the master skill `sdlc-plan` to explore conversationally with the user and create one main OpenSpec implementation brief. Planning never writes implementation code or phase specs.
 * **Orchestrate:** Call the master skill `sdlc-orchestrate` to read the main spec, decompose into phase specs/child changes when needed, implement autonomously, and verify every phase independently.
 * **Verify:** Call the master skill `sdlc-verify` to audit, preview locally, generate and walk the manual checklist, fix failures through the SDLC loop, integrate, sync specs/docs, archive, and clean up.
+
+---
+
+## 4. Parallel Agent Dispatch Rules
+
+When multiple Jules or Codex agents work at the same time:
+
+* Give each agent one bounded scope and one isolated branch or worktree.
+* Agents must not push directly to `main`.
+* Agents must not edit `Vault_Test/` unless the task explicitly targets local fixture data.
+* Agents must keep changes small enough that review and CI failures can be traced to one feature.
+* Agents may open a PR only after relevant local checks pass.
+* Agents may merge only after GitHub reports the required `Gatekeeper Required` check as green on the latest `main` base.
+* `Gatekeeper Required` is intentionally the fast PR gate for Jules/Codex branches. It does not run full macOS/Windows/Linux release-mode packaging.
+* After merge, `Platform Validation Required` runs on `main` to validate macOS, Windows, and Linux with slower platform checks.
+* Actual release packaging runs only from version tags through the `Release` workflow.
+* If another PR merges first, the agent must update its branch from `main` and wait for CI to rerun.
+
+The CI gate is a merge contract, not a proof of correctness. Passing CI means the required automated checks passed; user-facing behavior still needs manual verification when the change touches product workflows.

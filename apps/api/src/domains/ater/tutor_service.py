@@ -1800,6 +1800,8 @@ Return ONLY valid JSON matching the schema format. No formatting, no markdown wr
         post = frontmatter.loads(note_file.read_text(encoding="utf-8"))
         transfer_task = post.metadata.get("transfer_task")
         if not transfer_task:
+            from src.domains.ater.vault_manager import VaultManager
+
             transfer_task = await self.generate_transfer_task(session["hub_path"], Path(note_path).stem, post.content)
             post.metadata["transfer_task"] = transfer_task
             post.metadata["offline_ready"] = True

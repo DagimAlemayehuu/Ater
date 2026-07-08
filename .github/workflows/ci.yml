@@ -1,190 +1,153 @@
 name: Gatekeeper CI
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  push:
+    branches-ignore: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: gatekeeper-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder_key' }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder_key' }}
 
 jobs:
-  # ─────────────────────────────────────────────
-  # Tier 1: Python Backend Tests
-  # ─────────────────────────────────────────────
-  test-backend:
-    name: Backend (Python / pytest) - ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  workflow-contracts:
+    name: Workflow Contracts
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate workflow YAML parses
+        run: |
+          ruby -e "require 'yaml'; Dir['.github/workflows/*.yml'].each { |f| YAML.load_file(f); puts \"parsed #{f}\" }"
+
+      - name: Run release and CI contract tests
+        run: |
+          node --test \
+            scripts/ci_workflow_contract.test.js \
+            scripts/generate_update_json.test.js \
+            scripts/release_workflow_contract.test.js
+
+  backend-smoke:
+    name: Backend Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
-      - name: Run Pytest Suite
+
+      - name: Run Ruff correctness check
+        run: cd apps/api && uv run ruff check . --select E9,F821,F822,F823
+
+      - name: Run pytest suite
         run: cd apps/api && uv run python -m pytest tests/ -v --tb=short
 
-  # ─────────────────────────────────────────────
-  # Tier 2: Frontend Tests (Vitest + Type Check)
-  # ─────────────────────────────────────────────
-  test-desktop:
-    name: Desktop (React / Vitest) - ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    env:
-      # Provide Supabase vars so Vite build succeeds in CI
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder_key' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Run Typecheck
-        run: pnpm typecheck
-      - name: Run Vitest Suite
-        run: cd apps/desktop && pnpm vitest run --reporter=verbose
-      - name: Run Production Build
-        run: pnpm --filter @ater/desktop build
-
-  # ─────────────────────────────────────────────
-  # Tier 3: Rust Build + Tests (macOS runner matches release target)
-  # ─────────────────────────────────────────────
-  test-rust:
-    name: Desktop (Rust / cargo test)
-    # Use macos-14 (Apple Silicon) to match the primary release runner.
-    # The CI previously ran cargo check on ubuntu-latest — this would miss
-    # macOS-specific native library linking errors (ort, LanceDB, Arrow).
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create dummy sidecar binary (required by Tauri build system)
-        run: |
-          mkdir -p apps/desktop/src-tauri/binaries
-          touch apps/desktop/src-tauri/binaries/ater-api-aarch64-apple-darwin
-          chmod +x apps/desktop/src-tauri/binaries/ater-api-aarch64-apple-darwin
-
-      - name: Cache Cargo
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: "apps/desktop/src-tauri -> target"
-
-      # Full build (not just check) so that native libraries are linked and tested
-      - name: Run cargo build --release
-        run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml --release
-
-      # Run Rust unit tests (db.rs has a VectorDB workflow test)
-      - name: Run cargo test
-        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml -- --nocapture
-
-  # ─────────────────────────────────────────────
-  # Tier 4: E2E Tests (Playwright — desktop build required)
-  # ─────────────────────────────────────────────
-  test-e2e:
-    name: E2E (Playwright)
+  workspace-js:
+    name: Workspace JS
     runs-on: ubuntu-latest
-    env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder_key' }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://mock.supabase.co' }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'mock_key' }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Cache Playwright Browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-      - name: Install Playwright Browsers
-        run: cd apps/desktop && npx playwright install --with-deps chromium
-      - name: Run Playwright Tests (Desktop Mocks)
-        run: cd apps/desktop && npx playwright test
-      - name: Run Playwright Tests (Admin)
-        run: cd apps/admin && npx playwright test
-      - name: Run Playwright Tests (Landing Page)
-        run: cd apps/landing-page && npx playwright test
-      - name: Upload Playwright Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-reports
-          path: |
-            apps/desktop/playwright-report/
-            apps/admin/playwright-report/
-            apps/landing-page/playwright-report/
-          retention-days: 7
 
-  test-rust-windows:
-    name: Desktop (Rust / cargo test) - Windows
-    runs-on: windows-latest
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run typecheck
+        run: pnpm typecheck
+
+      - name: Run production builds
+        run: pnpm build
+
+      - name: Run desktop unit tests
+        run: pnpm --filter @ater/desktop test -- --reporter=verbose
+
+  rust-check:
+    name: Desktop Rust Check
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            wget
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-unknown-linux-gnu
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create dummy sidecar binary (required by Tauri build system)
+      - name: Create dummy sidecar binary
         run: |
           mkdir -p apps/desktop/src-tauri/binaries
-          New-Item -Path "apps/desktop/src-tauri/binaries/ater-api-x86_64-pc-windows-msvc.exe" -ItemType File -Force
-        shell: pwsh
+          touch apps/desktop/src-tauri/binaries/ater-api-x86_64-unknown-linux-gnu
+          chmod +x apps/desktop/src-tauri/binaries/ater-api-x86_64-unknown-linux-gnu
 
       - name: Cache Cargo
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "apps/desktop/src-tauri -> target"
 
-      # Full build (not just check) so that native libraries are linked and tested
-      - name: Run cargo build --release
-        run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml --release
+      - name: Run cargo check
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
 
-      # Run Rust unit tests
-      - name: Run cargo test
-        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml -- --nocapture
+  gatekeeper-required:
+    name: Gatekeeper Required
+    if: always()
+    needs:
+      - workflow-contracts
+      - backend-smoke
+      - workspace-js
+      - rust-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every fast gate to pass
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || \
+             [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ] || \
+             [ "${{ contains(needs.*.result, 'skipped') }}" = "true" ]; then
+            echo "One or more required Gatekeeper CI jobs failed, were cancelled, or were skipped."
+            exit 1
+          fi
+          echo "All required Gatekeeper CI jobs passed."

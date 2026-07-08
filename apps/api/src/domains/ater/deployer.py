@@ -414,6 +414,10 @@ class AterDeployer:
             # ── TITLE ENFORCEMENT ──
             meta["title"] = target_path.stem
 
+            # Re-assemble note with normalized YAML before write/index hooks.
+            yaml_content = self.vm.dump_obsidian_yaml(meta).strip()
+            full_content = f"---\n{yaml_content}\n---\n\n{content.strip()}\n"
+
             # Versioning and Embedding Indexing Hooks
             try:
                 rel_path = target_path.relative_to(self.vm.vault_path).as_posix()
