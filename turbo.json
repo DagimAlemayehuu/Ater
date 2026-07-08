@@ -20,13 +20,13 @@
             "dependsOn": [
                 "^lint"
             ],
-            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "pyproject.toml", "uv.lock"]
+            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "tests/**/*.py", "pyproject.toml", "uv.lock"]
         },
         "typecheck": {
             "dependsOn": [
                 "^typecheck"
             ],
-            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "pyproject.toml", "uv.lock"]
+            "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.py", "tests/**/*.py", "pyproject.toml", "uv.lock"]
         },
         "test": {
             "dependsOn": [
