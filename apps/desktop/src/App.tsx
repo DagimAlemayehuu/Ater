@@ -153,10 +153,10 @@ function AppRoutes() {
                         <AuthenticatedLayout>
                           <Routes>
                             <Route path="/" element={<Navigate to="/agents?tab=ater" replace />} />
-                            <Route path="/obsidian" element={<PageGuard featureSlug="file_ingestion"><ObsidianVault /></PageGuard>} />
-                            <Route path="/academic" element={<PageGuard featureSlug="interactive_quiz"><AcademicDashboard /></PageGuard>} />
-                            <Route path="/calendar" element={<PageGuard featureSlug="interactive_quiz"><CalendarRoute /></PageGuard>} />
-                            <Route path="/agents" element={<PageGuard featureSlug="ai-features"><Agents /></PageGuard>} />
+                            <Route path="/obsidian" element={<PageGuard featureSlug="explorer_locked"><ObsidianVault /></PageGuard>} />
+                            <Route path="/academic" element={<PageGuard featureSlug="academic_locked"><AcademicDashboard /></PageGuard>} />
+                            <Route path="/calendar" element={<PageGuard featureSlug="academic_locked"><CalendarRoute /></PageGuard>} />
+                            <Route path="/agents" element={<PageGuard featureSlug="ai_locked"><Agents /></PageGuard>} />
                             <Route path="/teacher" element={<Navigate to="/agents?tab=ater" replace />} />
                             <Route path="/practice" element={<PageGuard featureSlug="practice-recall"><Practice /></PageGuard>} />
                             <Route path="/settings" element={<Settings />} />

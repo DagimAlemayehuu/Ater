@@ -236,7 +236,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
             supabase.functions.invoke('generate-security-lease', {
               body: {
                 userId: user.id,
-                machineIdHash: machineId,
+                machineId: machineId,
                 accountStatus: profile.account_status,
                 lockedFeatures: profile.locked_features || []
               }
@@ -261,7 +261,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       if (!leaseApplied) {
         const mockLease = {
           user_id: user.id,
-          machine_id_hash: machineId,
+          machine_id: machineId,
           expiration: new Date(Date.now() + 86400 * 1000 * 365).toISOString(),
           locked_features: profile.locked_features || [],
           account_status: profile.account_status || 'active'
@@ -302,36 +302,35 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     
     // Master Mapping logic for robust hackproof lockout checks
     // In beta mode (isBetaMode() handled above), creditBalance is 0 by design — do not treat it as a lock.
-    const isAiLocked = lockedFeatures.some(f => ['ai_locked', 'ai-features', 'ai-ingestion'].includes(f)) || creditBalance <= 0
-    const isAcademicLocked = lockedFeatures.some(f => ['academic_locked', 'academic-dashboard', 'interactive_quiz'].includes(f))
-    const isExplorerLocked = lockedFeatures.some(f => ['explorer_locked', 'explorer-lockout', 'file_ingestion', 'vector_search'].includes(f))
+    const isAiLocked = lockedFeatures.includes('ai_locked') || creditBalance <= 0
+    const isAcademicLocked = lockedFeatures.includes('academic_locked')
+    const isExplorerLocked = lockedFeatures.includes('explorer_locked')
 
     if (status === 'LeaseExpired') {
       const serverDependentFeatures = [
-        'ai-ingestion', 
+        'ai_locked',
         'oracle-chat', 
         'practice-recall', 
-        'file_ingestion', 
-        'vector_search', 
+        'explorer_locked',
         'ater_generation', 
         'ater_chat', 
         'ater_oracle_chat', 
-        'interactive_quiz',
+        'academic_locked',
         'explain-features'
       ]
       if (serverDependentFeatures.includes(feature)) return true
     }
 
     // AI lockout group checks
-    const aiGroup = ['ai-ingestion', 'oracle-chat', 'practice-recall', 'ater_generation', 'ater_chat', 'ater_oracle_chat', 'ai-features', 'ai_locked', 'explain-features']
+    const aiGroup = ['oracle-chat', 'practice-recall', 'ater_generation', 'ater_chat', 'ater_oracle_chat', 'ai_locked', 'explain-features']
     if (isAiLocked && aiGroup.includes(feature)) return true
 
     // Academic lockout group checks
-    const academicGroup = ['interactive_quiz', 'academic-dashboard', 'academic_locked']
+    const academicGroup = ['academic_locked']
     if (isAcademicLocked && academicGroup.includes(feature)) return true
 
     // Explorer lockout group checks
-    const explorerGroup = ['file_ingestion', 'explorer-lockout', 'explorer_locked', 'vector_search']
+    const explorerGroup = ['explorer_locked']
     if (isExplorerLocked && explorerGroup.includes(feature)) return true
 
     return lockedFeatures.includes(feature)

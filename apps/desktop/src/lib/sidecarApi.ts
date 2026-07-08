@@ -761,7 +761,7 @@ export const sidecarApi = {
     
     updateObsidianNote: async (path: string, content: string) => {
         if (isSimulationMode()) return simulationSidecarApi.updateObsidianNote(path, content)
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
             return await invoke<any>('update_obsidian_note', { path: ipcPath, content })
@@ -773,7 +773,7 @@ export const sidecarApi = {
 
     deleteObsidianItem: async (path: string) => {
         if (isSimulationMode()) return simulationSidecarApi.deleteObsidianItem(path)
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
             return await invoke<any>('delete_obsidian_item', { path: ipcPath })
@@ -785,7 +785,7 @@ export const sidecarApi = {
 
     createObsidianFile: async (path: string, content: string = '', overwrite: boolean = false) => {
         if (isSimulationMode()) return simulationSidecarApi.createObsidianFile(path, content)
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
             return await invoke<any>('create_obsidian_file', { path: ipcPath, content, overwrite })
@@ -797,7 +797,7 @@ export const sidecarApi = {
 
     createObsidianFolder: async (path: string) => {
         if (isSimulationMode()) return simulationSidecarApi.createObsidianFolder(path)
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         const ipcPath = await normalizeVaultIpcPath(path)
         try {
             return await invoke<any>('create_obsidian_folder', { path: ipcPath })
@@ -809,7 +809,7 @@ export const sidecarApi = {
 
     moveObsidianItem: async (oldPath: string, newPath: string) => {
         if (isSimulationMode()) return simulationSidecarApi.moveObsidianItem(oldPath, newPath)
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         const oldIpcPath = await normalizeVaultIpcPath(oldPath)
         const newIpcPath = await normalizeVaultIpcPath(newPath)
         try {
@@ -828,7 +828,7 @@ export const sidecarApi = {
 
     aterProcess: async (payload: { file_path?: string; text?: string; target_hub_id?: string }) => {
         if (isSimulationMode()) return simulationSidecarApi.aterProcess(payload)
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('ater_generation')
         try {
             return await invoke<any>('ater_process', { payload })
@@ -840,7 +840,7 @@ export const sidecarApi = {
  
     aterGeneratePlan: async (payload: { session_id?: string; file_path?: string; curriculum: any; target_hub_id?: string }) => {
         if (isSimulationMode()) return simulationSidecarApi.aterGeneratePlan(payload)
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('ater_generation')
         try {
             return await invoke<any>('ater_generate_plan', { payload })
@@ -852,7 +852,7 @@ export const sidecarApi = {
  
     aterConfirm: async (payload: { session_id: string; command?: string; curriculum_override?: any; anchored_hub_id?: string }) => {
         if (isSimulationMode()) return simulationSidecarApi.aterConfirm(payload)
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('ater_generation')
         try {
             return await invoke<any>('ater_confirm', { payload })
@@ -1174,7 +1174,7 @@ export const sidecarApi = {
     },
 
     explainPdfSelection: async (payload: { path: string, selection: string, page?: number, note_mode?: string, note_title?: string, note_course?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
@@ -1190,7 +1190,7 @@ export const sidecarApi = {
     },
  
     generateQuickQuestions: async (payload: { path: string, selection: string, page?: number }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         try {
             return await invoke<any>('generate_quick_questions', { payload })
@@ -1212,7 +1212,7 @@ export const sidecarApi = {
         source_kind?: 'markdown' | 'pdf',
         selection_context?: string,
     }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
@@ -1240,7 +1240,7 @@ export const sidecarApi = {
         note_title?: string,
         note_course?: string,
     }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         try {
             return await invoke<any>('ater_chat', { payload })
@@ -1251,7 +1251,7 @@ export const sidecarApi = {
     },
 
     generateArtifactCode: async (payload: { prompt: string; context?: string; previous_code?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
@@ -1272,7 +1272,7 @@ export const sidecarApi = {
     },
 
     repairArtifactCode: async (payload: { code: string; error: string; stack?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return { code: payload.code }
@@ -1295,7 +1295,7 @@ export const sidecarApi = {
             recent_notes?: string[];
         }
     }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('oracle-chat')
         try {
             return await invoke<any>('ater_oracle_chat', { payload })
@@ -1478,7 +1478,7 @@ export const sidecarApi = {
     },
 
     logNoteVisit: async (notePath: string, durationSeconds: number) => {
-        enforceFeatureLock('interactive_quiz')
+        enforceFeatureLock('academic_locked')
         try {
             return await invoke<any>('log_note_visit', { notePath, durationSeconds })
         } catch (err) {
@@ -1488,7 +1488,7 @@ export const sidecarApi = {
     },
     
     logStudySession: async (hubId: string, durationSeconds: number, mode: string = 'focus') => {
-        enforceFeatureLock('interactive_quiz')
+        enforceFeatureLock('academic_locked')
         try {
             return await invoke<any>('log_study_session', { hubId, durationSeconds, mode })
         } catch (err) {
@@ -1499,7 +1499,7 @@ export const sidecarApi = {
 
     logPracticeResult: async (hubId: string, score: number, total: number, notePath?: string) => {
         if (isSimulationMode()) return simulationSidecarApi.logPracticeResult({ hubId, score, total, notePath })
-        enforceFeatureLock('interactive_quiz')
+        enforceFeatureLock('academic_locked')
         try {
             return await invoke<any>('log_practice_result', { hubId, score, total, notePath })
         } catch (err) {
@@ -1558,7 +1558,7 @@ export const sidecarApi = {
     },
 
     srsReview: async (notePath: string, rating: number) => {
-        enforceFeatureLock('interactive_quiz')
+        enforceFeatureLock('academic_locked')
         try {
             return await invoke<any>('srs_review', { notePath, rating })
         } catch (err) {
@@ -1592,7 +1592,7 @@ export const sidecarApi = {
     },
 
     srsFeynmanValidate: async (notePath: string, explanation: string) => {
-        enforceFeatureLock('interactive_quiz')
+        enforceFeatureLock('academic_locked')
         if (await isDemoActive()) {
             return {
                 success: true,
@@ -1627,7 +1627,7 @@ export const sidecarApi = {
     },
 
     vaultUploadText: async (hubId: string, sourceName: string, sourceText: string) => {
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         try {
             return await invoke<any>('vault_upload_text', { hubId, sourceName, sourceText })
         } catch (err) {
@@ -1637,8 +1637,8 @@ export const sidecarApi = {
     },
  
     vaultGenerate: async (vaultPaths: string[], mode: string, hubId: string) => {
-        enforceFeatureLock('ai-features')
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('ai_locked')
+        enforceFeatureLock('explorer_locked')
         await deductCredits('ater_generation')
         try {
             return await invoke<any>('vault_generate', { vaultPaths, mode, hubId })
@@ -1649,7 +1649,7 @@ export const sidecarApi = {
     },
  
     vaultUploadFile: async (hubId: string, file: File) => {
-        enforceFeatureLock('file_ingestion')
+        enforceFeatureLock('explorer_locked')
         try {
             const filePath = (file as any).path || '';
             if (!filePath) {
@@ -1685,7 +1685,7 @@ export const sidecarApi = {
     },
  
     explainQuestion: async (payload: { question: string; type: string; answer: any; explanation?: string; context?: string; userAnswer?: string; is_correct?: boolean; note_path?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
@@ -1700,7 +1700,7 @@ export const sidecarApi = {
         }
     },
     classifyTeachIntent: async (payload: { prompt: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
@@ -1737,7 +1737,7 @@ export const sidecarApi = {
         }
     },
     generateTeachCurriculum: async (payload: { prompt: string; learning_mode?: string; semester?: string; course?: string; unit?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
@@ -1774,7 +1774,7 @@ export const sidecarApi = {
         }
     },
     confirmTeachCurriculum: async (payload: { curriculum: any; mode: string; semester?: string; course?: string; unit?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
@@ -1811,7 +1811,7 @@ export const sidecarApi = {
         }
     },
     planCurriculum: async (payload: { concept: string; target_hub_id?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
@@ -1865,7 +1865,7 @@ export const sidecarApi = {
         }
     },
     confirmCurriculum: async (payload: { concept: string; curriculum: any; target_hub_id?: string }) => {
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         if (await isDemoActive()) {
             return {
@@ -1979,7 +1979,7 @@ export const sidecarApi = {
                 ]
             };
         }
-        enforceFeatureLock('ai-features')
+        enforceFeatureLock('ai_locked')
         await deductCredits('explain-features')
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
@@ -2539,7 +2539,7 @@ export const sidecarApi = {
         }
     },
     uploadSourceFile: async (file: File) => {
-        enforceFeatureLock('file_ingestion');
+        enforceFeatureLock('explorer_locked');
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
             const store = await getAppStore();
@@ -2568,7 +2568,7 @@ export const sidecarApi = {
         }
     },
     generateGroundedCurriculumPlan: async (payload: { prompt: string; sources: any[]; learning_mode?: string }) => {
-        enforceFeatureLock('ai-features');
+        enforceFeatureLock('ai_locked');
         await deductCredits('explain-features');
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
@@ -2605,7 +2605,7 @@ export const sidecarApi = {
         }
     },
     augmentGroundedContext: async (payload: { concept: string }) => {
-        enforceFeatureLock('ai-features');
+        enforceFeatureLock('ai_locked');
         await deductCredits('explain-features');
         try {
             const sidecarToken = await invoke<string>('get_sidecar_token');
@@ -2645,7 +2645,7 @@ export const sidecarApi = {
         parent_hub_path?: string;
         chapter_title?: string;
     }): Promise<SourceLearningJob> => {
-        enforceFeatureLock('file_ingestion');
+        enforceFeatureLock('explorer_locked');
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/ater/source/jobs`, {
@@ -2681,7 +2681,7 @@ export const sidecarApi = {
         }
     },
     startSourceLearningJob: async (jobId: string) => {
-        enforceFeatureLock('file_ingestion');
+        enforceFeatureLock('explorer_locked');
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/start`, {
@@ -2700,7 +2700,7 @@ export const sidecarApi = {
         }
     },
     deploySourceLearningJob: async (jobId: string) => {
-        enforceFeatureLock('ai-features');
+        enforceFeatureLock('ai_locked');
         await deductCredits('explain-features');
         try {
             const headers = await getBaseHeaders('application/json');
@@ -2720,7 +2720,7 @@ export const sidecarApi = {
         }
     },
     updateSourceLearningJobRoadmap: async (jobId: string, titles: string[]) => {
-        enforceFeatureLock('ai-features');
+        enforceFeatureLock('ai_locked');
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/roadmap`, {
@@ -2739,7 +2739,7 @@ export const sidecarApi = {
         }
     },
     refineSourceLearningJobRoadmap: async (jobId: string, instruction: string, currentTitles: string[]) => {
-        enforceFeatureLock('ai-features');
+        enforceFeatureLock('ai_locked');
         try {
             const headers = await getBaseHeaders('application/json');
             const res = await checkedFetch(`/api/ater/source/jobs/${encodeURIComponent(jobId)}/roadmap/refine`, {
