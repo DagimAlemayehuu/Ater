@@ -95,6 +95,30 @@ test.describe('Ater Student Onboarding Lifecycle', () => {
 // ─────────────────────────────────────────────────────────────────────
 test.describe('Ater Active Student Hub', () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept sidecar API calls to prevent real network requests
+    await page.route('**/api/**', async (route) => {
+      const url = route.request().url();
+      if (url.includes('/api/chat/conversations')) {
+        if (route.request().method() === 'GET') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+        } else {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'mock-conv-id' }) });
+        }
+      } else if (url.includes('/api/chat/memories')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      } else if (url.includes('/api/chat/attachments')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      } else if (url.includes('/api/ater/tutor/session_by_hub')) {
+        await route.fulfill({ status: 404 });
+      } else if (url.includes('/api/ater/tutor/status')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'idle' }) });
+      } else if (url.includes('/api/ater/source/jobs')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      }
+    });
+
     await injectTauriMocks(page);
 
     // Initial state: Fully activated and configured
@@ -140,8 +164,21 @@ test.describe('Ater Active Student Hub', () => {
     await page.goto('/#/obsidian?path=Computer_Science%2FData_Structures_And_Algorithms.md');
     await page.waitForLoadState('domcontentloaded');
 
-    // Verify note content area opens and shows mocked note text
-    await expect(page.getByText(/high-fidelity note/i)).toBeVisible({ timeout: 15000 });
+    // Verify Sidebar structure from mocked vault (parent folders should expand automatically)
+    // Sidebar content is projected via SidebarContentProvider
+    await expect(page.locator('aside').getByText('Computer_Science')).toBeVisible();
+    await expect(page.locator('aside').getByText('Data_Structures_And_Algorithms')).toBeVisible();
+
+    // Verify note title in main editor (resolves to both header and content H1)
+    await expect(page.getByRole('heading', { name: 'Data Structures and Algorithms', level: 1 }).first()).toBeVisible({ timeout: 15000 });
+
+    // Verify Metadata Pills are rendered correctly
+    await expect(page.getByText('Fall 2026')).toBeVisible();
+    await expect(page.getByText('CS 101')).toBeVisible();
+    await expect(page.getByText('UNIT 1')).toBeVisible();
+
+    // Verify note content area opens and shows mocked note text (MarkdownViewer)
+    await expect(page.getByText(/high-fidelity note/i)).toBeVisible();
   });
 
   test('should successfully interact with Settings and run AI Connection Tests', async ({ page }) => {
