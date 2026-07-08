@@ -6,11 +6,11 @@ This document defines the branching strategy, commit conventions, Pull Request l
 
 ## 0. Current Branch Hygiene
 
-As of 2026-07-04, the repository is intentionally clean:
+As of 2026-07-08, the repository is intentionally protected for PR-based integration:
 
 * Local active branch: `main`
 * Remote active branch: `origin/main`
-* Current verified merge commit: `6b34553e`
+* Required GitHub status check: `Gatekeeper Required`
 * Open PRs: none
 * Required state before starting new work: create a new feature/fix branch from updated `main`
 
@@ -51,6 +51,17 @@ When submitting a Pull Request via `gh pr create`, populate the description usin
 
 ## 4. CI/CD Pipeline Gates
 * **Protected Branches:** Push permissions directly to `master`/`main` are blocked. All integrations must happen via a Pull Request.
-* **Test Verification:** Pull Requests will only be merged once the GitHub Actions CI workflow compiles successfully and runs all tests with a **green** status.
-* **Required Matrix:** Backend pytest on macOS/Ubuntu/Windows, desktop React typecheck/test/build on macOS/Ubuntu/Windows, Playwright E2E, Rust cargo test, Rust cargo test on Windows, Vercel, and Vercel Preview Comments.
-* **Repair Loop:** If a pushed branch fails CI, inspect the failing job logs, fix on the same branch, rerun the full affected gate, and merge only after the matrix is green.
+* **Fast PR Gate:** `.github/workflows/ci.yml` is the fast Jules/Codex feedback loop. It runs on pull requests, non-`main` branch pushes, and manual dispatch. It checks workflow/release contracts, backend Ruff correctness + pytest on Ubuntu, workspace lint/typecheck/build on Ubuntu, desktop Vitest on Ubuntu, and Rust `cargo check` on Ubuntu without a release-mode build.
+* **Required PR Check:** GitHub branch protection for `main` requires the `Gatekeeper Required` status check with strict up-to-date checks. This summary job is the PR merge contract and fails if any fast gate fails, is cancelled, or is skipped.
+* **Platform Validation:** `.github/workflows/platform-validation.yml` runs after merges to `main` and can be launched manually. It performs the slower confidence checks across macOS, Windows, and Linux: backend Ruff + pytest, workspace lint/typecheck/build, desktop Vitest, release-mode Rust cargo build/test, and Ubuntu Playwright smoke tests. Its summary job is `Platform Validation Required`.
+* **Release Packaging:** `.github/workflows/release.yml` runs only for version tags matching `v*`. It is the only workflow that builds PyInstaller sidecars, packages Tauri installers for macOS/Windows/Linux, uploads artifacts to `DagimAlemayehuu/Ater_Releases`, generates `update.json`, and publishes the release.
+* **Expected Runtime:** Fast PR CI should target roughly 4-8 minutes on warm caches. Platform validation should target roughly 15-25 minutes. Full release packaging should be expected to take roughly 35-45 minutes because Windows and Linux installer packaging are the bottlenecks.
+* **Repair Loop:** If a branch fails `Gatekeeper Required`, inspect the failing job logs, fix on the same branch, and rerun the fast gate. If `Platform Validation Required` fails after merge, treat `main` as blocked for release until the failing platform job is fixed. If the release workflow fails, delete or repair the draft release/tag state before retrying the same version.
+
+## 5. Parallel Agent Rules
+* Give each Jules/Codex agent a separate branch or worktree and a bounded task scope.
+* Agents may open PRs only after relevant local checks pass.
+* Agents must not merge until `Gatekeeper Required` passes on the latest `main` base.
+* Agents must treat `Platform Validation Required` as the post-merge cross-platform release-readiness signal.
+* If another PR merges first, rebase or merge `main`, resolve conflicts, and wait for CI to rerun.
+* Do not treat CI as a proof of every possible behavior. User-facing workflow changes still require manual verification evidence.

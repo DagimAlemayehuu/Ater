@@ -20,15 +20,15 @@ const platforms = {
   },
   'windows-x86_64': {
     artifactDirName: 'signatures-windows-x86_64',
-    sigPattern: /\.sig$/i,
-    fallbackPattern: /x64-setup\.nsis\.zip\.sig$|x64\.nsis\.zip\.sig$|Ater\.zip\.sig$/i,
-    urlName: `Ater_${VERSION}_x64-setup.nsis.zip`
+    sigPattern: /x64-setup\.exe\.sig$/i,
+    fallbackPattern: /x64-setup\.exe\.sig$/i,
+    urlName: `Ater_${VERSION}_x64-setup.exe`
   },
   'linux-x86_64': {
     artifactDirName: 'signatures-linux-x86_64',
-    sigPattern: /\.sig$/i,
-    fallbackPattern: /x86_64\.AppImage\.tar\.gz\.sig$|amd64\.AppImage\.tar\.gz\.sig$|AppImage\.tar\.gz\.sig$/i,
-    urlName: `Ater_${VERSION}_x86_64.AppImage.tar.gz`
+    sigPattern: /AppImage\.sig$/i,
+    fallbackPattern: /x86_64\.AppImage\.sig$|amd64\.AppImage\.sig$/i,
+    urlName: `Ater_${VERSION}_x86_64.AppImage`
   }
 };
 

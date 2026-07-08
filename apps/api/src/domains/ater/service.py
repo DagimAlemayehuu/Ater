@@ -2996,7 +2996,7 @@ generated: true"""
                                     norm_note = self.vm.get_canonical_title(note_title)
                                     
                                     # Skip the first note since it was already generated in Batch 1
-                                    if all_atomic_titles and norm_note == self.vm.get_canonical_title(all_atomic_titles[0]):
+                                    if all_note_titles and norm_note == self.vm.get_canonical_title(all_note_titles[0]):
                                         continue
                                         
                                     note_rel_path = lo.get_note_path(
