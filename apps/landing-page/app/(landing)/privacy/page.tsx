@@ -20,8 +20,10 @@ export default function PrivacyPage() {
             </h2>
             <p>
               Ater is designed as a local-first study engine. Your notes, class slides, parsed PDFs,
-              and index databases reside entirely on your physical storage device. We do not transmit,
-              replicate, or store your personal files or study contents on remote cloud servers.
+              and index databases reside entirely on your physical storage device. While your primary
+              data remains local, generation and reasoning steps involve sending relevant source text
+              segments to external LLM providers (e.g., Gemini) for processing. We do not replicate
+              or store your personal files on remote cloud servers beyond these transient processing requests.
             </p>
           </section>
 
@@ -31,8 +33,9 @@ export default function PrivacyPage() {
             </h2>
             <p>
               Retrieval-Augmented Generation (RAG) vector embeddings and tokenization are computed
-              locally on your system. No document content is uploaded to external AI APIs for vector indexing
-              or processing. Your local notes never leave your system for semantic parsing.
+              locally on your system. While vector indexing is local, advanced generation and
+              reasoning tasks utilize secure external AI APIs. Users maintain full control by
+              configuring and managing their own API credentials for these external services.
             </p>
           </section>
 

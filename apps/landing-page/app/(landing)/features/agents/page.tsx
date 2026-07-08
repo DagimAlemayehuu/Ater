@@ -30,7 +30,7 @@ export default function AgentsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mt-8">
             {[
               { label: "Automatic roadmaps", desc: "Helper agents sort topics from simple to advanced." },
-              { label: "100% Private", desc: "All assistants run locally on your own machine." },
+              { label: "Privacy-First", desc: "Local storage with secure, external LLM processing." },
               { label: "Smart Governor", desc: "Monitors and balances system loads to keep things fast." }
             ].map(item => (
               <div key={item.label} className="p-4 border border-outline-variant bg-surface flex flex-col gap-1 text-left">

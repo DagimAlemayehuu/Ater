@@ -14,7 +14,7 @@ export default function KnowledgeBasePage() {
             KNOWLEDGE BASE
           </h1>
           <p className="text-body max-w-2xl leading-relaxed opacity-85 text-center">
-            A safe place to keep all your study notes. All your files stay entirely on your own computer, so nobody else can see them. They work even if you don't have internet!
+            A safe place to keep all your study notes. Your files stay on your own computer, with generation and reasoning powered by secure external LLM connections.
           </p>
           
           {/* Integrated Mockup */}
@@ -306,10 +306,10 @@ export default function KnowledgeBasePage() {
           <div className="flex flex-col gap-6">
             <h2 className="text-section-heading">YOUR PRIVATE TUTOR</h2>
             <p className="text-body opacity-85">
-              Highlight any sentence in your books or notes, and the AI sidecar tutor will explain it instantly in simple words—without sending your personal files to the internet.
+              Highlight any sentence in your books or notes, and the AI sidecar tutor will explain it instantly in simple words—powered by secure external LLM providers.
             </p>
             <ul className="space-y-3 text-[11px] leading-relaxed opacity-75">
-              <li> Stream explanations instantly from local secure models on your computer.</li>
+              <li> Stream explanations instantly using secure external LLM connections.</li>
               <li> Dual personas translate details: Strategist for architectures, Creator for code.</li>
               <li> Sliders adjust generation settings like innovation, detail levels, and polish.</li>
             </ul>
