@@ -65,6 +65,7 @@ from src.domains.academics.router import router as academics_router
 from src.api.routers.ai import router as ai_router
 from src.api.routers.ater import router as ater_router, validate_vault_path
 from src.api.routers.notebooklm import router as notebooklm_router
+from src.api.deps import get_app_secrets
 from src.api.lifespan import ServerLifespanManager
 import src.api.state as state
 
@@ -144,11 +145,11 @@ async def get_pdf_css():
     return Response(content=_pdf_css_cache, media_type="text/css")
 
 # Mount routers
-app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
-app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
-app.include_router(ai_router, prefix="/api")
-app.include_router(ater_router, prefix="/api")
-app.include_router(notebooklm_router, prefix="/api")
+app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path), Depends(get_app_secrets)])
+app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path), Depends(get_app_secrets)])
+app.include_router(ai_router, prefix="/api", dependencies=[Depends(get_app_secrets)])
+app.include_router(ater_router, prefix="/api", dependencies=[Depends(get_app_secrets)])
+app.include_router(notebooklm_router, prefix="/api", dependencies=[Depends(get_app_secrets)])
 
 @app.get("/api/health")
 async def health_check():
@@ -165,6 +166,32 @@ if __name__ == "__main__":
 
     # Start watchdog before app initializes
     ServerLifespanManager.start_watchdog()
+
+    # Kill any existing process on the target port to prevent "port already in use" errors
+    import psutil
+    import time
+
+    current_pid = os.getpid()
+    try:
+        for conn in psutil.net_connections(kind='inet'):
+            if conn.laddr.port == args.port and conn.status == 'LISTEN':
+                if conn.pid and conn.pid != current_pid:
+                    try:
+                        zombie = psutil.Process(conn.pid)
+                        logger.warning(f"[Zombie Hunter] Found process {zombie.pid} ({zombie.name()}) on port {args.port}. Terminating...")
+                        zombie.terminate()
+                        # Wait for termination
+                        for _ in range(10):
+                            if not zombie.is_running():
+                                break
+                            time.sleep(0.2)
+                        if zombie.is_running():
+                            logger.warning(f"[Zombie Hunter] Process {zombie.pid} still running. Force killing...")
+                            zombie.kill()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+    except Exception as e:
+        logger.error(f"[Zombie Hunter] Error during port cleanup: {e}")
 
     logger.info(f"Starting sidecar on {args.host}:{args.port}")
     uvicorn.run(
