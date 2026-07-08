@@ -37,3 +37,8 @@ It serves as the front-facing entry terminal for organized professionals seeking
    ```bash
    pnpm --filter landing-page dev
    ```
+
+## Security & Environment
+
+- **Production-Only RLS**: The landing page and waitlist portal interact directly with Supabase via Row Level Security (RLS).
+- **Mock Bypass Removal**: As of v0.2, the `?bypass=true` mock layer has been completely removed from the landing page to ensure all waitlist interactions are live and authenticated.
