@@ -16,7 +16,7 @@ const checkBypass = () => {
 
 // Rich Mock Telemetry Data
 const MOCK_PROFILES = [
-  { id: 'usr_1', email: 'alice.vance@mit.edu', full_name: 'Alice Vance', role: 'admin', is_approved: true, waitlist_status: 'approved', created_at: '2026-05-15T12:00:00Z' },
+  { id: 'usr_1', email: 'alice.vance@mit.edu', full_name: 'Alice Vance', role: 'Admin', is_approved: true, waitlist_status: 'approved', created_at: '2026-05-15T12:00:00Z' },
   { id: 'usr_2', email: 'bob.chen@stanford.edu', full_name: 'Bob Chen', role: 'User', is_approved: true, waitlist_status: 'approved', created_at: '2026-05-18T14:30:00Z' },
   { id: 'usr_3', email: 'charlie.smith@berkeley.edu', full_name: 'Charlie Smith', role: 'User', is_approved: false, waitlist_status: 'revoked', created_at: '2026-05-20T09:15:00Z' },
   { id: 'usr_4', email: 'dana.white@harvard.edu', full_name: 'Dana White', role: 'User', is_approved: true, waitlist_status: 'approved', created_at: '2026-05-22T17:45:00Z' },
@@ -172,6 +172,16 @@ if (typeof window !== 'undefined') {
 const hybridSupabase = new Proxy(realSupabase, {
   get(target, prop, receiver) {
     if (checkBypass()) {
+      if (prop === 'auth') {
+        return {
+          getSession: () => Promise.resolve({ data: { session: { user: { id: 'usr_1' } } }, error: null }),
+          getUser: () => Promise.resolve({ data: { user: { id: 'usr_1' } }, error: null }),
+          onAuthStateChange: (cb: any) => {
+            return { data: { subscription: { unsubscribe: () => {} } } };
+          },
+          signOut: () => Promise.resolve({ error: null })
+        };
+      }
       if (prop === 'channel') {
         return () => ({
           on: function() { return this; },

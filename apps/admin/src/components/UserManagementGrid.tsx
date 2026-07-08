@@ -114,22 +114,20 @@ export function UserManagementGrid() {
   async function updateBalance(overrideVal?: number) {
     if (!selectedUser) return
     const targetBalance = overrideVal !== undefined ? overrideVal : newCreditBalance
+    const delta = targetBalance - selectedUser.credit_balance
+    if (delta === 0) return
+
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ credit_balance: targetBalance })
-        .eq('id', selectedUser.id)
+      const { data, error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'grant_credits',
+          target_user_id: selectedUser.id,
+          amount: delta
+        }
+      })
       
       if (!error) {
-        const delta = targetBalance - selectedUser.credit_balance
-        if (delta !== 0) {
-          await supabase.from('credit_ledger').insert({
-            user_id: selectedUser.id,
-            amount: delta,
-            feature_slug: 'admin-adjustment'
-          })
-          fetchUserLedger(selectedUser.id)
-        }
+        fetchUserLedger(selectedUser.id)
         setSelectedUser({ ...selectedUser, credit_balance: targetBalance })
         setSuccessMessage(`Credits updated to ${targetBalance}`)
         fetchUsers()
@@ -146,10 +144,13 @@ export function UserManagementGrid() {
   async function updateStatus(status: 'active' | 'suspended' | 'banned') {
     if (!selectedUser) return
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ account_status: status })
-        .eq('id', selectedUser.id)
+      const { error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'update_user_status',
+          target_user_id: selectedUser.id,
+          status
+        }
+      })
       if (!error) {
         setSelectedUser({ ...selectedUser, account_status: status })
         setSuccessMessage(`Status updated to ${status.toUpperCase()}`)
@@ -168,10 +169,13 @@ export function UserManagementGrid() {
     if (!selectedUser || !newFeatureSlug.trim()) return
     const updated = [...(selectedUser.locked_features || []), newFeatureSlug.trim()]
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ locked_features: updated })
-        .eq('id', selectedUser.id)
+      const { error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'update_feature_locks',
+          target_user_id: selectedUser.id,
+          locked_features: updated
+        }
+      })
       if (!error) {
         setSelectedUser({ ...selectedUser, locked_features: updated })
         const addedSlug = newFeatureSlug.trim()
@@ -192,10 +196,13 @@ export function UserManagementGrid() {
     if (!selectedUser) return
     const updated = (selectedUser.locked_features || []).filter(f => f !== featureToDelete)
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ locked_features: updated })
-        .eq('id', selectedUser.id)
+      const { error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'update_feature_locks',
+          target_user_id: selectedUser.id,
+          locked_features: updated
+        }
+      })
       if (!error) {
         setSelectedUser({ ...selectedUser, locked_features: updated })
         setSuccessMessage(`Feature restriction ${featureToDelete} removed`)

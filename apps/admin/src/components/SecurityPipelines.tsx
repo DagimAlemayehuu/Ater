@@ -6,7 +6,7 @@ import { ShieldAlert, RefreshCw, Trash } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type BlacklistedDevice = {
-  machine_id_hash: string
+  machine_id: string
   created_at: string
   reason: string
 }
@@ -79,12 +79,13 @@ export function SecurityPipelines() {
   async function blacklistDevice() {
     if (!newDeviceHash.trim()) return
     try {
-      const { error } = await supabase
-        .from('hardware_blacklist')
-        .insert({
-          machine_id_hash: newDeviceHash.trim(),
+      const { error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'blacklist_hardware',
+          machine_id: newDeviceHash.trim(),
           reason: banReason.trim() || 'Manual admin block'
-        })
+        }
+      })
       if (!error) {
         setNewDeviceHash('')
         setBanReason('')
@@ -100,12 +101,14 @@ export function SecurityPipelines() {
   }
 
   // Lift device blacklist
-  async function removeBlacklist(hash: string) {
+  async function removeBlacklist(machine_id: string) {
     try {
-      const { error } = await supabase
-        .from('hardware_blacklist')
-        .delete()
-        .eq('machine_id_hash', hash)
+      const { error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'remove_hardware_blacklist',
+          machine_id
+        }
+      })
       if (!error) {
         setSuccessMessage('Hardware blacklist block lifted.')
         fetchBlacklist()
@@ -209,13 +212,13 @@ export function SecurityPipelines() {
           ) : (
             <div className="space-y-2">
               {blacklist.map(b => (
-                <div key={b.machine_id_hash} className="flex justify-between items-center border border-border/40 p-3 bg-bento-bg/30 text-[9px] leading-relaxed rounded-[6px]">
+                <div key={b.machine_id} className="flex justify-between items-center border border-border/40 p-3 bg-bento-bg/30 text-[9px] leading-relaxed rounded-[6px]">
                   <div className="space-y-1 select-text min-w-0 flex-1 pr-2">
-                    <div className="font-bold text-foreground break-all">{b.machine_id_hash}</div>
+                    <div className="font-bold text-foreground break-all">{b.machine_id}</div>
                     <div className="text-muted-foreground text-[8px]">Reason: {b.reason}</div>
                   </div>
                   <button
-                    onClick={() => removeBlacklist(b.machine_id_hash)}
+                    onClick={() => removeBlacklist(b.machine_id)}
                     className="text-muted-foreground hover:text-foreground p-2 transition-colors cursor-pointer border border-border/40 bg-bento-card rounded-[6px] shrink-0"
                   >
                     <Trash className="size-3" />

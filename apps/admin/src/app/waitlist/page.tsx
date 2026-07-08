@@ -43,28 +43,30 @@ export default function WaitlistManager() {
     }
 
     const activation_code = action === "approved" ? codeForApproval(current) : null;
-    const { error } = await supabase
-      .from("waiting_list")
-      .update({ status: action, activation_code })
-      .eq("id", id);
 
-    if (!error) {
-      await supabase
-        .from("profiles")
-        .update({
-          activation_code,
-          is_approved: action === "approved",
-          waitlist_status: action,
-        })
-        .eq("email", current.email);
-    }
+    try {
+      const { error } = await supabase.functions.invoke('admin-mutations', {
+        body: {
+          action: 'handle_waitlist_decision',
+          waitlist_id: id,
+          email: current.email,
+          decision: action,
+          activation_code
+        }
+      })
 
-    if (!error) {
-      setEntries((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, status: action, activation_code } : e))
-      );
+      if (!error) {
+        setEntries((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, status: action, activation_code } : e))
+        );
+      } else {
+        console.error('[Waitlist] Failed to update status:', error)
+      }
+    } catch (e) {
+      console.error('[Waitlist] Error invoking edge function:', e)
+    } finally {
+      setUpdatingId(null);
     }
-    setUpdatingId(null);
   }
 
   const fetchEntries = async () => {
