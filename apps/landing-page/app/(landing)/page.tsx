@@ -65,7 +65,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
-                  Ater builds a private, connected study vault on your computer. All your files stay safe and local on your machine—never sent to the cloud.
+                  Ater builds a private, connected study vault on your computer. All your files stay safe and local on your machine, while generation and reasoning steps utilize secure external LLM connections.
                 </p>
                 <div className="space-y-3 text-[11px] leading-relaxed text-on-surface-variant">
                   <div><strong>Scan</strong>: Drop your books and slides into your folder.</div>
@@ -155,7 +155,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-12 items-center">
               <div className="flex flex-col gap-6">
                 <p className="text-body leading-relaxed text-on-surface-variant">
-                  Your files stay strictly on your computer. Ater runs fully local markdown files that are completely compatible with Obsidian, keeping your notes portable and 100% private.
+                  Your files stay strictly on your computer. Ater runs fully local markdown files that are completely compatible with Obsidian, keeping your notes portable and your storage private.
                 </p>
                 <div className="space-y-3 text-[11px] leading-relaxed text-on-surface-variant">
                   <div><strong>Data Ownership</strong>: 100% standard markdown file structure.</div>

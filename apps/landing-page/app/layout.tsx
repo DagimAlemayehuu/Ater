@@ -14,13 +14,13 @@ export const metadata: Metadata = {
   description: 'A smarter way to study. Learn faster, score better.',
   openGraph: {
     title: 'Ater',
-    description: 'A local-first study engine for structured notes, retrieval, and review.',
+    description: 'A privacy-first study engine for structured notes, local retrieval, and hybrid AI review.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Ater',
-    description: 'A local-first study engine for structured notes, retrieval, and review.',
+    description: 'A privacy-first study engine for structured notes, local retrieval, and hybrid AI review.',
   },
 };
 
