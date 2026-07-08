@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Check, Trash2, Search } from 'lucide-react'
-import { parseISO, startOfDay } from 'date-fns'
+import { format, parseISO, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { stripWL, getVal, getDaysUntil, isOverdue, wrapWL, priorityColorClass } from './utils'
+import { stripWL, getVal, getDaysUntil, isOverdue, wrapWL, priorityColorClass, cleanTitle } from './utils'
 import { EmptyState, BigPropertyCard, EditableTitle, CreateBanner, CountdownBadge } from './SharedComponents'
 import type { TabProps } from './types'
 

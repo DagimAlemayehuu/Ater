@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Check, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, Search, X, Edit2 } from 'lucide-react'
+import { Check, Trash2, Plus, ChevronLeft, ChevronRight, Calendar, Search, X, Edit2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { differenceInDays, startOfDay, addDays, isSameDay, startOfWeek, format } from 'date-fns'
