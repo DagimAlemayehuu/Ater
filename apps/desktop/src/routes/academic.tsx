@@ -140,7 +140,7 @@ export default function AcademicDashboard() {
 
   try {
   if (properties.title && properties.title !== itemId) {
-  await sidecarApi.renameVaultFile(dbId, itemId, properties.title)
+  await sidecarApi.renameVaultFile(dbId, itemId, properties.title as string)
 } else {
   await sidecarApi.updateVaultRow(dbId, itemId, properties)
 }
