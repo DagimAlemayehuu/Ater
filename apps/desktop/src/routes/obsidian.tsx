@@ -1,21 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {useState, useRef, useEffect, useMemo, useCallback, useTransition} from 'react'
+import {useState, useRef, useEffect, useMemo, useCallback} from 'react'
 import {
- Trash2, ShieldCheck, RefreshCw,
- Sparkles, Paperclip, FileText, Folder, ChevronRight,
-  X, Zap,
- Database, Search, Archive,
- ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
-  Plus, ArrowLeft, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
-  Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
-  Activity, Play, SkipForward, MapPin
+ Trash2, RefreshCw,
+ FileText, Folder, ChevronRight,
+  X,
+ Search, Archive,
+ Maximize2, Minimize2, Info,
+  Plus, ArrowLeft, ChevronLeft, GraduationCap, Calendar, Network,
+  Edit3, Save, FolderPlus, Hash, MapPin
 } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useConfig } from '@/lib/ConfigContext'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { PanelLoader } from '@/components/ui/loading-state'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
@@ -29,9 +27,9 @@ import { useLayout } from '@/context/layout-provider'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
 import { useSidebarContent } from '@/context/sidebar-content-context'
-import React, { lazy, Suspense } from 'react'
+import React from 'react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
-import { updateProperty, deleteProperty, toggleChecklistLink, parseFrontmatter } from '@/lib/markdownHelper'
+import { updateProperty, deleteProperty, toggleChecklistLink } from '@/lib/markdownHelper'
 import { useArtifactStore } from '@/lib/artifacts/store'
 import { extractArtifacts } from '@/lib/artifacts/parser'
 import { UnifiedSandboxViewer } from '@/components/obsidian/UnifiedSandboxViewer'
@@ -213,7 +211,7 @@ const FileTreeItem = React.memo(({
             <Edit3 size={10} />
           </button>
           <button
-            onClick={(e) => onDelete(node.path, node.isFolder)}
+            onClick={() => onDelete(node.path, node.isFolder)}
             className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-[8px] "
             title="Delete"
           >
@@ -267,6 +265,15 @@ function normalizeFile(f: any) {
   };
 }
 
+const normalizeVaultPath = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
+
+const academicHubPathFromNote = (notePath: string, hubName: string): string => {
+  const normalized = String(notePath || '').replace(/\\/g, '/')
+  const match = normalized.match(/^Notes\/academic\/([^/]+)\/([^/]+)\/([^/]+)\//i)
+  if (!match || !hubName) return ''
+  return `database/study planner/${match[1]}/${match[2]}/${match[3]}/${hubName.replace(/\.md$/i, '')}.md`
+}
+
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
   const navigate = useNavigate()
@@ -279,8 +286,7 @@ export default function ObsidianVaultPage() {
     }
   }, [])
   const {
-    setCurrentHub, setIsActive, setShowOverlay,
-    setTimeLeft, setShowStats, mode, addNoteFocus, currentHub
+    addNoteFocus, currentHub
   } = usePomodoroStore()
   const location = useLocation()
 
@@ -299,10 +305,8 @@ export default function ObsidianVaultPage() {
   const [loadingHubs, setLoadingHubs] = useState(false)
  // --- Vault Explorer State ---
  const [files, setFiles] = useState<ObsidianFile[]>([])
- const [loadingFiles, setLoadingFiles] = useState(false)
  const [selectedPath, setSelectedPath] = useState<string | null>(null)
  const [loadedPath, setLoadedPath] = useState<string | null>(null)
- const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
  const selectRequestId = useRef(0)
  const [selectedPage, setSelectedPage] = useState(1)
  const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
@@ -315,7 +319,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     if (isGraph !== showGraphView) {
       setShowGraphView(isGraph);
     }
-  }, [searchParams]);
+  }, [searchParams, showGraphView]);
 
   useEffect(() => {
     const isGraph = searchParams.get('graph') === '1' || showGraphView;
@@ -323,14 +327,12 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     if (!hasPath && !isGraph && isMountedRef.current) {
       navigate('/academic');
     }
-  }, [selectedPath, searchParams, showGraphView, navigate]);
+  }, [selectedPath, searchParams, showGraphView, navigate, isMountedRef]);
 
   const {
     artifacts,
     isPanelOpen,
-    panelWidth,
-    setPanelOpen,
-    resetArtifacts
+    panelWidth
   } = useArtifactStore()
   const [isDraggingSplit, setIsDraggingSplit] = useState(false)
 
@@ -691,10 +693,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
        setCenterContent(null)
        setRightContent(null)
      }
-  }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, setIsFullscreen])
+  }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, setIsFullscreen, currentWaypointIndex, handleSaveNote, selectFile, waypoints])
 
  // --- Sync & Topology Cache ---
- const currentHubPath = useRef<string | null>(null);
 
 
  // --- File Operations State ---
@@ -704,13 +705,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
 
   // --- Sidebar Resize State ---
-  const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isResizing, setIsResizing] = useState(false)
-
-  const startResizing = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizing(true)
-  }
 
   // --- Navigation Listener ---
   useEffect(() => {
@@ -718,7 +713,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
     if (entry && entry.type === 'file' && entry.path !== selectedPath) {
       selectFile(entry.path, entry.metadata?.page || 1, true, entry.metadata?.filterPages || []);
     }
-  }, [currentIndex]);
+  }, [currentIndex, history, selectFile, selectedPath]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -742,17 +737,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   }, [isResizing])
 
 
- const handleSRSRating = async (rating: number) => {
-   if (!selectedPath) return;
-   try {
-     await sidecarApi.srsReview(selectedPath, rating);
-     toast.success("SRS progress saved!");
-   } catch (e: any) {
-     toast.error("Failed to save SRS review: " + e.message);
-   }
- };
-
- const handleSaveNote = async () => {
+ const handleSaveNote = useCallback(async () => {
  if (!selectedPath) return
  setLoadingNote(true)
  try {
@@ -764,29 +749,14 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } finally {
  setLoadingNote(false)
 }
-}
+}, [selectedPath, editedContent])
  const [loadingNote, setLoadingNote] = useState(false)
  const [searchQuery, setSearchQuery] = useState('')
- const [inputValue, setInputValue] = useState('')
- const [isPending, startTransition] = useTransition()
  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
  // --- Ater Agent State ---
- const [queueStatus, setQueueStatus] = useState<any>(null)
  const [inboxFiles, setInboxFiles] = useState<InboxFile[]>([])
- const [loadingInbox, setLoadingInbox] = useState(false)
- const [selectedInboxFile, setSelectedInboxFile] = useState<InboxFile | null>(null)
- const [processing, setProcessing] = useState(false)
- const [activePlan, setActivePlan] = useState<string | null>(null)
- const [planData, setPlanData] = useState<any | null>(null)
- const [sessionId, setSessionId] = useState<string | null>(null)
  const [lockedNotes, setLockedNotes] = useState<Set<string>>(new Set())
- const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
- const [currentBatch, setCurrentBatch] = useState<number>(0)
- const [totalBatches, setTotalBatches] = useState<number>(0)
- const [isCompleted, setIsCompleted] = useState(false)
- const [batchFeed, setBatchFeed] = useState<any[]>([])
- const [aterError, setAterError] = useState<string | null>(null)
  const [hubConnections, setHubConnections] = useState<string | null>(null)
  const studyTree = useMemo(() => parseHubTree(hubConnections || ''), [hubConnections])
 
@@ -894,8 +864,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const updateFrontmatterProperty = async (
   path: string,
   key: string,
-  value: string | boolean | number,
-  currentMetadata?: Record<string, any>
+  value: string | boolean | number
   ): Promise<void> => {
   const noteData = await sidecarApi.readObsidianNote(path);
   const content: string = noteData.content ?? '';
@@ -1144,51 +1113,40 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
         }
       }
     }
-  }, [location.search, location.pathname, selectedPath, selectedPage, noteMetadata, noteContent, editedContent, searchQuery])
+  }, [location.search, location.pathname, selectedPath, selectedPage, noteMetadata, noteContent, editedContent, searchQuery, selectFile, setIsFullscreen])
 
  useEffect(() => {
  fetchFiles()
- fetchStatus()
  fetchInbox()
 
  // Polling for realtime sync
  const interval = setInterval(() => {
  fetchFiles()
- fetchStatus()
 }, 15000)
 
  return () => clearInterval(interval)
-}, [config?.obsidianVaultPath])
+}, [config?.obsidianVaultPath, fetchFiles, fetchInbox])
 
  // --- Actions ---
  const fetchFiles = useCallback(async () => {
- setLoadingFiles(true)
  try {
  const res = await sidecarApi.listObsidianFiles()
  setFiles((res.files || []).map(normalizeFile))
 } catch (err) {
  console.error('Failed to fetch obsidian files:', err)
-} finally {
- setLoadingFiles(false)
 }
 }, [])
 
- const fetchStatus = async () => {
- try {
- const res = await sidecarApi.aterQueueStatus()
- setQueueStatus(res)
-} catch (err) {console.error(err)}
-}
-
- const fetchInbox = async () => {
- setLoadingInbox(true)
+ const fetchInbox = useCallback(async () => {
  try {
  const res = await sidecarApi.aterListInbox()
  setInboxFiles(res.files || [])
-} finally {setLoadingInbox(false)}
+} catch (err) {
+  console.error('Failed to fetch inbox files:', err)
 }
+}, [])
 
- const handleDeleteItem = useCallback(async (path: string, isFolder: boolean) => {
+ const handleDeleteItem = useCallback(async (path: string) => {
     // 1. Lock Protection
     try {
       const isLocked = await checkLockState(path)
@@ -1220,7 +1178,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
  toast.error(`Delete failed: ${err.message}`)
 }
-}, [fetchFiles, selectedPath, lockedNotes])
+}, [fetchFiles, selectedPath, checkLockState])
 
  const handleCreateItem = useCallback(async () => {
  if (!newItemName) {
@@ -1263,7 +1221,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
  toast.error(`Creation failed: ${err.message}`)
 }
-}, [creatingInPath, creatingType, newItemName, fetchFiles])
+}, [creatingInPath, creatingType, newItemName, fetchFiles, checkLockState, selectFile])
 
  const handleRenameItem = useCallback(async () => {
  if (!renamingPath || !newItemName) {
@@ -1305,16 +1263,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 } catch (err: any) {
   toast.error(`Rename failed: ${err.message}`)
  }
-}, [renamingPath, newItemName, fetchFiles, selectedPath])
-
-const normalizeVaultPath = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
-
-const academicHubPathFromNote = (notePath: string, hubName: string): string => {
-  const normalized = String(notePath || '').replace(/\\/g, '/')
-  const match = normalized.match(/^Notes\/academic\/([^/]+)\/([^/]+)\/([^/]+)\//i)
-  if (!match || !hubName) return ''
-  return `database/study planner/${match[1]}/${match[2]}/${match[3]}/${hubName.replace(/\.md$/i, '')}.md`
-}
+}, [renamingPath, newItemName, fetchFiles, selectedPath, checkLockState])
 
 const [activeTutorSession, setActiveTutorSession] = useState<any | null>(null)
 
@@ -1357,7 +1306,7 @@ useEffect(() => {
   }
 }, [selectedPath, isLessonNote]);
 
-const checkLockState = async (path: string): Promise<boolean> => {
+const checkLockState = useCallback(async (path: string): Promise<boolean> => {
   const targetPath = normalizeVaultPath(path)
   if (lockedNotes.has(targetPath)) return true
 
@@ -1384,7 +1333,7 @@ const checkLockState = async (path: string): Promise<boolean> => {
     console.error('Error verifying lock status:', err)
     return false
   }
-}
+}, [lockedNotes])
 
 const selectFile = useCallback(async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
     // Lock validation
@@ -1571,7 +1520,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
         setLoadingNote(false)
       }
     }
-  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push, lockedNotes])
+  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push, checkLockState])
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
     let cleanPageName = pageName;
@@ -1867,131 +1816,6 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
  setExpandedFolders(newExpanded)
 }, [expandedFolders])
 
- const toggleAutoDeploy = async () => {
- await saveConfig({autoDeploy: !config?.autoDeploy})
- await sidecarApi.aterWatcherToggle()
- fetchStatus()
-}
-
- const resetAterSession = () => {
- setSessionId(null)
- setIsAwaitingConfirmation(false)
- setIsCompleted(false)
- setActivePlan(null)
- setPlanData(null)
- setBatchFeed([])
- setSelectedInboxFile(null)
- setAterError(null)
- fetchInbox()
-}
-
- const processSelectedFile = async () => {
- if (!selectedInboxFile) return
- setProcessing(true)
- setAterError(null)
- setActivePlan(null)
- setBatchFeed([])
- setIsCompleted(false)
- setIsAwaitingConfirmation(false)
-
- try {
- const res = await sidecarApi.aterProcess({file_path: selectedInboxFile.path})
- setActivePlan(res.plan_raw)
- setPlanData(res.plan_structured)
- setSessionId(res.session_id)
- setTotalBatches(res.plan_structured?.batches?.length || 1)
- setCurrentBatch(0)
-
- // Auto Deploy Circuit
- if (config?.autoDeploy) {
- // Proceed immediately without manual confirmation
- setTimeout(() => confirmDeployment(res.session_id), 800);
-} else {
- setIsAwaitingConfirmation(true)
-}
-} catch (err: any) {
- setAterError(err.message || 'Workflow failed')
-} finally {setProcessing(false)}
-}
-
- const confirmDeployment = async (forcedId?: string) => {
- const targetId = forcedId || sessionId
- if (!targetId) return
-
- setProcessing(true)
- setIsAwaitingConfirmation(false) // Hide button if manual
-
- try {
- let currentHasMore = true
- let tempBatch = 0
- while (currentHasMore) {
- const res = await sidecarApi.aterConfirm({session_id: targetId})
-
- if (res.status === 'error') {
- throw new Error((res as any).message || (res as any).detail || "Backend generation failed.");
-}
-
- tempBatch = res.current_batch || (tempBatch + 1)
- setCurrentBatch(tempBatch)
- setBatchFeed(prev => [...prev, {batch: tempBatch, results: res.results}])
- currentHasMore = res.has_more
- if (currentHasMore) await new Promise(r => setTimeout(r, 2000))
-}
- setIsCompleted(true)
- fetchFiles() // Refresh explorer
-} catch (err: any) {
- setAterError(err.message)
-} finally {
- setProcessing(false)
-}
-}
-
-  const handleRegenerateNote = async (path: string | null) => {
-    if (!path) return
-    setProcessing(true)
-    setAterError(null)
-    setActivePlan(null)
-    setBatchFeed([])
-    setIsCompleted(false)
-    setIsAwaitingConfirmation(false)
-
-    try {
-      const res = await sidecarApi.aterProcess({file_path: path})
-      setActivePlan(res.plan_raw)
-      setPlanData(res.plan_structured)
-      setSessionId(res.session_id)
-      setTotalBatches(res.plan_structured?.batches?.length || 1)
-      setCurrentBatch(0)
-
-      if (config?.autoDeploy) {
-        setTimeout(() => confirmDeployment(res.session_id), 800)
-      } else {
-        setIsAwaitingConfirmation(true)
-      }
-      toast.success("Regeneration started")
-    } catch (err: any) {
-      setAterError(err.message || 'Regeneration failed')
-      toast.error("Regeneration failed")
-    } finally {
-      setProcessing(false)
-    }
-  }
-
-  const handleHealNote = async (path: string | null) => {
-    if (!path) return
-    setProcessing(true)
-    try {
-      toast.info("Healing note logic triggered...")
-      console.log("Heal requested for:", path)
-      await new Promise(r => setTimeout(r, 1000))
-      toast.success("Note healing complete")
-    } catch (err: any) {
-      toast.error("Healing failed")
-    } finally {
-      setProcessing(false)
-    }
-  }
-
  // --- Tree Construction ---
  const fileTree = useMemo(() => {
  const root: FileNode[] = []
@@ -2038,7 +1862,6 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
  return root
 }, [files])
 
-  const [isNoteMetadataExpanded, setIsNoteMetadataExpanded] = useState(false)
   const [contentMatchPaths, setContentMatchPaths] = useState<Set<string>>(new Set())
 
   const matchesSearch = useCallback((node: FileNode, queryLower: string): boolean => {
@@ -2060,7 +1883,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       try {
         const res = await sidecarApi.searchVaultFull(searchQuery)
         setContentMatchPaths(new Set(res.paths))
-      } catch (e) { console.error("Search failed", e) }
+      } catch (err) { console.error("Search failed", err) }
     }, 500)
     return () => clearTimeout(timer)
   }, [searchQuery])
@@ -2148,7 +1971,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   } finally {
    setDraggedPath(null)
   }
- }, [draggedPath, files, fetchFiles])
+ }, [draggedPath, files, fetchFiles, checkLockState])
 
  const renderTree = useCallback((nodes: FileNode[], level = 0) => {
   const result = nodes.map(node => (
