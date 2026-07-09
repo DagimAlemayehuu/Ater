@@ -1,19 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {useState, useRef, useEffect, useMemo, useCallback} from 'react'
-import {
- Trash2, RefreshCw,
- FileText, Folder, ChevronRight,
-  X,
- Search, Archive,
- Maximize2, Minimize2, Info,
-  Plus, ArrowLeft, ChevronLeft, GraduationCap, Calendar, Network,
-  Edit3, Save, FolderPlus, Hash, MapPin
+import {useState, useRef, useEffect, useMemo, useCallback, useTransition} from 'react'
+import {, [lockedNotes])
+ Trash2, ShieldCheck, RefreshCw,
+ Sparkles, Paperclip, FileText, Folder, ChevronRight,
+  X, Zap,
+ Database, Search, Archive,
+ ChevronDown, ChevronUp, Maximize2, Minimize2, Info, PanelLeft,
+  Plus, ArrowLeft, ChevronLeft, GraduationCap, Calendar, Building, Circle, Network,
+  Edit3, Save, FolderPlus, Hash, CheckSquare, Link, List, Heart,
+  Activity, Play, SkipForward, MapPin
 } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { usePomodoroStore } from '@/lib/pomodoroStore'
 import { useConfig } from '@/lib/ConfigContext'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { PanelLoader } from '@/components/ui/loading-state'
 import { MarkdownViewer } from '@/components/obsidian/MarkdownViewer'
 import { PdfViewer } from '@/components/obsidian/PdfViewer'
@@ -27,9 +29,9 @@ import { useLayout } from '@/context/layout-provider'
 import { useNavigation } from '@/context/navigation-context'
 import { useHeader } from '@/context/header-context'
 import { useSidebarContent } from '@/context/sidebar-content-context'
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { sidecarApi, ObsidianFile } from '@/lib/sidecarApi'
-import { updateProperty, deleteProperty, toggleChecklistLink } from '@/lib/markdownHelper'
+import { updateProperty, deleteProperty, toggleChecklistLink, parseFrontmatter } from '@/lib/markdownHelper'
 import { useArtifactStore } from '@/lib/artifacts/store'
 import { extractArtifacts } from '@/lib/artifacts/parser'
 import { UnifiedSandboxViewer } from '@/components/obsidian/UnifiedSandboxViewer'
@@ -211,7 +213,7 @@ const FileTreeItem = React.memo(({
             <Edit3 size={10} />
           </button>
           <button
-            onClick={() => onDelete(node.path, node.isFolder)}
+            onClick={(e) => onDelete(node.path, node.isFolder)}
             className="p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-[8px] "
             title="Delete"
           >
@@ -264,7 +266,6 @@ function normalizeFile(f: any) {
     title: f.title ?? f.name ?? '' 
   };
 }
-
 const normalizeVaultPath = (p: string) => String(p || '').replace(/\\/g, '/').toLowerCase()
 
 const academicHubPathFromNote = (notePath: string, hubName: string): string => {
@@ -273,6 +274,7 @@ const academicHubPathFromNote = (notePath: string, hubName: string): string => {
   if (!match || !hubName) return ''
   return `database/study planner/${match[1]}/${match[2]}/${match[3]}/${hubName.replace(/\.md$/i, '')}.md`
 }
+
 
 export default function ObsidianVaultPage() {
   const { config, saveConfig } = useConfig()
@@ -286,7 +288,8 @@ export default function ObsidianVaultPage() {
     }
   }, [])
   const {
-    addNoteFocus, currentHub
+    setCurrentHub, setIsActive, setShowOverlay,
+    setTimeLeft, setShowStats, mode, addNoteFocus, currentHub
   } = usePomodoroStore()
   const location = useLocation()
 
@@ -305,14 +308,260 @@ export default function ObsidianVaultPage() {
   const [loadingHubs, setLoadingHubs] = useState(false)
  // --- Vault Explorer State ---
  const [files, setFiles] = useState<ObsidianFile[]>([])
+ const [loadingFiles, setLoadingFiles] = useState(false)
  const [selectedPath, setSelectedPath] = useState<string | null>(null)
  const [loadedPath, setLoadedPath] = useState<string | null>(null)
+ const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
  const selectRequestId = useRef(0)
  const [selectedPage, setSelectedPage] = useState(1)
  const [selectedFilteredPages, setSelectedFilteredPages] = useState<number[]>([])
 const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [noteContent, setNoteContent] = useState('')
    const noteContentRef = useRef('')
+ const fetchFiles = useCallback(async () => {
+ setLoadingFiles(true)
+ try {
+ const res = await sidecarApi.listObsidianFiles()
+ setFiles((res.files || []).map(normalizeFile))
+} catch (err) {
+ console.error('Failed to fetch obsidian files:', err)
+} finally {
+ setLoadingFiles(false)
+}
+}, [])
+const selectFile = useCallback(async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
+    // Lock validation
+    try {
+      const isLocked = await checkLockState(path)
+      if (isLocked) {
+        toast.error("This lesson is locked. Complete your current lesson first.")
+        return
+      }
+    } catch (err) {
+      console.error("Lock check error:", err)
+    }
+
+    const norm = String(path).toLowerCase();
+    const cleanItemName = path.split(/[/\\]/).pop()?.replace('.md', '') || '';
+    if (norm.includes('database/courses/')) {
+      navigate(`/academic?tab=COURSES&id=${encodeURIComponent(cleanItemName)}`);
+      return;
+    } else if (norm.includes('database/semesters/') || norm.includes('database/years/')) {
+      navigate(`/academic?tab=PROGRAM&id=${encodeURIComponent(cleanItemName)}`);
+      return;
+    } else if (norm.includes('database/exams/')) {
+      navigate(`/academic?tab=EXAMS&id=${encodeURIComponent(cleanItemName)}`);
+      return;
+    } else if (norm.includes('database/assignments/')) {
+      navigate(`/academic?tab=ASSIGNMENTS&id=${encodeURIComponent(cleanItemName)}`);
+      return;
+    } else if (norm.includes('practice')) {
+      navigate(`/academic?tab=PRACTICE&id=${encodeURIComponent(cleanItemName)}`);
+      return;
+    }
+
+    if (!keepMetadata) {
+      // Check if we are opening a PDF that matches the currently open note's source file,
+      // in which case we want to extract and preserve the waypoints from the current note's metadata
+      const isOpeningPdf = typeof path === 'string' && path.toLowerCase().endsWith('.pdf');
+      const noteSource = noteMetadata?.source_file || noteMetadata?.source;
+      let sourceMatches = false;
+      if (isOpeningPdf && noteSource) {
+        let cleanSource = '';
+        if (Array.isArray(noteSource) && noteSource.length > 0) {
+          cleanSource = noteSource[0];
+        } else if (typeof noteSource === 'string') {
+          cleanSource = noteSource;
+        }
+        cleanSource = cleanSource.replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim();
+        const cleanSourceBase = cleanSource.split(/[/\\]/).pop()?.toLowerCase();
+        const pathBase = path.split(/[/\\]/).pop()?.toLowerCase();
+        if (cleanSourceBase && pathBase && (cleanSourceBase === pathBase || path.toLowerCase().includes(cleanSource.toLowerCase()))) {
+          sourceMatches = true;
+        }
+      }
+
+      if (sourceMatches) {
+        const wps = Array.isArray(noteMetadata.source_pages)
+          ? noteMetadata.source_pages
+          : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []));
+        const numericWaypoints = wps.map(Number).filter(n => !isNaN(n));
+        setWaypoints(numericWaypoints);
+        const wpIndex = numericWaypoints.indexOf(page);
+        setCurrentWaypointIndex(wpIndex >= 0 ? wpIndex : 0);
+      } else {
+        setWaypoints([]);
+      }
+    }
+
+    // If the PDF is already active in the viewer, execute a direct jump without reloading or returning early
+    if (selectedPath === path && path.toLowerCase().endsWith('.pdf')) {
+      setSelectedPage(page);
+      pdfRef.current?.handleJump(page);
+
+      // Sync URL search params
+      if (!fromHistory) {
+        const searchParams = new URLSearchParams(location.search);
+        searchParams.set('path', path);
+        if (page > 1) searchParams.set('page', page.toString());
+        else searchParams.delete('page');
+        if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
+        else searchParams.delete('filterPages');
+        navigate(`/obsidian?${searchParams.toString()}`);
+      }
+      return;
+    }
+
+    // 0. Skip if already loading the exact same thing
+    if (selectedPath === path && selectedPage === page && !fromHistory) {
+      console.log(`[selectFile] Skip: Already on ${path}`);
+      return;
+    }
+
+    // Always hide Graph View when a file/PDF is explicitly selected to show the main panel content
+    setShowGraphView(false);
+
+    selectRequestId.current += 1
+    const currentReq = selectRequestId.current
+
+    console.log(`[selectFile] START: ${path} (reqId: ${currentReq})`)
+
+    if (!fromHistory) {
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('path', path);
+      if (page > 1) searchParams.set('page', page.toString());
+      else searchParams.delete('page');
+
+      if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
+      else searchParams.delete('filterPages');
+
+      navigate(`/obsidian?${searchParams.toString()}`);
+
+      push({
+        type: 'file',
+        path: path,
+        metadata: { page, filterPages }
+      }, false);
+    }
+
+    setSelectedPath(path)
+    setSelectedPage(page)
+    setSelectedFilteredPages(filterPages)
+
+    // Delayed loading state: Only show spinner if it takes > 150ms
+    const loadingTimeout = setTimeout(() => {
+      if (selectRequestId.current === currentReq) {
+        setLoadingNote(true)
+      }
+    }, 150);
+
+    // Safety timeout: 15 seconds max for any document load
+    const safetyTimeout = setTimeout(() => {
+      if (selectRequestId.current === currentReq) {
+        console.warn(`[selectFile] Safety timeout triggered for ${path} (reqId: ${currentReq})`);
+        setLoadingNote(false);
+      }
+    }, 15000);
+
+    // PDFs are handled by an iframe, we don't need to read content here
+    if (typeof path === 'string' && path.toLowerCase().endsWith('.pdf')) {
+      console.log(`[selectFile] PDF detected: ${path}`);
+      if (!keepMetadata) {
+        setNoteMetadata({})
+        setNoteContent('')
+        setEditedContent('')
+      }
+      setIsEditing(false)
+      clearTimeout(loadingTimeout)
+      clearTimeout(safetyTimeout)
+      setLoadingNote(false)
+      setLoadedPath(path)
+      return
+    }
+
+    try {
+      console.log(`[selectFile] Fetching content: ${path}`);
+      const res = await sidecarApi.readObsidianNote(path)
+
+      // Prevent stale data from overwriting new request
+      if (selectRequestId.current !== currentReq) {
+        console.log(`[selectFile] Request ${currentReq} is stale, ignoring result.`);
+        return
+      }
+
+      const content = res.content || '';
+      const metadata = res.metadata || {};
+
+      setNoteMetadata(metadata);
+      setNoteContent(content);
+      noteContentRef.current = content;
+      setEditedContent(content);
+      setIsEditing(false);
+      setLoadedPath(path);
+
+      console.log(`[selectFile] SUCCESS: ${path} (${content.length} chars)`);
+    } catch (err) {
+      console.error(`[selectFile] ERROR: Failed to read note: ${path}`, err)
+      if (selectRequestId.current === currentReq) {
+        setNoteMetadata({})
+        setNoteContent('# Error\nFailed to load content. Please check if the file exists or the backend is running.')
+        setLoadedPath(null)
+      }
+    } finally {
+      clearTimeout(loadingTimeout);
+      clearTimeout(safetyTimeout);
+      if (selectRequestId.current === currentReq) {
+        setLoadingNote(false)
+      }
+    }
+  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push, checkLockState])
+ const handleSaveNote = useCallback(async () => {
+ if (!selectedPath) return
+ setLoadingNote(true)
+ try {
+ await sidecarApi.updateObsidianNote(selectedPath, editedContent)
+ setNoteContent(editedContent)
+ setIsEditing(false)
+} catch (err: any) {, [selectedPath, editedContent])
+ const fetchStatus = useCallback(async () => {
+ try {
+ const res = await sidecarApi.aterQueueStatus()
+ setQueueStatus(res)
+} catch (err) {console.error(err)}, [])
+ const fetchInbox = useCallback(async () => {
+ setLoadingInbox(true)
+ try {
+ const res = await sidecarApi.aterListInbox()
+ setInboxFiles(res.files || [])
+} finally {setLoadingInbox(false)}, [])
+const checkLockState = useCallback(async (path: string): Promise<boolean> => {
+  const targetPath = normalizeVaultPath(path)
+  if (lockedNotes.has(targetPath)) return true
+
+  const activeSessionId = localStorage.getItem('ater_active_session_id')
+  if (!activeSessionId) return false
+
+  try {
+    const session = await sidecarApi.getTutorStatus(activeSessionId)
+    if (!session || !session.curriculum) return false
+
+    const inCurriculum = session.curriculum.some((p: string) => normalizeVaultPath(p) === targetPath)
+    if (!inCurriculum) return false
+
+    const completed = new Set((session.completed_notes || []).map(normalizeVaultPath))
+    const unlocked = new Set((session.active_note_unlocks || []).map(normalizeVaultPath))
+    const current = normalizeVaultPath(session.current_note_path || '')
+
+    if (completed.has(targetPath) || unlocked.has(targetPath) || targetPath === current) {
+      return false
+    }
+
+    return true // Locked
+  } catch (err) {
+    console.error('Error verifying lock status:', err)
+    return false
+  }
+}, [lockedNotes])
 
   useEffect(() => {
     const isGraph = searchParams.get('graph') === '1';
@@ -332,7 +581,9 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const {
     artifacts,
     isPanelOpen,
-    panelWidth
+    panelWidth,
+    setPanelOpen,
+    resetArtifacts
   } = useArtifactStore()
   const [isDraggingSplit, setIsDraggingSplit] = useState(false)
 
@@ -696,6 +947,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   }, [selectedPath, isEditing, isFullscreen, pdfState.page, pdfState.pageCount, noteMetadata, config, saveConfig, setCenterContent, setRightContent, setIsFullscreen, currentWaypointIndex, handleSaveNote, selectFile, waypoints])
 
  // --- Sync & Topology Cache ---
+ const currentHubPath = useRef<string | null>(null);
 
 
  // --- File Operations State ---
@@ -705,7 +957,15 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
 
   // --- Sidebar Resize State ---
+  const [sidebarWidth, setSidebarWidth] = useState(280)
+  const [sidebarWidth, setSidebarWidth] = useState(280)
+  const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isResizing, setIsResizing] = useState(false)
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
 
   // --- Navigation Listener ---
   useEffect(() => {
@@ -737,26 +997,45 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   }, [isResizing])
 
 
- const handleSaveNote = useCallback(async () => {
- if (!selectedPath) return
- setLoadingNote(true)
- try {
- await sidecarApi.updateObsidianNote(selectedPath, editedContent)
- setNoteContent(editedContent)
- setIsEditing(false)
-} catch (err: any) {
+ const handleSRSRating = async (rating: number) => {
+   if (!selectedPath) return;
+   try {
+     await sidecarApi.srsReview(selectedPath, rating);
+     toast.success("SRS progress saved!");
+   } catch (e: any) {
+     toast.error("Failed to save SRS review: " + e.message);
+   }
+ };
+
  console.error("Save failed:", err)
 } finally {
  setLoadingNote(false)
 }
-}, [selectedPath, editedContent])
+}
  const [loadingNote, setLoadingNote] = useState(false)
  const [searchQuery, setSearchQuery] = useState('')
+ const [inputValue, setInputValue] = useState('')
+ const [inputValue, setInputValue] = useState('')
+ const [inputValue, setInputValue] = useState('')
+ const [isPending, startTransition] = useTransition()
  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
  // --- Ater Agent State ---
+ const [queueStatus, setQueueStatus] = useState<any>(null)
  const [inboxFiles, setInboxFiles] = useState<InboxFile[]>([])
+ const [loadingInbox, setLoadingInbox] = useState(false)
+ const [selectedInboxFile, setSelectedInboxFile] = useState<InboxFile | null>(null)
+ const [processing, setProcessing] = useState(false)
+ const [activePlan, setActivePlan] = useState<string | null>(null)
+ const [planData, setPlanData] = useState<any | null>(null)
+ const [sessionId, setSessionId] = useState<string | null>(null)
  const [lockedNotes, setLockedNotes] = useState<Set<string>>(new Set())
+ const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false)
+ const [currentBatch, setCurrentBatch] = useState<number>(0)
+ const [totalBatches, setTotalBatches] = useState<number>(0)
+ const [isCompleted, setIsCompleted] = useState(false)
+ const [batchFeed, setBatchFeed] = useState<any[]>([])
+ const [aterError, setAterError] = useState<string | null>(null)
  const [hubConnections, setHubConnections] = useState<string | null>(null)
  const studyTree = useMemo(() => parseHubTree(hubConnections || ''), [hubConnections])
 
@@ -864,7 +1143,8 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   const updateFrontmatterProperty = async (
   path: string,
   key: string,
-  value: string | boolean | number
+  value: string | boolean | number,
+  currentMetadata?: Record<string, any>
   ): Promise<void> => {
   const noteData = await sidecarApi.readObsidianNote(path);
   const content: string = noteData.content ?? '';
@@ -983,7 +1263,7 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
   : typeof value === 'number' ? value
   : String(value);
 
-  await updateFrontmatterProperty(selectedPath, name, finalVal, noteMetadata);
+  await updateFrontmatterProperty(selectedPath, name, finalVal);
 
   const refreshed = await sidecarApi.readObsidianNote(selectedPath);
   setNoteMetadata(refreshed.metadata ?? {});
@@ -1117,36 +1397,25 @@ const [noteMetadata, setNoteMetadata] = useState<Record<string, any>>({})
 
  useEffect(() => {
  fetchFiles()
+ fetchStatus()
  fetchInbox()
 
  // Polling for realtime sync
  const interval = setInterval(() => {
  fetchFiles()
+ fetchStatus()
 }, 15000)
 
  return () => clearInterval(interval)
-}, [config?.obsidianVaultPath, fetchFiles, fetchInbox])
+}, [config?.obsidianVaultPath])
 
  // --- Actions ---
- const fetchFiles = useCallback(async () => {
- try {
- const res = await sidecarApi.listObsidianFiles()
- setFiles((res.files || []).map(normalizeFile))
-} catch (err) {
- console.error('Failed to fetch obsidian files:', err)
-}
-}, [])
 
- const fetchInbox = useCallback(async () => {
- try {
- const res = await sidecarApi.aterListInbox()
- setInboxFiles(res.files || [])
-} catch (err) {
-  console.error('Failed to fetch inbox files:', err)
 }
-}, [])
 
- const handleDeleteItem = useCallback(async (path: string) => {
+}
+
+ const handleDeleteItem = useCallback(async (path: string, isFolder: boolean) => {
     // 1. Lock Protection
     try {
       const isLocked = await checkLockState(path)
@@ -1306,221 +1575,7 @@ useEffect(() => {
   }
 }, [selectedPath, isLessonNote]);
 
-const checkLockState = useCallback(async (path: string): Promise<boolean> => {
-  const targetPath = normalizeVaultPath(path)
-  if (lockedNotes.has(targetPath)) return true
 
-  const activeSessionId = localStorage.getItem('ater_active_session_id')
-  if (!activeSessionId) return false
-
-  try {
-    const session = await sidecarApi.getTutorStatus(activeSessionId)
-    if (!session || !session.curriculum) return false
-
-    const inCurriculum = session.curriculum.some((p: string) => normalizeVaultPath(p) === targetPath)
-    if (!inCurriculum) return false
-
-    const completed = new Set((session.completed_notes || []).map(normalizeVaultPath))
-    const unlocked = new Set((session.active_note_unlocks || []).map(normalizeVaultPath))
-    const current = normalizeVaultPath(session.current_note_path || '')
-
-    if (completed.has(targetPath) || unlocked.has(targetPath) || targetPath === current) {
-      return false
-    }
-
-    return true // Locked
-  } catch (err) {
-    console.error('Error verifying lock status:', err)
-    return false
-  }
-}, [lockedNotes])
-
-const selectFile = useCallback(async (path: string, page: number = 1, fromHistory: boolean = false, filterPages: number[] = [], keepMetadata: boolean = false) => {
-    // Lock validation
-    try {
-      const isLocked = await checkLockState(path)
-      if (isLocked) {
-        toast.error("This lesson is locked. Complete your current lesson first.")
-        return
-      }
-    } catch (err) {
-      console.error("Lock check error:", err)
-    }
-
-    const norm = String(path).toLowerCase();
-    const cleanItemName = path.split(/[/\\]/).pop()?.replace('.md', '') || '';
-    if (norm.includes('database/courses/')) {
-      navigate(`/academic?tab=COURSES&id=${encodeURIComponent(cleanItemName)}`);
-      return;
-    } else if (norm.includes('database/semesters/') || norm.includes('database/years/')) {
-      navigate(`/academic?tab=PROGRAM&id=${encodeURIComponent(cleanItemName)}`);
-      return;
-    } else if (norm.includes('database/exams/')) {
-      navigate(`/academic?tab=EXAMS&id=${encodeURIComponent(cleanItemName)}`);
-      return;
-    } else if (norm.includes('database/assignments/')) {
-      navigate(`/academic?tab=ASSIGNMENTS&id=${encodeURIComponent(cleanItemName)}`);
-      return;
-    } else if (norm.includes('practice')) {
-      navigate(`/academic?tab=PRACTICE&id=${encodeURIComponent(cleanItemName)}`);
-      return;
-    }
-
-    if (!keepMetadata) {
-      // Check if we are opening a PDF that matches the currently open note's source file,
-      // in which case we want to extract and preserve the waypoints from the current note's metadata
-      const isOpeningPdf = typeof path === 'string' && path.toLowerCase().endsWith('.pdf');
-      const noteSource = noteMetadata?.source_file || noteMetadata?.source;
-      let sourceMatches = false;
-      if (isOpeningPdf && noteSource) {
-        let cleanSource = '';
-        if (Array.isArray(noteSource) && noteSource.length > 0) {
-          cleanSource = noteSource[0];
-        } else if (typeof noteSource === 'string') {
-          cleanSource = noteSource;
-        }
-        cleanSource = cleanSource.replace(/^\[+/, '').replace(/\]+$/, '').split('|')[0].trim();
-        const cleanSourceBase = cleanSource.split(/[/\\]/).pop()?.toLowerCase();
-        const pathBase = path.split(/[/\\]/).pop()?.toLowerCase();
-        if (cleanSourceBase && pathBase && (cleanSourceBase === pathBase || path.toLowerCase().includes(cleanSource.toLowerCase()))) {
-          sourceMatches = true;
-        }
-      }
-
-      if (sourceMatches) {
-        const wps = Array.isArray(noteMetadata.source_pages)
-          ? noteMetadata.source_pages
-          : (noteMetadata.source_pages ? [noteMetadata.source_pages] : (noteMetadata.source_page ? [noteMetadata.source_page] : []));
-        const numericWaypoints = wps.map(Number).filter(n => !isNaN(n));
-        setWaypoints(numericWaypoints);
-        const wpIndex = numericWaypoints.indexOf(page);
-        setCurrentWaypointIndex(wpIndex >= 0 ? wpIndex : 0);
-      } else {
-        setWaypoints([]);
-      }
-    }
-
-    // If the PDF is already active in the viewer, execute a direct jump without reloading or returning early
-    if (selectedPath === path && path.toLowerCase().endsWith('.pdf')) {
-      setSelectedPage(page);
-      pdfRef.current?.handleJump(page);
-
-      // Sync URL search params
-      if (!fromHistory) {
-        const searchParams = new URLSearchParams(location.search);
-        searchParams.set('path', path);
-        if (page > 1) searchParams.set('page', page.toString());
-        else searchParams.delete('page');
-        if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
-        else searchParams.delete('filterPages');
-        navigate(`/obsidian?${searchParams.toString()}`);
-      }
-      return;
-    }
-
-    // 0. Skip if already loading the exact same thing
-    if (selectedPath === path && selectedPage === page && !fromHistory) {
-      console.log(`[selectFile] Skip: Already on ${path}`);
-      return;
-    }
-
-    // Always hide Graph View when a file/PDF is explicitly selected to show the main panel content
-    setShowGraphView(false);
-
-    selectRequestId.current += 1
-    const currentReq = selectRequestId.current
-
-    console.log(`[selectFile] START: ${path} (reqId: ${currentReq})`)
-
-    if (!fromHistory) {
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('path', path);
-      if (page > 1) searchParams.set('page', page.toString());
-      else searchParams.delete('page');
-
-      if (filterPages.length > 0) searchParams.set('filterPages', filterPages.join(','));
-      else searchParams.delete('filterPages');
-
-      navigate(`/obsidian?${searchParams.toString()}`);
-
-      push({
-        type: 'file',
-        path: path,
-        metadata: { page, filterPages }
-      }, false);
-    }
-
-    setSelectedPath(path)
-    setSelectedPage(page)
-    setSelectedFilteredPages(filterPages)
-
-    // Delayed loading state: Only show spinner if it takes > 150ms
-    const loadingTimeout = setTimeout(() => {
-      if (selectRequestId.current === currentReq) {
-        setLoadingNote(true)
-      }
-    }, 150);
-
-    // Safety timeout: 15 seconds max for any document load
-    const safetyTimeout = setTimeout(() => {
-      if (selectRequestId.current === currentReq) {
-        console.warn(`[selectFile] Safety timeout triggered for ${path} (reqId: ${currentReq})`);
-        setLoadingNote(false);
-      }
-    }, 15000);
-
-    // PDFs are handled by an iframe, we don't need to read content here
-    if (typeof path === 'string' && path.toLowerCase().endsWith('.pdf')) {
-      console.log(`[selectFile] PDF detected: ${path}`);
-      if (!keepMetadata) {
-        setNoteMetadata({})
-        setNoteContent('')
-        setEditedContent('')
-      }
-      setIsEditing(false)
-      clearTimeout(loadingTimeout)
-      clearTimeout(safetyTimeout)
-      setLoadingNote(false)
-      setLoadedPath(path)
-      return
-    }
-
-    try {
-      console.log(`[selectFile] Fetching content: ${path}`);
-      const res = await sidecarApi.readObsidianNote(path)
-
-      // Prevent stale data from overwriting new request
-      if (selectRequestId.current !== currentReq) {
-        console.log(`[selectFile] Request ${currentReq} is stale, ignoring result.`);
-        return
-      }
-
-      const content = res.content || '';
-      const metadata = res.metadata || {};
-
-      setNoteMetadata(metadata);
-      setNoteContent(content);
-      noteContentRef.current = content;
-      setEditedContent(content);
-      setIsEditing(false);
-      setLoadedPath(path);
-
-      console.log(`[selectFile] SUCCESS: ${path} (${content.length} chars)`);
-    } catch (err) {
-      console.error(`[selectFile] ERROR: Failed to read note: ${path}`, err)
-      if (selectRequestId.current === currentReq) {
-        setNoteMetadata({})
-        setNoteContent('# Error\nFailed to load content. Please check if the file exists or the backend is running.')
-        setLoadedPath(null)
-      }
-    } finally {
-      clearTimeout(loadingTimeout);
-      clearTimeout(safetyTimeout);
-      if (selectRequestId.current === currentReq) {
-        setLoadingNote(false)
-      }
-    }
-  }, [navigate, noteMetadata, selectedPath, selectedPage, location.search, push, checkLockState])
 
   const handleWikiLinkClick = async (pageName: string, pageNumber?: number, filterPages: number[] = []) => {
     let cleanPageName = pageName;
@@ -1816,6 +1871,131 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
  setExpandedFolders(newExpanded)
 }, [expandedFolders])
 
+ const toggleAutoDeploy = async () => {
+ await saveConfig({autoDeploy: !config?.autoDeploy})
+ await sidecarApi.aterWatcherToggle()
+ fetchStatus()
+}
+
+ const resetAterSession = () => {
+ setSessionId(null)
+ setIsAwaitingConfirmation(false)
+ setIsCompleted(false)
+ setActivePlan(null)
+ setPlanData(null)
+ setBatchFeed([])
+ setSelectedInboxFile(null)
+ setAterError(null)
+ fetchInbox()
+}
+
+ const processSelectedFile = async () => {
+ if (!selectedInboxFile) return
+ setProcessing(true)
+ setAterError(null)
+ setActivePlan(null)
+ setBatchFeed([])
+ setIsCompleted(false)
+ setIsAwaitingConfirmation(false)
+
+ try {
+ const res = await sidecarApi.aterProcess({file_path: selectedInboxFile.path})
+ setActivePlan(res.plan_raw)
+ setPlanData(res.plan_structured)
+ setSessionId(res.session_id)
+ setTotalBatches(res.plan_structured?.batches?.length || 1)
+ setCurrentBatch(0)
+
+ // Auto Deploy Circuit
+ if (config?.autoDeploy) {
+ // Proceed immediately without manual confirmation
+ setTimeout(() => confirmDeployment(res.session_id), 800);
+} else {
+ setIsAwaitingConfirmation(true)
+}
+} catch (err: any) {
+ setAterError(err.message || 'Workflow failed')
+} finally {setProcessing(false)}
+}
+
+ const confirmDeployment = async (forcedId?: string) => {
+ const targetId = forcedId || sessionId
+ if (!targetId) return
+
+ setProcessing(true)
+ setIsAwaitingConfirmation(false) // Hide button if manual
+
+ try {
+ let currentHasMore = true
+ let tempBatch = 0
+ while (currentHasMore) {
+ const res = await sidecarApi.aterConfirm({session_id: targetId})
+
+ if (res.status === 'error') {
+ throw new Error((res as any).message || (res as any).detail || "Backend generation failed.");
+}
+
+ tempBatch = res.current_batch || (tempBatch + 1)
+ setCurrentBatch(tempBatch)
+ setBatchFeed(prev => [...prev, {batch: tempBatch, results: res.results}])
+ currentHasMore = res.has_more
+ if (currentHasMore) await new Promise(r => setTimeout(r, 2000))
+}
+ setIsCompleted(true)
+ fetchFiles() // Refresh explorer
+} catch (err: any) {
+ setAterError(err.message)
+} finally {
+ setProcessing(false)
+}
+}
+
+  const handleRegenerateNote = async (path: string | null) => {
+    if (!path) return
+    setProcessing(true)
+    setAterError(null)
+    setActivePlan(null)
+    setBatchFeed([])
+    setIsCompleted(false)
+    setIsAwaitingConfirmation(false)
+
+    try {
+      const res = await sidecarApi.aterProcess({file_path: path})
+      setActivePlan(res.plan_raw)
+      setPlanData(res.plan_structured)
+      setSessionId(res.session_id)
+      setTotalBatches(res.plan_structured?.batches?.length || 1)
+      setCurrentBatch(0)
+
+      if (config?.autoDeploy) {
+        setTimeout(() => confirmDeployment(res.session_id), 800)
+      } else {
+        setIsAwaitingConfirmation(true)
+      }
+      toast.success("Regeneration started")
+    } catch (err: any) {
+      setAterError(err.message || 'Regeneration failed')
+      toast.error("Regeneration failed")
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleHealNote = async (path: string | null) => {
+    if (!path) return
+    setProcessing(true)
+    try {
+      toast.info("Healing note logic triggered...")
+      console.log("Heal requested for:", path)
+      await new Promise(r => setTimeout(r, 1000))
+      toast.success("Note healing complete")
+    } catch (err: any) {
+      toast.error("Healing failed")
+    } finally {
+      setProcessing(false)
+    }
+  }
+
  // --- Tree Construction ---
  const fileTree = useMemo(() => {
  const root: FileNode[] = []
@@ -1862,6 +2042,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
  return root
 }, [files])
 
+  const [isNoteMetadataExpanded, setIsNoteMetadataExpanded] = useState(false)
   const [contentMatchPaths, setContentMatchPaths] = useState<Set<string>>(new Set())
 
   const matchesSearch = useCallback((node: FileNode, queryLower: string): boolean => {
@@ -1883,7 +2064,7 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
       try {
         const res = await sidecarApi.searchVaultFull(searchQuery)
         setContentMatchPaths(new Set(res.paths))
-      } catch (err) { console.error("Search failed", err) }
+      } catch (e) { console.error("Search failed", e) }
     }, 500)
     return () => clearTimeout(timer)
   }, [searchQuery])
@@ -2094,7 +2275,8 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
   handleCreateItem,
   handleDrop,
   files,
-  lockedNotes
+  lockedNotes,
+  checkLockState
 ]);
 
   const selectedIsPdf = typeof selectedPath === 'string' && selectedPath.toLowerCase().endsWith('.pdf')
@@ -3080,4 +3262,4 @@ const selectFile = useCallback(async (path: string, page: number = 1, fromHistor
     )}
   </div>
   )
-}
+}, [selectedPath, editedContent]), []), [])

@@ -1,0 +1,9 @@
+
+/app/apps/desktop/src/routes/obsidian.tsx
+  269:90  error  Parsing error: Unterminated string literal
+
+✖ 1 problem (1 error, 0 warnings)
+
+undefined
+/app/apps/desktop:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: eslint src/routes/obsidian.tsx
