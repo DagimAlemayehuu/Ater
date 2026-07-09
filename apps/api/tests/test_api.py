@@ -13,7 +13,7 @@ def test_api_health_check():
 
 def test_api_status_endpoint():
     """Check if the status endpoint is reachable."""
-    response = client.get("/api/ater/queue/status")
+    response = client.get("/api/ater/queue/status", headers={"X-Ater-Token": "test-token"})
     assert response.status_code == 200
     data = response.json()
     assert "status" in data

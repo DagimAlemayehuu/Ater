@@ -212,7 +212,7 @@ def test_auth_login_endpoint_forwards_force_and_clear(monkeypatch):
 
     monkeypatch.setattr(NotebookLMRunner, "start_login", fake_start_login)
 
-    response = TestClient(app).post("/api/notebooklm/auth/login?force=true&clear=true")
+    response = TestClient(app).post("/api/notebooklm/auth/login?force=true&clear=true", headers={"X-Ater-Token": "test-token"})
 
     assert response.status_code == 200
     assert response.json()["success"] is True
@@ -228,7 +228,7 @@ def test_auth_status_endpoint_can_bypass_cache(monkeypatch):
 
     monkeypatch.setattr(NotebookLMRunner, "get_auth_status", fake_get_auth_status)
 
-    response = TestClient(app).get("/api/notebooklm/auth/status?force=true")
+    response = TestClient(app).get("/api/notebooklm/auth/status?force=true", headers={"X-Ater-Token": "test-token"})
 
     assert response.status_code == 200
     assert response.json()["auth_status"] == "configured"

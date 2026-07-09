@@ -114,8 +114,9 @@ def test_sanitize_api_key_non_ascii():
 
 async def _call_get_app_secrets(**kwargs):
     """Helper to bypass FastAPI Header defaults and pass real values."""
+    import os
     defaults = {
-        "x_ater_token": None,
+        "x_ater_token": os.environ.get("ATER_SIDECAR_TOKEN"),
         "x_ai_provider": "google",
         "x_ai_key": None,
         "x_ai_model": "gemini-2.0-flash",
@@ -158,12 +159,12 @@ async def test_get_app_secrets_auth_failure(monkeypatch):
 
     with pytest.raises(HTTPException) as exc_info:
         await _call_get_app_secrets(x_ater_token="invalid-token")
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 403
     assert "Invalid sidecar authentication token" in exc_info.value.detail
 
     with pytest.raises(HTTPException) as exc_info:
         await _call_get_app_secrets(x_ater_token=None)
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 403
 
 
 @pytest.mark.asyncio

@@ -37,11 +37,22 @@ def client(test_client, mock_secrets, mock_storage):
     app.dependency_overrides.clear()
 
 def test_single_artifact_generate_route():
-    routes = []
-    for route in app.routes:
-        # The router attaches a prefix '/api' to all routes in main.py, so we check for the endpoint path
-        if getattr(route, "path", None) == "/api/ater/artifact/generate":
-            routes.append(route)
+    def find_route(routes, target_path, prefix=''):
+        found = []
+        for r in routes:
+            r_path = getattr(r, 'path', None)
+            full_path = prefix + (r_path or '')
+            if r_path and full_path == target_path:
+                found.append(r)
+
+            if hasattr(r, 'router'):
+                found.extend(find_route(r.router.routes, target_path, full_path))
+            elif hasattr(r, 'original_router'):
+                # In main.py prefix is /api
+                found.extend(find_route(r.original_router.routes, target_path, prefix + '/api'))
+        return found
+
+    routes = find_route(app.routes, "/api/ater/artifact/generate")
             
     assert len(routes) == 1
     # Check that it is the route in ater.py

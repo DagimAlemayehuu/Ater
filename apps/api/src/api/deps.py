@@ -1,6 +1,9 @@
+import logging
 from fastapi import Header, Query
 from typing import Optional
 from pydantic import BaseModel
+
+logger = logging.getLogger("Ater")
 
 class AppSecrets(BaseModel):
     ai_provider: str = "google"
@@ -78,9 +81,13 @@ async def get_app_secrets(
     from fastapi import HTTPException
     effective_token = x_ater_token or sidecar_token
     expected_token = os.environ.get("ATER_SIDECAR_TOKEN")
-    if expected_token:
-        if not effective_token or effective_token != expected_token:
-            raise HTTPException(status_code=401, detail="ACCESS_DENIED: Invalid sidecar authentication token.")
+
+    if not expected_token:
+        logger.critical("[Security] ATER_SIDECAR_TOKEN is not set in the environment. All requests will be rejected.")
+        raise HTTPException(status_code=500, detail="INTERNAL_ERROR: Sidecar security token not configured.")
+
+    if not effective_token or effective_token != expected_token:
+        raise HTTPException(status_code=403, detail="ACCESS_DENIED: Invalid sidecar authentication token.")
 
     primary_provider = x_ai_provider.lower()
     

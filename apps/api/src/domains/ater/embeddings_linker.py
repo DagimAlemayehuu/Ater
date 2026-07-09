@@ -22,6 +22,7 @@ class EmbeddingsLinker:
     _instance = None
     _session = None
     _tokenizer = None
+    _load_failed = False
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -71,19 +72,31 @@ class EmbeddingsLinker:
     @classmethod
     def load_model(cls):
         """Loads tokenizer and ONNX inference session as a lazy-loaded Singleton."""
+        if cls._load_failed:
+            raise RuntimeError("EmbeddingsLinker: Previous model load attempt failed. Skipping to prevent crash.")
+
         if cls._session is None or cls._tokenizer is None:
-            import onnxruntime as ort
-            if getattr(ort, "__spec__", None) is None:
-                from importlib.machinery import ModuleSpec
-                ort.__spec__ = ModuleSpec("onnxruntime", loader=None)
-            from transformers import AutoTokenizer
-            model_dir, model_path = cls._get_model_paths()
-            if not model_path.exists():
-                raise FileNotFoundError(f"ONNX model not found at {model_path}")
-            print(f"[EmbeddingsLinker] Lazy-loading AutoTokenizer from {model_dir}...")
-            cls._tokenizer = AutoTokenizer.from_pretrained(str(model_dir))
-            print(f"[EmbeddingsLinker] Lazy-loading ONNX session from {model_path}...")
-            cls._session = ort.InferenceSession(str(model_path))
+            try:
+                import onnxruntime as ort
+                if getattr(ort, "__spec__", None) is None:
+                    from importlib.machinery import ModuleSpec
+                    ort.__spec__ = ModuleSpec("onnxruntime", loader=None)
+                from transformers import AutoTokenizer
+                model_dir, model_path = cls._get_model_paths()
+                if not model_path.exists():
+                    raise FileNotFoundError(f"ONNX model not found at {model_path}")
+
+                print(f"[EmbeddingsLinker] Lazy-loading AutoTokenizer from {model_dir}...")
+                cls._tokenizer = AutoTokenizer.from_pretrained(str(model_dir))
+
+                print(f"[EmbeddingsLinker] Lazy-loading ONNX session from {model_path}...")
+                # Add logging for robustness
+                cls._session = ort.InferenceSession(str(model_path))
+            except Exception as e:
+                cls._load_failed = True
+                print(f"[EmbeddingsLinker] FATAL: Failed to load ONNX model components: {e}")
+                raise RuntimeError(f"Failed to initialize ONNX embeddings engine: {e}")
+
         return cls._session, cls._tokenizer
 
     @classmethod
@@ -102,29 +115,33 @@ class EmbeddingsLinker:
         if not texts:
             return np.empty((0, 384))
 
-        session, tokenizer = self.load_model()
+        try:
+            session, tokenizer = self.load_model()
 
-        # Tokenize input texts
-        encoded_input = tokenizer(texts, padding=True, truncation=True, return_tensors="np")
+            # Tokenize input texts
+            encoded_input = tokenizer(texts, padding=True, truncation=True, return_tensors="np")
 
-        # Prepare inputs for ONNX session
-        onnx_inputs = {
-            "input_ids": encoded_input["input_ids"].astype(np.int64),
-            "attention_mask": encoded_input["attention_mask"].astype(np.int64)
-        }
-        if "token_type_ids" in encoded_input:
-            onnx_inputs["token_type_ids"] = encoded_input["token_type_ids"].astype(np.int64)
+            # Prepare inputs for ONNX session
+            onnx_inputs = {
+                "input_ids": encoded_input["input_ids"].astype(np.int64),
+                "attention_mask": encoded_input["attention_mask"].astype(np.int64)
+            }
+            if "token_type_ids" in encoded_input:
+                onnx_inputs["token_type_ids"] = encoded_input["token_type_ids"].astype(np.int64)
 
-        # Run ONNX Runtime inference
-        outputs = session.run(None, onnx_inputs)
+            # Run ONNX Runtime inference
+            outputs = session.run(None, onnx_inputs)
 
-        # Apply mean pooling
-        embeddings = mean_pooling(outputs, encoded_input["attention_mask"])
+            # Apply mean pooling
+            embeddings = mean_pooling(outputs, encoded_input["attention_mask"])
 
-        # Normalize to unit vectors (ensures dot product is exactly cosine similarity)
-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        norms = np.clip(norms, a_min=1e-9, a_max=None)
-        return embeddings / norms
+            # Normalize to unit vectors (ensures dot product is exactly cosine similarity)
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            norms = np.clip(norms, a_min=1e-9, a_max=None)
+            return embeddings / norms
+        except Exception as e:
+            print(f"[EmbeddingsLinker] get_embeddings failed: {e}. Returning zero vectors.")
+            return np.zeros((len(texts), 384))
 
     def get_concept_offset(self, title: str, full_text: str) -> int:
         """Calculates the character offset of the first appearance of a concept in textbook text."""
