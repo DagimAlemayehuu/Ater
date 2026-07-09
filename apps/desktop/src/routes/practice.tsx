@@ -1,6 +1,5 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { BlockingLoader } from '@/components/ui/loading-state'
 import { usePracticeConfig } from '@/hooks/usePracticeConfig'
 import { PracticeDashboard } from '@/components/practice/PracticeDashboard'
@@ -10,7 +9,7 @@ import { PracticeConfigurator } from '@/components/practice/PracticeConfigurator
 import { PracticeSession } from '@/components/practice/PracticeSession'
 import { PracticeResults } from '@/components/practice/PracticeResults'
 import { useSidebarContent } from '@/context/sidebar-content-context'
-import { LayoutDashboard, Clock, BookOpen, Sliders } from 'lucide-react'
+import { LayoutDashboard, Clock, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -142,7 +141,7 @@ export function PracticeModule({ noAnimation = false }: { noAnimation?: boolean 
     return () => {
       setSidebarContent(null, 'practice')
     }
-  }, [activeSubTab, setSidebarContent, navigate])
+  }, [activeSubTab, setSidebarContent, navigate, setView])
 
   const handleSetView = (nextView: string) => {
     setView(nextView)

@@ -1,14 +1,11 @@
 import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
-import {RefreshCw, CalendarDays, GraduationCap, BookOpen, ClipboardList, FlaskConical, LayoutDashboard, Layers, ChevronLeft, ChevronRight, Activity, Award, Home, FolderOpen, Network} from 'lucide-react'
-import {format, subMonths, addMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays, isToday, parseISO, startOfDay} from 'date-fns'
+import {RefreshCw, BookOpen, ClipboardList, FlaskConical, Layers, Home, FolderOpen, Network} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {toast} from 'sonner'
 import {sidecarApi} from '@/lib/sidecarApi'
 import {useHeader} from '@/context/header-context'
 import {useLayout} from '@/context/layout-provider'
-import {PracticeModule} from './practice'
-import {TabButton} from './academic-tabs/SharedComponents'
 import ProgramTab from './academic-tabs/ProgramTab'
 import CoursesTab from './academic-tabs/CoursesTab'
 import StudyPlannerTab from './academic-tabs/StudyPlannerTab'
@@ -16,18 +13,14 @@ import AssignmentsTab from './academic-tabs/AssignmentsTab'
 import ExamsTab from './academic-tabs/ExamsTab'
 import YearsTab from './academic-tabs/YearsTab'
 import SemestersTab from './academic-tabs/SemestersTab'
-import AcademicCalendar from '@/components/academic/AcademicCalendar'
 // import { SIDECAR_BASE_URL } from '@/lib/sidecarApi'
 import {cleanTitle, DEFAULT_SCHEMAS, wrapWL, getBoolVal, getVal, stripWL} from './academic-tabs/utils'
-import type {AcademicTab, AcademicData, VaultDatabase, TabProps} from './academic-tabs/types'
-import { usePomodoroStore } from '@/lib/pomodoroStore'
+import type {AcademicTab, AcademicData, VaultDatabase, TabProps, AcademicItem} from './academic-tabs/types'
 import { BlockingLoader } from '@/components/ui/loading-state'
 import { useSidebarContent } from '@/context/sidebar-content-context'
 
 export default function AcademicDashboard() {
-  const { history: storeHistory } = usePomodoroStore()
  const [data, setData] = useState<AcademicData | null>(null)
-  const [apiStudyHistory, setApiStudyHistory] = useState<{sessions: any[], telemetry: any[], practice?: any[]}>({sessions: [], telemetry: [], practice: []})
   const [loading, setLoading] = useState(true)
  const [databases, setDatabases] = useState<VaultDatabase[]>([])
  const [, startDataTransition] = React.useTransition()
@@ -36,21 +29,24 @@ export default function AcademicDashboard() {
  const databaseRequestIdRef = useRef(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = (String(searchParams.get('tab') || 'PROGRAM').toUpperCase()) as AcademicTab
-  const setActiveTab = (tab: AcademicTab | ((prev: AcademicTab) => AcademicTab)) => {
+
+  const setActiveTab = useCallback((tab: AcademicTab | ((prev: AcademicTab) => AcademicTab)) => {
     if (typeof tab === 'function') {
       const current = (String(searchParams.get('tab') || 'PROGRAM').toUpperCase()) as AcademicTab
       setSearchParams({ tab: tab(current).toUpperCase() })
     } else {
       setSearchParams({ tab: tab.toUpperCase() })
     }
-  }
+  }, [searchParams, setSearchParams])
+
   const selectedItemId = searchParams.get('id')
-  const setSelectedItemId = (id: string | null) => setSearchParams(prev => {
+
+  const setSelectedItemId = useCallback((id: string | null) => setSearchParams(prev => {
     if (id) prev.set('id', id)
     else prev.delete('id')
     prev.set('tab', String(prev.get('tab') || 'PROGRAM').toUpperCase())
     return prev
-  })
+  }), [setSearchParams])
   const {setCenterContent, setRightContent} = useHeader()
   const {setIsFullscreen} = useLayout()
   const {setSidebarContent} = useSidebarContent()
@@ -64,20 +60,13 @@ export default function AcademicDashboard() {
   const dashRes = await sidecarApi.academicsDashboard()
   if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
   startDataTransition(() => {
-    setData(dashRes as any)
+    setData(dashRes as unknown as AcademicData)
     setLoading(false)
   })
 
   sidecarApi.getStudyHistory()
-    .then(studyRes => {
-      if (isMountedRef.current && requestId === dataRequestIdRef.current) {
-        setApiStudyHistory(studyRes || { sessions: [], telemetry: [], practice: [] })
-      }
-    })
     .catch(() => {
-      if (isMountedRef.current && requestId === dataRequestIdRef.current) {
-        setApiStudyHistory({ sessions: [], telemetry: [], practice: [] })
-      }
+      console.error('Failed to fetch study history')
     })
  } catch {
   if (!isMountedRef.current || requestId !== dataRequestIdRef.current) return
@@ -121,7 +110,7 @@ export default function AcademicDashboard() {
  }, [setIsFullscreen])
 
  // ── Shared handlers ────────────────────────────────────────────────────────
-  const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, any>) => {
+  const onUpdate = useCallback(async (dbId: string, itemId: string, properties: Record<string, unknown>) => {
   console.log(`[Academic] Updating ${dbId}/${itemId}:`, properties)
   // Optimistic update
   setData(prev => {
@@ -137,10 +126,10 @@ export default function AcademicDashboard() {
   else if (dbIdLow.includes('assignment')) key = 'assignments';
   
   if (key && Array.isArray(next[key])) {
-  next[key] = (next[key] as any[]).map(item => {
+  next[key] = (next[key] as AcademicItem[]).map(item => {
   if (item.id === itemId) {
-  const updated = {...item, ...properties}
-  if (properties.title) updated.id = properties.title
+  const updated = {...item, ...properties} as AcademicItem
+  if (properties.title) updated.id = properties.title as string
   return updated
 }
   return item
@@ -162,7 +151,7 @@ export default function AcademicDashboard() {
 }
 }, [fetchData])
 
-  const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, any>): Promise<string | null> => {
+  const onCreate = useCallback(async (dbId: string, title: string, props?: Record<string, unknown>): Promise<string | null> => {
   const dbIdLow = dbId.toLowerCase();
   // Optimistic update for creation
   setData(prev => {
@@ -177,8 +166,8 @@ export default function AcademicDashboard() {
   else if (dbIdLow.includes('assignment')) key = 'assignments';
   
   if (key && Array.isArray(next[key])) {
-  const newItem = {id: title, title, ...props}
-  next[key] = [...(next[key] as any[]), newItem]
+  const newItem = {id: title, title, ...props} as AcademicItem
+  next[key] = [...(next[key] as AcademicItem[]), newItem]
 }
   return next
 })
@@ -367,7 +356,7 @@ export default function AcademicDashboard() {
  }
  window.addEventListener('keydown', handleKeyDown)
  return () => window.removeEventListener('keydown', handleKeyDown)
- }, [tabs])
+ }, [tabs, setActiveTab])
  // ── Tab props ──────────────────────────────────────────────────────────────
  const tabProps: TabProps = {
   data: data!,
@@ -392,45 +381,6 @@ export default function AcademicDashboard() {
  if (loading) {
   return <BlockingLoader label="Opening Academic Dashboard" />
  }
-
-  // ── Upcoming items for the calendar ───────────────────────────────────────
-  const calendarEvents = [
-    ...(data?.assignments || []).map(a => ({...a, _type: 'Assignment', _date: a.due_date})),
-    ...(data?.exams || []).map(e => ({...e, _type: 'Exam', _date: e.date})),
-    // Local Store History (Real-time)
-    ...(storeHistory || []).map(h => ({
-      ...h,
-      _type: 'Study',
-      _date: h.timestamp ? new Date(h.timestamp).toISOString() : new Date().toISOString(),
-      title: h.type === 'practice' 
-        ? `Recall: ${h.score}/${h.totalQuestions}` 
-        : h.type === 'note_focus' 
-          ? `Note: ${h.notePath?.split(/[/\\]/).pop()?.replace('.md', '') || 'Focus'}`
-          : `Session: ${h.hub || 'Focus'}`
-    })),
-    // API History (Persistent)
-    ...(apiStudyHistory?.sessions || []).map(s => ({
-      id: s.id,
-      title: `${s.hub_id || 'Focus'} Session`,
-      _type: 'Study Session',
-      _date: s.timestamp || new Date().toISOString(),
-      duration: s.duration_seconds
-    })),
-    ...(apiStudyHistory?.telemetry || []).map(t => ({
-      id: t.id,
-      title: `Read: ${t.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || 'Note'}`,
-      _type: 'Note Visit',
-      _date: t.timestamp || new Date().toISOString(),
-      duration: t.duration_seconds
-    })),
-    ...(apiStudyHistory?.practice || []).map(p => ({
-      id: p.id,
-      title: `Recall: ${p.note_path?.split(/[/\\]/).pop()?.replace('.md', '') || p.hub_id || 'Quiz'}`,
-      _type: 'Practice',
-      _date: p.timestamp,
-      isCorrect: p.is_correct
-    }))
-  ]
 
  return (
   <div className="h-full flex flex-col bg-transparent font-sans overflow-hidden gap-3">
