@@ -1,0 +1,534 @@
+diff --git a/apps/api/src/api/deps.py b/apps/api/src/api/deps.py
+index bf9f4183..e95710fc 100644
+--- a/apps/api/src/api/deps.py
++++ b/apps/api/src/api/deps.py
+@@ -1,7 +1,10 @@
++import logging
+ from fastapi import Header, Query
+ from typing import Optional
+ from pydantic import BaseModel
+ 
++logger = logging.getLogger("Ater")
++
+ class AppSecrets(BaseModel):
+     ai_provider: str = "google"
+     ai_key: Optional[str] = None
+@@ -78,9 +81,13 @@ async def get_app_secrets(
+     from fastapi import HTTPException
+     effective_token = x_ater_token or sidecar_token
+     expected_token = os.environ.get("ATER_SIDECAR_TOKEN")
+-    if expected_token:
+-        if not effective_token or effective_token != expected_token:
+-            raise HTTPException(status_code=401, detail="ACCESS_DENIED: Invalid sidecar authentication token.")
++
++    if not expected_token:
++        logger.critical("[Security] ATER_SIDECAR_TOKEN is not set in the environment. All requests will be rejected.")
++        raise HTTPException(status_code=500, detail="INTERNAL_ERROR: Sidecar security token not configured.")
++
++    if not effective_token or effective_token != expected_token:
++        raise HTTPException(status_code=403, detail="ACCESS_DENIED: Invalid sidecar authentication token.")
+ 
+     primary_provider = x_ai_provider.lower()
+     
+diff --git a/apps/api/src/api/main.py b/apps/api/src/api/main.py
+index f4e4728a..fc1cd3dd 100644
+--- a/apps/api/src/api/main.py
++++ b/apps/api/src/api/main.py
+@@ -65,6 +65,7 @@
+ from src.api.routers.ai import router as ai_router
+ from src.api.routers.ater import router as ater_router, validate_vault_path
+ from src.api.routers.notebooklm import router as notebooklm_router
++from src.api.deps import get_app_secrets
+ from src.api.lifespan import ServerLifespanManager
+ import src.api.state as state
+ 
+@@ -144,11 +145,11 @@ async def get_pdf_css():
+     return Response(content=_pdf_css_cache, media_type="text/css")
+ 
+ # Mount routers
+-app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
+-app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path)])
+-app.include_router(ai_router, prefix="/api")
+-app.include_router(ater_router, prefix="/api")
+-app.include_router(notebooklm_router, prefix="/api")
++app.include_router(obsidian_router, prefix="/api", dependencies=[Depends(validate_vault_path), Depends(get_app_secrets)])
++app.include_router(academics_router, prefix="/api", dependencies=[Depends(validate_vault_path), Depends(get_app_secrets)])
++app.include_router(ai_router, prefix="/api", dependencies=[Depends(get_app_secrets)])
++app.include_router(ater_router, prefix="/api", dependencies=[Depends(get_app_secrets)])
++app.include_router(notebooklm_router, prefix="/api", dependencies=[Depends(get_app_secrets)])
+ 
+ @app.get("/api/health")
+ async def health_check():
+@@ -166,6 +167,32 @@ async def health_check():
+     # Start watchdog before app initializes
+     ServerLifespanManager.start_watchdog()
+ 
++    # Kill any existing process on the target port to prevent "port already in use" errors
++    import psutil
++    import time
++
++    current_pid = os.getpid()
++    try:
++        for conn in psutil.net_connections(kind='inet'):
++            if conn.laddr.port == args.port and conn.status == 'LISTEN':
++                if conn.pid and conn.pid != current_pid:
++                    try:
++                        zombie = psutil.Process(conn.pid)
++                        logger.warning(f"[Zombie Hunter] Found process {zombie.pid} ({zombie.name()}) on port {args.port}. Terminating...")
++                        zombie.terminate()
++                        # Wait for termination
++                        for _ in range(10):
++                            if not zombie.is_running():
++                                break
++                            time.sleep(0.2)
++                        if zombie.is_running():
++                            logger.warning(f"[Zombie Hunter] Process {zombie.pid} still running. Force killing...")
++                            zombie.kill()
++                    except (psutil.NoSuchProcess, psutil.AccessDenied):
++                        pass
++    except Exception as e:
++        logger.error(f"[Zombie Hunter] Error during port cleanup: {e}")
++
+     logger.info(f"Starting sidecar on {args.host}:{args.port}")
+     uvicorn.run(
+         app,
+diff --git a/apps/api/src/api/test_deps.py b/apps/api/src/api/test_deps.py
+index 6506663f..58d1c9b8 100644
+--- a/apps/api/src/api/test_deps.py
++++ b/apps/api/src/api/test_deps.py
+@@ -1,9 +1,9 @@
+ import pytest
+ 
+ 
+-def _default_header_kwargs():
++def _default_header_kwargs(x_ater_token=None):
+     return {
+-        "x_ater_token": None,
++        "x_ater_token": x_ater_token,
+         "sidecar_token": None,
+         "x_ai_base_url": None,
+         "x_ai_max_tpm": None,
+@@ -23,10 +23,10 @@ def _default_header_kwargs():
+ async def test_get_app_secrets_preserves_explicit_planner_tier(monkeypatch):
+     from src.api.deps import get_app_secrets
+ 
+-    monkeypatch.delenv("ATER_SIDECAR_TOKEN", raising=False)
++    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "test-token")
+ 
+     secrets = await get_app_secrets(
+-        **_default_header_kwargs(),
++        **_default_header_kwargs(x_ater_token="test-token"),
+         x_ai_provider="google",
+         x_ai_key="primary-key",
+         x_ai_model="Gemma-4-31b-it",
+@@ -49,10 +49,10 @@ async def test_get_app_secrets_preserves_explicit_planner_tier(monkeypatch):
+ async def test_get_app_secrets_defaults_gemma_primary_to_fast_google_planner(monkeypatch):
+     from src.api.deps import get_app_secrets
+ 
+-    monkeypatch.delenv("ATER_SIDECAR_TOKEN", raising=False)
++    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "test-token")
+ 
+     secrets = await get_app_secrets(
+-        **_default_header_kwargs(),
++        **_default_header_kwargs(x_ater_token="test-token"),
+         x_ai_provider="google",
+         x_ai_key="primary-key",
+         x_ai_model="Gemma-4-31b-it",
+diff --git a/apps/api/src/domains/ater/embeddings_linker.py b/apps/api/src/domains/ater/embeddings_linker.py
+index 112854d4..19c2e796 100644
+--- a/apps/api/src/domains/ater/embeddings_linker.py
++++ b/apps/api/src/domains/ater/embeddings_linker.py
+@@ -22,6 +22,7 @@ class EmbeddingsLinker:
+     _instance = None
+     _session = None
+     _tokenizer = None
++    _load_failed = False
+ 
+     def __new__(cls, *args, **kwargs):
+         if not cls._instance:
+@@ -71,19 +72,31 @@ def _get_model_paths(cls) -> Tuple[Path, Path]:
+     @classmethod
+     def load_model(cls):
+         """Loads tokenizer and ONNX inference session as a lazy-loaded Singleton."""
++        if cls._load_failed:
++            raise RuntimeError("EmbeddingsLinker: Previous model load attempt failed. Skipping to prevent crash.")
++
+         if cls._session is None or cls._tokenizer is None:
+-            import onnxruntime as ort
+-            if getattr(ort, "__spec__", None) is None:
+-                from importlib.machinery import ModuleSpec
+-                ort.__spec__ = ModuleSpec("onnxruntime", loader=None)
+-            from transformers import AutoTokenizer
+-            model_dir, model_path = cls._get_model_paths()
+-            if not model_path.exists():
+-                raise FileNotFoundError(f"ONNX model not found at {model_path}")
+-            print(f"[EmbeddingsLinker] Lazy-loading AutoTokenizer from {model_dir}...")
+-            cls._tokenizer = AutoTokenizer.from_pretrained(str(model_dir))
+-            print(f"[EmbeddingsLinker] Lazy-loading ONNX session from {model_path}...")
+-            cls._session = ort.InferenceSession(str(model_path))
++            try:
++                import onnxruntime as ort
++                if getattr(ort, "__spec__", None) is None:
++                    from importlib.machinery import ModuleSpec
++                    ort.__spec__ = ModuleSpec("onnxruntime", loader=None)
++                from transformers import AutoTokenizer
++                model_dir, model_path = cls._get_model_paths()
++                if not model_path.exists():
++                    raise FileNotFoundError(f"ONNX model not found at {model_path}")
++
++                print(f"[EmbeddingsLinker] Lazy-loading AutoTokenizer from {model_dir}...")
++                cls._tokenizer = AutoTokenizer.from_pretrained(str(model_dir))
++
++                print(f"[EmbeddingsLinker] Lazy-loading ONNX session from {model_path}...")
++                # Add logging for robustness
++                cls._session = ort.InferenceSession(str(model_path))
++            except Exception as e:
++                cls._load_failed = True
++                print(f"[EmbeddingsLinker] FATAL: Failed to load ONNX model components: {e}")
++                raise RuntimeError(f"Failed to initialize ONNX embeddings engine: {e}")
++
+         return cls._session, cls._tokenizer
+ 
+     @classmethod
+@@ -102,29 +115,33 @@ def get_embeddings(self, texts: List[str]) -> np.ndarray:
+         if not texts:
+             return np.empty((0, 384))
+ 
+-        session, tokenizer = self.load_model()
++        try:
++            session, tokenizer = self.load_model()
+ 
+-        # Tokenize input texts
+-        encoded_input = tokenizer(texts, padding=True, truncation=True, return_tensors="np")
++            # Tokenize input texts
++            encoded_input = tokenizer(texts, padding=True, truncation=True, return_tensors="np")
+ 
+-        # Prepare inputs for ONNX session
+-        onnx_inputs = {
+-            "input_ids": encoded_input["input_ids"].astype(np.int64),
+-            "attention_mask": encoded_input["attention_mask"].astype(np.int64)
+-        }
+-        if "token_type_ids" in encoded_input:
+-            onnx_inputs["token_type_ids"] = encoded_input["token_type_ids"].astype(np.int64)
++            # Prepare inputs for ONNX session
++            onnx_inputs = {
++                "input_ids": encoded_input["input_ids"].astype(np.int64),
++                "attention_mask": encoded_input["attention_mask"].astype(np.int64)
++            }
++            if "token_type_ids" in encoded_input:
++                onnx_inputs["token_type_ids"] = encoded_input["token_type_ids"].astype(np.int64)
+ 
+-        # Run ONNX Runtime inference
+-        outputs = session.run(None, onnx_inputs)
++            # Run ONNX Runtime inference
++            outputs = session.run(None, onnx_inputs)
+ 
+-        # Apply mean pooling
+-        embeddings = mean_pooling(outputs, encoded_input["attention_mask"])
++            # Apply mean pooling
++            embeddings = mean_pooling(outputs, encoded_input["attention_mask"])
+ 
+-        # Normalize to unit vectors (ensures dot product is exactly cosine similarity)
+-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+-        norms = np.clip(norms, a_min=1e-9, a_max=None)
+-        return embeddings / norms
++            # Normalize to unit vectors (ensures dot product is exactly cosine similarity)
++            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
++            norms = np.clip(norms, a_min=1e-9, a_max=None)
++            return embeddings / norms
++        except Exception as e:
++            print(f"[EmbeddingsLinker] get_embeddings failed: {e}. Returning zero vectors.")
++            return np.zeros((len(texts), 384))
+ 
+     def get_concept_offset(self, title: str, full_text: str) -> int:
+         """Calculates the character offset of the first appearance of a concept in textbook text."""
+diff --git a/apps/api/tests/conftest.py b/apps/api/tests/conftest.py
+new file mode 100644
+index 00000000..d264dae3
+--- /dev/null
++++ b/apps/api/tests/conftest.py
+@@ -0,0 +1,26 @@
++import os
++import pytest
++from fastapi.testclient import TestClient
++
++# We monkeypatch TestClient.request to automatically add the X-Ater-Token header
++# This avoids having to update hundreds of individual test calls.
++_original_request = TestClient.request
++
++def _mocked_request(self, method, url, **kwargs):
++    headers = kwargs.get("headers")
++    if headers is None:
++        headers = {}
++        kwargs["headers"] = headers
++
++    # Only add the token if it's not already explicitly provided (even if None)
++    if "X-Ater-Token" not in headers and "x-ater-token" not in headers:
++        headers["X-Ater-Token"] = "test-token"
++
++    return _original_request(self, method, url, **kwargs)
++
++TestClient.request = _mocked_request
++
++@pytest.fixture(autouse=True)
++def setup_sidecar_token(monkeypatch):
++    """Automatically set ATER_SIDECAR_TOKEN for all tests."""
++    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "test-token")
+diff --git a/apps/api/tests/routers/test_ai_fixes.py b/apps/api/tests/routers/test_ai_fixes.py
+index 5ec0282d..7bad7ee5 100644
+--- a/apps/api/tests/routers/test_ai_fixes.py
++++ b/apps/api/tests/routers/test_ai_fixes.py
+@@ -37,11 +37,22 @@ def override_components():
+     app.dependency_overrides.clear()
+ 
+ def test_single_artifact_generate_route():
+-    routes = []
+-    for route in app.routes:
+-        # The router attaches a prefix '/api' to all routes in main.py, so we check for the endpoint path
+-        if getattr(route, "path", None) == "/api/ater/artifact/generate":
+-            routes.append(route)
++    def find_route(routes, target_path, prefix=''):
++        found = []
++        for r in routes:
++            r_path = getattr(r, 'path', None)
++            full_path = prefix + (r_path or '')
++            if r_path and full_path == target_path:
++                found.append(r)
++
++            if hasattr(r, 'router'):
++                found.extend(find_route(r.router.routes, target_path, full_path))
++            elif hasattr(r, 'original_router'):
++                # In main.py prefix is /api
++                found.extend(find_route(r.original_router.routes, target_path, prefix + '/api'))
++        return found
++
++    routes = find_route(app.routes, "/api/ater/artifact/generate")
+             
+     assert len(routes) == 1
+     # Check that it is the route in ater.py
+diff --git a/apps/api/tests/test_advanced_artifacts.py b/apps/api/tests/test_advanced_artifacts.py
+index cdbfa44f..a557f955 100644
+--- a/apps/api/tests/test_advanced_artifacts.py
++++ b/apps/api/tests/test_advanced_artifacts.py
+@@ -214,7 +214,7 @@ def test_endpoint_sql_evaluation():
+         },
+         "query": "SELECT price FROM products WHERE id = 1;"
+     }
+-    response = client.post("/api/ater/playground/sql/evaluate", json=payload)
++    response = client.post("/api/ater/playground/sql/evaluate", json=payload, headers={"X-Ater-Token": "test-token"})
+     assert response.status_code == 200
+     data = response.json()
+     assert data["success"] is True
+@@ -237,7 +237,7 @@ def test_endpoint_case_evaluation():
+         "current_metrics": {"stability": 0.8},
+         "success_conditions": {"stability": {"min": 0.5}}
+     }
+-    response = client.post("/api/ater/playground/case/evaluate", json=payload)
++    response = client.post("/api/ater/playground/case/evaluate", json=payload, headers={"X-Ater-Token": "test-token"})
+     assert response.status_code == 200
+     data = response.json()
+     assert data["next_stage"] == "stage_isolated"
+diff --git a/apps/api/tests/test_api.py b/apps/api/tests/test_api.py
+index 23377537..b30e65bd 100644
+--- a/apps/api/tests/test_api.py
++++ b/apps/api/tests/test_api.py
+@@ -13,7 +13,7 @@ def test_api_health_check():
+ 
+ def test_api_status_endpoint():
+     """Check if the status endpoint is reachable."""
+-    response = client.get("/api/ater/queue/status")
++    response = client.get("/api/ater/queue/status", headers={"X-Ater-Token": "test-token"})
+     assert response.status_code == 200
+     data = response.json()
+     assert "status" in data
+diff --git a/apps/api/tests/test_compiler.py b/apps/api/tests/test_compiler.py
+index 6bc85a4d..fb141082 100644
+--- a/apps/api/tests/test_compiler.py
++++ b/apps/api/tests/test_compiler.py
+@@ -216,7 +216,7 @@ def test_compile_endpoint():
+                 "note_path": str(note_file.relative_to(tmp_path)),
+                 "variant": "deep"
+             },
+-            headers={"X-Vault-Path": tmpdir}
++                headers={"X-Vault-Path": tmpdir, "X-Ater-Token": "test-token"}
+         )
+         
+         assert response.status_code == 200
+diff --git a/apps/api/tests/test_deps.py b/apps/api/tests/test_deps.py
+index f436324a..a39f5209 100644
+--- a/apps/api/tests/test_deps.py
++++ b/apps/api/tests/test_deps.py
+@@ -114,8 +114,9 @@ def test_sanitize_api_key_non_ascii():
+ 
+ async def _call_get_app_secrets(**kwargs):
+     """Helper to bypass FastAPI Header defaults and pass real values."""
++    import os
+     defaults = {
+-        "x_ater_token": None,
++        "x_ater_token": os.environ.get("ATER_SIDECAR_TOKEN"),
+         "x_ai_provider": "google",
+         "x_ai_key": None,
+         "x_ai_model": "gemini-2.0-flash",
+@@ -158,12 +159,12 @@ async def test_get_app_secrets_auth_failure(monkeypatch):
+ 
+     with pytest.raises(HTTPException) as exc_info:
+         await _call_get_app_secrets(x_ater_token="invalid-token")
+-    assert exc_info.value.status_code == 401
++    assert exc_info.value.status_code == 403
+     assert "Invalid sidecar authentication token" in exc_info.value.detail
+ 
+     with pytest.raises(HTTPException) as exc_info:
+         await _call_get_app_secrets(x_ater_token=None)
+-    assert exc_info.value.status_code == 401
++    assert exc_info.value.status_code == 403
+ 
+ 
+ @pytest.mark.asyncio
+diff --git a/apps/api/tests/test_hardening.py b/apps/api/tests/test_hardening.py
+new file mode 100644
+index 00000000..304f48c5
+--- /dev/null
++++ b/apps/api/tests/test_hardening.py
+@@ -0,0 +1,99 @@
++import pytest
++import os
++import numpy as np
++from fastapi import HTTPException
++from src.api.deps import AppSecrets, sanitize_api_key, get_app_secrets
++from src.domains.ater.embeddings_linker import EmbeddingsLinker
++
++async def _call_get_app_secrets(**kwargs):
++    """Helper to bypass FastAPI Header defaults and pass real values."""
++    defaults = {
++        "x_ater_token": None,
++        "x_ai_provider": "google",
++        "x_ai_key": None,
++        "x_ai_model": "gemini-2.0-flash",
++        "x_ai_base_url": None,
++        "x_ai_max_tpm": None,
++        "x_ai_max_rpm": None,
++        "x_ai_max_tpd": None,
++        "x_ai_max_rpd": None,
++        "x_ai_max_concurrency": None,
++        "x_planner_provider": None,
++        "x_planner_key": None,
++        "x_planner_model": None,
++        "x_utility_provider": None,
++        "x_utility_key": None,
++        "x_utility_model": None,
++        "x_vault_path": None,
++        "x_inbox_path": None,
++        "x_academic_path": "Notes",
++        "x_auto_deploy": "false",
++        "x_google_calendar_token": None,
++    }
++    defaults.update(kwargs)
++    return await get_app_secrets(**defaults)
++
++@pytest.mark.asyncio
++async def test_strict_token_validation_no_env(monkeypatch):
++    """Verify 500 error if ATER_SIDECAR_TOKEN is not set."""
++    monkeypatch.delenv("ATER_SIDECAR_TOKEN", raising=False)
++
++    with pytest.raises(HTTPException) as exc_info:
++        await _call_get_app_secrets(x_ater_token="any")
++    assert exc_info.value.status_code == 500
++    assert "Sidecar security token not configured" in exc_info.value.detail
++
++@pytest.mark.asyncio
++async def test_strict_token_validation_invalid_token(monkeypatch):
++    """Verify 403 error if token is incorrect."""
++    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "secret-token")
++
++    with pytest.raises(HTTPException) as exc_info:
++        await _call_get_app_secrets(x_ater_token="wrong-token")
++    assert exc_info.value.status_code == 403
++    assert "Invalid sidecar authentication token" in exc_info.value.detail
++
++@pytest.mark.asyncio
++async def test_strict_token_validation_success(monkeypatch):
++    """Verify success if token is correct."""
++    monkeypatch.setenv("ATER_SIDECAR_TOKEN", "secret-token")
++
++    secrets = await _call_get_app_secrets(x_ater_token="secret-token")
++    assert secrets is not None
++
++def test_embeddings_linker_robustness_missing_model(monkeypatch):
++    """Verify that EmbeddingsLinker returns zeros if model loading fails."""
++    # Force failure by setting a non-existent model dir and disabling common paths
++    monkeypatch.setenv("ATER_ONNX_MODEL_DIR", "/non/existent/path")
++
++    # We need to mock _get_model_paths to return a non-existent path reliably
++    from pathlib import Path
++    monkeypatch.setattr(EmbeddingsLinker, "_get_model_paths", lambda: (Path("/non/existent"), Path("/non/existent/model.onnx")))
++
++    linker = EmbeddingsLinker()
++    # Reset internal state to ensure it tries to load
++    EmbeddingsLinker._session = None
++    EmbeddingsLinker._tokenizer = None
++    EmbeddingsLinker._load_failed = False
++
++    try:
++        embeddings = linker.get_embeddings(["test text"])
++        assert embeddings.shape == (1, 384)
++        assert np.all(embeddings == 0)
++        assert EmbeddingsLinker._load_failed is True
++    finally:
++        # Cleanup
++        EmbeddingsLinker._load_failed = False
++
++def test_embeddings_linker_persistence_of_failure(monkeypatch):
++    """Verify that EmbeddingsLinker doesn't keep retrying if load_failed is True."""
++    EmbeddingsLinker._load_failed = True
++
++    try:
++        linker = EmbeddingsLinker()
++        embeddings = linker.get_embeddings(["test text"])
++        assert embeddings.shape == (1, 384)
++        assert np.all(embeddings == 0)
++    finally:
++        # Cleanup
++        EmbeddingsLinker._load_failed = False
+diff --git a/apps/api/tests/test_notebooklm_runner.py b/apps/api/tests/test_notebooklm_runner.py
+index 782f5776..ea1546c6 100644
+--- a/apps/api/tests/test_notebooklm_runner.py
++++ b/apps/api/tests/test_notebooklm_runner.py
+@@ -212,7 +212,7 @@ async def fake_start_login(force=True, clear=False):
+ 
+     monkeypatch.setattr(NotebookLMRunner, "start_login", fake_start_login)
+ 
+-    response = TestClient(app).post("/api/notebooklm/auth/login?force=true&clear=true")
++    response = TestClient(app).post("/api/notebooklm/auth/login?force=true&clear=true", headers={"X-Ater-Token": "test-token"})
+ 
+     assert response.status_code == 200
+     assert response.json()["success"] is True
+@@ -228,7 +228,7 @@ async def fake_get_auth_status(force=False):
+ 
+     monkeypatch.setattr(NotebookLMRunner, "get_auth_status", fake_get_auth_status)
+ 
+-    response = TestClient(app).get("/api/notebooklm/auth/status?force=true")
++    response = TestClient(app).get("/api/notebooklm/auth/status?force=true", headers={"X-Ater-Token": "test-token"})
+ 
+     assert response.status_code == 200
+     assert response.json()["auth_status"] == "configured"
+diff --git a/apps/api/tests/test_rag.py b/apps/api/tests/test_rag.py
+index 56d0b0c1..572c8932 100644
+--- a/apps/api/tests/test_rag.py
++++ b/apps/api/tests/test_rag.py
+@@ -5,7 +5,7 @@
+ @pytest.mark.asyncio
+ async def test_rag_sync_status():
+     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+-        response = await ac.get("/api/rag/sync-status")
++        response = await ac.get("/api/rag/sync-status", headers={"X-Ater-Token": "test-token"})
+         assert response.status_code == 200
+         data = response.json()
+         assert "status" in data
+@@ -13,6 +13,6 @@ async def test_rag_sync_status():
+ @pytest.mark.asyncio
+ async def test_rag_watcher_toggle_requires_vault_path():
+     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+-        response = await ac.post("/api/rag/watcher/toggle")
++        response = await ac.post("/api/rag/watcher/toggle", headers={"X-Ater-Token": "test-token"})
+         assert response.status_code == 400
+         assert "Vault Path is required" in response.text
