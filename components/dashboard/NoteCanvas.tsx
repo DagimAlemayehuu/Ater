@@ -584,13 +584,28 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
     );
   }
 
-  const sectionsConfig = [
-    { num: 1, title: t.sections.sec1Full, short: t.sections.intuition, text: section1Text },
-    { num: 2, title: t.sections.sec2Full, short: t.sections.framework, text: section2Text },
-    { num: 3, title: t.sections.sec3Full, short: t.sections.mechanism, text: section3Text },
-    { num: 4, title: t.sections.sec4Full, short: t.sections.checkpoint, text: section4Boundary },
-    { num: 5, title: t.sections.sec5Full, short: t.sections.synthesis, text: section5Text },
-  ];
+  const isCurrentMiniLesson = Boolean(
+    (note as any)?.isRemediation ||
+    (note as any)?.parentLessonId ||
+    curriculum?.lessons?.some((l) => l.id === ((note as any)?.lessonId || (note as any)?.id) && (l.isRemediation || l.parentLessonId))
+  );
+
+  const sectionsConfig = isCurrentMiniLesson
+    ? [
+        {
+          num: 1,
+          title: isAmharic ? 'የማካካሻ ትምህርት' : 'Core Remediation',
+          short: isAmharic ? 'ክለሳ' : 'Mini-Lesson',
+          text: section1Text,
+        },
+      ]
+    : [
+        { num: 1, title: t.sections.sec1Full, short: t.sections.intuition, text: section1Text },
+        { num: 2, title: t.sections.sec2Full, short: t.sections.framework, text: section2Text },
+        { num: 3, title: t.sections.sec3Full, short: t.sections.mechanism, text: section3Text },
+        { num: 4, title: t.sections.sec4Full, short: t.sections.checkpoint, text: section4Boundary },
+        { num: 5, title: t.sections.sec5Full, short: t.sections.synthesis, text: section5Text },
+      ];
 
   // Active quote for "What the Agent Just Said"
   const currentDisplayedSpeech = activeSpokenText || getSectionExplanation(activeSectionTab);
@@ -709,6 +724,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                   const isSelected = lesson.id === activeLessonId || (note as any)?.lessonId === lesson.id;
                   const isLocked = lesson.status === 'locked';
                   const cleanLessonTitle = lesson.title.replace(/^(\d+\s*[\cdot·\-–—]\s*)+/u, '').trim();
+                  // Only treat as mini-lesson if explicitly marked as remediation sub-lesson or has parentLessonId
+                  // (Crucial: do not treat parent lesson whose status is 'remediation' as a mini-lesson)
+                  const isMiniLesson = Boolean(lesson.isRemediation || lesson.parentLessonId || (lesson.id.endsWith('b') && !lesson.id.startsWith('lesson-')));
 
                   return (
                     <button
@@ -717,7 +735,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       disabled={isLocked}
                       onClick={() => !isLocked && onSelectLesson && onSelectLesson(lesson)}
                       title={cleanLessonTitle}
-                      className={`w-full text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 ${
+                      className={`text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 cursor-pointer ${
+                        isMiniLesson ? 'ml-4 pl-2.5 w-[calc(100%-1rem)] bg-zinc-50/60 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-800' : 'w-full'
+                      } ${
                         isSelected
                           ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs border border-zinc-200/80 dark:border-zinc-700/80'
                           : isLocked
@@ -729,17 +749,16 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                         className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md mt-0.5 shrink-0 ${
                           isSelected
                             ? 'bg-zinc-100 dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-100 font-semibold'
-                            : 'bg-zinc-200/50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400'
+                            : isMiniLesson
+                              ? 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold'
+                              : 'bg-zinc-200/50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400'
                         }`}
                       >
-                        {lesson.order ? String(lesson.order).padStart(2, '0') : '•'}
+                        {isMiniLesson ? (isAmharic ? 'ክለሳ' : 'Mini') : lesson.order ? String(Math.floor(lesson.order)).padStart(2, '0') : ''}
                       </span>
                       <span className="text-xs leading-snug line-clamp-2 flex-1">
                         {cleanLessonTitle}
                       </span>
-                      {isSelected && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 mt-1.5 shrink-0" />
-                      )}
                     </button>
                   );
                 })}
@@ -749,10 +768,10 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
         )}
 
         {/* Main Canvas Column: scrollable content + static bottom ask teacher bar */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 flex flex-col h-full overflow-hidden w-full">
           {/* Scrollable Lesson Area */}
           <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6">
-            <div className="max-w-4xl mx-auto space-y-4 pb-8">
+            <div className="max-w-3xl w-full mx-auto space-y-4 pb-8">
 
             {/* Stepper Progression Navigation Bar (Section tabs: Intuition, Framework, etc.) */}
             <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
@@ -1011,17 +1030,17 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     </div>
                   )}
 
-                  {/* Socratic Defense Gate Launch Card (Hidden if disableGate is true on curriculum) */}
+                  {/* Defense Launch Card (Hidden if disableGate is true on curriculum) */}
                   {!curriculum?.disableGate && (
                     <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80">
                       <div>
                         <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                          {isAmharic ? 'የሶቅራጥስ የቃል ምዘና መከላከያ (Socratic Defense Gate)' : 'Socratic Defense Gate · Prove Mastery'}
+                          {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
                         </h4>
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                           {isAmharic
                             ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
-                            : 'Defend your first-principles comprehension through an interactive 3-question battery to unlock the next lesson.'}
+                            : 'Answer 3 progressively challenging questions to prove complete mastery and unlock the next lesson.'}
                         </p>
                       </div>
                       {onOpenFeynman && (
@@ -1030,7 +1049,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                           onClick={onOpenFeynman}
                           className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
                         >
-                          {isAmharic ? 'የቃል ፈተናውን ጀምር' : 'Enter Gate'}
+                          {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
                         </button>
                       )}
                     </div>
@@ -1054,7 +1073,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                   </button>
                 ) : <div />}
 
-                {activeSectionTab < 5 ? (
+                {activeSectionTab < sectionsConfig.length ? (
                   <button
                     type="button"
                     onClick={() => handleAdvanceSection(activeSectionTab + 1)}
@@ -1130,25 +1149,26 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             }
             className={isSideQuestionOpen ? 'relative z-40' : ''}
           />
+
+          {/* Question Pop-up Card inside main canvas column for centered alignment */}
+          <SideQuestionModal
+            isOpen={isSideQuestionOpen}
+            activeThread={sideQuestionThreads.find((t) => t.id === activeThreadId) || null}
+            allThreads={sideQuestionThreads}
+            isLoading={isAskingTeacher}
+            pendingQuestion={pendingQuestion}
+            onClose={() => {
+              setIsSideQuestionOpen(false);
+              stopNeuralAudio();
+              setReadingSection(null);
+            }}
+            onSelectThread={(threadId) => setActiveThreadId(threadId)}
+            language={language}
+            defaultVoice={defaultVoice}
+            containerClassName="inset-x-0 sm:left-60 lg:left-72 sm:right-0"
+          />
         </div>
       </div>
-
-      {/* Question Pop-up Card */}
-      <SideQuestionModal
-        isOpen={isSideQuestionOpen}
-        activeThread={sideQuestionThreads.find((t) => t.id === activeThreadId) || null}
-        allThreads={sideQuestionThreads}
-        isLoading={isAskingTeacher}
-        pendingQuestion={pendingQuestion}
-        onClose={() => {
-          setIsSideQuestionOpen(false);
-          stopNeuralAudio();
-          setReadingSection(null);
-        }}
-        onSelectThread={(threadId) => setActiveThreadId(threadId)}
-        language={language}
-        defaultVoice={defaultVoice}
-      />
     </div>
   );
 };

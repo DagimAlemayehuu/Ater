@@ -38,7 +38,7 @@ export const AskTeacherBar: React.FC<AskTeacherBarProps> = ({
 
   return (
     <div className={`p-4 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-900/60 pointer-events-auto shrink-0 ${className}`}>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl w-full mx-auto">
         <form
           onSubmit={handleSubmit}
           className={`relative flex items-center gap-2 rounded-2xl border bg-white dark:bg-zinc-900/90 px-4 py-2.5 shadow-sm transition-all ${

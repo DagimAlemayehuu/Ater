@@ -1225,6 +1225,8 @@ export default function AterCognitiveStudio() {
         <FeynmanModal
           isOpen={isFeynmanModalOpen}
           concept={activeNote.title}
+          lessonId={activeLesson?.id || activeNote.lessonId}
+          tabooWords={activeNote.feynmanCriteria?.tabooWords || []}
           onClose={() => setIsFeynmanModalOpen(false)}
           onOpenRemediation={handleOpenRemediation}
           onContinueNextLesson={handleContinueNextLesson}

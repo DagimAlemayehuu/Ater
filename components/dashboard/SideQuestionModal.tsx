@@ -42,6 +42,7 @@ export interface SideQuestionModalProps {
   onSelectThread: (threadId: string) => void;
   language?: AppLanguage;
   defaultVoice?: string;
+  containerClassName?: string;
 }
 
 export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
@@ -54,6 +55,7 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
   onSelectThread,
   language = 'en',
   defaultVoice = 'en-US-JennyNeural',
+  containerClassName = '',
 }) => {
   const [playbackState, setPlaybackState] = useState<AudioPlaybackState>(getAudioPlaybackState());
   const [copied, setCopied] = useState(false);
@@ -146,7 +148,7 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
       />
 
       {/* Floating Card Container extending directly from above the bottom input bar */}
-      <div className="fixed inset-x-0 bottom-20 z-40 flex flex-col items-center pointer-events-none px-3 sm:px-4">
+      <div className={`fixed bottom-20 z-40 flex flex-col items-center pointer-events-none px-3 sm:px-4 ${containerClassName || 'inset-x-0'}`}>
         <div
           role="dialog"
           aria-labelledby="question-card-title"
