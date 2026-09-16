@@ -253,8 +253,8 @@ export const RichContentRenderer: React.FC<RichContentRendererProps> = ({
             return (
               <InteractiveCanvasViewer
                 key={idx}
-                title="Consensus Cluster Simulation"
-                preset="consensus-simulator"
+                code={block.content}
+                title="Interactive Simulation"
               />
             );
 

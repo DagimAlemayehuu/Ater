@@ -183,6 +183,13 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              href="/app"
+              className="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Open App</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
             <span className="text-xs font-mono text-zinc-400 truncate max-w-[180px]">
               {currentUserEmail || 'Unauthenticated'}
             </span>

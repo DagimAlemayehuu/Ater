@@ -25,51 +25,23 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     );
   }
 
-  const { type, prompt, pdfBase64, fileName, filename, useMock, language } = body;
+  const { type, prompt, pdfBase64, fileName, filename, files, useMock, language } = body;
   const resolvedFileName = typeof fileName === 'string' ? fileName.trim() : typeof filename === 'string' ? filename.trim() : '';
   const appLang = language === 'am' ? 'am' : 'en';
 
-  if (type !== undefined && type !== 'prompt' && type !== 'pdf') {
-    return NextResponse.json(
-      { error: "Invalid intake type: must be 'prompt' or 'pdf'" },
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   const trimmedPrompt = typeof prompt === 'string' ? prompt.trim() : '';
   const trimmedPdf = typeof pdfBase64 === 'string' ? pdfBase64.trim() : '';
+  const resolvedFiles = Array.isArray(files) ? files : [];
 
-  // Explicit type checks
-  if (type === 'prompt' && !trimmedPrompt && !resolvedFileName) {
+  if (resolvedFiles.length === 0 && !trimmedPrompt && !trimmedPdf && !resolvedFileName) {
     return NextResponse.json(
-      { error: 'Prompt text is required for prompt intake' },
+      { error: 'Either prompt, pdfBase64, or uploaded files must be provided' },
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
-  if (type === 'pdf' && !trimmedPdf && !trimmedPrompt && !resolvedFileName) {
-    return NextResponse.json(
-      { error: 'PDF base64 data is required for PDF intake' },
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // General presence check when type is omitted or implicit
-  if (!trimmedPrompt && !trimmedPdf && !resolvedFileName) {
-    return NextResponse.json(
-      { error: 'Either prompt or pdfBase64 must be provided' },
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (trimmedPdf && trimmedPdf.length > MAX_PDF_BASE64_LENGTH) {
-    return NextResponse.json(
-      { error: 'PDF payload exceeds maximum allowable size (20MB)' },
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const resolvedType: 'prompt' | 'pdf' = type || (trimmedPdf ? 'pdf' : 'prompt');
+  const resolvedType: 'prompt' | 'pdf' | 'document' =
+    type || (resolvedFiles.length > 0 || trimmedPdf ? 'document' : 'prompt');
 
   try {
     const intakeResult: IntakeResponse = await analyzeIntakeMaterial({
@@ -77,6 +49,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
       prompt: trimmedPrompt,
       pdfBase64: trimmedPdf,
       fileName: resolvedFileName,
+      files: resolvedFiles,
       useMock: !!useMock,
       language: appLang,
       throwOnError: true,

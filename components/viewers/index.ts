@@ -1,3 +1,4 @@
+export * from './ArtifactModal';
 export * from './MermaidViewer';
 export * from './CodeViewer';
 export * from './MathViewer';

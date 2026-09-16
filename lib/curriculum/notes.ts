@@ -13,6 +13,7 @@ import type {
 import { extractJsonFromResponse } from '@/lib/ai/gemini';
 import { cleanContinuousProse, stripEmojis, sanitizeSpokenPrompt } from './intake';
 import { getViewerDemoLessonNote } from './viewerDemo';
+import { getShowcaseLessonNote } from './showcaseCourses';
 
 const NOTE_CACHE_DIR = path.join(os.tmpdir(), 'ater_note_cache');
 
@@ -70,6 +71,11 @@ export function generateFallbackNote(
 ): DynamicLessonNote {
   if (lessonId.startsWith('lesson-viewer-') || (title && title.toLowerCase().includes('viewer demo'))) {
     return getViewerDemoLessonNote(lessonId, language);
+  }
+
+  const showcaseNote = getShowcaseLessonNote(lessonId, language);
+  if (showcaseNote) {
+    return showcaseNote;
   }
 
   const cleanTitle = stripEmojis(title || 'Foundational Principles').trim();
@@ -313,6 +319,11 @@ export async function compileDynamicLessonNote(
 
   if (lessonId.startsWith('lesson-viewer-') || (cleanTitle && cleanTitle.toLowerCase().includes('viewer demo'))) {
     return getViewerDemoLessonNote(lessonId, language);
+  }
+
+  const showcaseNote = getShowcaseLessonNote(lessonId, language);
+  if (showcaseNote) {
+    return showcaseNote;
   }
 
   const apiKey = process.env.GEMINI_API_KEY;

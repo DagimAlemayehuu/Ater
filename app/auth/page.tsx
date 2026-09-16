@@ -55,10 +55,21 @@ function AuthContent() {
           data = res.data;
         }
 
-        setUserStatus(data || { email: userEmail, status: 'approved' });
+        const statusVal = data?.status || 'pending';
+        const isAdmin = userEmail.toLowerCase() === 'dagimalemayehuu@gmail.com';
+        setUserStatus(data || { email: userEmail, status: isAdmin ? 'approved' : statusVal });
+        if (statusVal === 'approved' || isAdmin) {
+          router.push('/app');
+          return;
+        }
         setView('dashboard');
       } catch {
-        setUserStatus({ email: userEmail, status: 'approved' });
+        const isAdmin = userEmail.toLowerCase() === 'dagimalemayehuu@gmail.com';
+        setUserStatus({ email: userEmail, status: isAdmin ? 'approved' : 'pending' });
+        if (isAdmin) {
+          router.push('/app');
+          return;
+        }
         setView('dashboard');
       }
     }
@@ -231,6 +242,14 @@ function AuthContent() {
             </div>
 
             <div className="flex flex-col gap-2 pt-2">
+              {(user.email === 'dagimalemayehuu@gmail.com' || userStatus?.status === 'approved') && (
+                <Link
+                  href="/app"
+                  className="w-full py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-medium transition-colors text-center cursor-pointer"
+                >
+                  {isAmharic ? 'መተግበሪያውን ክፈት (Open App)' : 'Open Learning App'}
+                </Link>
+              )}
               {user.email === 'dagimalemayehuu@gmail.com' && (
                 <Link
                   href="/admin"

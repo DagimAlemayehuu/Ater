@@ -37,8 +37,8 @@ export const AskTeacherBar: React.FC<AskTeacherBarProps> = ({
     placeholder || (isLoading ? (language === 'am' ? 'እያሰበ ነው...' : 'Thinking...') : t.askTeacherBottomPlaceholder);
 
   return (
-    <div className={`sticky bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-zinc-950 dark:via-zinc-950/95 dark:to-transparent pt-4 pointer-events-auto ${className}`}>
-      <div className="max-w-2xl mx-auto">
+    <div className={`p-4 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-900/60 pointer-events-auto shrink-0 ${className}`}>
+      <div className="max-w-4xl mx-auto">
         <form
           onSubmit={handleSubmit}
           className={`relative flex items-center gap-2 rounded-2xl border bg-white dark:bg-zinc-900/90 px-4 py-2.5 shadow-sm transition-all ${

@@ -1,24 +1,28 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Copy, Check, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Copy, Check, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
+import { ArtifactModal } from './ArtifactModal';
 
 export interface MermaidViewerProps {
   code: string;
   caption?: string;
   className?: string;
+  disableExpand?: boolean;
 }
 
 export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   code,
   caption,
   className = '',
+  disableExpand = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isExpanded, setIsExpanded] = useState(false);
   const renderIdRef = useRef(`mermaid-${Math.random().toString(36).substring(2, 9)}`);
 
   useEffect(() => {
@@ -157,13 +161,32 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
               {isCopied ? 'Copied' : 'Copy'}
             </span>
           </button>
+          {!disableExpand && (
+            <>
+              <div className="w-[1px] h-3 bg-zinc-300 dark:bg-zinc-700 mx-1" />
+              <button
+                type="button"
+                onClick={() => setIsExpanded(true)}
+                aria-label="Expand diagram"
+                title="Expand diagram"
+                className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-mono hidden sm:inline">Expand</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* SVG Canvas Area */}
       <div
         ref={containerRef}
-        className="p-4 overflow-x-auto flex items-center justify-center min-h-[140px]"
+        onClick={!disableExpand ? () => setIsExpanded(true) : undefined}
+        title={!disableExpand ? 'Click to expand diagram' : undefined}
+        className={`p-4 overflow-x-auto flex items-center justify-center min-h-[140px] ${
+          !disableExpand ? 'cursor-pointer hover:bg-zinc-100/30 dark:hover:bg-zinc-900/60 transition-colors' : ''
+        }`}
       >
         {error ? (
           <div className="text-xs font-mono text-zinc-500 space-y-2 w-full">
@@ -190,6 +213,29 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
         <div className="px-3 py-1.5 border-t border-zinc-200/60 dark:border-zinc-800/60 text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100/30 dark:bg-zinc-900/20">
           {caption}
         </div>
+      )}
+
+      {/* Expanded Modal View */}
+      {!disableExpand && isExpanded && (
+        <ArtifactModal
+          isOpen={isExpanded}
+          onClose={() => setIsExpanded(false)}
+          badgeText="Diagram"
+          title={caption || 'Mermaid Vector Diagram'}
+        >
+          <div className="flex flex-col items-center justify-center min-h-[60vh] w-full p-6">
+            {error ? (
+              <pre className="p-4 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-xs font-mono text-zinc-700 dark:text-zinc-300 overflow-x-auto max-w-full">
+                {code}
+              </pre>
+            ) : svgContent ? (
+              <div
+                className="w-full max-w-full flex items-center justify-center overflow-x-auto"
+                dangerouslySetInnerHTML={{ __html: svgContent }}
+              />
+            ) : null}
+          </div>
+        </ArtifactModal>
       )}
     </div>
   );

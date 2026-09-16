@@ -46,6 +46,7 @@ export interface CourseCurriculum {
   lessons: RoadmapLesson[];
   activeLessonId: string;
   teacherWalkthrough?: string;
+  disableGate?: boolean;
   createdAt?: string;
   generatedAt?: string;
 }
@@ -118,19 +119,56 @@ export interface LessonCheckpoint {
   evaluation?: LessonCheckpointEvaluation;
 }
 
-/**
- * Inline multiple choice question embedded directly into a note section.
- */
-export interface LessonInlineMCQ {
+export type LessonQuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'matching' | 'short_answer';
+
+export interface MatchingPair {
   id: string;
-  sectionIndex: number; // 1 (Intuition) or 3 (Mechanism)
+  left: string;
+  right: string;
+}
+
+/**
+ * Mid-lesson interactive retrieval question embedded into note sections.
+ * Supports Multiple Choice, True/False, Fill in Blank, Matching, and Short Answer.
+ */
+export interface LessonInlineQuestion {
+  id: string;
+  sectionIndex: number; // 1 to 4
+  type?: LessonQuestionType; // default 'mcq'
   question: string;
-  options: string[];
-  correctOptionIndex: number;
   explanation: string;
+
+  // Multiple Choice (type = 'mcq')
+  options?: string[];
+  correctOptionIndex?: number;
   userSelectedIndex?: number;
+
+  // True / False (type = 'true_false')
+  correctBoolean?: boolean;
+  userSelectedBoolean?: boolean;
+
+  // Fill in the Blank (type = 'fill_blank')
+  // e.g. sentence: "In Raft, only the [blank] can issue AppendEntries RPCs."
+  sentencePrefix?: string;
+  sentenceSuffix?: string;
+  acceptedAnswers?: string[]; // case-insensitive trimmed matches
+  userTextAnswer?: string;
+
+  // Matching (type = 'matching')
+  matchingPairs?: MatchingPair[]; // original canonical pairs
+  userMatches?: Record<string, string>; // leftId -> rightId
+
+  // Short Answer (type = 'short_answer')
+  sampleAnswer?: string;
+  targetKeywords?: string[]; // key concepts expected in student's response
+
   isCorrect?: boolean;
 }
+
+/**
+ * Backwards-compatibility alias for LessonInlineQuestion.
+ */
+export type LessonInlineMCQ = LessonInlineQuestion;
 
 /**
  * Forbidden taboo words and prompt criteria for the oral Feynman Gate.

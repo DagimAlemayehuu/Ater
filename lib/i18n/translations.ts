@@ -110,6 +110,8 @@ export interface TranslationDictionary {
     multiSelectLabel: string;
     synthesizingTitle: (topic: string) => string;
     synthesizingDesc: string;
+    generatingRoadmapTitle: (topic: string) => string;
+    generatingCourseTitle: (topic: string) => string;
   };
   drawer: {
     title: string;
@@ -240,11 +242,11 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       mechanism: 'How It Works',
       checkpoint: 'Check',
       synthesis: 'Summary',
-      sec1Full: '01 · Simple Example',
-      sec2Full: '02 · Core Idea',
-      sec3Full: '03 · How It Works',
-      sec4Full: '04 · Watch Out & Check',
-      sec5Full: '05 · Summary',
+      sec1Full: 'Simple Example',
+      sec2Full: 'Core Idea',
+      sec3Full: 'How It Works',
+      sec4Full: 'Watch Out & Check',
+      sec5Full: 'Summary',
     },
     intake: {
       title: 'New Course',
@@ -264,8 +266,10 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       back: 'Back',
       clearSelection: 'Clear',
       multiSelectLabel: 'Options',
-      synthesizingTitle: (topic) => `Creating course for "${topic}"...`,
-      synthesizingDesc: 'Building simple step-by-step lessons based on your answers.',
+      synthesizingTitle: (topic) => `Generating roadmap for "${topic}"...`,
+      synthesizingDesc: 'Calibrating structured lesson sequence based on your responses.',
+      generatingRoadmapTitle: (topic) => `Generating roadmap for "${topic}"...`,
+      generatingCourseTitle: (topic) => `Generating course for "${topic}"...`,
     },
     drawer: {
       title: 'Workspace Library',
@@ -394,11 +398,11 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       mechanism: 'አሰራር',
       checkpoint: 'ፍተሻ',
       synthesis: 'ማጠቃለያ',
-      sec1Full: '01 · ቀላል ምሳሌ',
-      sec2Full: '02 · ዋናው ሀሳብ',
-      sec3Full: '03 · እንዴት ይሰራል',
-      sec4Full: '04 · መጠንቀቂያ እና ፍተሻ',
-      sec5Full: '05 · ማጠቃለያ',
+      sec1Full: 'ቀላል ምሳሌ',
+      sec2Full: 'ዋናው ሀሳብ',
+      sec3Full: 'እንዴት ይሰራል',
+      sec4Full: 'መጠንቀቂያ እና ፍተሻ',
+      sec5Full: 'ማጠቃለያ',
     },
     intake: {
       title: 'አዲስ ኮርስ',
@@ -418,8 +422,10 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       back: 'ተመለስ',
       clearSelection: 'አጽዳ',
       multiSelectLabel: 'አማራጮች',
-      synthesizingTitle: (topic) => `ለ "${topic}" ኮርስ እየተዘጋጀ ነው...`,
-      synthesizingDesc: 'ቀላል ደረጃ በደረጃ ትምህርቶች እየተዘጋጁ ነው።',
+      synthesizingTitle: (topic) => `ለ "${topic}" የትምህርት ካርታ በማዘጋጀት ላይ...`,
+      synthesizingDesc: 'በሰጧቸው ምላሾች መሰረት የትምህርት ቅደም ተከተል እየተቀመረ ነው።',
+      generatingRoadmapTitle: (topic) => `ለ "${topic}" የትምህርት ካርታ በማዘጋጀት ላይ...`,
+      generatingCourseTitle: (topic) => `ለ "${topic}" ኮርስ በማዘጋጀት ላይ...`,
     },
     drawer: {
       title: 'የስራ ቤተ-መጽሐፍት',

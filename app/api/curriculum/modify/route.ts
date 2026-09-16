@@ -100,7 +100,7 @@ Respond with ONLY valid JSON:
       "isRemediation": false
     }
   ],
-  "teacherWalkthrough": "Spoken explanation of the updates made"
+  "teacherWalkthrough": "Spoken explanation of the updates made. First acknowledge the user's specific request. Then walk sequentially through the modified or added lessons, giving a 1-sentence explanation of what each one covers, and invite the student to approve or adjust further."
 }`;
 
     const response = await fetch(

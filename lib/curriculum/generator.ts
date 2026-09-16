@@ -280,7 +280,7 @@ Respond with ONLY valid JSON matching this schema:
       "isRemediation": false
     }
   ],
-  "teacherWalkthrough": "A concise, engaging 3-4 sentence spoken script spoken by the AI teacher walking the student through the learning progression of this roadmap and inviting them to approve or suggest modifications."
+  "teacherWalkthrough": "A spoken script by the AI teacher. First, introduce the course and target outcome. Then, walk sequentially through each generated lesson by title and give a clear, simple 1-sentence explanation of what will be learned and why it matters. Conclude by inviting the learner to approve and begin lesson 1 or type adjustments."
 }`;
 
   try {

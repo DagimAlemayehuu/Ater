@@ -187,12 +187,20 @@ export function generateFallbackIntake(topicHint?: string, language: 'en' | 'am'
       };
 }
 
+export interface UploadedFileItem {
+  fileName: string;
+  fileBase64?: string;
+  fileType?: string;
+  textContent?: string;
+}
+
 export interface AnalyzeIntakeOptions {
-  type?: 'prompt' | 'pdf';
+  type?: 'prompt' | 'pdf' | 'document' | 'file';
   prompt?: string;
   pdfBase64?: string;
   fileName?: string;
   filename?: string;
+  files?: UploadedFileItem[];
   useMock?: boolean;
   throwOnError?: boolean;
   language?: 'en' | 'am';
@@ -201,17 +209,18 @@ export interface AnalyzeIntakeOptions {
 const VALID_CATEGORIES: SocraticQuestionCategory[] = ['goal', 'baseline', 'depth', 'style', 'followup'];
 
 /**
- * Analyzes dual intake material (text prompt or base64 PDF) using gemini-3.5-flash-lite,
- * extracting the learning topic and generating 2-4 calibrated Socratic discovery questions.
+ * Analyzes dual intake material (text prompt or multiple uploaded files) using gemini-3.5-flash-lite,
+ * extracting the learning topic and generating 3-5 calibrated Socratic discovery questions.
  */
 export async function analyzeIntakeMaterial(
   promptOrOptions?: string | AnalyzeIntakeOptions,
   pdfBase64Arg?: string,
-  optionsOrFilename?: { fileName?: string; filename?: string; useMock?: boolean; throwOnError?: boolean; language?: 'en' | 'am' } | string
+  optionsOrFilename?: { fileName?: string; filename?: string; files?: UploadedFileItem[]; useMock?: boolean; throwOnError?: boolean; language?: 'en' | 'am' } | string
 ): Promise<IntakeResponse> {
   let prompt = '';
   let pdfBase64 = '';
   let fileName = '';
+  let files: UploadedFileItem[] = [];
   let useMock = false;
   let throwOnError = false;
   let language: 'en' | 'am' = 'en';
@@ -220,6 +229,7 @@ export async function analyzeIntakeMaterial(
     prompt = promptOrOptions.prompt || '';
     pdfBase64 = promptOrOptions.pdfBase64 || '';
     fileName = promptOrOptions.fileName || promptOrOptions.filename || '';
+    files = promptOrOptions.files || [];
     useMock = !!promptOrOptions.useMock;
     throwOnError = !!promptOrOptions.throwOnError;
     language = promptOrOptions.language === 'am' ? 'am' : 'en';
@@ -230,6 +240,7 @@ export async function analyzeIntakeMaterial(
       fileName = optionsOrFilename;
     } else if (typeof optionsOrFilename === 'object' && optionsOrFilename !== null) {
       fileName = optionsOrFilename.fileName || optionsOrFilename.filename || '';
+      files = optionsOrFilename.files || [];
       useMock = !!optionsOrFilename.useMock;
       throwOnError = !!optionsOrFilename.throwOnError;
       language = optionsOrFilename.language === 'am' ? 'am' : 'en';
@@ -241,14 +252,23 @@ export async function analyzeIntakeMaterial(
   const trimmedPdf = pdfBase64.trim();
   const trimmedFileName = fileName.trim();
 
-  if (!trimmedPrompt && !trimmedPdf && !trimmedFileName) {
-    throw new Error('Missing intake content: either prompt or pdfBase64 must be provided');
+  // If a single file was provided via legacy parameters, convert to files list
+  if (files.length === 0 && (trimmedPdf || trimmedFileName)) {
+    files.push({
+      fileName: trimmedFileName || 'document.pdf',
+      fileBase64: trimmedPdf,
+      fileType: trimmedFileName.endsWith('.pdf') ? 'application/pdf' : 'text/plain',
+    });
+  }
+
+  if (!trimmedPrompt && files.length === 0) {
+    throw new Error('Missing intake content: either prompt or uploaded files must be provided');
   }
 
   let derivedTopic = trimmedPrompt.slice(0, 60);
-  if (!derivedTopic && trimmedFileName) {
-    derivedTopic = trimmedFileName
-      .replace(/\.pdf$/i, '')
+  if (!derivedTopic && files.length > 0) {
+    derivedTopic = files[0].fileName
+      .replace(/\.[a-zA-Z0-9]+$/i, '')
       .replace(/[-_]/g, ' ')
       .trim();
   }
@@ -261,15 +281,13 @@ export async function analyzeIntakeMaterial(
     return generateFallbackIntake(derivedTopic, language);
   }
 
-  const cleanPdf = trimmedPdf
-    ? trimmedPdf.replace(/^data:[^;]+;base64,/, '').replace(/\s+/g, '')
-    : '';
-
   const languageDirective = isAm
     ? `CRITICAL LANGUAGE INVARIANT:
 You MUST author the entire output (topic, initialSummary, questions, spokenPrompt, options) strictly in natural, articulate Amharic (አማርኛ) using Ge'ez script. Zero English letters or latin script.`
     : `CRITICAL LANGUAGE INVARIANT:
 Author the entire output in clear, articulate English.`;
+
+  const filesSummary = files.map((f) => `- ${f.fileName} (${f.fileType || 'document'})`).join('\n');
 
   const systemPrompt = `You are a friendly teacher conducting an interview to understand the student's exact goal.
 Use VERY simple, plain, everyday English. Absolutely ZERO academic jargon and ZERO complex words.
@@ -278,16 +296,15 @@ ${languageDirective}
 
 Material Details:
 ${trimmedPrompt ? `User Prompt: "${trimmedPrompt}"` : ''}
-${trimmedFileName ? `Document Filename: "${trimmedFileName}"` : ''}
+${files.length > 0 ? `Uploaded Learning Materials:\n${filesSummary}` : ''}
 
 CRITICAL INVARIANTS:
 1. Extract "topic": A concise canonical title of the domain or subject (2-5 words).
 2. Formulate "initialSummary": Exactly 1-2 analytical sentences summarizing the core focus. STRICT INVARIANT: Continuous prose only, strictly zero bullet points, asterisks, plus signs, or numbered list prefixes.
-3. Formulate "questions": Exactly 2 to 4 diagnostic Socratic discovery questions (strict range: 2 <= questions.length <= 4).
-   - Question 1 (Category: "goal"): Probe what concrete project, system, or milestone the learner wants to achieve.
-   - Question 2 (Category: "baseline"): Probe their prior prerequisite background and adjacent concepts.
-   - Question 3 (Category: "depth" or "style"): Probe target depth (theoretical mathematical proofs vs. practical code traces).
-   - Optional Question 4 (Category: "followup" or "depth"): Probe specific domain constraints or frameworks.
+3. Formulate "questions": Generate diagnostic Socratic discovery questions tailored to the input.
+   - If the user prompt is broad, short, or vague (e.g. "learn programming", "AI", "physics"), formulate 4 to 5 foundational diagnostic questions (probing specific sub-domain, target real-world project, prior baseline, target depth, and preferred focus).
+   - If the user prompt is detailed or provided via PDF/syllabus files, formulate 3 to 4 focused diagnostic questions.
+   - Question Categories: "goal", "baseline", "depth", "style", "followup".
 4. Question Schema Fields:
    - "id": Unique string identifier ("q1", "q2", "q3", etc.).
    - "question": Written text formatted clearly for screen reading.
@@ -317,13 +334,24 @@ Respond with ONLY valid JSON matching this schema:
 }`;
 
   const parts: any[] = [];
-  if (cleanPdf) {
-    parts.push({
-      inlineData: {
-        mimeType: 'application/pdf',
-        data: cleanPdf,
-      },
-    });
+  // Attach inline document data
+  for (const f of files.slice(0, 5)) {
+    if (f.fileBase64) {
+      const cleanBase64 = f.fileBase64.replace(/^data:[^;]+;base64,/, '').replace(/\s+/g, '');
+      const mime = f.fileType || (f.fileName.endsWith('.pdf') ? 'application/pdf' : 'text/plain');
+      if (mime === 'application/pdf' || mime.startsWith('text/')) {
+        parts.push({
+          inlineData: {
+            mimeType: mime === 'application/pdf' ? 'application/pdf' : 'text/plain',
+            data: cleanBase64,
+          },
+        });
+      }
+    } else if (f.textContent) {
+      parts.push({
+        text: `Content from ${f.fileName}:\n${f.textContent.slice(0, 10000)}`,
+      });
+    }
   }
   parts.push({ text: systemPrompt });
 

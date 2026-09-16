@@ -116,8 +116,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   const provingGrounds = dynamicNote?.provingGrounds || [];
   const teacherExplanations = dynamicNote?.teacherExplanations;
   const inlineMCQs = dynamicNote?.inlineMCQs || [];
-  const mcqSection1 = inlineMCQs.find((m) => m.sectionIndex === 1);
-  const mcqSection3 = inlineMCQs.find((m) => m.sectionIndex === 3);
+  const sectionQuestions = (secIdx: number) => inlineMCQs.filter((m) => m.sectionIndex === secIdx);
 
   // Subscribe to audio state changes
   useEffect(() => {
@@ -515,9 +514,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
 
   if (activeLoading) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 p-8 text-zinc-400 gap-2">
-        <div className="w-5 h-5 border-2 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
-        <p className="text-xs text-zinc-500 font-sans">
+      <main className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 p-8 text-zinc-400 gap-3">
+        <div className="w-5 h-5 border-[1.5px] border-zinc-200 dark:border-zinc-800 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
+        <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 font-sans">
           {isAmharic ? 'ትምህርቱን በማዘጋጀት ላይ...' : 'Compiling lesson note...'}
         </p>
       </main>
@@ -599,10 +598,10 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 font-sans relative">
       {/* Top Header Bar with Audio Controls & Actions */}
-      <header className="border-b border-zinc-200/80 dark:border-zinc-800/80 px-6 py-3 flex items-center justify-between gap-3 shrink-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm z-10">
+      <header className="border-b border-transparent dark:border-transparent px-6 py-3 flex items-center justify-between gap-3 shrink-0 bg-white dark:bg-zinc-950 z-10">
         <div>
           <h1 className="text-sm sm:text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {note.title}
+            {note.title.replace(/^(\d+\s*[\cdot·\-–—]\s*)+/u, '').trim()}
           </h1>
           {readingSection && (
             <p className="text-[11px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
@@ -632,7 +631,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
               <>
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-[11px] hidden sm:inline">{playbackState === 'paused' ? t.resumeAudio : t.playAudio}</span>
               </>
@@ -696,109 +694,95 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
         </div>
       </header>
 
-      {/* Main Scrollable Canvas Area */}
-      <main className="flex-1 overflow-y-auto px-4 sm:px-10 py-6 space-y-6">
-        <div className="max-w-2xl mx-auto space-y-3 pb-6">
-          {/* Courses Switcher Pill (if multiple saved courses exist) */}
-          {savedCourses && savedCourses.length > 1 && (
-            <nav
-              aria-label="Courses list"
-              className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 overflow-x-auto scrollbar-none"
-            >
-              {savedCourses.map((c) => {
-                const isSelected = c.id === curriculum?.id;
+      {/* Body: Left Lessons Sidebar + Center Scrollable Note Canvas */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Lessons Sidebar */}
+        {curriculum && curriculum.lessons && curriculum.lessons.length > 0 && (
+          <aside
+            aria-label="Course lessons"
+            className="w-60 sm:w-72 bg-transparent flex flex-col shrink-0 overflow-hidden select-none"
+          >
+            <div className="flex-1 overflow-y-auto p-3 scrollbar-none">
+              {/* Vertical Card Stack Container mirroring the section stepper style */}
+              <div className="flex flex-col gap-1.5 p-1 rounded-2xl bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
+                {curriculum.lessons.map((lesson) => {
+                  const isSelected = lesson.id === activeLessonId || (note as any)?.lessonId === lesson.id;
+                  const isLocked = lesson.status === 'locked';
+                  const cleanLessonTitle = lesson.title.replace(/^(\d+\s*[\cdot·\-–—]\s*)+/u, '').trim();
+
+                  return (
+                    <button
+                      key={lesson.id}
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => !isLocked && onSelectLesson && onSelectLesson(lesson)}
+                      title={cleanLessonTitle}
+                      className={`w-full text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 ${
+                        isSelected
+                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs border border-zinc-200/80 dark:border-zinc-700/80'
+                          : isLocked
+                            ? 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-white/60 dark:hover:bg-zinc-800/50'
+                      }`}
+                    >
+                      <span
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md mt-0.5 shrink-0 ${
+                          isSelected
+                            ? 'bg-zinc-100 dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-100 font-semibold'
+                            : 'bg-zinc-200/50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400'
+                        }`}
+                      >
+                        {lesson.order ? String(lesson.order).padStart(2, '0') : '•'}
+                      </span>
+                      <span className="text-xs leading-snug line-clamp-2 flex-1">
+                        {cleanLessonTitle}
+                      </span>
+                      {isSelected && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 mt-1.5 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {/* Main Canvas Column: scrollable content + static bottom ask teacher bar */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Scrollable Lesson Area */}
+          <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6">
+            <div className="max-w-4xl mx-auto space-y-4 pb-8">
+
+            {/* Stepper Progression Navigation Bar (Section tabs: Intuition, Framework, etc.) */}
+            <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
+              {sectionsConfig.map((sec) => {
+                const isUnlocked = sec.num <= unlockedSection;
+                const isActive = sec.num === activeSectionTab;
                 return (
                   <button
-                    key={c.id}
+                    key={sec.num}
                     type="button"
-                    onClick={() => onSelectCourse && onSelectCourse(c)}
-                    title={c.topic}
-                    className={`flex-1 py-1 px-2.5 rounded-lg text-center transition-colors min-w-[100px] truncate ${
-                      isSelected
+                    disabled={!isUnlocked}
+                    onClick={() => {
+                      setActiveSectionTab(sec.num);
+                      playTeacherExplanation(sec.num, sec.title);
+                    }}
+                    className={`flex-1 py-1 px-2 rounded-lg text-center transition-colors ${
+                      isActive
                         ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-sm'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                        : isUnlocked
+                          ? 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                          : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
                     }`}
                   >
-                    <span className="block text-xs truncate">{c.topic}</span>
-                  </button>
-                );
-              })}
-              {onOpenIntakeModal && (
-                <button
-                  type="button"
-                  onClick={onOpenIntakeModal}
-                  className="py-1 px-2.5 rounded-lg text-center transition-colors text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 shrink-0"
-                  title={isAmharic ? 'አዲስ ኮርስ' : 'New course'}
-                >
-                  +
-                </button>
-              )}
-            </nav>
-          )}
-
-          {/* Minimal Pill for Course Lessons (replaces the right sidebar) */}
-          {curriculum && curriculum.lessons && curriculum.lessons.length > 0 && (
-            <nav
-              aria-label="Course lessons roadmap"
-              className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 overflow-x-auto scrollbar-none"
-            >
-              {curriculum.lessons.map((lesson) => {
-                const isSelected = lesson.id === activeLessonId || (note as any)?.lessonId === lesson.id;
-                const isLocked = lesson.status === 'locked';
-
-                return (
-                  <button
-                    key={lesson.id}
-                    type="button"
-                    disabled={isLocked}
-                    onClick={() => !isLocked && onSelectLesson && onSelectLesson(lesson)}
-                    title={lesson.title}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-center transition-colors min-w-[90px] truncate ${
-                      isSelected
-                        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-sm'
-                        : isLocked
-                          ? 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
-                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                    }`}
-                  >
-                    <span className="block text-xs truncate">
-                      {lesson.order ? `${String(lesson.order).padStart(2, '0')} · ` : ''}{lesson.title}
+                    <span className="block text-[11px] truncate">
+                      {sec.short}
                     </span>
                   </button>
                 );
               })}
             </nav>
-          )}
-
-          {/* Stepper Progression Navigation Bar (Smaller section pill: Intuition, Idea, etc.) */}
-          <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
-            {sectionsConfig.map((sec) => {
-              const isUnlocked = sec.num <= unlockedSection;
-              const isActive = sec.num === activeSectionTab;
-              return (
-                <button
-                  key={sec.num}
-                  type="button"
-                  disabled={!isUnlocked}
-                  onClick={() => {
-                    setActiveSectionTab(sec.num);
-                    playTeacherExplanation(sec.num, sec.title);
-                  }}
-                  className={`flex-1 py-1 px-2 rounded-lg text-center transition-colors ${
-                    isActive
-                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-sm'
-                      : isUnlocked
-                        ? 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-                        : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
-                  }`}
-                >
-                  <span className="block text-[11px] truncate">
-                    {sec.short}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
 
           {/* STEPS VIEW MODE (Focused Stepper with Smooth Navigation) */}
           {viewMode === 'interactive' && (
@@ -812,7 +796,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     </h3>
                   </div>
                   <RichContentRenderer content={section1Text} />
-                  {mcqSection1 && <InlineMCQCard mcq={mcqSection1} language={language} />}
+                  {sectionQuestions(1).map((q) => (
+                    <InlineMCQCard key={q.id} mcq={q} language={language} />
+                  ))}
                 </article>
               )}
 
@@ -825,6 +811,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     </h3>
                   </div>
                   <RichContentRenderer content={section2Text} />
+                  {sectionQuestions(2).map((q) => (
+                    <InlineMCQCard key={q.id} mcq={q} language={language} />
+                  ))}
                 </article>
               )}
 
@@ -837,7 +826,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     </h3>
                   </div>
                   <RichContentRenderer content={section3Text} />
-                  {mcqSection3 && <InlineMCQCard mcq={mcqSection3} language={language} />}
+                  {sectionQuestions(3).map((q) => (
+                    <InlineMCQCard key={q.id} mcq={q} language={language} />
+                  ))}
                 </article>
               )}
 
@@ -866,7 +857,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     ) : dynamicNote?.artifactLanguage === 'timeline' ? (
                       <TimelineViewer content={artifactCode} />
                     ) : dynamicNote?.artifactLanguage === 'interactive' ? (
-                      <InteractiveCanvasViewer />
+                      <InteractiveCanvasViewer code={artifactCode} title={note.title} />
                     ) : (
                       <CodeViewer code={artifactCode} language={dynamicNote?.artifactLanguage || 'typescript'} />
                     )
@@ -1020,28 +1011,30 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     </div>
                   )}
 
-                  {/* Socratic Defense Gate Launch Card */}
-                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80">
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                        {isAmharic ? 'የሶቅራጥስ የቃል ምዘና መከላከያ (Socratic Defense Gate)' : 'Socratic Defense Gate · Prove Mastery'}
-                      </h4>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                        {isAmharic
-                          ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
-                          : 'Defend your first-principles comprehension through an interactive 3-question battery to unlock the next lesson.'}
-                      </p>
+                  {/* Socratic Defense Gate Launch Card (Hidden if disableGate is true on curriculum) */}
+                  {!curriculum?.disableGate && (
+                    <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80">
+                      <div>
+                        <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {isAmharic ? 'የሶቅራጥስ የቃል ምዘና መከላከያ (Socratic Defense Gate)' : 'Socratic Defense Gate · Prove Mastery'}
+                        </h4>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                          {isAmharic
+                            ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
+                            : 'Defend your first-principles comprehension through an interactive 3-question battery to unlock the next lesson.'}
+                        </p>
+                      </div>
+                      {onOpenFeynman && (
+                        <button
+                          type="button"
+                          onClick={onOpenFeynman}
+                          className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
+                        >
+                          {isAmharic ? 'የቃል ፈተናውን ጀምር' : 'Enter Gate'}
+                        </button>
+                      )}
                     </div>
-                    {onOpenFeynman && (
-                      <button
-                        type="button"
-                        onClick={onOpenFeynman}
-                        className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
-                      >
-                        {isAmharic ? 'የቃል ፈተናውን ጀምር' : 'Enter Gate'}
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </article>
               )}
 
@@ -1105,37 +1098,40 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             </div>
           )}
         </div>
-      </main>
 
-      {/* Reopen Side Questions pill if past questions exist and modal is closed */}
-      {!isSideQuestionOpen && sideQuestionThreads.length > 0 && (
-        <div className="flex justify-center -mb-2 z-20">
-          <button
-            type="button"
-            onClick={() => setIsSideQuestionOpen(true)}
-            className="px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200/80 dark:border-zinc-700/80 text-[11px] text-zinc-600 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-sm"
-          >
-            <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <span>{isAmharic ? `ጥያቄዎች (${sideQuestionThreads.length})` : `Questions (${sideQuestionThreads.length})`}</span>
-          </button>
+          </main>
+
+          {/* Reopen Side Questions pill if past questions exist and modal is closed */}
+          {!isSideQuestionOpen && sideQuestionThreads.length > 0 && (
+            <div className="flex justify-center -mb-2 z-20">
+              <button
+                type="button"
+                onClick={() => setIsSideQuestionOpen(true)}
+                className="px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200/80 dark:border-zinc-700/80 text-[11px] text-zinc-600 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                <span>{isAmharic ? `ጥያቄዎች (${sideQuestionThreads.length})` : `Questions (${sideQuestionThreads.length})`}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Static Bottom "Ask Teacher" Bar */}
+          <AskTeacherBar
+            onAsk={handleAskQuestion}
+            isLoading={isAskingTeacher}
+            language={language}
+            disabled={activeLoading}
+            placeholder={
+              isSideQuestionOpen
+                ? (isAmharic ? 'ተጨማሪ ጥያቄ ይጠይቁ...' : 'Ask a follow-up question...')
+                : undefined
+            }
+            className={isSideQuestionOpen ? 'relative z-40' : ''}
+          />
         </div>
-      )}
-
-      {/* Bottom-Docked "Ask Teacher" Bar */}
-      <AskTeacherBar
-        onAsk={handleAskQuestion}
-        isLoading={isAskingTeacher}
-        language={language}
-        disabled={activeLoading}
-        placeholder={
-          isSideQuestionOpen
-            ? (isAmharic ? 'ተጨማሪ ጥያቄ ይጠይቁ...' : 'Ask a follow-up question...')
-            : undefined
-        }
-        className={isSideQuestionOpen ? 'relative z-40' : ''}
-      />
+      </div>
 
       {/* Question Pop-up Card */}
       <SideQuestionModal
