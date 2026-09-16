@@ -24,8 +24,8 @@ export function Header() {
           <span className="text-xl md:text-2xl font-black opacity-60">አጠር</span>
         </Link>
 
-        {/* Center: Clean navigation links */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-medium">
+        {/* Center: Clean navigation links - mathematically centered */}
+        <nav className="hidden md:flex items-center gap-6 text-xs font-medium absolute left-1/2 -translate-x-1/2">
           <a
             href="#how-it-works"
             className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
