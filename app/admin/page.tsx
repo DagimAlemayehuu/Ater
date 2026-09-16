@@ -116,13 +116,19 @@ export default function AdminDashboardPage() {
 
       if (fetchErr) throw fetchErr;
 
-      const normalized: WaitlistEntry[] = (data || []).map((row: any) => ({
-        id: row.id,
-        email: row.email || row.contact || 'No contact',
-        full_name: row.full_name || null,
-        status: row.status || 'queued',
-        created_at: row.created_at,
-      }));
+      const normalized: WaitlistEntry[] = (data || [])
+        .map((row: any) => ({
+          id: row.id,
+          email: row.email || row.contact || 'No contact',
+          full_name: row.full_name || null,
+          status: row.status || 'queued',
+          created_at: row.created_at,
+        }))
+        .filter((item: WaitlistEntry) => {
+          // Exclude team members and admins so they are never counted as customer waitlist users
+          const cleanEmail = item.email.toLowerCase().trim();
+          return !adminEmails.map((e) => e.toLowerCase().trim()).includes(cleanEmail);
+        });
 
       setEntries(normalized);
     } catch (err: any) {
