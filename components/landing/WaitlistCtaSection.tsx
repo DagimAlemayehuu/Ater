@@ -12,7 +12,7 @@ export function WaitlistCtaSection() {
   const t = translations[language];
 
   return (
-    <section id="waitlist" className="snap-section relative w-full h-screen min-h-[600px] flex flex-col justify-center items-center overflow-hidden border-t border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-950 px-4 sm:px-8 scroll-mt-16 select-none">
+    <section id="waitlist" className="snap-section relative w-full min-h-[550px] md:h-screen md:min-h-[600px] flex flex-col justify-center items-center overflow-hidden border-t border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-950 px-4 sm:px-8 py-16 md:py-0 scroll-mt-16 select-none">
       {/* Foreground Content: Exactly centered in the viewport */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

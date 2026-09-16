@@ -305,7 +305,7 @@ export function InteractiveFlowDemo() {
   };
 
   return (
-    <section id="demo" className="snap-section w-full min-h-screen flex flex-col justify-center items-center px-4 sm:px-6 py-12 scroll-mt-16">
+    <section id="demo" className="snap-section w-full min-h-[85vh] md:min-h-screen flex flex-col justify-center items-center px-4 sm:px-6 py-10 md:py-12 scroll-mt-16">
       <motion.div
         initial={{ opacity: 0, scale: 0.98, y: 15 }}
         whileInView={{ opacity: 1, scale: 1, y: 0 }}
@@ -313,7 +313,7 @@ export function InteractiveFlowDemo() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="w-full max-w-4xl mx-auto flex flex-col justify-center"
       >
-        <div className="text-center mb-6 space-y-1.5 shrink-0">
+        <div className="text-center mb-5 sm:mb-6 space-y-1.5 shrink-0">
         <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           {isAmharic ? 'ይሞክሩት' : 'Try it out'}
         </h2>
@@ -324,7 +324,7 @@ export function InteractiveFlowDemo() {
         </p>
       </div>
 
-      <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg overflow-hidden flex flex-col h-[580px] max-h-[75vh]">
+      <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg overflow-hidden flex flex-col min-h-[480px] h-[580px] max-h-[85vh] md:max-h-[75vh]">
         {/* Floating Reset / Mute controls anchored top-right (only when not in lesson view to prevent any header overlap) */}
         {step !== 'lesson' && (
           <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">

@@ -16,7 +16,7 @@ export function HeroSection() {
   };
 
   return (
-    <section className="snap-section min-h-screen w-full flex flex-col justify-center items-center text-center px-4 py-16">
+    <section className="snap-section w-full min-h-[85vh] md:min-h-screen flex flex-col justify-center items-center text-center px-4 py-12 md:py-16">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}

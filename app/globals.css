@@ -27,14 +27,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scroll snap utility container */
-.snap-container {
-  scroll-snap-type: y mandatory;
-}
+/* Scroll snap utility container - desktop only */
+@media (min-width: 768px) {
+  .snap-container {
+    scroll-snap-type: y mandatory;
+  }
 
-.snap-section {
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
+  .snap-section {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
 }
 
 /* Smooth subtle transitions */

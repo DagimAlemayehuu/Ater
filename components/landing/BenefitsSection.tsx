@@ -10,7 +10,7 @@ export function BenefitsSection() {
   const t = translations[language];
 
   return (
-    <section id="how-it-works" className="snap-section w-full min-h-screen flex flex-col justify-center items-center px-6 py-16 scroll-mt-16">
+    <section id="how-it-works" className="snap-section w-full min-h-[85vh] md:min-h-screen flex flex-col justify-center items-center px-4 sm:px-6 py-12 md:py-16 scroll-mt-16">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
