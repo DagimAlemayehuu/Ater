@@ -219,7 +219,7 @@ export default function AdminDashboardPage() {
             </p>
             <div className="pt-2">
               <Link
-                href="/auth?mode=login"
+                href="/auth?mode=login&redirect=/admin"
                 className="inline-flex items-center px-4 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all cursor-pointer"
               >
                 Sign In
