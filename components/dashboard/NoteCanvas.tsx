@@ -535,8 +535,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
 
   if (activeLoading) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 p-8 text-zinc-400 gap-3">
-        <div className="w-5 h-5 border-[1.5px] border-zinc-200 dark:border-zinc-800 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
+      <main className="flex-1 flex flex-col items-center justify-center bg-[#fbf7f0] dark:bg-zinc-950 p-8 text-zinc-400 gap-3">
+        <div className="w-5 h-5 border-[1.5px] border-parchment-300 dark:border-zinc-800 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
         <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 font-sans">
           {isAmharic ? 'ትምህርቱን በማዘጋጀት ላይ...' : 'Compiling lesson note...'}
         </p>
@@ -555,9 +555,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
         ];
 
     return (
-      <main className="flex-1 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 p-8 font-sans overflow-y-auto">
+      <main className="flex-1 flex flex-col items-center justify-center bg-[#fbf7f0] dark:bg-zinc-950 p-8 font-sans overflow-y-auto">
         <div className="max-w-md w-full text-center space-y-6">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono text-zinc-500 bg-zinc-50 dark:bg-zinc-900/60">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-parchment-300 dark:border-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-400 bg-parchment-200/60 dark:bg-zinc-900/60">
             <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 animate-pulse" />
             <span>{isAmharic ? 'የሶቅራጥስ እውቀት ሞተር' : 'Socratic Cognitive Engine'}</span>
           </div>
@@ -584,7 +584,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             </div>
           )}
 
-          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2.5">
+          <div className="pt-4 border-t border-parchment-300 dark:border-zinc-800/80 space-y-2.5">
             <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 block">
               {isAmharic ? 'ፈጣን መነሻ ርዕሶች' : 'Quick Start Inspiration'}
             </span>
@@ -593,7 +593,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                 <button
                   key={topicItem}
                   onClick={onOpenIntakeModal}
-                  className="px-2.5 py-1 text-[11px] rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 bg-zinc-50/50 dark:bg-zinc-900/30 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                  className="px-2.5 py-1 text-[11px] rounded-lg border border-parchment-300 dark:border-zinc-800 hover:border-parchment-400 dark:hover:border-zinc-600 bg-parchment-200/50 dark:bg-zinc-900/30 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                 >
                   {topicItem}
                 </button>
@@ -632,9 +632,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   const currentDisplayedSpeech = activeSpokenText || getSectionExplanation(activeSectionTab);
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 font-sans relative">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fbf7f0] dark:bg-zinc-950 font-sans relative">
       {/* Top Header Bar with Audio Controls & Actions */}
-      <header className="border-b border-transparent dark:border-transparent px-6 py-3 flex items-center justify-between gap-3 shrink-0 bg-white dark:bg-zinc-950 z-10">
+      <header className="border-b border-parchment-300/80 dark:border-zinc-800/80 px-6 py-3 flex items-center justify-between gap-3 shrink-0 bg-[#fbf7f0] dark:bg-zinc-950 z-10">
         <div>
           <h1 className="text-sm sm:text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {note.title.replace(/^(\d+\s*[\cdot·\-–—]\s*)+/u, '').trim()}
@@ -653,7 +653,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             type="button"
             onClick={handleTogglePause}
             aria-label={playbackState === 'playing' ? t.pauseAudio : t.resumeAudio}
-            className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium"
+            className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
             title={playbackState === 'playing' ? t.pauseAudio : t.resumeAudio}
           >
             {playbackState === 'playing' ? (
@@ -678,7 +678,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             type="button"
             onClick={handleRestartAudio}
             aria-label={t.restartAudio}
-            className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium"
+            className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
             title={t.restartAudio}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -688,14 +688,14 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
           </button>
 
           {/* View Mode Toggle: Summary | Transcription */}
-          <div className="flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 p-0.5 bg-zinc-100 dark:bg-zinc-900 text-xs">
+          <div className="flex items-center rounded-lg border border-parchment-300 dark:border-zinc-800 p-0.5 bg-parchment-200/70 dark:bg-zinc-900 text-xs">
             <button
               type="button"
               onClick={() => setViewMode('interactive')}
               className={`px-2.5 py-1 rounded-md transition-colors ${
                 viewMode === 'interactive'
-                  ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium'
-                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
+                  ? 'bg-parchment-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
               {isAmharic ? 'ማጠቃለያ' : 'Summary'}
@@ -705,8 +705,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
               onClick={() => setViewMode('full')}
               className={`px-2.5 py-1 rounded-md transition-colors ${
                 viewMode === 'full'
-                  ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium'
-                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
+                  ? 'bg-parchment-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
               {isAmharic ? 'ጽሑፍ' : 'Transcription'}
@@ -720,7 +720,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
               onClick={() => setIsStudioOpen(true)}
               aria-label={isAmharic ? 'ማስታወሻ ስቱዲዮ' : 'NotebookLM Studio'}
               title={isAmharic ? 'ማስታወሻ ስቱዲዮ' : 'NotebookLM Studio'}
-              className="p-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+              className="p-1.5 px-2.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
             >
               <Sliders className="w-3.5 h-3.5 text-zinc-500" />
               <span className="hidden sm:inline">{isAmharic ? 'ስቱዲዮ' : 'Studio'}</span>
@@ -733,10 +733,10 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             onClick={() => setIsSourcesTrayOpen((prev) => !prev)}
             aria-label={isAmharic ? 'ጥናታዊ ምንጮች' : 'Literature Sources'}
             title={isAmharic ? 'ጥናታዊ ምንጮች' : 'Literature Sources'}
-            className={`p-1.5 px-2.5 rounded-lg border transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer ${
+            className={`p-1.5 px-2.5 rounded-lg border transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs ${
               isSourcesTrayOpen
                 ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                : 'border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -750,7 +750,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
               onClick={onResetDemo}
               aria-label={isAmharic ? 'ከመጀመሪያ ጀምር' : 'Restart demo'}
               title={isAmharic ? 'ከመጀመሪያ ጀምር' : 'Restart demo'}
-              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1 text-xs cursor-pointer ml-1"
+              className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-parchment-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1 text-xs cursor-pointer ml-1"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -770,7 +770,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
           >
             <div className="flex-1 overflow-y-auto p-3 scrollbar-none">
               {/* Vertical Card Stack Container mirroring the section stepper style */}
-              <div className="flex flex-col gap-1.5 p-1 rounded-2xl bg-zinc-100/70 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
+              <div className="flex flex-col gap-1.5 p-1 rounded-2xl bg-parchment-200/60 dark:bg-zinc-900/60 border border-parchment-300/70 dark:border-zinc-800/60">
                 {curriculum.lessons.map((lesson) => {
                   const isSelected = lesson.id === activeLessonId || (note as any)?.lessonId === lesson.id;
                   const isLocked = lesson.status === 'locked';
@@ -787,22 +787,22 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       onClick={() => !isLocked && onSelectLesson && onSelectLesson(lesson)}
                       title={cleanLessonTitle}
                       className={`text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 cursor-pointer ${
-                        isMiniLesson ? 'ml-4 pl-2.5 w-[calc(100%-1rem)] bg-zinc-50/60 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-800' : 'w-full'
+                        isMiniLesson ? 'ml-4 pl-2.5 w-[calc(100%-1rem)] bg-parchment-100/70 dark:bg-zinc-900/40 border border-dashed border-parchment-300 dark:border-zinc-800' : 'w-full'
                       } ${
                         isSelected
-                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs border border-zinc-200/80 dark:border-zinc-700/80'
+                          ? 'bg-parchment-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs border border-parchment-300 dark:border-zinc-700/80'
                           : isLocked
                             ? 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
-                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-white/60 dark:hover:bg-zinc-800/50'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-parchment-100 dark:hover:bg-zinc-800/50'
                       }`}
                     >
                       <span
                         className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md mt-0.5 shrink-0 ${
                           isSelected
-                            ? 'bg-zinc-100 dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-100 font-semibold'
+                            ? 'bg-parchment-200 dark:bg-zinc-700/80 text-zinc-900 dark:text-zinc-100 font-semibold'
                             : isMiniLesson
-                              ? 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold'
-                              : 'bg-zinc-200/50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400'
+                              ? 'bg-parchment-300/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold'
+                              : 'bg-parchment-200/50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400'
                         }`}
                       >
                         {isMiniLesson ? (isAmharic ? 'ክለሳ' : 'Mini') : lesson.order ? String(Math.floor(lesson.order)).padStart(2, '0') : ''}
@@ -825,7 +825,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             <div className="max-w-3xl w-full mx-auto space-y-4 pb-8">
 
             {/* Stepper Progression Navigation Bar (Section tabs: Intuition, Framework, etc.) */}
-            <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
+            <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-parchment-200/70 dark:bg-zinc-900/60 border border-parchment-300/70 dark:border-zinc-800/60">
               {sectionsConfig.map((sec) => {
                 const isUnlocked = sec.num <= unlockedSection;
                 const isActive = sec.num === activeSectionTab;
@@ -840,7 +840,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     }}
                     className={`flex-1 py-1 px-2 rounded-lg text-center transition-colors ${
                       isActive
-                        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-sm'
+                        ? 'bg-parchment-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
                         : isUnlocked
                           ? 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                           : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
@@ -859,8 +859,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             <div className="space-y-4">
               {/* Section 1: Core Intuition */}
               {activeSectionTab === 1 && (
-                <article className="space-y-3 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
-                  <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
+                <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
                     <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       {t.sections.sec1Full}
                     </h3>
@@ -874,8 +874,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
 
               {/* Section 2: Framework (if active) */}
               {activeSectionTab === 2 && (
-                <article className="space-y-3 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
-                  <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
+                <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
                     <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       {t.sections.sec2Full}
                     </h3>
@@ -889,8 +889,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
 
               {/* Section 3: Mechanism (if active) */}
               {activeSectionTab === 3 && (
-                <article className="space-y-3 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
-                  <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
+                <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
                     <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       {t.sections.sec3Full}
                     </h3>
@@ -904,8 +904,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
 
               {/* Section 4: Boundary Traps & Socratic Midway Checkpoint */}
               {activeSectionTab === 4 && (
-                <article className="space-y-4 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
-                  <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
+                <article className="space-y-4 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
                     <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       {t.sections.sec4Full}
                     </h3>
@@ -1039,9 +1039,9 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       {provingGrounds.map((q) => (
                         <div
                           key={q.id}
-                          className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 space-y-3"
+                          className="p-4 rounded-xl border border-parchment-300 dark:border-zinc-800/80 bg-parchment-100/60 dark:bg-zinc-900/40 space-y-3"
                         >
-                          <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                          <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-parchment-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold">
                             {q.difficulty}
                           </span>
                           <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
@@ -1052,7 +1052,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                               {Object.entries(q.options).map(([optKey, optVal]) => (
                                 <div
                                   key={optKey}
-                                  className="p-2.5 rounded-lg border border-zinc-200/60 dark:border-zinc-800/60 bg-white dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300"
+                                  className="p-2.5 rounded-lg border border-parchment-300/80 dark:border-zinc-800/60 bg-parchment-50 dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300"
                                 >
                                   <span className="font-semibold mr-1.5 text-zinc-900 dark:text-zinc-100">
                                     {optKey}:
@@ -1083,7 +1083,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
 
                   {/* Defense Launch Card (Hidden if disableGate is true on curriculum) */}
                   {!curriculum?.disableGate && (
-                    <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80">
+                    <div className="pt-4 border-t border-parchment-200 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-parchment-100/80 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800/80">
                       <div>
                         <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                           {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
@@ -1098,7 +1098,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                         <button
                           type="button"
                           onClick={onOpenFeynman}
-                          className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
+                          className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
                         >
                           {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
                         </button>
@@ -1117,7 +1117,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       setActiveSectionTab(activeSectionTab - 1);
                       playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
                     }}
-                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100/70 hover:bg-parchment-200 dark:bg-transparent transition-colors flex items-center gap-1.5"
                   >
                     <span>←</span>
                     <span>{isAmharic ? 'ተመለስ' : 'Previous'}</span>
@@ -1128,7 +1128,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                   <button
                     type="button"
                     onClick={() => handleAdvanceSection(activeSectionTab + 1)}
-                    className="px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-750 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <span>{isAmharic ? 'ቀጥል' : 'Continue'}</span>
                     <span>→</span>
@@ -1141,8 +1141,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
           {/* TRANSCRIPTION VIEW MODE (Spoken transcript for active section, matching main note logic) */}
           {viewMode === 'full' && (
             <div className="space-y-4">
-              <article className="space-y-3 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
-                <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
+              <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
                   <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                     {sectionsConfig[activeSectionTab - 1]?.title || `Section 0${activeSectionTab}`}
                   </h3>
@@ -1158,7 +1158,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                   <button
                     type="button"
                     onClick={() => handleAdvanceSection(unlockedSection + 1)}
-                    className="px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-750 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <span>{isAmharic ? 'ቀጥል' : 'Continue'}</span>
                     <span>→</span>

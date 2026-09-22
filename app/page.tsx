@@ -26,7 +26,7 @@ export default function LandingPage() {
         <WaitlistCtaSection />
       </main>
 
-      <footer className="w-full border-t border-zinc-200/80 dark:border-zinc-800/80 py-8 text-xs text-zinc-500">
+      <footer className="w-full border-t border-parchment-300/80 dark:border-zinc-800/80 py-8 text-xs text-zinc-500">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Link

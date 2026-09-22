@@ -217,8 +217,8 @@ function AuthContent() {
             </button>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 p-6 sm:p-8 space-y-5 text-center">
-            <div className="w-10 h-10 mx-auto rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+          <div className="rounded-2xl border border-parchment-300 dark:border-zinc-800 bg-parchment-100/60 dark:bg-zinc-900/40 p-6 sm:p-8 space-y-5 text-center">
+            <div className="w-10 h-10 mx-auto rounded-full bg-parchment-200 dark:bg-zinc-800 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
             </div>
 
@@ -231,10 +231,10 @@ function AuthContent() {
               </p>
             </div>
 
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-600 dark:text-zinc-400 space-y-2 text-left">
+            <div className="p-4 rounded-xl border border-parchment-300 dark:border-zinc-800 bg-parchment-50 dark:bg-zinc-950 text-xs text-zinc-600 dark:text-zinc-400 space-y-2 text-left">
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500">{isAmharic ? 'ሁኔታ' : 'Access Status'}</span>
-                <span className="px-2 py-0.5 rounded font-mono text-[10px] border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">
+                <span className="px-2 py-0.5 rounded font-mono text-[10px] border border-parchment-300 dark:border-zinc-700 bg-parchment-200 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">
                   {userStatus?.status || 'Alpha Waitlist'}
                 </span>
               </div>
@@ -257,7 +257,7 @@ function AuthContent() {
               {(userStatus?.is_admin || userStatus?.status === 'approved') && (
                 <Link
                   href="/app"
-                  className="w-full py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-medium transition-colors text-center cursor-pointer"
+                  className="w-full py-2.5 rounded-xl border border-parchment-400 dark:border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-medium transition-colors text-center cursor-pointer"
                 >
                   {isAmharic ? 'መተግበሪያውን ክፈት (Open App)' : 'Open Learning App'}
                 </Link>
@@ -265,14 +265,14 @@ function AuthContent() {
               {userStatus?.is_admin && (
                 <Link
                   href="/admin"
-                  className="w-full py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-colors text-center cursor-pointer"
+                  className="w-full py-2.5 rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-colors text-center cursor-pointer"
                 >
                   Open Admin Dashboard
                 </Link>
               )}
               <Link
                 href="/"
-                className="w-full py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white hover:bg-zinc-100 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100 text-xs font-medium transition-colors text-center cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-parchment-300 dark:border-zinc-800 bg-parchment-50 hover:bg-parchment-200/70 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100 text-xs font-medium transition-colors text-center cursor-pointer"
               >
                 {isAmharic ? 'ወደ መነሻ ገጽ ተመለስ' : 'Back to Home'}
               </Link>
@@ -286,7 +286,7 @@ function AuthContent() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="w-full max-w-sm space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center justify-between pb-4 border-b border-parchment-300 dark:border-zinc-800">
           <Link
             href="/"
             className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
@@ -318,7 +318,7 @@ function AuthContent() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-zinc-100">
+          <div className="p-3 rounded-xl bg-parchment-200 dark:bg-zinc-900 border border-parchment-300 dark:border-zinc-800 text-xs text-zinc-900 dark:text-zinc-100">
             {error}
           </div>
         )}
@@ -335,7 +335,7 @@ function AuthContent() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Dagim Alemayehu"
-                  className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3.5 py-2.5 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                  className="w-full rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-100/70 dark:bg-zinc-900 px-3.5 py-2.5 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-parchment-500"
                 />
                 <User className="w-3.5 h-3.5 absolute left-3 top-3.5 text-zinc-400" />
               </div>
@@ -353,7 +353,7 @@ function AuthContent() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 required
-                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3.5 py-2.5 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                className="w-full rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-100/70 dark:bg-zinc-900 px-3.5 py-2.5 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-parchment-500"
               />
               <Mail className="w-3.5 h-3.5 absolute left-3 top-3.5 text-zinc-400" />
             </div>
@@ -370,7 +370,7 @@ function AuthContent() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3.5 py-2.5 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                className="w-full rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-100/70 dark:bg-zinc-900 px-3.5 py-2.5 pl-9 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-parchment-500"
               />
               <Lock className="w-3.5 h-3.5 absolute left-3 top-3.5 text-zinc-400" />
             </div>
@@ -379,7 +379,7 @@ function AuthContent() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 mt-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            className="w-full py-2.5 mt-2 rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
           >
             {loading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

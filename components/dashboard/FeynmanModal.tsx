@@ -526,9 +526,9 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950 font-sans overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#fbf7f0] dark:bg-zinc-950 font-sans overflow-hidden">
       {/* Top Navigation Bar with Defense Title and Exit Button */}
-      <header className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between shrink-0 bg-white dark:bg-zinc-950 z-10">
+      <header className="border-b border-parchment-300/80 dark:border-zinc-800 px-6 py-4 flex items-center justify-between shrink-0 bg-[#fbf7f0] dark:bg-zinc-950 z-10">
         <div className="flex items-center gap-4">
           <h2 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {isAmharic ? 'የቃል መከላከያ' : 'Defense'}
@@ -546,8 +546,8 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                       isDone
                         ? 'bg-zinc-900 dark:bg-zinc-100'
                         : isCurrent
-                        ? 'bg-zinc-500 dark:bg-zinc-400'
-                        : 'bg-zinc-200 dark:bg-zinc-800'
+                        ? 'bg-parchment-500 dark:bg-zinc-400'
+                        : 'bg-parchment-300 dark:bg-zinc-800'
                     }`}
                   />
                 );
@@ -560,7 +560,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
             stopNeuralAudio();
             onClose();
           }}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-parchment-300 dark:border-zinc-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
           aria-label="Exit Defense"
         >
           <X size={14} />
@@ -585,7 +585,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
         {/* Final Verdict Screen */}
         {!isLoadingBattery && finalResult && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60">
+            <div className="p-5 rounded-xl border border-parchment-300 dark:border-zinc-800 bg-parchment-100/80 dark:bg-zinc-900/60">
               <div className="flex items-start gap-3">
                 {finalResult.passed ? (
                   <CheckCircle2 className="w-5 h-5 text-zinc-800 dark:text-zinc-200 shrink-0 mt-0.5" />
@@ -610,7 +610,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
               </div>
 
               {!finalResult.passed && finalResult.remediationTopic && (
-                <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 font-sans">
+                <div className="mt-3 pt-3 border-t border-parchment-300 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 font-sans">
                   <span className="font-semibold">{isAmharic ? 'የተጨመረ የማካካሻ ትምህርት፡' : 'Added Mini-Lesson:'}</span>{' '}
                   {finalResult.remediationTopic}
                 </div>
@@ -630,7 +630,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                     else onClose();
                   }
                 }}
-                className="px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 transition-colors cursor-pointer shadow-xs"
               >
                 {finalResult.passed
                   ? (isAmharic ? 'ቀጣዩን ትምህርት ክፈት' : 'Continue to Next Lesson')
@@ -772,7 +772,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
             )}
 
             {/* Question Card without Taboo Words */}
-            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl space-y-3">
+            <div className="p-4 bg-parchment-100/90 dark:bg-zinc-900/80 border border-parchment-300 dark:border-zinc-800/80 rounded-xl space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
                   {currentTurn.question}
@@ -781,7 +781,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                   <button
                     type="button"
                     onClick={() => playNeuralAudio(currentTurn.spokenPrompt, { voice: defaultVoice, readerId: 'defense-replay' })}
-                    className="shrink-0 flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+                    className="shrink-0 flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-parchment-300 dark:border-zinc-700 transition-colors cursor-pointer shadow-xs"
                     title="Replay spoken question"
                   >
                     <Volume2 size={12} />
@@ -803,7 +803,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                       : t.feynman.placeholder
                   }
                   rows={4}
-                  className="w-full p-3 text-sm bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 leading-relaxed"
+                  className="w-full p-3 text-sm bg-parchment-50 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-parchment-400 dark:focus:ring-zinc-600 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 leading-relaxed"
                 />
               </div>
 
@@ -814,12 +814,12 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                     type="button"
                     onClick={toggleSpeechInput}
                     disabled={isTranscribingSpeech || isSubmittingTurn}
-                    className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer shadow-xs ${
                       isListeningSpeech
                         ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-sm'
                         : isTranscribingSpeech
-                          ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-zinc-800 cursor-not-allowed'
-                          : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
+                          ? 'bg-parchment-200 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 border-parchment-300 dark:border-zinc-800 cursor-not-allowed'
+                          : 'bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border-parchment-300 dark:border-zinc-800'
                     }`}
                     title={
                       isListeningSpeech
@@ -869,7 +869,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                 <button
                   type="submit"
                   disabled={!explanation.trim() || isSubmittingTurn || isListeningSpeech || isTranscribingSpeech}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700 disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 disabled:opacity-40 transition-all cursor-pointer shadow-xs"
                 >
                   {isSubmittingTurn ? (
                     <>

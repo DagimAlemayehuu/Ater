@@ -505,12 +505,12 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     ? isCorrect
       ? 'border-emerald-500/70 dark:border-emerald-500/70'
       : 'border-rose-500/70 dark:border-rose-500/70'
-    : 'border-zinc-200 dark:border-zinc-800';
+    : 'border-parchment-300 dark:border-zinc-800';
 
   return (
     <div
       data-testid={`inline-mcq-${mcq.id}`}
-      className={`my-4 p-4 rounded-xl border ${cardBorderClass} bg-zinc-50/50 dark:bg-zinc-900/40 text-zinc-900 dark:text-zinc-100 transition-colors shadow-xs relative`}
+      className={`my-4 p-4 rounded-xl border ${cardBorderClass} bg-parchment-100/60 dark:bg-zinc-900/40 text-zinc-900 dark:text-zinc-100 transition-colors shadow-xs relative`}
     >
       {/* Optional expand button in corner without clutter */}
       {!disableExpand && (

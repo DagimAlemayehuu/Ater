@@ -28,8 +28,8 @@ export function BenefitsSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/40 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-            <span className="text-xs font-mono text-zinc-400">{t.benefits.step1Tag}</span>
+          <div className="p-6 rounded-2xl border border-parchment-300 dark:border-zinc-800 bg-parchment-200/50 dark:bg-zinc-900/40 space-y-3 shadow-xs hover:border-parchment-400 dark:hover:border-zinc-700 transition-colors">
+            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{t.benefits.step1Tag}</span>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
               {t.benefits.step1Title}
             </h3>
@@ -38,8 +38,8 @@ export function BenefitsSection() {
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/40 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-            <span className="text-xs font-mono text-zinc-400">{t.benefits.step2Tag}</span>
+          <div className="p-6 rounded-2xl border border-parchment-300 dark:border-zinc-800 bg-parchment-200/50 dark:bg-zinc-900/40 space-y-3 shadow-xs hover:border-parchment-400 dark:hover:border-zinc-700 transition-colors">
+            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{t.benefits.step2Tag}</span>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
               {t.benefits.step2Title}
             </h3>
@@ -48,8 +48,8 @@ export function BenefitsSection() {
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/40 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-            <span className="text-xs font-mono text-zinc-400">{t.benefits.step3Tag}</span>
+          <div className="p-6 rounded-2xl border border-parchment-300 dark:border-zinc-800 bg-parchment-200/50 dark:bg-zinc-900/40 space-y-3 shadow-xs hover:border-parchment-400 dark:hover:border-zinc-700 transition-colors">
+            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{t.benefits.step3Tag}</span>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
               {t.benefits.step3Title}
             </h3>

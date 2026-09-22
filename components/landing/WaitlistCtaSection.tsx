@@ -12,7 +12,7 @@ export function WaitlistCtaSection() {
   const t = translations[language];
 
   return (
-    <section id="waitlist" className="snap-section relative w-full min-h-[550px] md:h-screen md:min-h-[600px] flex flex-col justify-center items-center overflow-hidden border-t border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-950 px-4 sm:px-8 py-16 md:py-0 scroll-mt-16 select-none">
+    <section id="waitlist" className="snap-section relative w-full min-h-[550px] md:h-screen md:min-h-[600px] flex flex-col justify-center items-center overflow-hidden border-t border-parchment-300/80 dark:border-zinc-800/80 bg-parchment-100/60 dark:bg-zinc-950 px-4 sm:px-8 py-16 md:py-0 scroll-mt-16 select-none">
       {/* Foreground Content: Exactly centered in the viewport */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -32,7 +32,7 @@ export function WaitlistCtaSection() {
         <div className="pt-2">
           <Link
             href="/auth?mode=signup"
-            className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-sm sm:text-base transition-all shadow-xs hover:shadow-sm cursor-pointer"
+            className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-sm sm:text-base transition-all shadow-xs hover:shadow-sm cursor-pointer"
           >
             <span>{t.cta.button}</span>
             <ArrowRight className="w-4 h-4" />

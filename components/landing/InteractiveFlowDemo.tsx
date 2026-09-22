@@ -324,7 +324,7 @@ export function InteractiveFlowDemo() {
         </p>
       </div>
 
-      <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-lg overflow-hidden flex flex-col min-h-[480px] h-[580px] max-h-[85vh] md:max-h-[75vh]">
+      <div className="relative rounded-2xl border border-parchment-300/90 dark:border-zinc-800 bg-parchment-50 dark:bg-zinc-950 shadow-lg overflow-hidden flex flex-col min-h-[480px] h-[580px] max-h-[85vh] md:max-h-[75vh]">
         {/* Floating Reset / Mute controls anchored top-right (only when not in lesson view to prevent any header overlap) */}
         {step !== 'lesson' && (
           <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
@@ -332,7 +332,7 @@ export function InteractiveFlowDemo() {
               <button
                 type="button"
                 onClick={() => stopNeuralAudio()}
-                className="px-2 py-1 rounded-md border border-zinc-250 dark:border-zinc-750 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 transition-colors flex items-center gap-1 cursor-pointer"
+                className="px-2 py-1 rounded-md border border-parchment-300 dark:border-zinc-750 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 transition-colors flex items-center gap-1 cursor-pointer"
                 title={isAmharic ? 'አቁም' : 'Mute voice'}
               >
                 <VolumeX className="w-3.5 h-3.5" />
@@ -344,7 +344,7 @@ export function InteractiveFlowDemo() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="p-1 rounded-md text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-850 transition-colors cursor-pointer border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90"
+                className="p-1 rounded-md text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-parchment-200 dark:hover:bg-zinc-850 transition-colors cursor-pointer border border-parchment-300 dark:border-zinc-800 bg-parchment-100/90 dark:bg-zinc-900/90"
                 title={isAmharic ? 'ከመጀመሪያ ጀምር' : 'Restart demo'}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export function InteractiveFlowDemo() {
         {/* Content Body */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {error && (
-            <div className="mx-6 mt-3 rounded-xl p-2.5 text-xs bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 shrink-0">
+            <div className="mx-6 mt-3 rounded-xl p-2.5 text-xs bg-parchment-200 dark:bg-zinc-900 border border-parchment-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 shrink-0">
               {error}
             </div>
           )}
@@ -388,7 +388,7 @@ export function InteractiveFlowDemo() {
                     }
                     disabled={loading}
                     required
-                    className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-500 transition-all leading-relaxed"
+                    className="w-full rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-100/70 dark:bg-zinc-900 px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-parchment-500 dark:focus:ring-zinc-500 transition-all leading-relaxed"
                   />
                 </div>
 
@@ -396,7 +396,7 @@ export function InteractiveFlowDemo() {
                   <button
                     type="submit"
                     disabled={loading || !topic.trim()}
-                    className="w-full sm:w-auto px-5 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2 text-xs font-medium rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                   >
                     {loading ? (
                       <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
@@ -421,16 +421,16 @@ export function InteractiveFlowDemo() {
                     key={q.id}
                     className={`h-1 flex-1 rounded-full transition-all ${
                       idx === currentQIndex
-                        ? 'bg-zinc-700 dark:bg-zinc-300'
+                        ? 'bg-zinc-800 dark:bg-zinc-300'
                         : idx < currentQIndex
-                          ? 'bg-zinc-400 dark:bg-zinc-600'
-                          : 'bg-zinc-200 dark:bg-zinc-800'
+                          ? 'bg-parchment-400 dark:bg-zinc-600'
+                          : 'bg-parchment-300 dark:bg-zinc-800'
                     }`}
                   />
                 ))}
               </div>
 
-              <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 p-4 space-y-3">
+              <div className="rounded-xl border border-parchment-300 dark:border-zinc-800 bg-parchment-100/60 dark:bg-zinc-900/40 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
                     {questions[currentQIndex].question}
@@ -438,7 +438,7 @@ export function InteractiveFlowDemo() {
 
                   <button
                     onClick={() => playQuestionVoice(questions[currentQIndex], language)}
-                    className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0 transition-colors cursor-pointer bg-white dark:bg-zinc-900"
+                    className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 hover:bg-parchment-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0 transition-colors cursor-pointer bg-parchment-50 dark:bg-zinc-900"
                     title={isAmharic ? 'ጥያቄውን ያድምጡ' : 'Hear question'}
                   >
                     <Volume2 className="w-3.5 h-3.5" />
@@ -456,15 +456,15 @@ export function InteractiveFlowDemo() {
                       }}
                       className={`w-full px-3.5 py-2 text-xs rounded-lg border text-left transition-all cursor-pointer ${
                         selectedOption === opt
-                          ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-200/90 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 font-medium'
-                          : 'border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700'
+                          ? 'border-parchment-500 dark:border-zinc-600 bg-parchment-300/80 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 font-medium'
+                          : 'border-parchment-300 dark:border-zinc-800/80 bg-parchment-50 dark:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-parchment-200/80 dark:hover:bg-zinc-800/50 hover:border-parchment-400 dark:hover:border-zinc-700'
                       }`}
                     >
                       {opt}
                     </button>
                   ))}
 
-                  <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 px-3.5 py-2">
+                  <div className="rounded-lg border border-parchment-300 dark:border-zinc-800 bg-parchment-50 dark:bg-zinc-900/60 px-3.5 py-2">
                     <input
                       type="text"
                       value={customAnswer}
@@ -486,7 +486,7 @@ export function InteractiveFlowDemo() {
                 <button
                   onClick={handleAnswerSubmit}
                   disabled={loading || (!selectedOption && !customAnswer.trim())}
-                  className="px-4 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="px-4 py-2 text-xs font-medium rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
@@ -521,7 +521,7 @@ export function InteractiveFlowDemo() {
                 {curriculum.lessons.map((lesson, idx) => (
                   <div
                     key={lesson.id}
-                    className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 flex items-start gap-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                    className="p-3 rounded-lg border border-parchment-300 dark:border-zinc-800 bg-parchment-100/60 dark:bg-zinc-900/40 flex items-start gap-3 hover:border-parchment-400 dark:hover:border-zinc-700 transition-colors"
                   >
                     <span className="font-mono text-xs text-zinc-400 mt-0.5">
                       {String(idx + 1).padStart(2, '0')}
@@ -560,13 +560,13 @@ export function InteractiveFlowDemo() {
                           ? 'ካርታውን ያሻሽሉ (ለምሳሌ፡ "የላቀ የደህንነት ትምህርት ጨምር")...'
                           : 'Modify roadmap (e.g. "Add advanced security module", "Make it more practical")...'
                       }
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-parchment-300 dark:border-zinc-800 bg-parchment-50 dark:bg-zinc-900/60 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-parchment-500"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={isModifyingRoadmap || !roadmapFeedback.trim()}
-                    className="px-3 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                    className="px-3 py-2 text-xs font-medium rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
                   >
                     {isModifyingRoadmap ? (
                       <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
@@ -577,14 +577,14 @@ export function InteractiveFlowDemo() {
                 </form>
               </div>
 
-              <div className="pt-2 flex items-center justify-between border-t border-zinc-200 dark:border-zinc-800">
+              <div className="pt-2 flex items-center justify-between border-t border-parchment-300 dark:border-zinc-800">
                 <span className="text-xs text-zinc-400">
                   {curriculum.lessons.length} {isAmharic ? 'ትምህርቶች ተዘጋጅተዋል' : 'lessons calibrated'}
                 </span>
                 <button
                   onClick={handleApproveRoadmap}
                   disabled={loading || isModifyingRoadmap}
-                  className="px-4 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="px-4 py-2 text-xs font-medium rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />

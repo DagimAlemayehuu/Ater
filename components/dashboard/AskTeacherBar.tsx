@@ -37,14 +37,14 @@ export const AskTeacherBar: React.FC<AskTeacherBarProps> = ({
     placeholder || (isLoading ? (language === 'am' ? 'እያሰበ ነው...' : 'Thinking...') : t.askTeacherBottomPlaceholder);
 
   return (
-    <div className={`p-4 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-900/60 pointer-events-auto shrink-0 ${className}`}>
+    <div className={`p-4 bg-[#fbf7f0] dark:bg-zinc-950 border-t border-parchment-300/80 dark:border-zinc-900/60 pointer-events-auto shrink-0 ${className}`}>
       <div className="max-w-3xl w-full mx-auto">
         <form
           onSubmit={handleSubmit}
-          className={`relative flex items-center gap-2 rounded-2xl border bg-white dark:bg-zinc-900/90 px-4 py-2.5 shadow-sm transition-all ${
+          className={`relative flex items-center gap-2 rounded-2xl border bg-parchment-50 dark:bg-zinc-900/90 px-4 py-2.5 shadow-xs transition-all ${
             isFocused
-              ? 'border-zinc-400 dark:border-zinc-600 ring-2 ring-zinc-200 dark:ring-zinc-800'
-              : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
+              ? 'border-parchment-500 dark:border-zinc-600 ring-2 ring-parchment-300 dark:ring-zinc-800'
+              : 'border-parchment-300 dark:border-zinc-800 hover:border-parchment-400 dark:hover:border-zinc-700'
           }`}
         >
           <div className="relative flex-1 flex items-center">
@@ -70,7 +70,7 @@ export const AskTeacherBar: React.FC<AskTeacherBarProps> = ({
             type="submit"
             disabled={!question.trim() || isLoading || disabled}
             aria-label={t.askBtn}
-            className="shrink-0 p-1.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 disabled:opacity-30 transition-colors"
+            className="shrink-0 p-1.5 rounded-xl bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700/80 disabled:opacity-30 transition-colors cursor-pointer shadow-xs"
           >
             {isLoading ? (
               <span className="flex items-center justify-center w-3.5 h-3.5">

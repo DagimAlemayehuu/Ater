@@ -908,7 +908,7 @@ export default function AterCognitiveStudio() {
     <div className="flex flex-col h-screen overflow-hidden bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       {/* Top Header */}
       {currentView === 'library' ? (
-        <header className="h-14 bg-[#fbf7f0] dark:bg-zinc-950 px-6 flex items-center justify-between shrink-0 border-b border-zinc-200/80 dark:border-zinc-800/80">
+        <header className="h-14 bg-[#fbf7f0] dark:bg-zinc-950 px-6 flex items-center justify-between shrink-0 border-b border-parchment-300/80 dark:border-zinc-800/80">
           <Link
             href="/"
             className="text-xl md:text-2xl font-black tracking-tighter uppercase font-sans text-zinc-900 dark:text-zinc-100 flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -922,21 +922,21 @@ export default function AterCognitiveStudio() {
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100 hover:bg-parchment-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             </button>
 
             {/* Language Toggle: English / Amharic */}
-            <div className="flex items-center rounded-lg border border-zinc-200 dark:border-zinc-800 p-0.5 bg-zinc-100 dark:bg-zinc-900 text-xs">
+            <div className="flex items-center rounded-lg border border-parchment-300 dark:border-zinc-800 p-0.5 bg-parchment-200/70 dark:bg-zinc-900 text-xs">
               <button
                 type="button"
                 onClick={() => handleToggleLanguage('en')}
                 className={`px-2.5 py-1 rounded text-xs transition-all ${
                   appLanguage === 'en'
-                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    ? 'bg-parchment-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium shadow-2xs'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 English
@@ -946,8 +946,8 @@ export default function AterCognitiveStudio() {
                 onClick={() => handleToggleLanguage('am')}
                 className={`px-2.5 py-1 rounded text-xs transition-all ${
                   appLanguage === 'am'
-                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    ? 'bg-parchment-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium shadow-2xs'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 አማርኛ
@@ -958,7 +958,7 @@ export default function AterCognitiveStudio() {
             {currentUserIsAdmin && (
               <Link
                 href="/admin"
-                className="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                 title="Open Admin Dashboard"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -970,7 +970,7 @@ export default function AterCognitiveStudio() {
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full border border-parchment-300 dark:border-zinc-800 bg-parchment-100 hover:bg-parchment-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
                 title="Account & Settings"
                 aria-label="Account & Settings"
               >
@@ -1255,15 +1255,15 @@ export default function AterCognitiveStudio() {
             <button
               type="button"
               onClick={() => setIsIntakeModalOpen(true)}
-              className="group flex flex-col items-center justify-center min-h-[190px] p-6 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-zinc-900 dark:hover:border-zinc-100 bg-zinc-50/60 dark:bg-zinc-900/30 transition-all text-center cursor-pointer"
+              className="group flex flex-col items-center justify-center min-h-[190px] p-6 rounded-xl border border-dashed border-parchment-400 dark:border-zinc-700 hover:border-zinc-900 dark:hover:border-zinc-100 bg-parchment-100/70 hover:bg-parchment-200/60 dark:bg-zinc-900/30 transition-all text-center cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-full border border-zinc-300 dark:border-zinc-700 group-hover:border-zinc-900 dark:group-hover:border-zinc-100 flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 mb-3 transition-colors">
+              <div className="w-10 h-10 rounded-full border border-parchment-400 dark:border-zinc-700 group-hover:border-zinc-900 dark:group-hover:border-zinc-100 flex items-center justify-center text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 mb-3 transition-colors bg-parchment-50 dark:bg-transparent">
                 <Plus size={18} />
               </div>
               <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
                 {appLanguage === 'am' ? '+ አዲስ ኮርስ ፍጠር' : '+ Create Course'}
               </span>
-              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
+              <span className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1">
                 {appLanguage === 'am' ? 'በጥያቄ ወይም በፒዲኤፍ ጀምር' : 'Prompt or PDF upload'}
               </span>
             </button>
@@ -1284,11 +1284,11 @@ export default function AterCognitiveStudio() {
                     }
                     setCurrentView('study');
                   }}
-                  className="group relative flex flex-col justify-between min-h-[190px] p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 bg-white dark:bg-zinc-900 transition-all cursor-pointer shadow-sm hover:shadow"
+                  className="group relative flex flex-col justify-between min-h-[190px] p-5 rounded-xl border border-parchment-300 dark:border-zinc-800 hover:border-parchment-500 dark:hover:border-zinc-600 bg-parchment-50 dark:bg-zinc-900 transition-all cursor-pointer shadow-xs hover:shadow-sm"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">
+                      <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-500 dark:text-zinc-400">
                         {totalCount} {appLanguage === 'am' ? 'ትምህርቶች' : 'Lessons'}
                       </span>
                       <button
@@ -1310,13 +1310,13 @@ export default function AterCognitiveStudio() {
                     </h2>
 
                     {c.targetGoal && (
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-2 leading-relaxed">
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2 mt-2 leading-relaxed">
                         {c.targetGoal}
                       </p>
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/60 mt-3 flex items-center justify-between text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                  <div className="pt-3 border-t border-parchment-200 dark:border-zinc-800/60 mt-3 flex items-center justify-between text-[10px] font-mono text-zinc-600 dark:text-zinc-400">
                     <span>
                       {masteredCount}/{totalCount} {appLanguage === 'am' ? 'የተጠናቀቀ' : 'Completed'}
                     </span>

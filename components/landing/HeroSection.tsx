@@ -35,7 +35,7 @@ export function HeroSection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={scrollToDemo}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200/80 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl border border-parchment-400 dark:border-zinc-700 bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
           >
             <span>{t.hero.tryDemo}</span>
             <ArrowRight className="w-4 h-4" />
@@ -43,7 +43,7 @@ export function HeroSection() {
 
           <Link
             href="/auth?mode=signup"
-            className="w-full sm:w-auto px-6 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-zinc-100 font-medium text-sm transition-all text-center shadow-xs cursor-pointer"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl border border-parchment-300 dark:border-zinc-700 bg-parchment-100/90 hover:bg-parchment-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-zinc-100 font-medium text-sm transition-all text-center shadow-xs cursor-pointer"
           >
             {t.hero.joinWaitlist}
           </Link>
