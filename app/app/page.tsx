@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, ArrowLeft, Search, Sliders, User, Settings, Sun, Moon, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Trash2, ArrowLeft, Search, Sliders, User, Settings, Sun, Moon, LogOut, ShieldCheck } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { LeftDrawer } from '@/components/LeftDrawer';
@@ -20,7 +21,7 @@ import {
   getShowcaseLessonNote,
 } from '@/lib/curriculum/showcaseCourses';
 import { saveCourseToStore, saveNoteToStore, getCoursesFromStore, deleteCourseFromStore, clearUserSessionCache } from '@/lib/sync/store';
-import { checkIsAdmin } from '@/lib/auth/admins';
+import { checkIsAdmin, checkUserAppAccess } from '@/lib/auth/admins';
 import type {
   CourseCurriculum,
   RoadmapLesson,
@@ -29,6 +30,7 @@ import type {
 } from '@/types';
 
 export default function AterCognitiveStudio() {
+  const router = useRouter();
   const voiceBridge = useVoiceBridge();
   const [currentView, setCurrentView] = useState<'library' | 'study'>('library');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -80,10 +82,22 @@ export default function AterCognitiveStudio() {
     const supabase = getSupabaseBrowserClient();
     if (supabase) {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (session?.user?.email) {
-          setCurrentUserEmail(session.user.email);
-          const isAdmin = await checkIsAdmin(session.user.email);
-          setCurrentUserIsAdmin(isAdmin);
+        if (!session?.user?.email) {
+          router.push('/auth?mode=login&redirect=/app');
+          return;
+        }
+
+        const email = session.user.email;
+        setCurrentUserEmail(email);
+
+        // Verify that user is either an admin or has approved waitlist status
+        const access = await checkUserAppAccess(email);
+        setCurrentUserIsAdmin(access.isAdmin);
+
+        if (!access.allowed) {
+          // Block unapproved users and redirect them to auth status page
+          router.push('/auth');
+          return;
         }
       });
     }
@@ -94,7 +108,7 @@ export default function AterCognitiveStudio() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [router]);
 
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
   const [isTranslating, setIsTranslating] = useState(false);
@@ -891,10 +905,10 @@ export default function AterCognitiveStudio() {
   }, [voiceBridge, handleFeynmanSubmit, loadLesson, activeNote?.title]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       {/* Top Header */}
       {currentView === 'library' ? (
-        <header className="h-14 bg-white dark:bg-zinc-950 px-6 flex items-center justify-between shrink-0">
+        <header className="h-14 bg-[#fbf7f0] dark:bg-zinc-950 px-6 flex items-center justify-between shrink-0 border-b border-zinc-200/80 dark:border-zinc-800/80">
           <Link
             href="/"
             className="text-xl md:text-2xl font-black tracking-tighter uppercase font-sans text-zinc-900 dark:text-zinc-100 flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -939,6 +953,18 @@ export default function AterCognitiveStudio() {
                 አማርኛ
               </button>
             </div>
+
+            {/* Admin Console Header Button for Admins */}
+            {currentUserIsAdmin && (
+              <Link
+                href="/admin"
+                className="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Open Admin Dashboard"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Admin Dashboard</span>
+              </Link>
+            )}
 
             {/* Profile Dropdown Menu */}
             <div className="relative" ref={profileMenuRef}>
@@ -994,13 +1020,13 @@ export default function AterCognitiveStudio() {
                     <span>{appLanguage === 'am' ? 'ቅንብሮች እና ሁኔታ' : 'Settings & Status'}</span>
                   </Link>
 
-                  {currentUserEmail?.toLowerCase() === 'dagimalemayehuu@gmail.com' && (
+                  {currentUserIsAdmin && (
                     <Link
                       href="/admin"
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
-                      <User className="w-3.5 h-3.5" />
+                      <ShieldCheck className="w-3.5 h-3.5" />
                       <span>{appLanguage === 'am' ? 'የአድሚን ዳሽቦርድ' : 'Admin Dashboard'}</span>
                     </Link>
                   )}
@@ -1016,9 +1042,12 @@ export default function AterCognitiveStudio() {
 
                   <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const supabase = getSupabaseBrowserClient();
-                        supabase?.auth.signOut();
+                        if (supabase) {
+                          await supabase.auth.signOut();
+                        }
+                        clearUserSessionCache();
                         window.location.href = '/';
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors text-left cursor-pointer"
@@ -1033,7 +1062,7 @@ export default function AterCognitiveStudio() {
           </div>
         </header>
       ) : (
-        <header className="h-11 bg-white dark:bg-zinc-950 px-4 flex items-center justify-between shrink-0">
+        <header className="h-11 bg-[#fbf7f0] dark:bg-zinc-950 px-4 flex items-center justify-between shrink-0 border-b border-zinc-200/80 dark:border-zinc-800/80">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1086,6 +1115,18 @@ export default function AterCognitiveStudio() {
                 አማርኛ
               </button>
             </div>
+
+            {/* Admin Console Header Button for Admins */}
+            {currentUserIsAdmin && (
+              <Link
+                href="/admin"
+                className="px-2.5 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                title="Open Admin Dashboard"
+              >
+                <ShieldCheck className="w-3 h-3" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+            )}
 
             {/* Profile Dropdown Menu */}
             <div className="relative">
@@ -1163,9 +1204,11 @@ export default function AterCognitiveStudio() {
 
                   <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const supabase = getSupabaseBrowserClient();
-                        supabase?.auth.signOut();
+                        if (supabase) {
+                          await supabase.auth.signOut();
+                        }
                         clearUserSessionCache();
                         window.location.href = '/';
                       }}

@@ -54,7 +54,8 @@ export function clearUserSessionCache(): void {
       if (
         key.startsWith('ater_note_') ||
         key.startsWith('ater_courses_') ||
-        key.startsWith('ater_curricula_')
+        key.startsWith('ater_curricula_') ||
+        key.startsWith('sb-') // Purge Supabase auth tokens
       ) {
         localStorage.removeItem(key);
       }

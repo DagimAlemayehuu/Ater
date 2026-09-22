@@ -13,7 +13,7 @@ export function Header() {
   const t = translations[language];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800/60">
+    <header className="sticky top-0 z-50 w-full bg-[#fbf7f0]/80 dark:bg-zinc-950/70 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/60">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Left: Brand mark with same font size in English and Amharic */}
         <Link

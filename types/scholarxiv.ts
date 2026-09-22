@@ -4,7 +4,7 @@
 
 export interface ScholarxivPaper {
   id: string;
-  extractedID: string;
+  extractedID?: string;
   title: string;
   summary: string;
   authors: string[];
@@ -12,13 +12,26 @@ export interface ScholarxivPaper {
   updated?: string;
   primaryCategory?: string;
   category?: string[];
+  categories?: string[];
   pdfLink?: string;
   absLink?: string;
   doi?: string;
+  url?: string;
+  abstract?: string;
+  year?: number;
+  keyInsight?: string;
   journalRef?: string;
   comment?: string;
   source?: string;
   sources?: string[];
+}
+
+export interface NormalizedScholarxivPaper extends ScholarxivPaper {
+  year: number;
+  url: string;
+  abstract: string;
+  keyInsight: string;
+  categories: string[];
 }
 
 export interface ScholarxivPagination {

@@ -15,7 +15,7 @@ export default function LandingPage() {
   const t = translations[language] || translations.en;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors">
+    <div className="min-h-screen bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors">
       <Header />
 
       <main className="flex-1 flex flex-col items-center justify-center w-full">

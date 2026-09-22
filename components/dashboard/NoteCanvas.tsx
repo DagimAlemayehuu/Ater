@@ -25,6 +25,9 @@ import {
   InteractiveCanvasViewer,
 } from '@/components/viewers';
 import { InlineMCQCard } from '@/components/dashboard/InlineMCQCard';
+import { SourcesTray } from '@/components/dashboard/SourcesTray';
+import { StudioModal } from '@/components/dashboard/StudioModal';
+import { Sliders, BookOpen } from 'lucide-react';
 import type {
   DynamicLessonNote,
   AterAtomicNote,
@@ -54,6 +57,7 @@ export interface NoteCanvasProps {
   isFeynmanOpen?: boolean;
   isIntakeOpen?: boolean;
   onResetDemo?: () => void;
+  isStudioEnabled?: boolean;
 }
 
 export const NoteCanvas: React.FC<NoteCanvasProps> = ({
@@ -76,6 +80,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   isFeynmanOpen = false,
   isIntakeOpen = false,
   onResetDemo,
+  isStudioEnabled: isStudioEnabledProp,
 }) => {
   const t = translations[language] || translations.en;
   const isAmharic = language === 'am';
@@ -100,6 +105,22 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   const [sideQuestionThreads, setSideQuestionThreads] = useState<QaThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<string>('');
+
+  // Sources Tray & Studio Modal state
+  const [isSourcesTrayOpen, setIsSourcesTrayOpen] = useState<boolean>(false);
+  const [isStudioOpen, setIsStudioOpen] = useState<boolean>(false);
+  const [isStudioEnabledState, setIsStudioEnabledState] = useState<boolean>(true);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ater_enable_notebooklm_studio');
+      if (stored !== null) {
+        setIsStudioEnabledState(stored === 'true');
+      }
+    } catch {}
+  }, []);
+
+  const isStudioEnabled = isStudioEnabledProp !== undefined ? isStudioEnabledProp : isStudioEnabledState;
 
   const activeLoading = isLoading || isCompiling;
 
@@ -692,6 +713,36 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             </button>
           </div>
 
+          {/* NotebookLM Studio Button (when enabled) */}
+          {isStudioEnabled && (
+            <button
+              type="button"
+              onClick={() => setIsStudioOpen(true)}
+              aria-label={isAmharic ? 'ማስታወሻ ስቱዲዮ' : 'NotebookLM Studio'}
+              title={isAmharic ? 'ማስታወሻ ስቱዲዮ' : 'NotebookLM Studio'}
+              className="p-1.5 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="hidden sm:inline">{isAmharic ? 'ስቱዲዮ' : 'Studio'}</span>
+            </button>
+          )}
+
+          {/* Sources Tray Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsSourcesTrayOpen((prev) => !prev)}
+            aria-label={isAmharic ? 'ጥናታዊ ምንጮች' : 'Literature Sources'}
+            title={isAmharic ? 'ጥናታዊ ምንጮች' : 'Literature Sources'}
+            className={`p-1.5 px-2.5 rounded-lg border transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer ${
+              isSourcesTrayOpen
+                ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{isAmharic ? 'ምንጮች' : 'Sources'}</span>
+          </button>
+
           {/* Reset Demo / New Journey button (integrated cleanly to prevent overlap) */}
           {onResetDemo && (
             <button
@@ -1168,7 +1219,27 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             containerClassName="inset-x-0 sm:left-60 lg:left-72 sm:right-0"
           />
         </div>
+
+        {/* Collapsible In-Lesson Sources Tray in Right Column */}
+        <SourcesTray
+          isOpen={isSourcesTrayOpen}
+          onToggle={() => setIsSourcesTrayOpen((prev) => !prev)}
+          topicTitle={note.title}
+          language={language}
+        />
       </div>
+
+      {/* Non-Blocking NotebookLM Studio Creator Modal */}
+      {isStudioEnabled && (
+        <StudioModal
+          isOpen={isStudioOpen}
+          onClose={() => setIsStudioOpen(false)}
+          topicTitle={note.title}
+          sourceContext={`${section1Text}\n${section2Text}\n${section3Text}\n${section4Boundary}\n${section5Text}`}
+          notebookId={(curriculum as any)?.notebookId || (note as any)?.notebookId}
+          language={language}
+        />
+      )}
     </div>
   );
 };

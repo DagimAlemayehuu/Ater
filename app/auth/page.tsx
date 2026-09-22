@@ -74,27 +74,32 @@ function AuthContent() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      // If user arrives with mode=login, always show login form so credentials are requested
-      if (initialMode === 'login') {
-        setView('auth');
-        setAuthMode('login');
-      } else if (session) {
-        setUser(session.user);
-        checkUser(session.user.email!);
-      } else {
-        setView('auth');
-      }
-    });
+    if (initialMode === 'login') {
+      // User explicitly clicked "Sign In": Always require manual credential entry
+      setView('auth');
+      setAuthMode('login');
+      setUser(null);
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setUser(session.user);
+          checkUser(session.user.email!);
+        } else {
+          setView('auth');
+        }
+      });
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      // Only auto-route if user was not specifically asking to view the login form
+      if (event === 'SIGNED_IN' && session && initialMode !== 'login') {
         setUser(session.user);
         checkUser(session.user.email!);
       } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         setUserStatus(null);
         setView('auth');
+        setAuthMode('login');
       }
     });
 
@@ -146,19 +151,11 @@ function AuthContent() {
             setError(autoSignInError.message);
           } else if (signInData.session) {
             setUser(signInData.session.user);
-            if (redirectTo) {
-              router.push(redirectTo);
-            } else {
-              setView('dashboard');
-            }
+            await checkUser(signInData.session.user.email!);
           }
         } else {
           setUser(data.session.user);
-          if (redirectTo) {
-            router.push(redirectTo);
-          } else {
-            setView('dashboard');
-          }
+          await checkUser(data.session.user.email!);
         }
       } else {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -180,7 +177,7 @@ function AuthContent() {
 
   if (view === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
         <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
       </div>
     );
@@ -191,7 +188,7 @@ function AuthContent() {
     const displayName = (user?.user_metadata?.full_name || user?.email || 'Learner').split('@')[0];
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
         <div className="w-full max-w-md space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
             <Link
@@ -202,10 +199,16 @@ function AuthContent() {
               <span>{isAmharic ? 'ወደ ዋናው ገጽ' : 'Return Home'}</span>
             </Link>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const supabase = getSupabaseBrowserClient();
-                supabase?.auth.signOut();
+                if (supabase) {
+                  await supabase.auth.signOut();
+                }
                 clearUserSessionCache();
+                setUser(null);
+                setUserStatus(null);
+                setAuthMode('login');
+                setView('auth');
               }}
               className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
             >
@@ -236,9 +239,17 @@ function AuthContent() {
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500 pt-1 leading-relaxed">
-                {isAmharic
-                  ? 'የቅድመ-መዳረሻ ዝርዝር ውስጥ ተመዝግበዋል። የተሟላው መድረክ ሲለቀቅ መልእክት ይደርስዎታል።'
-                  : 'You are enrolled in early access. The core learning runtime is currently in closed alpha.'}
+                {userStatus?.status === 'denied'
+                  ? (isAmharic
+                      ? 'የእርስዎ የመዳረሻ ፈቃድ በአድሚን ታግዷል ወይም አልተፈቀደም።'
+                      : 'Your access request has been revoked or denied by the administrator.')
+                  : userStatus?.status === 'approved'
+                  ? (isAmharic
+                      ? 'መለያዎ ጸድቋል! ወደ መተግበሪያው መግባት ይችላሉ።'
+                      : 'Your account is approved! You have full access to the learning runtime.')
+                  : (isAmharic
+                      ? 'የቅድመ-መዳረሻ ዝርዝር ውስጥ ተመዝግበዋል። በአድሚን እስኪጸድቅ ድረስ መተግበሪያውን መክፈት አይቻልም።'
+                      : 'You are enrolled in the waitlist. Access to the app will open once approved by the administrator.')}
               </p>
             </div>
 
@@ -273,7 +284,7 @@ function AuthContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
           <Link

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ater — Teaser (TikTok / Reels 9:16)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Noto+Sans+Ethiopic:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #0c0d0e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #e5e5e5;
+      overflow: hidden;
+      padding: 20px 0;
+    }
+    #stage-wrapper {
+      position: relative;
+      width: 405px;
+      height: 720px;
+      max-height: 84vh;
+      aspect-ratio: 9 / 16;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      overflow: hidden;
+      background: #fcf8f2;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 18px;
+      border-radius: 40px;
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    button {
+      background: #dfd8cb;
+      color: #18181b;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    button:hover {
+      background: #ffffff;
+      transform: translateY(-1px);
+    }
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #888;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type=range] {
+      width: 160px;
+      accent-color: rgba(24, 24, 27, 0.6);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="stage-wrapper">
+    <!-- TikTok / Reels 9:16 portrait resolution -->
+    <canvas id="canvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="playBtn">Pause</button>
+    <button id="restartBtn">Replay</button>
+    <button id="muteBtn">Sound On</button>
+    <button id="switchBtn" style="background:#18181b;color:#fbf7f0;">🖥 Desktop 16:9</button>
+    
+    <select id="audioTrackSelect" style="background:#dfd8cb;color:#18181b;border:none;padding:6px 12px;border-radius:20px;font-weight:600;font-size:12px;cursor:pointer;outline:none;">
+      <option value="outro_pure">Dan Kye — Actually (Pure Instrumental Outro)</option>
+      <option value="loop_pure">Dan Kye — Actually (Pure Instrumental Loop)</option>
+      <option value="groove">Dan Kye — Actually (Filtered Groove)</option>
+      <option value="piano">Ambient Felt Piano (Original)</option>
+    </select>
+    <div class="timeline">
+      <span id="curTime">0.00s</span>
+      <input type="range" id="scrubber" min="0" max="32.0" step="0.01" value="0">
+      <span id="totalTime">32.00s</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const playBtn = document.getElementById('playBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const switchBtn = document.getElementById('switchBtn');
+    const scrubber = document.getElementById('scrubber');
+    const curTimeLabel = document.getElementById('curTime');
+
+    const DURATION = 32.0;
+    let currentTime = 0;
+    let isPlaying = true;
+    let lastTimestamp = null;
+
+    // --- UNIFORM GLOBAL PAPER CAMERA MOTION (5 FPS SWEET SPOT) ---
+    function hash(n) {
+      return (Math.sin(n * 127.1 + 311.7) * 43758.5453123) % 1;
+    }
+
+    function getGlobalPaperMotion() {
+      const step = Math.floor(currentTime * 5);
+      const h1 = hash(step);
+      const h2 = hash(step + 101.3);
+      const h3 = hash(step + 202.7);
+
+      return {
+        x: (h1 - 0.5) * 2.2,
+        y: (h2 - 0.5) * 2.2,
+        rot: (h3 - 0.5) * 0.002
+      };
+    }
+
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+    // Top Brand Header in top-left corner
+    function drawTopLogo(alpha = 1) {
+      if (alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.translate(90, 130);
+
+      const engText = "ATER";
+      const amhText = "አጠር";
+
+      ctx.font = '900 38px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.letterSpacing = '-1px';
+      const engW = ctx.measureText(engText).width;
+
+      ctx.font = '900 38px "Noto Sans Ethiopic", "Kefa", sans-serif';
+      ctx.fillStyle = '#18181b';
+      ctx.fillText(engText, 0, 0);
+
+      ctx.font = '900 38px "Noto Sans Ethiopic", "Kefa", sans-serif';
+      ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
+      ctx.fillText(amhText, engW + 12, 0);
+
+      ctx.restore();
+    }
+
+    function getActTransition(t, start, end, crossfade = 0.8) {
+      if (t < start || t > end) return { active: false, alpha: 0, y: 0 };
+      const enterProg = easeOutCubic(Math.min(1, (t - start) / crossfade));
+      const exitProg = t > (end - crossfade) ? easeInOutCubic((t - (end - crossfade)) / crossfade) : 0;
+      const alpha = Math.max(0, Math.min(1, enterProg * (1 - exitProg)));
+      const y = (1 - enterProg) * 22 - exitProg * 26;
+      return { active: true, alpha, y };
+    }
+
+    // --- DUAL AUDIO ENGINE: DAN KYE ACTUALLY (STEM-SEPARATED INSTRUMENTAL) + FELT PIANO ---
+    const audioTrackSelect = document.getElementById('audioTrackSelect');
+    const audioPlayer = new Audio();
+    audioPlayer.preload = 'auto';
+
+    const audioTracks = {
+      outro_pure: 'actually_pure_outro_groove.mp3',
+      loop_pure: 'actually_pure_loop_instrumental.mp3',
+      groove: 'groove_32s_inst.mp3',
+      piano: 'piano'
+    };
+
+    let currentTrackType = 'outro_pure';
+    audioPlayer.src = audioTracks[currentTrackType];
+
+    let audioCtx = null;
+    let masterGain = null;
+    let reverbGain = null;
+    let isMuted = false;
+    let lastScheduledIdx = -1;
+    function initAudio() {
+      if (currentTrackType !== 'piano') {
+        audioPlayer.muted = isMuted;
+        return;
+      }
+      if (audioCtx) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.38, audioCtx.currentTime);
+      masterGain.connect(audioCtx.destination);
+
+      const conv = audioCtx.createConvolver();
+      const rate = audioCtx.sampleRate;
+      const length = rate * 2.2;
+      const impulse = audioCtx.createBuffer(2, length, rate);
+      const impL = impulse.getChannelData(0);
+      const impR = impulse.getChannelData(1);
+
+      for (let i = 0; i < length; i++) {
+        const decay = Math.exp(-i / (rate * 0.55));
+        impL[i] = (Math.random() * 2 - 1) * decay;
+        impR[i] = (Math.random() * 2 - 1) * decay;
+      }
+      conv.buffer = impulse;
+
+      reverbGain = audioCtx.createGain();
+      reverbGain.gain.setValueAtTime(0.28, audioCtx.currentTime);
+
+      conv.connect(reverbGain);
+      reverbGain.connect(masterGain);
+    }
+
+    if (audioTrackSelect) {
+      audioTrackSelect.addEventListener('change', (e) => {
+        currentTrackType = e.target.value;
+        if (currentTrackType === 'piano') {
+          audioPlayer.pause();
+          initAudio();
+          if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+          lastScheduledIdx = pianoScore.findIndex(n => n.t >= currentTime) - 1;
+        } else {
+          audioPlayer.src = audioTracks[currentTrackType];
+          audioPlayer.currentTime = currentTime;
+          audioPlayer.muted = isMuted;
+          if (isPlaying) audioPlayer.play().catch(() => {});
+        }
+      });
+    }
+
+
+    function playFeltPiano(freq, time, duration = 3.6, velocity = 0.6) {
+      if (!audioCtx || isMuted) return;
+
+      const baseGain = audioCtx.createGain();
+      baseGain.connect(masterGain);
+      if (reverbGain) baseGain.connect(reverbGain);
+
+      const osc1 = audioCtx.createOscillator();
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(freq, time);
+
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 1.0008, time);
+
+      const osc3 = audioCtx.createOscillator();
+      const gain3 = audioCtx.createGain();
+      osc3.type = 'sine';
+      osc3.frequency.setValueAtTime(freq * 2, time);
+      gain3.gain.setValueAtTime(0.18, time);
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      const cutoff = Math.min(2200, freq * (2.8 + velocity * 1.5));
+      filter.frequency.setValueAtTime(cutoff, time);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(60, freq * 0.9), time + duration);
+
+      baseGain.gain.setValueAtTime(0.0001, time);
+      baseGain.gain.linearRampToValueAtTime(velocity * 0.5, time + 0.022);
+      baseGain.gain.exponentialRampToValueAtTime(velocity * 0.22, time + 0.45);
+      baseGain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      osc3.connect(gain3);
+      gain3.connect(filter);
+      filter.connect(baseGain);
+
+      osc1.start(time);
+      osc2.start(time);
+      osc3.start(time);
+
+      osc1.stop(time + duration);
+      osc2.stop(time + duration);
+      osc3.stop(time + duration);
+    }
+
+    function playChord(freqs, time, dur = 4.0, vel = 0.5) {
+      freqs.forEach((f, i) => {
+        playFeltPiano(f, time + i * 0.018, dur, vel * (1 - i * 0.08));
+      });
+    }
+
+    const pianoScore = [
+      { t: 0.1,  fn: (ct) => playChord([130.81, 196.00, 261.63, 329.63], ct, 4.2, 0.6) },
+      { t: 1.0,  fn: (ct) => playFeltPiano(392.00, ct, 2.8, 0.5) },
+      { t: 1.85, fn: (ct) => playChord([110.00, 164.81, 220.00, 261.63], ct, 4.2, 0.65) },
+      { t: 2.8,  fn: (ct) => playFeltPiano(329.63, ct, 3.2, 0.55) },
+      { t: 4.2,  fn: (ct) => playFeltPiano(293.66, ct, 3.0, 0.5) },
+
+      { t: 6.2,  fn: (ct) => playChord([87.31, 174.61, 261.63, 329.63], ct, 4.0, 0.6) },
+      { t: 7.0,  fn: (ct) => playFeltPiano(392.00, ct, 2.5, 0.5) },
+      { t: 8.0,  fn: (ct) => playChord([98.00, 196.00, 246.94, 293.66], ct, 4.2, 0.65) },
+      { t: 8.8,  fn: (ct) => playFeltPiano(329.63, ct, 2.5, 0.55) },
+      { t: 9.8,  fn: (ct) => playChord([110.00, 220.00, 261.63, 329.63], ct, 3.8, 0.6) },
+      { t: 10.8, fn: (ct) => playFeltPiano(392.00, ct, 2.5, 0.5) },
+      { t: 11.6, fn: (ct) => playFeltPiano(440.00, ct, 2.5, 0.55) },
+
+      { t: 12.8, fn: (ct) => playChord([87.31, 174.61, 220.00, 261.63, 349.23], ct, 4.5, 0.7) },
+      { t: 13.6, fn: (ct) => playFeltPiano(523.25, ct, 3.5, 0.65) },
+      { t: 14.6, fn: (ct) => playChord([98.00, 196.00, 293.66, 392.00, 493.88], ct, 4.5, 0.75) },
+      { t: 15.6, fn: (ct) => playFeltPiano(587.33, ct, 3.5, 0.65) },
+      { t: 16.8, fn: (ct) => playChord([110.00, 220.00, 261.63, 329.63, 523.25], ct, 4.0, 0.7) },
+      { t: 17.8, fn: (ct) => playFeltPiano(440.00, ct, 3.0, 0.6) },
+
+      { t: 19.2, fn: (ct) => playChord([87.31, 174.61, 261.63, 349.23], ct, 4.5, 0.75) },
+      { t: 20.0, fn: (ct) => playFeltPiano(392.00, ct, 2.5, 0.6) },
+      { t: 20.8, fn: (ct) => playChord([98.00, 196.00, 293.66, 392.00], ct, 4.5, 0.8) },
+      { t: 21.6, fn: (ct) => playFeltPiano(440.00, ct, 2.6, 0.65) },
+      { t: 22.4, fn: (ct) => playFeltPiano(523.25, ct, 2.8, 0.7) },
+      { t: 23.4, fn: (ct) => playFeltPiano(587.33, ct, 3.0, 0.75) },
+      { t: 24.4, fn: (ct) => playFeltPiano(659.25, ct, 3.5, 0.8) },
+
+      { t: 25.8, fn: (ct) => playChord([65.41, 130.81, 196.00, 261.63, 329.63, 523.25], ct, 6.2, 0.85) },
+      { t: 27.2, fn: (ct) => playFeltPiano(392.00, ct, 4.5, 0.5) },
+      { t: 28.5, fn: (ct) => playFeltPiano(523.25, ct, 5.0, 0.55) }
+    ];
+
+    function syncAudio(t, isRestart = false) {
+      if (currentTrackType !== 'piano') {
+        if (isRestart) {
+          audioPlayer.currentTime = 0;
+          if (isPlaying && !isMuted) audioPlayer.play().catch(() => {});
+        } else if (Math.abs(audioPlayer.currentTime - t) > 0.35) {
+          audioPlayer.currentTime = t;
+        }
+        return;
+      }
+
+      if (!audioCtx) return;
+      if (isRestart) {
+        lastScheduledIdx = -1;
+      }
+      for (let i = 0; i < pianoScore.length; i++) {
+        const ev = pianoScore[i];
+        if (i > lastScheduledIdx && t >= ev.t && t < ev.t + 0.35) {
+          ev.fn(audioCtx.currentTime);
+          lastScheduledIdx = i;
+        }
+      }
+    }
+
+    // --- MAIN RENDER DISPATCHER (PORTRAIT 1080 x 1920) ---
+    function render(t) {
+      const W = canvas.width;
+      const H = canvas.height;
+
+      const motion = getGlobalPaperMotion();
+
+      ctx.save();
+      ctx.translate(W / 2 + motion.x, H / 2 + motion.y);
+      ctx.rotate(motion.rot);
+      ctx.translate(-W / 2, -H / 2);
+
+      // Clean plain cream background
+      ctx.fillStyle = '#fcf8f2';
+      ctx.fillRect(-60, -60, W + 120, H + 120);
+
+      // Top logo for vertical stories
+      if (t < 25.6) {
+        const logoAlpha = t > 24.6 ? 1 - easeInOutCubic((t - 24.6) / 1.0) : easeOutCubic(Math.min(1, t / 0.8));
+        drawTopLogo(logoAlpha);
+      }
+
+      // =========================================================================
+      // ACT 1: THE HOOK (0.0s – 6.2s)
+      // "AI made studying feel effortless."
+      // "Or did it just make pretending easy?"
+      // =========================================================================
+      {
+        const act = getActTransition(t, 0.0, 6.2, 0.8);
+        if (act.active) {
+          ctx.save();
+          ctx.globalAlpha = act.alpha;
+          ctx.textAlign = 'center';
+
+          // Beat 1 (Stacked nicely for mobile width)
+          ctx.save();
+          ctx.translate(W / 2, H * 0.44 + act.y);
+          ctx.fillStyle = '#18181b';
+          ctx.font = '80px "Newsreader", "Georgia", serif';
+          ctx.fillText("AI made studying", 0, -50);
+          ctx.fillText("feel effortless.", 0, 30);
+          ctx.restore();
+
+          // Beat 2
+          if (t > 1.8) {
+            const tProg = easeOutCubic(Math.min(1, (t - 1.8) / 0.9));
+            ctx.save();
+            ctx.globalAlpha = Math.min(act.alpha, tProg);
+            ctx.translate(W / 2, H * 0.44 + act.y + 190);
+            ctx.font = 'italic 74px "Newsreader", "Georgia", serif';
+            ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
+            ctx.fillText("Or did it just make", 0, 0);
+            ctx.fillText("pretending easy?", 0, 75);
+            ctx.restore();
+          }
+
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+      }
+
+      // =========================================================================
+      // ACT 2: THE TENSION (6.2s – 12.8s)
+      // "You read the summary. You nodded along."
+      // "Then someone asks you to explain it."
+      // =========================================================================
+      {
+        const act = getActTransition(t, 6.2, 12.8, 0.8);
+        if (act.active) {
+          ctx.save();
+          ctx.globalAlpha = act.alpha;
+          ctx.textAlign = 'center';
+
+          ctx.save();
+          ctx.translate(W / 2, H * 0.44 + act.y);
+          ctx.fillStyle = '#18181b';
+          ctx.font = '76px "Newsreader", "Georgia", serif';
+          ctx.fillText("You read the summary.", 0, -45);
+          ctx.fillText("You nodded along.", 0, 35);
+          ctx.restore();
+
+          if (t > 8.0) {
+            const tProg = easeOutCubic(Math.min(1, (t - 8.0) / 0.9));
+            ctx.save();
+            ctx.globalAlpha = Math.min(act.alpha, tProg);
+            ctx.translate(W / 2, H * 0.44 + act.y + 190);
+            ctx.font = 'italic 62px "Newsreader", "Georgia", serif';
+            ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
+            ctx.fillText("Then someone asks you", 0, 0);
+            ctx.fillText("to explain it.", 0, 75);
+            ctx.restore();
+          }
+
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+      }
+
+      // =========================================================================
+      // ACT 3: THE TURNING POINT (12.8s – 19.2s)
+      // "Big words hide empty thoughts."
+      // "If you can't say it simply, you don't know it."
+      // =========================================================================
+      {
+        const act = getActTransition(t, 12.8, 19.2, 0.8);
+        if (act.active) {
+          ctx.save();
+          ctx.globalAlpha = act.alpha;
+          ctx.textAlign = 'center';
+
+          ctx.save();
+          ctx.translate(W / 2, H * 0.44 + act.y);
+          ctx.fillStyle = '#18181b';
+          ctx.font = '68px "Newsreader", "Georgia", serif';
+          ctx.fillText("Big words hide", 0, -45);
+          ctx.fillText("empty thoughts.", 0, 35);
+          ctx.restore();
+
+          if (t > 14.6) {
+            const tProg = easeOutCubic(Math.min(1, (t - 14.6) / 0.9));
+            ctx.save();
+            ctx.globalAlpha = Math.min(act.alpha, tProg);
+            ctx.translate(W / 2, H * 0.44 + act.y + 190);
+            ctx.font = 'italic 70px "Newsreader", "Georgia", serif';
+            ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
+            ctx.fillText("If you can't say it simply,", 0, 0);
+            ctx.fillText("you don't know it.", 0, 70);
+            ctx.restore();
+          }
+
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+      }
+
+      // =========================================================================
+      // ACT 4: THE CLIMAX & CHALLENGE (19.2s – 25.8s)
+      // "Don't just collect notes."
+      // "Say it out loud."
+      // Centered acoustic waveform filaments
+      // =========================================================================
+      {
+        const act = getActTransition(t, 19.2, 25.8, 0.8);
+        if (act.active) {
+          ctx.save();
+          ctx.globalAlpha = act.alpha;
+          ctx.textAlign = 'center';
+
+          ctx.save();
+          ctx.translate(W / 2, H * 0.41 + act.y);
+          ctx.fillStyle = '#18181b';
+          ctx.font = '68px "Newsreader", "Georgia", serif';
+          ctx.fillText("Don't just", 0, -45);
+          ctx.fillText("collect notes.", 0, 35);
+          ctx.restore();
+
+          if (t > 20.8) {
+            const tProg = easeOutCubic(Math.min(1, (t - 20.8) / 0.9));
+            ctx.save();
+            ctx.globalAlpha = Math.min(act.alpha, tProg);
+            ctx.translate(W / 2, H * 0.41 + act.y + 170);
+
+            ctx.font = 'italic 62px "Newsreader", "Georgia", serif';
+            ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
+            ctx.fillText("Say it out loud.", 0, 0);
+
+            // Centered acoustic waveform
+            const waveY = 85;
+            const barCount = 32;
+            const barSpacing = 16;
+            const waveWidth = barCount * barSpacing;
+            const waveStartX = -waveWidth / 2;
+
+            ctx.lineWidth = 2.8;
+            ctx.lineCap = 'round';
+
+            for (let b = 0; b < barCount; b++) {
+              const norm = b / (barCount - 1);
+              const env = Math.sin(norm * Math.PI);
+              const barH = (6 + Math.abs(Math.sin(t * 7.5 + b * 0.45)) * 36) * env;
+              const bx = waveStartX + b * barSpacing;
+
+              ctx.strokeStyle = '#18181b';
+              ctx.beginPath();
+              ctx.moveTo(bx, waveY - barH / 2);
+              ctx.lineTo(bx, waveY + barH / 2);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+          }
+
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+      }
+
+      // =========================================================================
+      // ACT 5: THE RESOLUTION & LOGO (25.8s – 32.0s)
+      // "ATER አጠር"
+      // "Stop nodding. Start learning."
+      // =========================================================================
+      {
+        const act = getActTransition(t, 25.8, 32.0, 1.0);
+        if (act.active) {
+          ctx.save();
+          ctx.globalAlpha = act.alpha;
+          ctx.translate(W / 2, H * 0.48 + act.y * 0.5);
+
+          const engText = "ATER";
+          const amhText = "አጠር";
+
+          ctx.font = '900 142px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.letterSpacing = '-5px';
+          const engW = ctx.measureText(engText).width;
+
+          ctx.font = '900 142px "Noto Sans Ethiopic", "Kefa", sans-serif';
+          const amhW = ctx.measureText(amhText).width;
+
+          const gap = 24;
+          const totalW = engW + gap + amhW;
+          const startX = -totalW / 2;
+
+          ctx.textAlign = 'left';
+          ctx.font = '900 120px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillStyle = '#18181b';
+          ctx.fillText(engText, startX, 0);
+
+          ctx.font = '900 120px "Noto Sans Ethiopic", "Kefa", sans-serif';
+          ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
+          ctx.fillText(amhText, startX + engW + gap, 0);
+
+          if (t > 26.8) {
+            const tagProg = easeOutCubic(Math.min(1, (t - 26.8) / 0.9));
+            ctx.save();
+            ctx.globalAlpha = Math.min(act.alpha, tagProg);
+            ctx.textAlign = 'center';
+            ctx.font = 'italic 60px "Newsreader", "Georgia", serif';
+            ctx.fillStyle = '#18181b';
+            ctx.letterSpacing = '0.5px';
+            ctx.fillText("Stop nodding.", 0, 120);
+            ctx.fillText("Start learning.", 0, 185);
+            ctx.restore();
+          }
+
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // --- MAIN TICK LOOP ---
+    function animate(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      if (isPlaying) {
+        currentTime += dt;
+        if (currentTime > DURATION) {
+          currentTime = DURATION;
+          isPlaying = false;
+          playBtn.textContent = 'Play';
+        }
+        scrubber.value = currentTime;
+        curTimeLabel.textContent = currentTime.toFixed(2) + 's';
+        syncAudio(currentTime);
+      }
+
+      render(currentTime);
+      requestAnimationFrame(animate);
+    }
+
+    playBtn.addEventListener('click', () => {
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      isPlaying = !isPlaying;
+      playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+      if (currentTrackType !== 'piano') {
+        if (isPlaying) {
+          audioPlayer.currentTime = currentTime;
+          audioPlayer.play().catch(() => {});
+        } else {
+          audioPlayer.pause();
+        }
+      }
+      if (isPlaying && currentTime >= DURATION) {
+        currentTime = 0;
+        syncAudio(0, true);
+      }
+      lastTimestamp = null;
+    });
+
+    restartBtn.addEventListener('click', () => {
+      if (currentTrackType !== 'piano') {
+        audioPlayer.currentTime = 0;
+        if (!isMuted) audioPlayer.play().catch(() => {});
+      }
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      currentTime = 0;
+      isPlaying = true;
+      playBtn.textContent = 'Pause';
+      lastTimestamp = null;
+      syncAudio(0, true);
+    });
+
+    if (switchBtn) {
+      switchBtn.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+    }
+
+    muteBtn.addEventListener('click', () => {
+      initAudio();
+      isMuted = !isMuted;
+      muteBtn.textContent = isMuted ? 'Sound Off' : 'Sound On';
+      audioPlayer.muted = isMuted;
+      if (masterGain) {
+        masterGain.gain.setValueAtTime(isMuted ? 0 : 0.38, audioCtx.currentTime);
+      }
+    });
+
+    scrubber.addEventListener('input', (e) => {
+      if (currentTrackType !== 'piano') {
+        audioPlayer.currentTime = parseFloat(e.target.value);
+        audioPlayer.pause();
+      }
+      initAudio();
+      currentTime = parseFloat(e.target.value);
+      curTimeLabel.textContent = currentTime.toFixed(2) + 's';
+      isPlaying = false;
+      playBtn.textContent = 'Play';
+      lastScheduledIdx = pianoScore.findIndex(n => n.t >= currentTime) - 1;
+      render(currentTime);
+    });
+
+    window.addEventListener('click', () => {
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }, { once: true });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

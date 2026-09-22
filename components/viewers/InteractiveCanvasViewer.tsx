@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Play, RotateCcw, Sparkles, Maximize2 } from 'lucide-react';
+import { Play, RotateCcw, Maximize2 } from 'lucide-react';
 import { ArtifactModal } from './ArtifactModal';
 import { RubiksCube } from './RubiksCube';
 
