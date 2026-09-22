@@ -10,13 +10,71 @@ function getClient() {
 }
 
 /**
+ * Gets the current authenticated user's ID if available.
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  const supabase = getClient();
+  if (!supabase) return null;
+  try {
+    const { data: authData } = await supabase.auth.getSession();
+    return authData?.session?.user?.id || null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+/**
+ * Clears all user session and cached courses/notes from localStorage on sign-out.
+ */
+export function clearUserSessionCache(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const keysToRemove = [
+      'ater_courses',
+      'ater_curricula',
+      'ater_notes',
+      'ater_bilingual_notes',
+      'ater_bilingual_curricula',
+      'ater_active_course_id',
+      'ater_current_user_id',
+    ];
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    // Also remove any note-specific or user-scoped keys
+    const allKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k) allKeys.push(k);
+    }
+    // Also check Object.keys for mocked environments
+    Object.keys(localStorage).forEach((k) => {
+      if (!allKeys.includes(k)) allKeys.push(k);
+    });
+
+    allKeys.forEach((key) => {
+      if (
+        key.startsWith('ater_note_') ||
+        key.startsWith('ater_courses_') ||
+        key.startsWith('ater_curricula_')
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {
+    console.warn('Failed to clear user session cache:', e);
+  }
+}
+
+/**
  * Saves a course and its roadmap lessons to Supabase with local fallback.
  */
 export async function saveCourseToStore(course: CourseCurriculum): Promise<void> {
-  // 1. Local Storage Fallback
+  const userId = await getCurrentUserId();
+
+  // 1. Local Storage Fallback (scoped per user if logged in)
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem('ater_courses');
+      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses';
+      const stored = localStorage.getItem(storageKey);
       const courses: CourseCurriculum[] = stored ? JSON.parse(stored) : [];
       const idx = courses.findIndex((c) => c.id === course.id);
       if (idx >= 0) {
@@ -24,6 +82,7 @@ export async function saveCourseToStore(course: CourseCurriculum): Promise<void>
       } else {
         courses.push(course);
       }
+      localStorage.setItem(storageKey, JSON.stringify(courses));
       localStorage.setItem('ater_courses', JSON.stringify(courses));
     } catch (e) {
       console.warn('Local storage save course failed:', e);
@@ -35,12 +94,6 @@ export async function saveCourseToStore(course: CourseCurriculum): Promise<void>
   if (!supabase) return;
 
   try {
-    let userId: string | null = null;
-    try {
-      const { data: authData } = await supabase.auth.getSession();
-      userId = authData?.session?.user?.id || null;
-    } catch (_authErr) {}
-
     const totalLessons = course.lessons?.length || 0;
     const completedLessons = course.lessons?.filter((l) => l.status === 'mastered').length || 0;
 
@@ -101,11 +154,22 @@ export async function saveCourseToStore(course: CourseCurriculum): Promise<void>
  * Deletes a course, its lessons, and notes from Supabase and local storage.
  */
 export async function deleteCourseFromStore(courseId: string): Promise<void> {
+  const userId = await getCurrentUserId();
+
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem('ater_courses');
+      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses';
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         const courses: CourseCurriculum[] = JSON.parse(stored);
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(courses.filter((c) => c.id !== courseId))
+        );
+      }
+      const genericStored = localStorage.getItem('ater_courses');
+      if (genericStored) {
+        const courses: CourseCurriculum[] = JSON.parse(genericStored);
         localStorage.setItem(
           'ater_courses',
           JSON.stringify(courses.filter((c) => c.id !== courseId))
@@ -128,24 +192,38 @@ export async function deleteCourseFromStore(courseId: string): Promise<void> {
   if (!supabase) return;
 
   try {
-    await supabase.from('ater_notes').delete().eq('course_id', courseId);
-    await supabase.from('ater_lessons').delete().eq('course_id', courseId);
-    await supabase.from('ater_courses').delete().eq('id', courseId);
+    let query = supabase.from('ater_notes').delete().eq('course_id', courseId);
+    if (userId) query = query.eq('user_id', userId);
+    await query;
+
+    let lQuery = supabase.from('ater_lessons').delete().eq('course_id', courseId);
+    if (userId) lQuery = lQuery.eq('user_id', userId);
+    await lQuery;
+
+    let cQuery = supabase.from('ater_courses').delete().eq('id', courseId);
+    if (userId) cQuery = cQuery.eq('user_id', userId);
+    await cQuery;
   } catch (err) {
     console.warn('Failed to delete course from Supabase:', err);
   }
 }
 
 /**
- * Retrieves all courses, merging Supabase and localStorage.
+ * Retrieves all courses for the active user, merging Supabase and localStorage.
  */
 export async function getCoursesFromStore(): Promise<CourseCurriculum[]> {
+  const userId = await getCurrentUserId();
   const localCourses: CourseCurriculum[] = [];
+
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem('ater_courses');
+      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses';
+      const stored = localStorage.getItem(storageKey);
       if (stored) {
         localCourses.push(...JSON.parse(stored));
+      } else if (!userId) {
+        const fallback = localStorage.getItem('ater_courses');
+        if (fallback) localCourses.push(...JSON.parse(fallback));
       }
     } catch (e) {
       console.warn('Local storage get courses error:', e);
@@ -156,18 +234,25 @@ export async function getCoursesFromStore(): Promise<CourseCurriculum[]> {
   if (!supabase) return localCourses;
 
   try {
-    const { data: dbCourses, error: cErr } = await supabase
-      .from('ater_courses')
-      .select('*')
-      .order('updated_at', { ascending: false });
+    let courseQuery = supabase.from('ater_courses').select('*');
+    if (userId) {
+      courseQuery = courseQuery.eq('user_id', userId);
+    } else {
+      // If unauthenticated, do not return private user courses
+      return localCourses;
+    }
+
+    const { data: dbCourses, error: cErr } = await courseQuery.order('updated_at', { ascending: false });
 
     if (cErr || !dbCourses || dbCourses.length === 0) {
       return localCourses;
     }
 
+    const courseIds = dbCourses.map((c) => c.id);
     const { data: dbLessons, error: lErr } = await supabase
       .from('ater_lessons')
       .select('*')
+      .in('course_id', courseIds)
       .order('order_index', { ascending: true });
 
     if (lErr) {
@@ -217,6 +302,8 @@ export async function saveNoteToStore(
   lessonId: string,
   note: DynamicLessonNote
 ): Promise<void> {
+  const userId = await getCurrentUserId();
+
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(`ater_note_${lessonId}`, JSON.stringify(note));
@@ -229,12 +316,6 @@ export async function saveNoteToStore(
   if (!supabase) return;
 
   try {
-    let userId: string | null = null;
-    try {
-      const { data: authData } = await supabase.auth.getSession();
-      userId = authData?.session?.user?.id || null;
-    } catch (_authErr) {}
-
     const notePayload: Record<string, any> = {
       id: lessonId,
       lesson_id: lessonId,
@@ -273,20 +354,20 @@ export async function getNoteFromStore(lessonId: string): Promise<DynamicLessonN
       if (local) {
         return JSON.parse(local);
       }
-    } catch (e) {
-      // continue
-    }
+    } catch (e) {}
   }
 
   const supabase = getClient();
   if (!supabase) return null;
 
   try {
-    const { data, error } = await supabase
-      .from('ater_notes')
-      .select('*')
-      .eq('lesson_id', lessonId)
-      .maybeSingle();
+    const userId = await getCurrentUserId();
+    let query = supabase.from('ater_notes').select('*').eq('lesson_id', lessonId);
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error || !data) return null;
 
@@ -328,13 +409,17 @@ export async function dispatchAgentEvent(event: {
   }
 
   try {
-    await supabase.from('ater_agent_events').insert({
+    const userId = await getCurrentUserId();
+    const eventRow: Record<string, any> = {
       course_id: event.course_id || null,
       lesson_id: event.lesson_id || null,
       command: event.command,
       payload: event.payload || {},
       sender: event.sender || 'antigravity',
-    });
+    };
+    if (userId) eventRow.user_id = userId;
+
+    await supabase.from('ater_agent_events').insert(eventRow);
   } catch (err) {
     console.warn('Failed to dispatch realtime agent event:', err);
   }
@@ -348,12 +433,13 @@ export async function saveGateSessionToStore(session: SocraticGateSession | Reco
   if (!supabase) return;
 
   try {
+    const userId = await getCurrentUserId();
     const sessId = (session as any).sessionId || `gate-${session.lessonId}-${Date.now()}`;
     const score = (session as any).overallScore ?? (session as any).finalScore ?? 0;
     const passed = session.status === 'passed' || (session as any).passed || false;
     const feedback = session.summaryFeedback || (session as any).feedback || null;
 
-    await supabase.from('ater_gate_sessions').upsert({
+    const row: Record<string, any> = {
       id: sessId,
       lesson_id: session.lessonId,
       lesson_title: session.lessonTitle,
@@ -361,7 +447,10 @@ export async function saveGateSessionToStore(session: SocraticGateSession | Reco
       final_score: score,
       passed: passed,
       feedback: feedback,
-    });
+    };
+    if (userId) row.user_id = userId;
+
+    await supabase.from('ater_gate_sessions').upsert(row);
   } catch (err) {
     console.warn('Failed to save gate session to Supabase:', err);
   }

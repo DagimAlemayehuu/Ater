@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { DEFAULT_ADMINS, getAdminEmails, addAdminEmail, removeAdminEmail } from '@/lib/auth/admins';
 
 interface WaitlistEntry {
   id: string;
@@ -30,9 +31,7 @@ interface GitCommitItem {
   url: string;
 }
 
-const DEFAULT_ADMINS = [
-  'dagimalemayehuu@gmail.com',
-];
+
 
 export default function AdminDashboardPage() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
@@ -44,39 +43,31 @@ export default function AdminDashboardPage() {
   const [fetchingData, setFetchingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load team admins from localStorage to persist teammates
-  useEffect(() => {
+  // Load team admins from canonical source (DB + defaults)
+  const refreshAdmins = async () => {
     try {
-      const saved = localStorage.getItem('ater_team_admins');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setAdminEmails(Array.from(new Set([...DEFAULT_ADMINS, ...parsed])));
-        }
-      }
-    } catch (_err) {}
-  }, []);
-
-  const saveAdminEmails = (updated: string[]) => {
-    setAdminEmails(updated);
-    try {
-      localStorage.setItem('ater_team_admins', JSON.stringify(updated));
+      const emails = await getAdminEmails();
+      setAdminEmails(emails);
     } catch (_err) {}
   };
 
-  const handleAddAdmin = (e: React.FormEvent) => {
+  useEffect(() => {
+    refreshAdmins();
+  }, []);
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = newAdminEmail.trim().toLowerCase();
     if (!clean || adminEmails.includes(clean)) return;
-    const updated = [...adminEmails, clean];
-    saveAdminEmails(updated);
+    await addAdminEmail(clean);
+    await refreshAdmins();
     setNewAdminEmail('');
   };
 
-  const handleRemoveAdmin = (emailToRemove: string) => {
+  const handleRemoveAdmin = async (emailToRemove: string) => {
     if (emailToRemove === DEFAULT_ADMINS[0]) return; // Protect primary owner
-    const updated = adminEmails.filter((e) => e !== emailToRemove);
-    saveAdminEmails(updated);
+    await removeAdminEmail(emailToRemove);
+    await refreshAdmins();
   };
 
   const fetchDeployments = async () => {

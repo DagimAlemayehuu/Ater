@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Loader2, ArrowLeft, LogOut, CheckCircle2, Lock, Mail, User } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
+import { checkIsAdmin } from '@/lib/auth/admins';
+import { clearUserSessionCache } from '@/lib/sync/store';
 
 function AuthContent() {
   const router = useRouter();
@@ -24,6 +26,47 @@ function AuthContent() {
   const [user, setUser] = useState<any>(null);
   const [userStatus, setUserStatus] = useState<any>(null);
 
+  const checkUser = useCallback(async (userEmail: string) => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setView('auth');
+      return;
+    }
+
+    const cleanEmail = userEmail.toLowerCase().trim();
+    const isAdmin = await checkIsAdmin(cleanEmail);
+
+    // If a destination was requested (e.g. /admin), navigate there immediately if authorized
+    if (redirectTo) {
+      router.push(redirectTo);
+      return;
+    }
+
+    try {
+      // Query waiting_list
+      let { data } = await supabase
+        .from('waiting_list')
+        .select('*')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      const statusVal = isAdmin ? 'approved' : (data?.status || 'pending');
+      setUserStatus(data || { email: cleanEmail, status: statusVal, is_admin: isAdmin });
+      if (statusVal === 'approved' || isAdmin) {
+        router.push('/app');
+        return;
+      }
+      setView('dashboard');
+    } catch {
+      setUserStatus({ email: cleanEmail, status: isAdmin ? 'approved' : 'pending', is_admin: isAdmin });
+      if (isAdmin) {
+        router.push('/app');
+        return;
+      }
+      setView('dashboard');
+    }
+  }, [redirectTo, router]);
+
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
@@ -31,51 +74,12 @@ function AuthContent() {
       return;
     }
 
-    async function checkUser(userEmail: string) {
-      // If a destination was requested (e.g. /admin), navigate there immediately
-      if (redirectTo) {
-        router.push(redirectTo);
-        return;
-      }
-
-      try {
-        // Query waiting_list (or waitlist)
-        let { data } = await supabase!
-          .from('waiting_list')
-          .select('*')
-          .eq('email', userEmail)
-          .maybeSingle();
-
-        if (!data) {
-          const res = await supabase!
-            .from('waitlist')
-            .select('*')
-            .eq('contact', userEmail)
-            .maybeSingle();
-          data = res.data;
-        }
-
-        const statusVal = data?.status || 'pending';
-        const isAdmin = userEmail.toLowerCase() === 'dagimalemayehuu@gmail.com';
-        setUserStatus(data || { email: userEmail, status: isAdmin ? 'approved' : statusVal });
-        if (statusVal === 'approved' || isAdmin) {
-          router.push('/app');
-          return;
-        }
-        setView('dashboard');
-      } catch {
-        const isAdmin = userEmail.toLowerCase() === 'dagimalemayehuu@gmail.com';
-        setUserStatus({ email: userEmail, status: isAdmin ? 'approved' : 'pending' });
-        if (isAdmin) {
-          router.push('/app');
-          return;
-        }
-        setView('dashboard');
-      }
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      // If user arrives with mode=login, always show login form so credentials are requested
+      if (initialMode === 'login') {
+        setView('auth');
+        setAuthMode('login');
+      } else if (session) {
         setUser(session.user);
         checkUser(session.user.email!);
       } else {
@@ -83,11 +87,11 @@ function AuthContent() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
         setUser(session.user);
         checkUser(session.user.email!);
-      } else {
+      } else if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
         setUserStatus(null);
         setView('auth');
@@ -97,7 +101,7 @@ function AuthContent() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [redirectTo, router]);
+  }, [initialMode, checkUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,11 +168,7 @@ function AuthContent() {
         if (signInError) throw signInError;
         if (signInData.session) {
           setUser(signInData.session.user);
-          if (redirectTo) {
-            router.push(redirectTo);
-          } else {
-            setView('dashboard');
-          }
+          await checkUser(signInData.session.user.email!);
         }
       }
     } catch (err: any) {
@@ -205,6 +205,7 @@ function AuthContent() {
               onClick={() => {
                 const supabase = getSupabaseBrowserClient();
                 supabase?.auth.signOut();
+                clearUserSessionCache();
               }}
               className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
             >
@@ -242,7 +243,7 @@ function AuthContent() {
             </div>
 
             <div className="flex flex-col gap-2 pt-2">
-              {(user.email === 'dagimalemayehuu@gmail.com' || userStatus?.status === 'approved') && (
+              {(userStatus?.is_admin || userStatus?.status === 'approved') && (
                 <Link
                   href="/app"
                   className="w-full py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-medium transition-colors text-center cursor-pointer"
@@ -250,7 +251,7 @@ function AuthContent() {
                   {isAmharic ? 'መተግበሪያውን ክፈት (Open App)' : 'Open Learning App'}
                 </Link>
               )}
-              {user.email === 'dagimalemayehuu@gmail.com' && (
+              {userStatus?.is_admin && (
                 <Link
                   href="/admin"
                   className="w-full py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-medium transition-colors text-center cursor-pointer"

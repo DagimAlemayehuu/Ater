@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, ArrowLeft, Sparkles, User, Settings, Sun, Moon, LogOut } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Search, Sliders, User, Settings, Sun, Moon, LogOut } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { LeftDrawer } from '@/components/LeftDrawer';
@@ -19,7 +19,8 @@ import {
   getQuestionsShowcaseCurriculum,
   getShowcaseLessonNote,
 } from '@/lib/curriculum/showcaseCourses';
-import { saveCourseToStore, saveNoteToStore, getCoursesFromStore, deleteCourseFromStore } from '@/lib/sync/store';
+import { saveCourseToStore, saveNoteToStore, getCoursesFromStore, deleteCourseFromStore, clearUserSessionCache } from '@/lib/sync/store';
+import { checkIsAdmin } from '@/lib/auth/admins';
 import type {
   CourseCurriculum,
   RoadmapLesson,
@@ -50,14 +51,39 @@ export default function AterCognitiveStudio() {
   const { theme, toggleTheme } = useTheme();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
+  const [isStudioEnabled, setIsStudioEnabled] = useState(true);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ater_enable_notebooklm_studio');
+      if (stored !== null) {
+        setIsStudioEnabled(stored === 'true');
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleStudio = () => {
+    const nextVal = !isStudioEnabled;
+    setIsStudioEnabled(nextVal);
+    try {
+      localStorage.setItem('ater_enable_notebooklm_studio', String(nextVal));
+    } catch {}
+    // Broadcast storage event or reload state
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session?.user?.email) {
           setCurrentUserEmail(session.user.email);
+          const isAdmin = await checkIsAdmin(session.user.email);
+          setCurrentUserIsAdmin(isAdmin);
         }
       });
     }
@@ -417,6 +443,19 @@ export default function AterCognitiveStudio() {
         voiceBridge.setLanguage(savedLang);
       }
 
+      // Check active user to prevent cross-account cache leaks
+      const supabase = getSupabaseBrowserClient();
+      if (supabase) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const currentUid = session?.user?.id || 'anon';
+          const lastUid = localStorage.getItem('ater_last_session_uid');
+          if (lastUid && lastUid !== currentUid) {
+            clearUserSessionCache();
+          }
+          localStorage.setItem('ater_last_session_uid', currentUid);
+        });
+      }
+
       const storedBilingualNotes = localStorage.getItem('ater_bilingual_notes');
       if (storedBilingualNotes) {
         try {
@@ -474,11 +513,26 @@ export default function AterCognitiveStudio() {
           }
         } catch {}
       }
+      // Check if a specific course or view was requested (via query param or localStorage)
+      let targetCourseId: string | null = null;
+      let targetView: string | null = null;
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        targetCourseId = urlParams.get('courseId') || localStorage.getItem('ater_active_course_id');
+        targetView = urlParams.get('view');
+        // Clean up one-time active course id flag
+        localStorage.removeItem('ater_active_course_id');
+      }
+
       setSavedCourses(initialCourses);
       if (initialCourses.length > 0) {
-        setCurriculum(initialCourses[0]);
-        if (initialCourses[0]?.lessons?.[0]) {
-          loadLesson(initialCourses[0].lessons[0], initialCourses[0].id);
+        const selected = (targetCourseId ? initialCourses.find((c) => c.id === targetCourseId) : null) || initialCourses[0];
+        setCurriculum(selected);
+        if (targetView === 'study' || (targetCourseId && selected.id === targetCourseId)) {
+          setCurrentView('study');
+        }
+        if (selected?.lessons?.[0]) {
+          loadLesson(selected.lessons[0], selected.id);
         }
       }
 
@@ -499,9 +553,10 @@ export default function AterCognitiveStudio() {
               localStorage.setItem('ater_curricula', JSON.stringify(merged));
             } catch {}
             if (merged.length > 0) {
-              setCurriculum((prev) => prev || merged[0]);
-              if (merged[0]?.lessons?.[0]) {
-                loadLesson(merged[0].lessons[0], merged[0].id);
+              const target = (targetCourseId ? merged.find((c) => c.id === targetCourseId) : null) || merged[0];
+              setCurriculum((prev) => (targetCourseId ? target : prev || target));
+              if (target?.lessons?.[0]) {
+                loadLesson(target.lessons[0], target.id);
               }
             }
           }
@@ -908,6 +963,29 @@ export default function AterCognitiveStudio() {
                   </div>
 
                   <Link
+                    href="/research"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>{appLanguage === 'am' ? 'የምርምር ጣቢያ' : 'Research Station'}</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleStudio}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sliders className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>{appLanguage === 'am' ? 'ማስታወሻ ስቱዲዮ' : 'Enable Studio'}</span>
+                    </div>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isStudioEnabled ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'}`}>
+                      {isStudioEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+
+                  <Link
                     href="/auth"
                     className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                     onClick={() => setIsProfileMenuOpen(false)}
@@ -1032,6 +1110,29 @@ export default function AterCognitiveStudio() {
                   </div>
 
                   <Link
+                    href="/research"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>{appLanguage === 'am' ? 'የምርምር ጣቢያ' : 'Research Station'}</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleStudio}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sliders className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>{appLanguage === 'am' ? 'ማስታወሻ ስቱዲዮ' : 'Enable Studio'}</span>
+                    </div>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isStudioEnabled ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'}`}>
+                      {isStudioEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+
+                  <Link
                     href="/auth"
                     className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                     onClick={() => setIsProfileMenuOpen(false)}
@@ -1040,7 +1141,7 @@ export default function AterCognitiveStudio() {
                     <span>{appLanguage === 'am' ? 'ቅንብሮች እና ሁኔታ' : 'Settings & Status'}</span>
                   </Link>
 
-                  {currentUserEmail?.toLowerCase() === 'dagimalemayehuu@gmail.com' && (
+                  {currentUserIsAdmin && (
                     <Link
                       href="/admin"
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
@@ -1065,6 +1166,7 @@ export default function AterCognitiveStudio() {
                       onClick={() => {
                         const supabase = getSupabaseBrowserClient();
                         supabase?.auth.signOut();
+                        clearUserSessionCache();
                         window.location.href = '/';
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors text-left cursor-pointer"
@@ -1207,6 +1309,7 @@ export default function AterCognitiveStudio() {
             language={appLanguage}
             isFeynmanOpen={isFeynmanModalOpen}
             isIntakeOpen={isIntakeModalOpen}
+            isStudioEnabled={isStudioEnabled}
           />
         </div>
       )}
