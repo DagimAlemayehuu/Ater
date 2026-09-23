@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Users,
@@ -20,8 +21,10 @@ import {
   Sun,
   Moon,
   Lock,
+  LogOut,
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { clearUserSessionCache } from '@/lib/sync/store';
 import {
   DEFAULT_ADMINS,
   PRIMARY_OWNER,
@@ -35,6 +38,7 @@ import {
   TeamMember,
 } from '@/lib/auth/admins';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface WaitlistEntry {
   id: string;
@@ -55,7 +59,9 @@ interface GitCommitItem {
 type AdminTab = 'waitlist' | 'production' | 'team';
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { user: authUser, isLoading: isAuthLoading, isAdmin: isUserAdmin, signOut: authSignOut } = useAuth();
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('waitlist');
@@ -144,23 +150,26 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setLoading(false);
+    if (isAuthLoading) return;
+
+    if (!authUser || !authUser.email) {
+      router.push('/auth?mode=login&redirect=/admin');
       return;
     }
 
-    supabase.auth.getUser().then(async ({ data }) => {
-      const email = data?.user?.email?.toLowerCase() || null;
-      setCurrentUserEmail(email);
-      setLoading(false);
-      if (email) {
-        await refreshTeam();
-        fetchWaitlist();
-        fetchDeployments();
-      }
-    });
-  }, []);
+    const email = authUser.email.toLowerCase().trim();
+    setCurrentUserEmail(email);
+
+    if (!isUserAdmin) {
+      router.push('/app');
+      return;
+    }
+
+    setLoading(false);
+    refreshTeam();
+    fetchWaitlist();
+    fetchDeployments();
+  }, [isAuthLoading, authUser, isUserAdmin, router]);
 
   // Update waitlist status (Approve, Deny, or Reset)
   const handleUpdateStatus = async (targetEmail: string, nextStatus: 'approved' | 'denied' | 'pending') => {
@@ -321,6 +330,19 @@ export default function AdminDashboardPage() {
                 {isUserOwner ? 'Owner' : 'Team Admin'}
               </span>
             </div>
+
+            {currentUserEmail && (
+              <button
+                onClick={async () => {
+                  await authSignOut();
+                  router.push('/auth?mode=login');
+                }}
+                className="p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </header>

@@ -21,7 +21,8 @@ import {
   getShowcaseLessonNote,
 } from '@/lib/curriculum/showcaseCourses';
 import { saveCourseToStore, saveNoteToStore, getCoursesFromStore, deleteCourseFromStore, clearUserSessionCache } from '@/lib/sync/store';
-import { checkIsAdmin, checkUserAppAccess } from '@/lib/auth/admins';
+import { checkIsAdmin, checkUserAppAccess, isOwner } from '@/lib/auth/admins';
+import { useAuth } from '@/context/AuthContext';
 import type {
   CourseCurriculum,
   RoadmapLesson,
@@ -32,6 +33,15 @@ import type {
 export default function AterCognitiveStudio() {
   const router = useRouter();
   const voiceBridge = useVoiceBridge();
+  const {
+    user: authUser,
+    isLoading: isAuthLoading,
+    isAdmin: authIsAdmin,
+    isOwner: authIsOwner,
+    accessAllowed: authAccessAllowed,
+    signOut: authSignOut,
+  } = useAuth();
+
   const [currentView, setCurrentView] = useState<'library' | 'study'>('library');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
@@ -53,6 +63,9 @@ export default function AterCognitiveStudio() {
   const { theme, toggleTheme } = useTheme();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUserEmailRef = useRef<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
   const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [isStudioEnabled, setIsStudioEnabled] = useState(true);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -72,35 +85,32 @@ export default function AterCognitiveStudio() {
     try {
       localStorage.setItem('ater_enable_notebooklm_studio', String(nextVal));
     } catch {}
-    // Broadcast storage event or reload state
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('storage'));
     }
   };
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    if (supabase) {
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (!session?.user?.email) {
-          router.push('/auth?mode=login&redirect=/app');
-          return;
-        }
+    if (isAuthLoading) return;
 
-        const email = session.user.email;
-        setCurrentUserEmail(email);
-
-        // Verify that user is either an admin or has approved waitlist status
-        const access = await checkUserAppAccess(email);
-        setCurrentUserIsAdmin(access.isAdmin);
-
-        if (!access.allowed) {
-          // Block unapproved users and redirect them to auth status page
-          router.push('/auth');
-          return;
-        }
-      });
+    if (!authUser || !authUser.email) {
+      router.push('/auth?mode=login&redirect=/app');
+      return;
     }
+
+    if (!authAccessAllowed) {
+      router.push('/auth');
+      return;
+    }
+
+    setCurrentUserEmail(authUser.email);
+    setCurrentUserId(authUser.id);
+    currentUserEmailRef.current = authUser.email;
+    currentUserIdRef.current = authUser.id;
+    setCurrentUserIsAdmin(authIsAdmin);
+  }, [isAuthLoading, authUser, authAccessAllowed, authIsAdmin, router]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
         setIsProfileMenuOpen(false);
@@ -108,13 +118,14 @@ export default function AterCognitiveStudio() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [router]);
+  }, []);
 
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const noteCacheRef = useRef<Record<string, { en?: DynamicLessonNote; am?: DynamicLessonNote }>>({});
   const curriculumCacheRef = useRef<Record<string, { en?: CourseCurriculum; am?: CourseCurriculum }>>({});
   const hasHydratedRef = useRef(false);
+  const hydratedUserRef = useRef<string | null>(null);
 
   // Instant translation toggle handler with bidirectional caching for both note and curriculum
   const handleToggleLanguage = async (newLang: AppLanguage) => {
@@ -209,30 +220,37 @@ export default function AterCognitiveStudio() {
 
   const persistCourses = useCallback((courses: CourseCurriculum[]) => {
     setSavedCourses(courses);
-    try {
-      localStorage.setItem('ater_curricula', JSON.stringify(courses));
-    } catch (_e) {}
-    // Background sync to Supabase
-    courses.forEach((c) => {
-      saveCourseToStore(c).catch(() => {});
-    });
-  }, []);
+    const uid = currentUserIdRef.current || currentUserId || authUser?.id;
+    if (uid) {
+      try {
+        localStorage.setItem(`ater_courses_${uid}`, JSON.stringify(courses));
+        localStorage.setItem(`ater_curricula_${uid}`, JSON.stringify(courses));
+      } catch (_e) {}
+      // Background sync to Supabase
+      courses.forEach((c) => {
+        saveCourseToStore(c, uid).catch(() => {});
+      });
+    }
+  }, [currentUserId, authUser?.id]);
 
   const persistNotes = useCallback((notes: DynamicLessonNote[]) => {
     setSavedNotes(notes);
-    try {
-      localStorage.setItem('ater_notes', JSON.stringify(notes));
-    } catch (_e) {}
-    // Background sync to Supabase
-    if (curriculum?.id) {
-      notes.forEach((n) => {
-        const lessonId = String(n.lessonId || n.id || '');
-        if (lessonId) {
-          saveNoteToStore(curriculum.id, lessonId, n).catch(() => {});
-        }
-      });
+    const uid = currentUserIdRef.current || currentUserId || authUser?.id;
+    if (uid) {
+      try {
+        localStorage.setItem(`ater_notes_${uid}`, JSON.stringify(notes));
+      } catch (_e) {}
+      // Background sync to Supabase
+      if (curriculum?.id) {
+        notes.forEach((n) => {
+          const lessonId = String(n.lessonId || n.id || '');
+          if (lessonId) {
+            saveNoteToStore(curriculum.id, lessonId, n, uid).catch(() => {});
+          }
+        });
+      }
     }
-  }, [curriculum?.id]);
+  }, [curriculum?.id, currentUserId, authUser?.id]);
 
   // Dynamically compile note via Gemini for a selected lesson
   const loadLesson = useCallback(
@@ -244,8 +262,9 @@ export default function AterCognitiveStudio() {
       const noteKey = String(lesson.id || 'default_note');
       const cachedNote = noteCacheRef.current[noteKey]?.[appLanguage];
 
-      // Showcase courses check: always return the authoritative showcase lesson note
-      const showcaseNote = getShowcaseLessonNote(lesson.id, appLanguage);
+      // Showcase courses check: only accessible/stored for Dagim (primary owner)
+      const userIsOwner = isOwner(currentUserEmailRef.current || currentUserEmail);
+      const showcaseNote = userIsOwner ? getShowcaseLessonNote(lesson.id, appLanguage) : null;
       if (showcaseNote && !forceRefresh) {
         setActiveNote(showcaseNote);
         const currentCache = noteCacheRef.current[noteKey] || {};
@@ -445,10 +464,25 @@ export default function AterCognitiveStudio() {
     };
   }, [curriculum, appLanguage, prefetchLesson]);
 
-  // Load persistence once when app mounts
+  // Load persistence scoped strictly to the authenticated user
   useEffect(() => {
-    if (hasHydratedRef.current) return;
-    hasHydratedRef.current = true;
+    if (isAuthLoading) return;
+
+    if (!authUser?.id) {
+      hydratedUserRef.current = null;
+      setSavedCourses([]);
+      setSavedNotes([]);
+      setCurriculum(null);
+      setActiveLesson(null);
+      setActiveNote(null);
+      return;
+    }
+
+    const activeUid = authUser.id;
+    const activeEmail = authUser.email;
+
+    if (hydratedUserRef.current === activeUid) return;
+    hydratedUserRef.current = activeUid;
 
     try {
       const savedLang = localStorage.getItem('ater_global_language') as AppLanguage | null;
@@ -457,20 +491,8 @@ export default function AterCognitiveStudio() {
         voiceBridge.setLanguage(savedLang);
       }
 
-      // Check active user to prevent cross-account cache leaks
-      const supabase = getSupabaseBrowserClient();
-      if (supabase) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          const currentUid = session?.user?.id || 'anon';
-          const lastUid = localStorage.getItem('ater_last_session_uid');
-          if (lastUid && lastUid !== currentUid) {
-            clearUserSessionCache();
-          }
-          localStorage.setItem('ater_last_session_uid', currentUid);
-        });
-      }
-
-      const storedBilingualNotes = localStorage.getItem('ater_bilingual_notes');
+      // Read strictly user-scoped bilingual caches
+      const storedBilingualNotes = localStorage.getItem(`ater_bilingual_notes_${activeUid}`);
       if (storedBilingualNotes) {
         try {
           const parsed = JSON.parse(storedBilingualNotes);
@@ -480,7 +502,7 @@ export default function AterCognitiveStudio() {
         } catch {}
       }
 
-      const storedBilingualCurricula = localStorage.getItem('ater_bilingual_curricula');
+      const storedBilingualCurricula = localStorage.getItem(`ater_bilingual_curricula_${activeUid}`);
       if (storedBilingualCurricula) {
         try {
           const parsed = JSON.parse(storedBilingualCurricula);
@@ -490,7 +512,7 @@ export default function AterCognitiveStudio() {
         } catch {}
       }
 
-      const storedNotes = localStorage.getItem('ater_notes');
+      const storedNotes = localStorage.getItem(`ater_notes_${activeUid}`);
       if (storedNotes) {
         const parsed = JSON.parse(storedNotes);
         if (Array.isArray(parsed)) {
@@ -507,11 +529,14 @@ export default function AterCognitiveStudio() {
         }
       }
 
+      const isDagim = authIsOwner || isOwner(activeEmail);
       const artifactsShowcase = getArtifactsShowcaseCurriculum(savedLang || 'en');
       const questionsShowcase = getQuestionsShowcaseCurriculum(savedLang || 'en');
 
-      const storedCurricula = localStorage.getItem('ater_curricula');
-      let initialCourses: CourseCurriculum[] = [artifactsShowcase, questionsShowcase];
+      const storageKey = `ater_courses_${activeUid}`;
+      const storedCurricula = localStorage.getItem(storageKey) || localStorage.getItem(`ater_curricula_${activeUid}`);
+
+      let initialCourses: CourseCurriculum[] = isDagim ? [artifactsShowcase, questionsShowcase] : [];
       if (storedCurricula) {
         try {
           const parsed = JSON.parse(storedCurricula);
@@ -523,18 +548,17 @@ export default function AterCognitiveStudio() {
                 c.id !== 'course-artifacts-showcase' &&
                 c.id !== 'course-questions-showcase'
             );
-            initialCourses = [artifactsShowcase, questionsShowcase, ...filtered];
+            initialCourses = isDagim ? [artifactsShowcase, questionsShowcase, ...filtered] : filtered;
           }
         } catch {}
       }
-      // Check if a specific course or view was requested (via query param or localStorage)
+
       let targetCourseId: string | null = null;
       let targetView: string | null = null;
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
         targetCourseId = urlParams.get('courseId') || localStorage.getItem('ater_active_course_id');
         targetView = urlParams.get('view');
-        // Clean up one-time active course id flag
         localStorage.removeItem('ater_active_course_id');
       }
 
@@ -550,36 +574,35 @@ export default function AterCognitiveStudio() {
         }
       }
 
-      // Sync courses from Supabase/Store to pick up real persisted courses
-      getCoursesFromStore()
-        .then((cloudCourses) => {
-          if (Array.isArray(cloudCourses)) {
-            const cleanCloud = cloudCourses.filter(
-              (c) =>
-                c.id !== 'course-viewer-demo' &&
-                !c.topic?.toLowerCase().includes('viewer demo') &&
-                c.id !== 'course-artifacts-showcase' &&
-                c.id !== 'course-questions-showcase'
-            );
-            const merged = [artifactsShowcase, questionsShowcase, ...cleanCloud];
-            setSavedCourses(merged);
-            try {
-              localStorage.setItem('ater_curricula', JSON.stringify(merged));
-            } catch {}
-            if (merged.length > 0) {
-              const target = (targetCourseId ? merged.find((c) => c.id === targetCourseId) : null) || merged[0];
-              setCurriculum((prev) => (targetCourseId ? target : prev || target));
-              if (target?.lessons?.[0]) {
-                loadLesson(target.lessons[0], target.id);
-              }
+      // Sync user-specific courses from Supabase/Store
+      getCoursesFromStore(activeUid).then((cloudCourses) => {
+        if (Array.isArray(cloudCourses)) {
+          const cleanCloud = cloudCourses.filter(
+            (c) =>
+              c.id !== 'course-viewer-demo' &&
+              !c.topic?.toLowerCase().includes('viewer demo') &&
+              c.id !== 'course-artifacts-showcase' &&
+              c.id !== 'course-questions-showcase'
+          );
+          const merged = isDagim ? [artifactsShowcase, questionsShowcase, ...cleanCloud] : cleanCloud;
+          setSavedCourses(merged);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(merged));
+            localStorage.setItem(`ater_curricula_${activeUid}`, JSON.stringify(merged));
+          } catch {}
+          if (merged.length > 0) {
+            const target = (targetCourseId ? merged.find((c) => c.id === targetCourseId) : null) || merged[0];
+            setCurriculum((prev) => (targetCourseId ? target : prev || target));
+            if (target?.lessons?.[0]) {
+              loadLesson(target.lessons[0], target.id);
             }
           }
-        })
-        .catch((err) => {
-          console.warn('Failed to hydrate cloud courses:', err);
-        });
+        }
+      }).catch((err) => {
+        console.warn('Failed to hydrate cloud courses:', err);
+      });
     } catch (_e) {}
-  }, [loadLesson]);
+  }, [isAuthLoading, authUser?.id, authUser?.email, authIsOwner, loadLesson, voiceBridge]);
 
   // Listen for agent commands (via Supabase Realtime or local broadcast)
   useEffect(() => {
@@ -904,6 +927,19 @@ export default function AterCognitiveStudio() {
     });
   }, [voiceBridge, handleFeynmanSubmit, loadLesson, activeNote?.title]);
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-zinc-400 border-t-zinc-900 dark:border-zinc-700 dark:border-t-zinc-100 rounded-full animate-spin" />
+          <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+            {appLanguage === 'am' ? 'እየተጫነ ነው...' : 'Loading Session...'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       {/* Top Header */}
@@ -1043,11 +1079,7 @@ export default function AterCognitiveStudio() {
                   <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                     <button
                       onClick={async () => {
-                        const supabase = getSupabaseBrowserClient();
-                        if (supabase) {
-                          await supabase.auth.signOut();
-                        }
-                        clearUserSessionCache();
+                        await authSignOut();
                         window.location.href = '/';
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors text-left cursor-pointer"
@@ -1205,11 +1237,7 @@ export default function AterCognitiveStudio() {
                   <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                     <button
                       onClick={async () => {
-                        const supabase = getSupabaseBrowserClient();
-                        if (supabase) {
-                          await supabase.auth.signOut();
-                        }
-                        clearUserSessionCache();
+                        await authSignOut();
                         window.location.href = '/';
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors text-left cursor-pointer"

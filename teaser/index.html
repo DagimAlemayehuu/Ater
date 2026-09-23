@@ -83,6 +83,140 @@
       accent-color: rgba(24, 24, 27, 0.6);
       cursor: pointer;
     }
+
+    /* Instagram Story Style 30s Audio Section Picker */
+    .audio-picker-card {
+      margin-top: 14px;
+      width: 1280px;
+      max-width: 95vw;
+      background: #f7f1e7;
+      border: 1px solid rgba(24, 24, 27, 0.08);
+      border-radius: 18px;
+      padding: 12px 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    }
+    .picker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .song-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .song-dropdown {
+      background: #ebe3d5;
+      color: #18181b;
+      border: 1px solid rgba(24, 24, 27, 0.12);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+    .picker-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #555;
+    }
+    .pill-btn {
+      padding: 5px 14px;
+      font-size: 12px;
+      background: #18181b;
+      color: #fbf7f0;
+      border-radius: 14px;
+      cursor: pointer;
+      border: none;
+      font-weight: 600;
+    }
+    .pill-btn:hover {
+      background: #333;
+    }
+    .waveform-container {
+      position: relative;
+      height: 64px;
+      background: #eee6d8;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      touch-action: none;
+    }
+    .waveform-bars {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      gap: 2px;
+    }
+    .bar {
+      flex: 1;
+      background: rgba(24, 24, 27, 0.22);
+      border-radius: 2px;
+      min-height: 4px;
+      transition: background 0.1s ease;
+    }
+    .selection-window {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(24, 24, 27, 0.12);
+      border: 2px solid #18181b;
+      border-radius: 8px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      user-select: none;
+      z-index: 10;
+    }
+    .selection-window:active {
+      cursor: grabbing;
+    }
+    .window-handle {
+      width: 4px;
+      height: 24px;
+      background: #18181b;
+      border-radius: 2px;
+    }
+    .window-time {
+      font-size: 11px;
+      font-weight: 700;
+      color: #18181b;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 2px 8px;
+      border-radius: 10px;
+      pointer-events: none;
+    }
+    .playhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e11d48;
+      pointer-events: none;
+      z-index: 15;
+      display: none;
+    }
+    .picker-instructions {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #777;
+      margin-top: 6px;
+      padding: 0 4px;
+    }
   </style>
 </head>
 <body>
@@ -96,17 +230,46 @@
     <button id="restartBtn">Replay</button>
     <button id="muteBtn">Sound On</button>
     <button id="switchBtn" style="background:#18181b;color:#fbf7f0;">📱 TikTok 9:16</button>
+    <button id="exportVideoBtn" style="background:#18181b;color:#fbf7f0;font-weight:700;">⬇ Download MP4 Video</button>
     
-    <select id="audioTrackSelect" style="background:#dfd8cb;color:#18181b;border:none;padding:6px 12px;border-radius:20px;font-weight:600;font-size:12px;cursor:pointer;outline:none;">
-      <option value="outro_pure">Dan Kye — Actually (Pure Instrumental Outro)</option>
-      <option value="loop_pure">Dan Kye — Actually (Pure Instrumental Loop)</option>
-      <option value="groove">Dan Kye — Actually (Filtered Groove)</option>
-      <option value="piano">Ambient Felt Piano (Original)</option>
-    </select>
     <div class="timeline">
       <span id="curTime">0.00s</span>
       <input type="range" id="scrubber" min="0" max="32.0" step="0.01" value="0">
       <span id="totalTime">32.00s</span>
+    </div>
+  </div>
+
+  <!-- Instagram Story Style 30s Audio Section Picker -->
+  <div class="audio-picker-card">
+    <div class="picker-header">
+      <div class="song-meta">
+        <span class="music-icon" style="font-size:16px;">🎵</span>
+        <select id="songSelect" class="song-dropdown">
+          <option value="berlioz" selected>berlioz — joycelyn's dance</option>
+          <option value="dankye">Dan Kye — Actually</option>
+          <option value="piano">Ater Felt Piano (Original)</option>
+        </select>
+      </div>
+      <div class="picker-badge">
+        <span>Section: <b id="windowTimeLabel">0:00 – 0:32</b></span>
+        <button id="previewTrackBtn" class="pill-btn">Preview 30s Cut</button>
+      </div>
+    </div>
+
+    <!-- Waveform & draggable 32s selection window -->
+    <div class="waveform-container" id="waveformContainer">
+      <div class="waveform-bars" id="waveformBars"></div>
+      <div class="selection-window" id="selectionWindow">
+        <div class="window-handle left"></div>
+        <div class="window-time" id="windowCenterTime">0:00</div>
+        <div class="window-handle right"></div>
+      </div>
+      <div class="playhead" id="waveformPlayhead"></div>
+    </div>
+    
+    <div class="picker-instructions">
+      <span>Drag or click anywhere on the waveform to slide the 30-second teaser cut</span>
+      <span id="songFullDuration">3:18 total</span>
     </div>
   </div>
 
@@ -123,47 +286,42 @@
     let isPlaying = true;
     let lastTimestamp = null;
 
-    // --- UNIFORM GLOBAL PAPER CAMERA MOTION (SWEET SPOT) ---
-    // The entire camera (paper sheet + all typography) moves together uniformly
-    function hash(n) {
-      return (Math.sin(n * 127.1 + 311.7) * 43758.5453123) % 1;
-    }
+    // --- ULTRA-SMOOTH CINEMATIC CAMERA MOTION (NO JITTER / BLINKING) ---
+    function getGlobalPaperMotion(t = currentTime) {
+      // Continuous smooth slow breathing camera drift
+      const x = Math.sin(t * 0.45) * 1.6 + Math.sin(t * 0.95) * 0.7;
+      const y = Math.cos(t * 0.38) * 1.5 + Math.sin(t * 0.82) * 0.6;
+      const rot = Math.sin(t * 0.28) * 0.0012;
 
-    function getGlobalPaperMotion() {
-      // 5 fps gentle paper drift cadence (uniform, subtle, and calming)
-      const step = Math.floor(currentTime * 5);
-      const h1 = hash(step);
-      const h2 = hash(step + 101.3);
-      const h3 = hash(step + 202.7);
-
-      // Gentle paper motion: 0.9px max shift, 0.0012 rad micro-tilt
-      return {
-        x: (h1 - 0.5) * 1.8,
-        y: (h2 - 0.5) * 1.8,
-        rot: (h3 - 0.5) * 0.0024
-      };
+      return { x, y, rot };
     }
 
     // Clean Easings
     function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
     function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 
-    // Top-Left Brand Anchor
+    // Top-Left Brand Anchor (matches website header: ATER አጠር, text-xl/2xl, gap-2)
     function drawTopLogo(alpha = 1) {
       if (alpha <= 0.001) return;
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
       ctx.translate(110, 85);
 
-      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      const engText = "ATER";
+      const amhText = "አጠር";
+
+      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.letterSpacing = '-0.8px';
       ctx.fillStyle = '#18181b';
-      ctx.fillText("ATER", 0, 0);
+      ctx.fillText(engText, 0, 0);
 
-      const engW = ctx.measureText("ATER").width;
+      const engW = ctx.measureText(engText).width;
+      const gap = 8; // tighter, authentic website spacing
+
       ctx.font = '900 24px "Noto Sans Ethiopic", "Kefa", sans-serif';
+      ctx.letterSpacing = 'normal';
       ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
-      ctx.fillText("አጠር", engW + 10, 0);
+      ctx.fillText(amhText, engW + gap, 0);
 
       ctx.restore();
     }
@@ -179,20 +337,29 @@
     }
 
 
-    // --- DUAL AUDIO ENGINE: DAN KYE ACTUALLY (STEM-SEPARATED INSTRUMENTAL) + FELT PIANO ---
-    const audioTrackSelect = document.getElementById('audioTrackSelect');
-    const audioPlayer = new Audio();
-    audioPlayer.preload = 'auto';
+    // --- INSTAGRAM-STYLE 30-SECOND SECTION PICKER AUDIO ENGINE ---
+    const songSelect = document.getElementById('songSelect');
+    const previewTrackBtn = document.getElementById('previewTrackBtn');
+    const windowTimeLabel = document.getElementById('windowTimeLabel');
+    const windowCenterTime = document.getElementById('windowCenterTime');
+    const songFullDuration = document.getElementById('songFullDuration');
+    const waveformContainer = document.getElementById('waveformContainer');
+    const waveformBars = document.getElementById('waveformBars');
+    const selectionWindow = document.getElementById('selectionWindow');
+    const waveformPlayhead = document.getElementById('waveformPlayhead');
 
-    const audioTracks = {
-      outro_pure: 'actually_pure_outro_groove.mp3',
-      loop_pure: 'actually_pure_loop_instrumental.mp3',
-      groove: 'groove_32s_inst.mp3',
-      piano: 'piano'
+    let songsData = {
+      berlioz: { name: "berlioz — joycelyn's dance", file: "joycelyns_dance.mp3", duration: 198.5, peaks: [] },
+      dankye: { name: "Dan Kye — Actually", file: "Dan_Kye_Actually.mp3", duration: 227.0, peaks: [] },
+      piano: { name: "Ater Felt Piano (Original)", file: null, duration: 32.0, peaks: [] }
     };
 
-    let currentTrackType = 'outro_pure';
-    audioPlayer.src = audioTracks[currentTrackType];
+    let activeSongKey = 'berlioz';
+    let audioOffset = 0.0; // The start second of the 30-second window in the song
+    const WINDOW_DURATION = 32.0;
+
+    const audioPlayer = new Audio();
+    audioPlayer.preload = 'auto';
 
     let audioCtx = null;
     let masterGain = null;
@@ -202,8 +369,205 @@
     const muteBtn = document.getElementById('muteBtn');
     const switchBtn = document.getElementById('switchBtn');
 
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // Render waveform bars and update selection window
+    function updateWaveformUI() {
+      const song = songsData[activeSongKey];
+      if (!song || activeSongKey === 'piano') {
+        waveformBars.innerHTML = '<div style="color:#888;font-size:12px;margin:auto;">Synthesized Web Audio Felt Piano (32.0s generative score)</div>';
+        selectionWindow.style.display = 'none';
+        windowTimeLabel.textContent = '0:00 – 0:32 (Full)';
+        songFullDuration.textContent = '32s synthesized';
+        return;
+      }
+
+      selectionWindow.style.display = 'flex';
+      songFullDuration.textContent = formatTime(song.duration) + ' total';
+
+      // Build bars
+      waveformBars.innerHTML = '';
+      const peaks = song.peaks && song.peaks.length ? song.peaks : new Array(120).fill(0.2);
+      peaks.forEach(p => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const h = Math.max(4, Math.round(p * 56));
+        bar.style.height = `${h}px`;
+        waveformBars.appendChild(bar);
+      });
+
+      syncSelectionWindowUI();
+    }
+
+    function syncSelectionWindowUI() {
+      const song = songsData[activeSongKey];
+      if (!song || activeSongKey === 'piano') return;
+
+      const containerWidth = waveformContainer.clientWidth || 1200;
+      const windowPct = Math.min(1, WINDOW_DURATION / song.duration);
+      const windowWidthPx = Math.max(80, containerWidth * windowPct);
+      
+      const maxOffset = Math.max(0, song.duration - WINDOW_DURATION);
+      audioOffset = Math.max(0, Math.min(audioOffset, maxOffset));
+
+      const leftPx = (audioOffset / song.duration) * containerWidth;
+
+      selectionWindow.style.width = `${windowWidthPx}px`;
+      selectionWindow.style.left = `${leftPx}px`;
+
+      const startTimeStr = formatTime(audioOffset);
+      const endTimeStr = formatTime(audioOffset + WINDOW_DURATION);
+      windowTimeLabel.textContent = `${startTimeStr} – ${endTimeStr}`;
+      windowCenterTime.textContent = startTimeStr;
+
+      // Update playhead on waveform
+      const currentSongTime = audioOffset + currentTime;
+      const playheadLeft = (currentSongTime / song.duration) * containerWidth;
+      waveformPlayhead.style.left = `${playheadLeft}px`;
+      waveformPlayhead.style.display = (activeSongKey !== 'piano') ? 'block' : 'none';
+    }
+
+    // Load peaks from JSON
+    fetch('songs_data.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data.berlioz) songsData.berlioz = data.berlioz;
+        if (data.dankye) songsData.dankye = data.dankye;
+        updateWaveformUI();
+      })
+      .catch(() => {
+        updateWaveformUI();
+      });
+
+    // Draggable / clickable waveform section window
+    let isDraggingWindow = false;
+    let startDragX = 0;
+    let initialOffset = 0;
+
+    function handleWaveformMove(clientX) {
+      const song = songsData[activeSongKey];
+      if (!song || activeSongKey === 'piano') return;
+      const rect = waveformContainer.getBoundingClientRect();
+      const clickX = clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const targetTime = pct * song.duration;
+      const maxOffset = Math.max(0, song.duration - WINDOW_DURATION);
+      // Center the 30s cut around click or clamped
+      audioOffset = Math.max(0, Math.min(maxOffset, targetTime - WINDOW_DURATION / 2));
+      syncSelectionWindowUI();
+
+      if (isPlaying) {
+        audioPlayer.currentTime = audioOffset + currentTime;
+      }
+    }
+
+    waveformContainer.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#selectionWindow')) {
+        isDraggingWindow = true;
+        startDragX = e.clientX;
+        initialOffset = audioOffset;
+      } else {
+        handleWaveformMove(e.clientX);
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingWindow) return;
+      const song = songsData[activeSongKey];
+      if (!song || activeSongKey === 'piano') return;
+
+      const deltaX = e.clientX - startDragX;
+      const rect = waveformContainer.getBoundingClientRect();
+      const deltaSec = (deltaX / rect.width) * song.duration;
+      const maxOffset = Math.max(0, song.duration - WINDOW_DURATION);
+
+      audioOffset = Math.max(0, Math.min(maxOffset, initialOffset + deltaSec));
+      syncSelectionWindowUI();
+
+      if (isPlaying) {
+        audioPlayer.currentTime = audioOffset + currentTime;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingWindow = false;
+    });
+
+    // Touch support for mobile / tablets
+    waveformContainer.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      if (e.target.closest('#selectionWindow')) {
+        isDraggingWindow = true;
+        startDragX = touch.clientX;
+        initialOffset = audioOffset;
+      } else {
+        handleWaveformMove(touch.clientX);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isDraggingWindow) return;
+      const touch = e.touches[0];
+      const song = songsData[activeSongKey];
+      if (!song || activeSongKey === 'piano') return;
+
+      const deltaX = touch.clientX - startDragX;
+      const rect = waveformContainer.getBoundingClientRect();
+      const deltaSec = (deltaX / rect.width) * song.duration;
+      const maxOffset = Math.max(0, song.duration - WINDOW_DURATION);
+
+      audioOffset = Math.max(0, Math.min(maxOffset, initialOffset + deltaSec));
+      syncSelectionWindowUI();
+      if (isPlaying) {
+        audioPlayer.currentTime = audioOffset + currentTime;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      isDraggingWindow = false;
+    });
+
+    // Switch song
+    function setTrack(songKey) {
+      activeSongKey = songKey;
+      audioOffset = 0.0;
+      if (activeSongKey === 'piano') {
+        audioPlayer.pause();
+        initAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        lastScheduledIdx = pianoScore.findIndex(n => n.t >= currentTime) - 1;
+      } else {
+        const song = songsData[activeSongKey];
+        audioPlayer.src = song.file;
+        audioPlayer.currentTime = audioOffset + currentTime;
+        audioPlayer.muted = isMuted;
+        if (isPlaying) audioPlayer.play().catch(() => {});
+      }
+      updateWaveformUI();
+    }
+
+    songSelect.addEventListener('change', (e) => {
+      setTrack(e.target.value);
+    });
+
+    // Quick preview button: replays the current 30s cut from its start
+    previewTrackBtn.addEventListener('click', () => {
+      currentTime = 0;
+      isPlaying = true;
+      playBtn.textContent = 'Pause';
+      lastTimestamp = null;
+      syncAudio(0, true);
+    });
+
+    // Set initial track to berlioz
+    audioPlayer.src = songsData.berlioz.file;
+
     function initAudio() {
-      if (currentTrackType !== 'piano') {
+      if (activeSongKey !== 'piano') {
         audioPlayer.muted = isMuted;
         return;
       }
@@ -234,23 +598,6 @@
 
       conv.connect(reverbGain);
       reverbGain.connect(masterGain);
-    }
-
-    if (audioTrackSelect) {
-      audioTrackSelect.addEventListener('change', (e) => {
-        currentTrackType = e.target.value;
-        if (currentTrackType === 'piano') {
-          audioPlayer.pause();
-          initAudio();
-          if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-          lastScheduledIdx = pianoScore.findIndex(n => n.t >= currentTime) - 1;
-        } else {
-          audioPlayer.src = audioTracks[currentTrackType];
-          audioPlayer.currentTime = currentTime;
-          audioPlayer.muted = isMuted;
-          if (isPlaying) audioPlayer.play().catch(() => {});
-        }
-      });
     }
 
 
@@ -365,12 +712,13 @@
     ];
 
     function syncAudio(t, isRestart = false) {
-      if (currentTrackType !== 'piano') {
+      if (activeSongKey !== 'piano') {
+        const targetSongTime = audioOffset + t;
         if (isRestart) {
-          audioPlayer.currentTime = 0;
+          audioPlayer.currentTime = audioOffset;
           if (isPlaying && !isMuted) audioPlayer.play().catch(() => {});
-        } else if (Math.abs(audioPlayer.currentTime - t) > 0.35) {
-          audioPlayer.currentTime = t;
+        } else if (Math.abs(audioPlayer.currentTime - targetSongTime) > 0.35) {
+          audioPlayer.currentTime = targetSongTime;
         }
         return;
       }
@@ -395,7 +743,7 @@
 
       // 1. UNIFORM GLOBAL CAMERA TRANSFORM
       // Entire frame, background, text, and artwork move in lockstep
-      const motion = getGlobalPaperMotion();
+      const motion = getGlobalPaperMotion(t);
 
       ctx.save();
       ctx.translate(W / 2 + motion.x, H / 2 + motion.y);
@@ -413,12 +761,12 @@
       }
 
       // =========================================================================
-      // ACT 1: THE HOOK (0.0s – 6.2s)
+      // ACT 1: THE HOOK (0.0s – 6.4s)
       // "AI made studying feel effortless."
       // "Or did it just make pretending easy?"
       // =========================================================================
       {
-        const act = getActTransition(t, 0.0, 6.2, 0.8);
+        const act = getActTransition(t, 0.0, 6.4, 0.8);
         if (act.active) {
           ctx.save();
           ctx.globalAlpha = act.alpha;
@@ -429,16 +777,18 @@
           ctx.translate(W / 2, H / 2 - 40 + act.y);
           ctx.fillStyle = '#18181b';
           ctx.font = '64px "Newsreader", "Georgia", serif';
+          ctx.letterSpacing = '-0.5px';
           ctx.fillText("AI made studying feel effortless.", 0, 0);
           ctx.restore();
 
-          // Beat 2
-          if (t > 1.8) {
-            const tProg = easeOutCubic(Math.min(1, (t - 1.8) / 0.9));
+          // Beat 2: Musical entry at 2.15s (joycelyns_dance piano downbeat)
+          if (t >= 2.15) {
+            const tProg = easeOutCubic(Math.min(1, (t - 2.15) / 0.85));
             ctx.save();
-            ctx.globalAlpha = Math.min(act.alpha, tProg);
+            ctx.globalAlpha = act.alpha * tProg;
             ctx.translate(W / 2, H / 2 + 45 + act.y);
             ctx.font = 'italic 64px "Newsreader", "Georgia", serif';
+            ctx.letterSpacing = '-0.5px';
             ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
             ctx.fillText("Or did it just make pretending easy?", 0, 0);
             ctx.restore();
@@ -450,12 +800,12 @@
       }
 
       // =========================================================================
-      // ACT 2: THE TENSION (6.2s – 12.8s)
+      // ACT 2: THE TENSION (6.4s – 12.8s)
       // "You read the summary. You nodded along."
       // "Then someone asks you to explain it."
       // =========================================================================
       {
-        const act = getActTransition(t, 6.2, 12.8, 0.8);
+        const act = getActTransition(t, 6.4, 12.8, 0.8);
         if (act.active) {
           ctx.save();
           ctx.globalAlpha = act.alpha;
@@ -466,16 +816,18 @@
           ctx.translate(W / 2, H / 2 - 42 + act.y);
           ctx.fillStyle = '#18181b';
           ctx.font = '54px "Newsreader", "Georgia", serif';
+          ctx.letterSpacing = '-0.5px';
           ctx.fillText("You read the summary. You nodded along.", 0, 0);
           ctx.restore();
 
-          // Beat 2
-          if (t > 8.0) {
-            const tProg = easeOutCubic(Math.min(1, (t - 8.0) / 0.9));
+          // Beat 2: Musical entry aligned at 8.75s
+          if (t >= 8.75) {
+            const tProg = easeOutCubic(Math.min(1, (t - 8.75) / 0.85));
             ctx.save();
-            ctx.globalAlpha = Math.min(act.alpha, tProg);
+            ctx.globalAlpha = act.alpha * tProg;
             ctx.translate(W / 2, H / 2 + 45 + act.y);
             ctx.font = 'italic 54px "Newsreader", "Georgia", serif';
+            ctx.letterSpacing = '-0.5px';
             ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
             ctx.fillText("Then someone asks you to explain it.", 0, 0);
             ctx.restore();
@@ -598,26 +950,31 @@
           ctx.globalAlpha = act.alpha;
           ctx.translate(W / 2, H * 0.45 + act.y * 0.5);
 
-          ctx.font = '900 124px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.letterSpacing = '-4px';
           const engText = "ATER";
+          const amhText = "አጠር";
+
+          // Use matching 108px font size for both English and Amharic
+          ctx.font = '900 108px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.letterSpacing = '-4px';
           const engMeasure = ctx.measureText(engText).width;
 
-          ctx.font = '900 124px "Noto Sans Ethiopic", "Kefa", sans-serif';
-          const amhText = "አጠር";
+          ctx.font = '900 108px "Noto Sans Ethiopic", "Kefa", sans-serif';
+          ctx.letterSpacing = 'normal';
           const amhMeasure = ctx.measureText(amhText).width;
 
-          const gap = 26;
+          const gap = 16; // Authentic tight gap matching website
           const totalW = engMeasure + gap + amhMeasure;
           const startX = -totalW / 2;
 
           // Solid Black English
-          ctx.font = '900 104px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.font = '900 108px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.letterSpacing = '-4px';
           ctx.fillStyle = '#18181b';
           ctx.fillText(engText, startX, 0);
 
-          // Amharic Grey Logo
-          ctx.font = '900 104px "Noto Sans Ethiopic", "Kefa", sans-serif';
+          // Amharic Grey Brand Mark right beside English
+          ctx.font = '900 108px "Noto Sans Ethiopic", "Kefa", sans-serif';
+          ctx.letterSpacing = 'normal';
           ctx.fillStyle = 'rgba(24, 24, 27, 0.45)';
           ctx.fillText(amhText, startX + engMeasure + gap, 0);
 
@@ -658,6 +1015,7 @@
         scrubber.value = currentTime;
         curTimeLabel.textContent = currentTime.toFixed(2) + 's';
         syncAudio(currentTime);
+        if (activeSongKey !== 'piano') syncSelectionWindowUI();
       }
 
       render(currentTime);
@@ -671,9 +1029,9 @@
       }
       isPlaying = !isPlaying;
       playBtn.textContent = isPlaying ? 'Pause' : 'Play';
-      if (currentTrackType !== 'piano') {
+      if (activeSongKey !== 'piano') {
         if (isPlaying) {
-          audioPlayer.currentTime = currentTime;
+          audioPlayer.currentTime = audioOffset + currentTime;
           audioPlayer.play().catch(() => {});
         } else {
           audioPlayer.pause();
@@ -687,8 +1045,8 @@
     });
 
     restartBtn.addEventListener('click', () => {
-      if (currentTrackType !== 'piano') {
-        audioPlayer.currentTime = 0;
+      if (activeSongKey !== 'piano') {
+        audioPlayer.currentTime = audioOffset;
         if (!isMuted) audioPlayer.play().catch(() => {});
       }
       initAudio();
@@ -719,16 +1077,17 @@
     });
 
     scrubber.addEventListener('input', (e) => {
-      if (currentTrackType !== 'piano') {
-        audioPlayer.currentTime = parseFloat(e.target.value);
+      currentTime = parseFloat(e.target.value);
+      if (activeSongKey !== 'piano') {
+        audioPlayer.currentTime = audioOffset + currentTime;
         audioPlayer.pause();
       }
       initAudio();
-      currentTime = parseFloat(e.target.value);
       curTimeLabel.textContent = currentTime.toFixed(2) + 's';
       isPlaying = false;
       playBtn.textContent = 'Play';
       lastScheduledIdx = pianoScore.findIndex(n => n.t >= currentTime) - 1;
+      syncSelectionWindowUI();
       render(currentTime);
     });
 
@@ -739,6 +1098,114 @@
         audioCtx.resume();
       }
     }, { once: true });
+
+    // --- VIDEO RECORDER / EXPORT LOGIC ---
+    const exportVideoBtn = document.getElementById('exportVideoBtn');
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
+    exportVideoBtn.addEventListener('click', async () => {
+      if (isRecording) return;
+      isRecording = true;
+      exportVideoBtn.textContent = '⏳ Recording (0%)...';
+      exportVideoBtn.style.background = '#e11d48';
+
+      // Ensure audio context is ready
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+
+      // Reset playback to beginning
+      currentTime = 0;
+      isPlaying = false;
+      syncAudio(0, true);
+
+      // Create stream destination from canvas
+      const canvasStream = canvas.captureStream(60);
+
+      // Mix in audio
+      let combinedStream = canvasStream;
+      try {
+        const destCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const destNode = destCtx.createMediaStreamDestination();
+
+        if (activeSongKey !== 'piano') {
+          // Route HTML5 Audio element through destination
+          const trackSource = destCtx.createMediaElementSource(audioPlayer);
+          trackSource.connect(destNode);
+          trackSource.connect(destCtx.destination);
+        } else {
+          masterGain.connect(destNode);
+        }
+
+        const audioTracks = destNode.stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          combinedStream = new MediaStream([...canvasStream.getVideoTracks(), audioTracks[0]]);
+        }
+      } catch (err) {
+        console.warn("Direct audio routing fallback:", err);
+      }
+
+      const mimeTypes = [
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+        'video/webm;codecs=h264',
+        'video/webm;codecs=vp9',
+        'video/webm'
+      ];
+      let selectedMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(combinedStream, {
+        mimeType: selectedMime,
+        videoBitsPerSecond: 16000000 // 16 Mbps high quality
+      });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const isMp4 = selectedMime.includes('mp4');
+        const blob = new Blob(recordedChunks, { type: selectedMime || 'video/mp4' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = isMp4 ? 'Ater_Teaser_Desktop_16x9.mp4' : 'Ater_Teaser_Desktop_16x9.webm';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        isRecording = false;
+        exportVideoBtn.textContent = '⬇ Download MP4 Video';
+        exportVideoBtn.style.background = '#18181b';
+      };
+
+      // Start recording and start playback
+      mediaRecorder.start();
+      isPlaying = true;
+      playBtn.textContent = 'Pause';
+      lastTimestamp = null;
+      syncAudio(0, true);
+
+      // Track progress
+      const checkInterval = setInterval(() => {
+        if (!isRecording) {
+          clearInterval(checkInterval);
+          return;
+        }
+        const pct = Math.round((currentTime / DURATION) * 100);
+        exportVideoBtn.textContent = `⏳ Recording (${pct}%)...`;
+
+        if (currentTime >= DURATION) {
+          clearInterval(checkInterval);
+          mediaRecorder.stop();
+          isPlaying = false;
+          playBtn.textContent = 'Play';
+        }
+      }, 200);
+    });
 
     requestAnimationFrame(animate);
   </script>

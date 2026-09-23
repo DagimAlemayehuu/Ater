@@ -9,12 +9,15 @@ import { useLanguage } from '@/context/LanguageContext';
 import { checkIsAdmin } from '@/lib/auth/admins';
 import { clearUserSessionCache } from '@/lib/sync/store';
 
+import { useAuth } from '@/context/AuthContext';
+
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
   const redirectTo = searchParams.get('redirect') || '';
   const { isAmharic } = useLanguage();
+  const { user: authUser, isLoading: isAuthLoading, signOut: authSignOut } = useAuth();
 
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -36,77 +39,61 @@ function AuthContent() {
     const cleanEmail = userEmail.toLowerCase().trim();
     const isAdmin = await checkIsAdmin(cleanEmail);
 
-    // If a destination was requested (e.g. /admin), navigate there immediately if authorized
-    if (redirectTo) {
-      router.push(redirectTo);
-      return;
-    }
+    let statusVal = isAdmin ? 'approved' : 'pending';
 
     try {
       // Query waiting_list
-      let { data } = await supabase
+      const { data } = await supabase
         .from('waiting_list')
         .select('*')
         .eq('email', cleanEmail)
         .maybeSingle();
 
-      const statusVal = isAdmin ? 'approved' : (data?.status || 'pending');
+      statusVal = isAdmin ? 'approved' : (data?.status || 'pending');
       setUserStatus(data || { email: cleanEmail, status: statusVal, is_admin: isAdmin });
-      if (statusVal === 'approved' || isAdmin) {
-        router.push('/app');
-        return;
-      }
-      setView('dashboard');
     } catch {
       setUserStatus({ email: cleanEmail, status: isAdmin ? 'approved' : 'pending', is_admin: isAdmin });
-      if (isAdmin) {
-        router.push('/app');
+    }
+
+    const isApproved = statusVal === 'approved' || isAdmin;
+
+    // Validate safe internal redirects (must start with single / and not //)
+    const isSafeRelativeRedirect = redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//');
+
+    if (isSafeRelativeRedirect) {
+      // If target is admin console, ensure user is an admin
+      if (redirectTo.startsWith('/admin')) {
+        if (isAdmin) {
+          router.push(redirectTo);
+          return;
+        }
+      } else if (isApproved) {
+        router.push(redirectTo);
         return;
       }
-      setView('dashboard');
     }
-  }, [redirectTo, router]);
 
-  useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setView('auth');
+    if (isApproved) {
+      router.push('/app');
       return;
     }
 
-    if (initialMode === 'login') {
-      // User explicitly clicked "Sign In": Always require manual credential entry
-      setView('auth');
-      setAuthMode('login');
-      setUser(null);
+    setView('dashboard');
+  }, [redirectTo, router]);
+
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (authUser && authUser.email) {
+      setUser(authUser);
+      checkUser(authUser.email);
     } else {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setUser(session.user);
-          checkUser(session.user.email!);
-        } else {
-          setView('auth');
-        }
-      });
+      setUser(null);
+      setUserStatus(null);
+      setView('auth');
+      setAuthMode(initialMode);
     }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only auto-route if user was not specifically asking to view the login form
-      if (event === 'SIGNED_IN' && session && initialMode !== 'login') {
-        setUser(session.user);
-        checkUser(session.user.email!);
-      } else if (event === 'SIGNED_OUT' || !session) {
-        setUser(null);
-        setUserStatus(null);
-        setView('auth');
-        setAuthMode('login');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [initialMode, checkUser]);
+  }, [isAuthLoading, authUser, initialMode, checkUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,11 +187,7 @@ function AuthContent() {
             </Link>
             <button
               onClick={async () => {
-                const supabase = getSupabaseBrowserClient();
-                if (supabase) {
-                  await supabase.auth.signOut();
-                }
-                clearUserSessionCache();
+                await authSignOut();
                 setUser(null);
                 setUserStatus(null);
                 setAuthMode('login');

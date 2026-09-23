@@ -24,12 +24,13 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 /**
- * Clears all user session and cached courses/notes from localStorage on sign-out.
+ * Clears cached courses and notes from localStorage on sign-out or session switch.
+ * Never touches 'sb-' tokens so Supabase session persistence remains healthy.
  */
-export function clearUserSessionCache(): void {
+export function clearUserSessionCache(targetUserId?: string | null): void {
   if (typeof window === 'undefined') return;
   try {
-    const keysToRemove = [
+    const legacyKeysToRemove = [
       'ater_courses',
       'ater_curricula',
       'ater_notes',
@@ -37,27 +38,45 @@ export function clearUserSessionCache(): void {
       'ater_bilingual_curricula',
       'ater_active_course_id',
       'ater_current_user_id',
+      'ater_last_session_uid',
+      'ater_courses_guest',
     ];
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
-    // Also remove any note-specific or user-scoped keys
+    legacyKeysToRemove.forEach((k) => localStorage.removeItem(k));
+
+    if (targetUserId) {
+      // Scoped removal for a specific user
+      localStorage.removeItem(`ater_courses_${targetUserId}`);
+      localStorage.removeItem(`ater_curricula_${targetUserId}`);
+      localStorage.removeItem(`ater_notes_${targetUserId}`);
+      localStorage.removeItem(`ater_bilingual_notes_${targetUserId}`);
+      localStorage.removeItem(`ater_bilingual_curricula_${targetUserId}`);
+    }
+
     const allKeys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k) allKeys.push(k);
     }
-    // Also check Object.keys for mocked environments
+    // Check Object.keys for mocked test environments
     Object.keys(localStorage).forEach((k) => {
       if (!allKeys.includes(k)) allKeys.push(k);
     });
 
     allKeys.forEach((key) => {
-      if (
-        key.startsWith('ater_note_') ||
-        key.startsWith('ater_courses_') ||
-        key.startsWith('ater_curricula_') ||
-        key.startsWith('sb-') // Purge Supabase auth tokens
-      ) {
-        localStorage.removeItem(key);
+      if (targetUserId) {
+        if (key.startsWith(`ater_note_${targetUserId}_`)) {
+          localStorage.removeItem(key);
+        }
+      } else {
+        // If no specific user is provided, purge all ater-prefixed cache keys (tests/full reset)
+        if (
+          key.startsWith('ater_note_') ||
+          key.startsWith('ater_courses_') ||
+          key.startsWith('ater_curricula_') ||
+          key.startsWith('ater_bilingual_')
+        ) {
+          localStorage.removeItem(key);
+        }
       }
     });
   } catch (e) {
@@ -68,13 +87,13 @@ export function clearUserSessionCache(): void {
 /**
  * Saves a course and its roadmap lessons to Supabase with local fallback.
  */
-export async function saveCourseToStore(course: CourseCurriculum): Promise<void> {
-  const userId = await getCurrentUserId();
+export async function saveCourseToStore(course: CourseCurriculum, explicitUserId?: string): Promise<void> {
+  const userId = explicitUserId || (await getCurrentUserId());
 
-  // 1. Local Storage Fallback (scoped per user if logged in)
+  // 1. Local Storage Fallback (strictly scoped per user)
   if (typeof window !== 'undefined') {
     try {
-      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses';
+      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses_guest';
       const stored = localStorage.getItem(storageKey);
       const courses: CourseCurriculum[] = stored ? JSON.parse(stored) : [];
       const idx = courses.findIndex((c) => c.id === course.id);
@@ -84,7 +103,9 @@ export async function saveCourseToStore(course: CourseCurriculum): Promise<void>
         courses.push(course);
       }
       localStorage.setItem(storageKey, JSON.stringify(courses));
-      localStorage.setItem('ater_courses', JSON.stringify(courses));
+      if (userId) {
+        localStorage.setItem(`ater_curricula_${userId}`, JSON.stringify(courses));
+      }
     } catch (e) {
       console.warn('Local storage save course failed:', e);
     }
@@ -154,36 +175,27 @@ export async function saveCourseToStore(course: CourseCurriculum): Promise<void>
 /**
  * Deletes a course, its lessons, and notes from Supabase and local storage.
  */
-export async function deleteCourseFromStore(courseId: string): Promise<void> {
-  const userId = await getCurrentUserId();
+export async function deleteCourseFromStore(courseId: string, explicitUserId?: string): Promise<void> {
+  const userId = explicitUserId || (await getCurrentUserId());
 
   if (typeof window !== 'undefined') {
     try {
-      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses';
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const courses: CourseCurriculum[] = JSON.parse(stored);
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify(courses.filter((c) => c.id !== courseId))
-        );
+      if (userId) {
+        const userKey = `ater_courses_${userId}`;
+        const stored = localStorage.getItem(userKey);
+        if (stored) {
+          const courses: CourseCurriculum[] = JSON.parse(stored);
+          localStorage.setItem(userKey, JSON.stringify(courses.filter((c) => c.id !== courseId)));
+        }
+        const curriculaKey = `ater_curricula_${userId}`;
+        const storedCurricula = localStorage.getItem(curriculaKey);
+        if (storedCurricula) {
+          const list: CourseCurriculum[] = JSON.parse(storedCurricula);
+          localStorage.setItem(curriculaKey, JSON.stringify(list.filter((c) => c.id !== courseId)));
+        }
       }
-      const genericStored = localStorage.getItem('ater_courses');
-      if (genericStored) {
-        const courses: CourseCurriculum[] = JSON.parse(genericStored);
-        localStorage.setItem(
-          'ater_courses',
-          JSON.stringify(courses.filter((c) => c.id !== courseId))
-        );
-      }
-      const curriculaStored = localStorage.getItem('ater_curricula');
-      if (curriculaStored) {
-        const list: CourseCurriculum[] = JSON.parse(curriculaStored);
-        localStorage.setItem(
-          'ater_curricula',
-          JSON.stringify(list.filter((c) => c.id !== courseId))
-        );
-      }
+      localStorage.removeItem('ater_courses');
+      localStorage.removeItem('ater_curricula');
     } catch (e) {
       console.warn('Local storage delete course failed:', e);
     }
@@ -212,19 +224,21 @@ export async function deleteCourseFromStore(courseId: string): Promise<void> {
 /**
  * Retrieves all courses for the active user, merging Supabase and localStorage.
  */
-export async function getCoursesFromStore(): Promise<CourseCurriculum[]> {
-  const userId = await getCurrentUserId();
+export async function getCoursesFromStore(explicitUserId?: string): Promise<CourseCurriculum[]> {
+  const userId = explicitUserId || (await getCurrentUserId());
   const localCourses: CourseCurriculum[] = [];
+
+  // If completely unauthenticated, return empty list to protect tenancy
+  if (!userId) {
+    return localCourses;
+  }
 
   if (typeof window !== 'undefined') {
     try {
-      const storageKey = userId ? `ater_courses_${userId}` : 'ater_courses';
-      const stored = localStorage.getItem(storageKey);
+      const storageKey = `ater_courses_${userId}`;
+      const stored = localStorage.getItem(storageKey) || localStorage.getItem(`ater_curricula_${userId}`);
       if (stored) {
         localCourses.push(...JSON.parse(stored));
-      } else if (!userId) {
-        const fallback = localStorage.getItem('ater_courses');
-        if (fallback) localCourses.push(...JSON.parse(fallback));
       }
     } catch (e) {
       console.warn('Local storage get courses error:', e);
@@ -235,26 +249,28 @@ export async function getCoursesFromStore(): Promise<CourseCurriculum[]> {
   if (!supabase) return localCourses;
 
   try {
-    let courseQuery = supabase.from('ater_courses').select('*');
-    if (userId) {
-      courseQuery = courseQuery.eq('user_id', userId);
-    } else {
-      // If unauthenticated, do not return private user courses
-      return localCourses;
-    }
+    const courseQuery = supabase
+      .from('ater_courses')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
 
-    const { data: dbCourses, error: cErr } = await courseQuery.order('updated_at', { ascending: false });
+    const { data: dbCourses, error: cErr } = await courseQuery;
 
     if (cErr || !dbCourses || dbCourses.length === 0) {
       return localCourses;
     }
 
     const courseIds = dbCourses.map((c) => c.id);
-    const { data: dbLessons, error: lErr } = await supabase
+    let lessonsQuery = supabase
       .from('ater_lessons')
       .select('*')
       .in('course_id', courseIds)
       .order('order_index', { ascending: true });
+
+    lessonsQuery = lessonsQuery.eq('user_id', userId);
+
+    const { data: dbLessons, error: lErr } = await lessonsQuery;
 
     if (lErr) {
       return localCourses;
@@ -301,13 +317,15 @@ export async function getCoursesFromStore(): Promise<CourseCurriculum[]> {
 export async function saveNoteToStore(
   courseId: string,
   lessonId: string,
-  note: DynamicLessonNote
+  note: DynamicLessonNote,
+  explicitUserId?: string
 ): Promise<void> {
-  const userId = await getCurrentUserId();
+  const userId = explicitUserId || (await getCurrentUserId());
 
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(`ater_note_${lessonId}`, JSON.stringify(note));
+      const noteKey = userId ? `ater_note_${userId}_${lessonId}` : `ater_note_${lessonId}`;
+      localStorage.setItem(noteKey, JSON.stringify(note));
     } catch (e) {
       console.warn('Local note save failed:', e);
     }
@@ -348,10 +366,13 @@ export async function saveNoteToStore(
 /**
  * Retrieves note from Supabase or localStorage.
  */
-export async function getNoteFromStore(lessonId: string): Promise<DynamicLessonNote | null> {
+export async function getNoteFromStore(lessonId: string, explicitUserId?: string): Promise<DynamicLessonNote | null> {
+  const userId = explicitUserId || (await getCurrentUserId());
+
   if (typeof window !== 'undefined') {
     try {
-      const local = localStorage.getItem(`ater_note_${lessonId}`);
+      const noteKey = userId ? `ater_note_${userId}_${lessonId}` : `ater_note_${lessonId}`;
+      const local = localStorage.getItem(noteKey);
       if (local) {
         return JSON.parse(local);
       }
@@ -362,10 +383,11 @@ export async function getNoteFromStore(lessonId: string): Promise<DynamicLessonN
   if (!supabase) return null;
 
   try {
-    const userId = await getCurrentUserId();
     let query = supabase.from('ater_notes').select('*').eq('lesson_id', lessonId);
     if (userId) {
       query = query.eq('user_id', userId);
+    } else {
+      return null;
     }
 
     const { data, error } = await query.maybeSingle();
