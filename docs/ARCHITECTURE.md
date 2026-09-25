@@ -66,11 +66,13 @@
 
 ---
 
-## 2. All 13 Next.js Application Routes
+## 2. Key Next.js Application Routes
 
 | Route | Type | Description |
 | :--- | :--- | :--- |
-| `/` | Page | Primary 3-column learning studio (Drawer, NoteCanvas, Roadmap). |
+| `/` | Page | Public Landing Page with interactive product demo and waitlist intake. |
+| `/app` | Page | Primary 3-column learning studio (Drawer, NoteCanvas, Roadmap Panel). |
+| `/auth` | Page | User authentication portal (Google OAuth & magic link). |
 | `/admin` | Page | Admin telemetry dashboard (waitlist analytics, tenant overview). |
 | `/auth/callback` | Route Handler | Supabase OAuth and magic link callback redirect handler. |
 | `/api/ingest/intake` | API Route | Evaluates topic/PDF inputs and outputs diagnostic interview questions. |
