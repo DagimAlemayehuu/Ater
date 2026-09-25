@@ -305,6 +305,8 @@ export interface IntakeRequest {
 export interface IntakeResponse {
   topic: string;
   initialSummary: string;
+  coreConcepts?: string[];
+  misconceptions?: string[];
   questions: SocraticDiscoveryQuestion[];
 }
 

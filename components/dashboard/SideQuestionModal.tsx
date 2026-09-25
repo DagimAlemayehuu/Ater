@@ -152,7 +152,7 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
         <div
           role="dialog"
           aria-labelledby="question-card-title"
-          className="w-full max-w-3xl pointer-events-auto rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 shadow-2xl backdrop-blur-md overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="w-full max-w-3xl pointer-events-auto rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 shadow-2xl backdrop-blur-md overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
         >
           {/* Header Bar */}
           <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/70 select-none">
@@ -288,7 +288,7 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
           </div>
 
           {/* Clean Explanation Body - No Chat Window, No Fluff, No Thinking Accordions */}
-          <div className="p-4 sm:p-5 overflow-y-auto max-h-[48vh] text-xs leading-relaxed text-zinc-800 dark:text-zinc-200">
+          <div className="p-4 sm:p-5 overflow-y-auto max-h-[48vh] text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             {currentAnswer ? (
               <div className="whitespace-pre-wrap leading-relaxed space-y-2">
                 {currentAnswer}

@@ -92,96 +92,64 @@ export function generateFallbackIntake(topicHint?: string, language: 'en' | 'am'
     ? {
         topic,
         initialSummary: `ስለ ${topic} መሰረታዊ መርሆች፣ የአሰራር ሚዛኖች እና የድንበር ሁኔታዎች አጠቃላይ ጥናት።`,
+        coreConcepts: ['መሰረታዊ መርሆች', 'የአሰራር ዑደት', 'የስህተት አያያዝ'],
+        misconceptions: ['ስርዓቶች ሁልጊዜ ትክክል ናቸው ብሎ ማሰብ', 'የአውታረ መረብ መቆራረጥን አለመረዳት'],
         questions: [
           {
             id: 'q1',
-            question: `ስለ ${topic} ለመማር ዋናው ግብዎ ምንድን ነው?`,
-            spokenPrompt: `ስለ ${topic} ለመማር ዋናው አላማዎ ምንድን ነው? ተግባራዊ ፕሮጀክት ለመስራት ወይስ የንድፈ-ሀሳብ መሰረቱን ለመረዳት ይፈልጋሉ?`,
+            question: `በተሰራጩ ስርዓቶች ውስጥ የ 'Network Partition' ዋና ትርጉም ምንድን ነው?`,
+            spokenPrompt: `በተሰራጩ ስርዓቶች ውስጥ ኔትወርክ ፓርቲሽን ሲባል ምን ማለት ነው?`,
             category: 'goal',
-            conceptTarget: 'የትምህርት ግብ እና አተገባበር',
-            difficulty: 'L1',
-            options: [
-              'ተግባራዊ ፕሮጀክት ከባዶ መስራት',
-              'የአልጎሪዝም እና የሂሳብ ማረጋገጫዎችን መረዳት',
-              'ለቴክኒካል ቃለ-መጠይቅ ወይም ፈተና መዘጋጀት',
-              'አጠቃላይ ግንዛቤ እና ፅንሰ-ሀሳባዊ እውቀት ማግኘት',
-            ],
+            conceptTarget: 'የአውታረ መረብ መቆራረጥን አለመረዳት',
+            difficulty: 'L1'
           },
           {
             id: 'q2',
-            question: `በ ${topic} ዙሪያ ያለዎት የቀደመ እውቀት ምን ይመስላል?`,
-            spokenPrompt: `ትምህርቱን እንደ እርስዎ ደረጃ ለማዘጋጀት፣ ከዚህ በፊት በ ${topic} ላይ ምን ያህል ልምድ አለዎት?`,
+            question: `አንድ ሰርቨር ቢበላሽ ስርዓቱ መስራቱን እንዲቀጥል ምን ማድረግ ያስፈልጋል?`,
+            spokenPrompt: `አንድ ሰርቨር ቢበላሽ ስርዓቱ መስራቱን እንዲቀጥል ምን ማድረግ ያስፈልጋል?`,
             category: 'baseline',
-            conceptTarget: 'የቀደመ እውቀት ደረጃ',
-            difficulty: 'L2',
-            options: [
-              'ምንም አይነት የቀደመ እውቀት የሌለኝ አዲስ ጀማሪ',
-              'መሰረታዊውን አውቃለሁ፣ ዝርዝር አሰራሩን መማር እፈልጋለሁ',
-              'ልምድ ያለኝ ባለሙያ፣ ውስብስብ ክፍተቶችን መረዳት እፈልጋለሁ',
-              'የአካዳሚክ እና የምርምር እውቀት ያለኝ',
-            ],
+            conceptTarget: 'የስህተት አያያዝ',
+            difficulty: 'L2'
           },
           {
             id: 'q3',
-            question: `የትምህርቱ ጥልቀት እስከምን ድረስ እንዲሆን ይፈልጋሉ?`,
-            spokenPrompt: `በ ${topic} ውስጥ ወደ ውስብስብ የስህተት ወጥመዶች እና ዝርዝር አሰራሮች ምን ያህል በጥልቀት መግባት ይፈልጋሉ?`,
+            question: `በተሰራጩ ስርዓቶች ውስጥ 'Consensus' ምን ማለት ነው?`,
+            spokenPrompt: `በተሰራጩ ስርዓቶች ውስጥ ኮንሴንሰስ ወይም ስምምነት ምን ማለት ነው?`,
             category: 'depth',
-            conceptTarget: 'የትምህርት ጥልቀት እና ገደቦች',
-            difficulty: 'L3',
-            options: [
-              'በእውነተኛ የስራ አለም የስህተት ወጥመዶች ላይ ማተኮር',
-              'ፅንሰ-ሀሳብን ከተግባራዊ ምሳሌዎች ጋር ማመጣጠን',
-              'ጥልቅ ማረጋገጫዎች እና የስርዓት ደህንነት ትንተና',
-              'ፈጣን እና ፅንሰ-ሀሳብ ላይ ያተኮረ ጉዞ',
-            ],
+            conceptTarget: 'መሰረታዊ መርሆች',
+            difficulty: 'L3'
           },
         ],
       }
     : {
         topic,
         initialSummary: `A clear, step-by-step guide to ${topic}, covering core ideas, practical examples, and common mistakes.`,
+        coreConcepts: ['Core Architecture', 'Failure Handling', 'Consistency'],
+        misconceptions: ['Assuming network is reliable', 'Confusing consistency with availability'],
         questions: [
           {
             id: 'q1',
-            question: `What is your main goal with ${topic}?`,
-            spokenPrompt: `What is your main goal with ${topic}? Do you want to build a real project or understand the core ideas?`,
+            question: `What is the primary consequence of a network partition in a distributed system?`,
+            spokenPrompt: `What is the primary consequence of a network partition in a distributed system?`,
             category: 'goal',
-            conceptTarget: 'Learning goal',
-            difficulty: 'L1',
-            options: [
-              'Build a working project from scratch',
-              'Understand the core concepts and ideas',
-              'Prepare for an interview or exam',
-              'Get a simple step-by-step overview',
-            ],
+            conceptTarget: 'Assuming network is reliable',
+            difficulty: 'L1'
           },
           {
             id: 'q2',
-            question: `What is your experience level with ${topic}?`,
-            spokenPrompt: `How much experience do you have with ${topic}?`,
+            question: `Why do distributed systems replicate data across multiple nodes?`,
+            spokenPrompt: `Why do distributed systems replicate data across multiple nodes?`,
             category: 'baseline',
-            conceptTarget: 'Experience level',
-            difficulty: 'L2',
-            options: [
-              'Complete beginner with zero background',
-              'Know the basics, want to learn more',
-              'Experienced, want advanced tips and details',
-              'Academic background, want thorough understanding',
-            ],
+            conceptTarget: 'Failure Handling',
+            difficulty: 'L2'
           },
           {
             id: 'q3',
-            question: `How deep would you like to go?`,
-            spokenPrompt: `How deep would you like to dive into ${topic}?`,
+            question: `What does 'Consensus' mean in a distributed cluster?`,
+            spokenPrompt: `What does consensus mean in a distributed cluster?`,
             category: 'depth',
-            conceptTarget: 'Course depth',
-            difficulty: 'L3',
-            options: [
-              'Focus on common mistakes and practical tips',
-              'Balance simple intuition with hands-on examples',
-              'Deep technical dive',
-              'Quick high-level summary',
-            ],
+            conceptTarget: 'Core Architecture',
+            difficulty: 'L3'
           },
         ],
       };
@@ -301,25 +269,29 @@ ${files.length > 0 ? `Uploaded Learning Materials:\n${filesSummary}` : ''}
 CRITICAL INVARIANTS:
 1. Extract "topic": A concise canonical title of the domain or subject (2-5 words).
 2. Formulate "initialSummary": Exactly 1-2 analytical sentences summarizing the core focus. STRICT INVARIANT: Continuous prose only, strictly zero bullet points, asterisks, plus signs, or numbered list prefixes.
-3. Formulate "questions": Generate diagnostic Socratic discovery questions tailored to the input.
-   - If the user prompt is broad, short, or vague (e.g. "learn programming", "AI", "physics"), formulate 4 to 5 foundational diagnostic questions (probing specific sub-domain, target real-world project, prior baseline, target depth, and preferred focus).
-   - If the user prompt is detailed or provided via PDF/syllabus files, formulate 3 to 4 focused diagnostic questions.
-   - Question Categories: "goal", "baseline", "depth", "style", "followup".
-4. Question Schema Fields:
+3. Extract "coreConcepts": An array of 3-5 core concepts of the topic.
+4. Extract "misconceptions": An array of 3-5 commonly confused points or misconceptions about the topic.
+5. Formulate "questions": Generate exactly 4-7 open-ended, diagnostic questions tailored to the input.
+   - Question 1 (Category: "goal"): Probe what concrete project, system, or milestone the learner wants to achieve related to the core concepts.
+   - Question 2 (Category: "baseline"): Probe their prior prerequisite background and adjacent concepts.
+   - Question 3 (Category: "depth" or "style"): Probe target depth or specific interests regarding the core concepts.
+   - Additional Questions (Category: "followup"): Probe their understanding or potential vulnerability to the extracted misconceptions, and any other nuances needed to deeply personalize their curriculum. (Maximum of 7 total questions).
+6. Question Schema Fields:
    - "id": Unique string identifier ("q1", "q2", "q3", etc.).
-   - "question": Written text formatted clearly for screen reading.
+   - "question": Written text formatted clearly for screen reading (open-ended question).
    - "spokenPrompt": Conversational question written specifically for Edge Neural TTS vocalization (clean spoken text, ending with a question mark ?, no markdown formatting, no bullet prefixes).
-   - "category": One of "goal", "baseline", "depth", "style", "followup".
-   - "conceptTarget": Specific prerequisite or learning attribute being probed.
+   - "category": "goal", "baseline", "depth", "style", or "followup".
+   - "conceptTarget": The specific coreConcept or misconception being probed.
    - "difficulty": One of "L1", "L2", "L3".
-   - "options": An array of exactly 3-4 concise, diverse, realistic student calibration answers tailored precisely to this question.
-5. STRICT INVARIANT: ZERO EMOJIS in any text field.
-6. STRICT INVARIANT: spokenPrompt must be clean, natural spoken text without markdown formatting, asterisks, backticks, brackets, or URLs, and must end with a question mark ?.
+7. STRICT INVARIANT: ZERO EMOJIS in any text field.
+8. STRICT INVARIANT: spokenPrompt must be clean, natural spoken text without markdown formatting, asterisks, backticks, brackets, or URLs, and must end with a question mark ?.
 
 Respond with ONLY valid JSON matching this schema:
 {
   "topic": "string",
   "initialSummary": "string",
+  "coreConcepts": ["string"],
+  "misconceptions": ["string"],
   "questions": [
     {
       "id": "q1",
@@ -327,8 +299,7 @@ Respond with ONLY valid JSON matching this schema:
       "spokenPrompt": "string",
       "category": "goal",
       "conceptTarget": "string",
-      "difficulty": "L1",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
+      "difficulty": "L1"
     }
   ]
 }`;

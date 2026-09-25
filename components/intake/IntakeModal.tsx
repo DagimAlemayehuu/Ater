@@ -355,45 +355,8 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
       return;
     }
 
-    // Otherwise, ask /api/ingest/grill if the LLM needs more follow-up questions
-    setIsLoading(true);
-    try {
-      const previousQA = Object.entries(updatedAnswers).map(([qId, ans]) => {
-        const found = discoveryQuestions.find((q) => q.id === qId);
-        return {
-          question: found?.question || qId,
-          answer: ans,
-        };
-      });
+    // Finished questions -> generate curriculum
 
-      const grillRes = await fetch('/api/ingest/grill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: topic || promptText.trim(),
-          previousQA,
-          language,
-          useMock,
-        }),
-      });
-
-      if (grillRes.ok) {
-        const grillData = await grillRes.json();
-        if (!grillData.done && grillData.question) {
-          // Dynamic Grill Me follow-up question generated!
-          const nextQ: SocraticDiscoveryQuestion = grillData.question;
-          setDiscoveryQuestions((prev) => [...prev, nextQ]);
-          setActiveQuestionIdx((prev) => prev + 1);
-          speakQuestion(nextQ);
-          setIsLoading(false);
-          return;
-        }
-      }
-    } catch (_err) {
-      // Fallback: proceed to curriculum creation
-    }
-
-    // Finished grilling -> generate curriculum
     handleGenerateCurriculum(updatedAnswers);
   };
 
@@ -758,13 +721,7 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                 {/* Dynamic tailored options aligned to the active question with multi-select support */}
                 {(() => {
                   const activeQ = discoveryQuestions[activeQuestionIdx];
-                  const options = activeQ?.options && activeQ.options.length > 0
-                    ? activeQ.options
-                    : activeQ?.category === 'goal'
-                      ? ['Build a real-world project from scratch', 'Understand the core ideas and principles', 'Prepare for technical interviews or exams', 'Get a clear step-by-step overview']
-                      : activeQ?.category === 'baseline'
-                        ? ['Complete beginner with zero background', 'Know the basics, want to learn deeper details', 'Experienced, want advanced real-world edge cases', 'Academic background wanting thorough derivations']
-                        : ['Focus on common mistakes and practical tips', 'Balance intuition with hands-on examples', 'Deep technical dive', 'Quick high-level summary'];
+                  const options = activeQ?.options || [];
 
                   const toggleOption = (opt: string) => {
                     setSelectedOptions((prev) =>
@@ -814,7 +771,7 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                                 handleAnswerSubmit();
                               }
                             }}
-                            placeholder={isAmharic ? 'ሌላ... (ተጨማሪ ዝርዝር ያክሉ)' : 'Other... (add more detail or custom topic)'}
+                            placeholder={isAmharic ? 'መልስዎን እዚህ ያስገቡ...' : 'Your answer...'}
                             className="w-full bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none pr-10"
                           />
                           <button

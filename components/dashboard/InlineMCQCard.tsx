@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CheckCircle2, XCircle, HelpCircle, Maximize2, RotateCcw, ArrowRight } from 'lucide-react';
 import { ArtifactModal } from '@/components/viewers/ArtifactModal';
 import type { LessonInlineQuestion } from '@/types';
+import { ENABLE_ADVANCED_QUESTION_TYPES } from '@/lib/config/features';
 
 export interface InlineMCQCardProps {
   mcq: LessonInlineQuestion;
@@ -18,6 +19,10 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
 }) => {
   const isAmharic = language === 'am';
   const qType = mcq.type || 'mcq';
+
+  if ((qType === 'matching' || qType === 'fill_blank') && !ENABLE_ADVANCED_QUESTION_TYPES) {
+    return null;
+  }
 
   // MCQ state
   const [selectedIndex, setSelectedIndex] = useState<number | null>(

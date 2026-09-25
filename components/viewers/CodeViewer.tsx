@@ -39,21 +39,21 @@ function highlightCodeLine(line: string): React.ReactNode {
     }
     if ((part.startsWith('"') && part.endsWith('"')) || (part.startsWith("'") && part.endsWith("'")) || (part.startsWith('`') && part.endsWith('`'))) {
       return (
-        <span key={index} className="text-emerald-700 dark:text-emerald-400">
+        <span key={index} className="text-emerald-700 dark:text-emerald-300">
           {part}
         </span>
       );
     }
     if (/^\b(?:const|let|var|function|return|if|else|for|while|import|export|from|class|extends|interface|type|public|private|readonly|new|this|async|await|try|catch|finally|true|false|null|undefined)\b$/.test(part)) {
       return (
-        <span key={index} className="text-violet-700 dark:text-violet-400 font-medium">
+        <span key={index} className="text-violet-700 dark:text-violet-300 font-medium">
           {part}
         </span>
       );
     }
     if (/^\b\d+\b$/.test(part)) {
       return (
-        <span key={index} className="text-amber-700 dark:text-amber-400">
+        <span key={index} className="text-amber-700 dark:text-amber-300">
           {part}
         </span>
       );

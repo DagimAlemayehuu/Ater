@@ -354,15 +354,18 @@ CRITICAL SYSTEM INVARIANTS:
 3. TEACHER EXPLANATIONS VS NOTE SUMMARY SEPARATION:
    - Screen notes (mentalModel, intuitivePurpose, operationalMechanism, boundaryConditions): Concise, high-density analytical summaries (3-5 sentences) capturing the core mental models to remember.
    - teacherExplanations (section1 through section5): Comprehensive, engaging, conversational spoken lectures (6-10 full sentences each). Spoken by an expert mentor explaining analogies, causal mechanisms, intuition, and failure modes in deep detail. Never truncate or cut off after a few words.
-4. Section 4 Midway Checkpoint:
+4. VISUAL ARTIFACT LIMIT (CRITICAL):
+   - For each section's markdown prose (mentalModel, intuitivePurpose, operationalMechanism, boundaryConditions), you may generate EXACTLY ONE primary visual markdown artifact (e.g., \`\`\`mermaid, \`\`\`table, \`\`\`timeline, \`\`\`math, \`\`\`code).
+   - Choose the ONE artifact type that best illustrates the section's core concept. Do NOT overload a section with multiple diagrams, tables, or code blocks.
+5. Section 4 Midway Checkpoint:
    - Must contain exactly 1 conceptual checkpoint question targeting a critical causal relationship or failure mode.
    - Includes "spokenPrompt" formatted cleanly for Edge Neural TTS (ends with a question mark, no markdown).
    - Includes "expectedInsight".
-5. Feynman Criteria:
+6. Feynman Criteria:
    - 4-6 forbidden "tabooWords" (most common jargon terms).
    - "challengeQuestion" demanding explanation to a 12-year-old.
    - "spokenPrompt" for TTS.
-6. Mermaid code artifact in section 4.
+7. Also provide a standalone "artifactCode" and "artifactLanguage" for the overall lesson summary.
 
 Respond with ONLY valid JSON matching this schema:
 {

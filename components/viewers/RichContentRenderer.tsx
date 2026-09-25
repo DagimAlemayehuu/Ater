@@ -175,17 +175,22 @@ function parseContentBlocks(rawText: string): ContentBlock[] {
   return blocks;
 }
 
-/**
- * Renders inline text with support for inline math ($...$) and bolding (**...**).
- */
 function renderInlineElements(text: string): React.ReactNode[] {
-  // Regex to match inline math $...$
-  const parts = text.split(/(\$[^$\n]+\$)/g);
+  // Regex to match inline math $...$ and inline code `...`
+  const parts = text.split(/(\$[^$\n]+\$|`[^`\n]+`)/g);
 
   return parts.map((part, index) => {
     if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
       const math = part.slice(1, -1);
       return <MathViewer key={index} math={math} displayMode={false} />;
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length > 1) {
+      const code = part.slice(1, -1);
+      return (
+        <code key={index} className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-mono text-[0.85em] border border-zinc-200/60 dark:border-zinc-700/60">
+          {code}
+        </code>
+      );
     }
     return <span key={index}>{part}</span>;
   });
