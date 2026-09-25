@@ -1,6 +1,9 @@
 import type {
   CourseCurriculum,
   RoadmapLesson,
+  PlannedSection,
+  GroundedSource,
+  UploadedDoc,
   CurriculumGenerateRequest,
   CurriculumRemediateRequest,
   CurriculumRemediateResponse,
@@ -8,6 +11,225 @@ import type {
 import { extractJsonFromResponse } from '@/lib/ai/gemini';
 import { cleanContinuousProse, stripEmojis } from './intake';
 import { getViewerDemoCurriculum } from './viewerDemo';
+import { gatherGroundedSources } from './sources';
+
+/**
+ * Generates meaningful, topic-derived planned sections and artifacts for a lesson.
+ * Enforces 3 to 4 sections:
+ * - Section 1: Real-world analogy / intuition (ELI12)
+ * - Sections 2-3: The dynamic middle (concepts, mechanisms, code/diagrams)
+ * - Final section: Failure modes, edge cases, and boundary checkpoint
+ */
+export function generateDefaultLessonSections(
+  lessonId: string,
+  lessonTitle: string,
+  lessonOrder: number,
+  isAm: boolean
+): PlannedSection[] {
+  if (isAm) {
+    if (lessonOrder === 1) {
+      return [
+        {
+          id: `${lessonId}-s1`,
+          order: 1,
+          title: 'ተጨባጭ ምሳሌ እና የመጀመሪያ ግንዛቤ',
+          summary: `ስለ ${lessonTitle} መሰረታዊ ፅንሰ-ሀሳብ ቀላል እና ግልጽ የሆነ የእለት ተእለት ምሳሌ።`,
+          artifactTypes: ['callout'],
+        },
+        {
+          id: `${lessonId}-s2`,
+          order: 2,
+          title: 'መሰረታዊ መርሆች እና ቁልፍ ማዕቀፍ',
+          summary: `የ ${lessonTitle} ቁልፍ ማዕቀፎች እና የንድፈ-ሀሳብ መሰረቶች።`,
+          artifactTypes: ['table', 'code'],
+        },
+        {
+          id: `${lessonId}-s3`,
+          order: 3,
+          title: 'የስርዓት ወሰን እና የመጀመሪያ ምዘና',
+          summary: `የመሰረታዊ ግንዛቤ ማረጋገጫ እና የስርዓቱ ወሰኖች ትንተና።`,
+          artifactTypes: ['mermaid'],
+        },
+      ];
+    }
+    if (lessonOrder === 2) {
+      return [
+        {
+          id: `${lessonId}-s1`,
+          order: 1,
+          title: 'የስራ ፍሰት እና የሂደት ቅደም ተከተል',
+          summary: `በ ${lessonTitle} ውስጥ የሚከናወኑ የዑደት ደረጃዎች እና የተግባር ፍሰት።`,
+          artifactTypes: ['mermaid', 'timeline'],
+        },
+        {
+          id: `${lessonId}-s2`,
+          order: 2,
+          title: 'የስቴት ሽግግር እና የውስጥ አሰራር',
+          summary: `የ ${lessonTitle} ዝርዝር የአሰራር ሂደት እና የውስጥ ዳታ ለውጦች።`,
+          artifactTypes: ['code', 'table'],
+        },
+        {
+          id: `${lessonId}-s3`,
+          order: 3,
+          title: 'የአፈጻጸም ሚዛን እና ስሌቶች',
+          summary: `የፍጥነት፣ የማህደረ-ትውስታ እና የስራ አፈጻጸም ትንተና።`,
+          artifactTypes: ['math', 'callout'],
+        },
+      ];
+    }
+    if (lessonOrder === 3) {
+      return [
+        {
+          id: `${lessonId}-s1`,
+          order: 1,
+          title: 'አስቸጋሪ የስህተት ሁኔታዎች እና ወጥመዶች',
+          summary: `በ ${lessonTitle} ወቅት ሊያጋጥሙ የሚችሉ የተለመዱ ስህተቶች እና ጥንቃቄዎች።`,
+          artifactTypes: ['callout', 'code'],
+        },
+        {
+          id: `${lessonId}-s2`,
+          order: 2,
+          title: 'የደህንነት ዋስትናዎች እና የስርዓት ጥበቃ',
+          summary: `ስርዓቱ ሳይበላሽ እንዲቀጥል የሚረዱ የጥበቃ መርሆች እና ህጎች።`,
+          artifactTypes: ['code', 'table'],
+        },
+        {
+          id: `${lessonId}-s3`,
+          order: 3,
+          title: 'የድንበር ፈተና እና የማረጋገጫ ነጥብ',
+          summary: `በአስቸጋሪ ሁኔታዎች ወቅት ስርዓቱ የሚሰጠውን ምላሽ መፈተሽ።`,
+          artifactTypes: ['mermaid'],
+        },
+      ];
+    }
+    return [
+      {
+        id: `${lessonId}-s1`,
+        order: 1,
+        title: 'የስራ ላይ አተገባበር እና ውህደት',
+        summary: `የ ${lessonTitle}ን እውቀት በተግባራዊ የስራ ስርዓቶች ላይ ማዋል የሚያስችል ማዕቀፍ።`,
+        artifactTypes: ['mermaid', 'code'],
+      },
+      {
+        id: `${lessonId}-s2`,
+        order: 2,
+        title: 'የምህንድስና ውሳኔዎች እና አማራጮች',
+        summary: `የተለያዩ ቴክኒካዊ ውሳኔዎችን ጥቅምና ጉዳት ማወዳደር።`,
+        artifactTypes: ['table'],
+      },
+      {
+        id: `${lessonId}-s3`,
+        order: 3,
+        title: 'አጠቃላይ ውህደት እና የመጨረሻ ምዘና',
+        summary: `ሙሉ እውቀቱን ወደ ተግባራዊ ውሳኔዎች በማዋሃድ ስርዓቱን ማጠናከር።`,
+        artifactTypes: ['callout', 'math'],
+      },
+    ];
+  }
+
+  // English default sections (3-4 sections per lesson)
+  if (lessonOrder === 1) {
+    return [
+      {
+        id: `${lessonId}-s1`,
+        order: 1,
+        title: 'Physical Analogy & Intuitive Primer',
+        summary: `Real-world analogy and intuitive mental model breaking down ${lessonTitle} for practical comprehension.`,
+        artifactTypes: ['callout'],
+      },
+      {
+        id: `${lessonId}-s2`,
+        order: 2,
+        title: 'Core Axioms & Conceptual Framework',
+        summary: `Foundational primitives, essential terminology, and conceptual schema underpinning ${lessonTitle}.`,
+        artifactTypes: ['table', 'code'],
+      },
+      {
+        id: `${lessonId}-s3`,
+        order: 3,
+        title: 'Operational Scope & Boundary Verification',
+        summary: `Key boundary rules, baseline invariants, and interactive comprehension check on the core premise.`,
+        artifactTypes: ['mermaid'],
+      },
+    ];
+  }
+
+  if (lessonOrder === 2) {
+    return [
+      {
+        id: `${lessonId}-s1`,
+        order: 1,
+        title: 'Execution Lifecycle & Dynamic Analogy',
+        summary: `Step-by-step intuition tracing how ${lessonTitle} works under the hood from start to finish.`,
+        artifactTypes: ['mermaid', 'timeline'],
+      },
+      {
+        id: `${lessonId}-s2`,
+        order: 2,
+        title: 'State Transitions & Internal Logic',
+        summary: `Deep dive into internal data structures, state machines, and operational transitions of ${lessonTitle}.`,
+        artifactTypes: ['code', 'table'],
+      },
+      {
+        id: `${lessonId}-s3`,
+        order: 3,
+        title: 'Performance Dynamics & Algorithmic Limits',
+        summary: `Quantitative analysis, time and space complexity, and performance formulas for ${lessonTitle}.`,
+        artifactTypes: ['math', 'callout'],
+      },
+    ];
+  }
+
+  if (lessonOrder === 3) {
+    return [
+      {
+        id: `${lessonId}-s1`,
+        order: 1,
+        title: 'Pathological Edge Cases & Failure Traps',
+        summary: `Critical anti-patterns, edge condition anomalies, and failure scenarios in ${lessonTitle}.`,
+        artifactTypes: ['callout', 'code'],
+      },
+      {
+        id: `${lessonId}-s2`,
+        order: 2,
+        title: 'Defensive Invariants & Recovery Mechanics',
+        summary: `Defensive guards, invariant assertions, and recovery patterns ensuring system stability.`,
+        artifactTypes: ['code', 'table'],
+      },
+      {
+        id: `${lessonId}-s3`,
+        order: 3,
+        title: 'Boundary Evaluation & Resiliency Checkpoint',
+        summary: `Interactive verification testing resilience and edge-case behavior under adverse conditions.`,
+        artifactTypes: ['mermaid'],
+      },
+    ];
+  }
+
+  return [
+    {
+      id: `${lessonId}-s1`,
+      order: 1,
+      title: 'Production Architecture & Ecosystem Integration',
+      summary: `Integrating ${lessonTitle} into modern production environments alongside real-world infrastructure.`,
+      artifactTypes: ['mermaid', 'code'],
+    },
+    {
+      id: `${lessonId}-s2`,
+      order: 2,
+      title: 'Engineering Compromises & Trade-off Matrix',
+      summary: `Comparing alternative architectural choices with concrete pros, cons, and performance trade-offs.`,
+      artifactTypes: ['table'],
+    },
+    {
+      id: `${lessonId}-s3`,
+      order: 3,
+      title: 'Capstone Synthesis & Mastery Defense',
+      summary: `Holistic end-to-end synthesis and defensive reasoning validating mastery of ${lessonTitle}.`,
+      artifactTypes: ['callout', 'math'],
+    },
+  ];
+}
 
 /**
  * Deterministically constructs a fallback course curriculum for a given topic.
@@ -17,30 +239,37 @@ export function generateFallbackCurriculum(
   topic: string,
   targetGoal?: string,
   learnerBaseline?: string,
-  language: 'en' | 'am' = 'en'
+  language: 'en' | 'am' = 'en',
+  sources?: GroundedSource[]
 ): CourseCurriculum {
   const isAm = language === 'am';
-  let cleanTopic = (topic || '').replace(/[_-]/g, ' ').trim();
+  let cleanTopic = stripEmojis(topic || '').replace(/[_-]/g, ' ').trim();
 
   if (cleanTopic.toLowerCase().includes('viewer demo') || cleanTopic.toLowerCase() === 'viewer demo') {
     return getViewerDemoCurriculum(language);
   }
   if (isAm) {
     if (!cleanTopic || !/[\u1200-\u137F]/.test(cleanTopic)) {
-      cleanTopic = cleanTopic ? `ትምህርት፡ ${cleanTopic}` : 'የተሰራጩ ስርዓቶች እና ስምምነት';
+      cleanTopic = cleanTopic ? `ትምህርት፡ ${cleanTopic}` : 'መሰረታዊ የትምህርት ርዕስ';
     }
   } else if (!cleanTopic) {
-    cleanTopic = 'Distributed Systems and Consensus';
+    cleanTopic = 'Core Foundational Principles';
   }
   const title = cleanTopic.charAt(0).toUpperCase() + cleanTopic.slice(1);
-  const courseId = `course-${cleanTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  const courseSlug = cleanTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'topic';
+  const courseId = `course-${courseSlug}`;
+
+  const lesson1Id = `${courseId}-l1`;
+  const lesson2Id = `${courseId}-l2`;
+  const lesson3Id = `${courseId}-l3`;
+  const lesson4Id = `${courseId}-l4`;
 
   const lessons: RoadmapLesson[] = isAm
     ? [
         {
-          id: 'lesson-01',
+          id: lesson1Id,
           order: 1,
-          title: `${title}፡ መሰረታዊ መርሆች`,
+          title: `${title}፡ መሰረታዊ መርሆች እና ቁልፍ ግንዛቤ`,
           slug: '01_foundational_principles',
           summary: `ስለ ${title} መሰረታዊ ፅንሰ-ሀሳቦች፣ የመጀመሪያ መርሆች እና የስራ ማዕቀፍ።`,
           description: `የ ${title}ን የመጀመሪያ መርሆች እና ቁልፍ ሚዛኖችን በዝርዝር ያስረዳል።`,
@@ -49,115 +278,124 @@ export function generateFallbackCurriculum(
           prerequisites: [],
           conceptsCovered: ['የመጀመሪያ መርሆች', 'መሰረታዊ አሰራር', 'ፅንሰ-ሀሳባዊ ሞዴሎች'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson1Id, `${title}፡ መሰረታዊ መርሆች`, 1, true),
         },
         {
-          id: 'lesson-02',
+          id: lesson2Id,
           order: 2,
-          title: `${title}፡ የአሰራር ሂደት እና የስቴት ለውጦች`,
+          title: `${title}፡ የአሰራር ሂደት እና የስራ ዑደት`,
           slug: '02_operational_mechanism',
-          summary: `በ ${title} ውስጥ የሚከናወኑ የዑደት ደረጃዎች፣ የመልእክት ዝውውሮች እና የስቴት ሽግግሮች።`,
-          description: `የስቴት ማባዛት፣ የማረጋገጫ ደንቦች እና የኮረም ስምምነት አሰራርን በጥልቀት ይዳስሳል።`,
+          summary: `በ ${title} ውስጥ የሚከናወኑ የዑደት ደረጃዎች፣ የስራ ሂደቶች እና የስቴት ሽግግሮች።`,
+          description: `የ ${title}ን ዝርዝር አሰራር፣ የውስጥ እንቅስቃሴ እና የስራ ፍሰት በጥልቀት ይዳስሳል።`,
           status: 'locked',
           estimatedMinutes: 20,
-          prerequisites: ['lesson-01'],
-          conceptsCovered: ['የመልእክት ዝውውር', 'የስቴት ሽግግር', 'የአሰራር ዑደት'],
+          prerequisites: [lesson1Id],
+          conceptsCovered: ['የስራ ፍሰት', 'የስቴት ሽግግር', 'የአሰራር ዑደት'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson2Id, `${title}፡ የአሰራር ሂደት`, 2, true),
         },
         {
-          id: 'lesson-03',
+          id: lesson3Id,
           order: 3,
           title: `${title}፡ የስህተት ሁኔታዎች እና የድንበር ወጥመዶች`,
           slug: '03_boundary_invariants',
-          summary: `የአውታረ መረብ መቆራረጥ፣ የስርዓት መከፈል አደጋዎች እና የደህንነት ወሰኖች ትንተና።`,
+          summary: `በ ${title} ውስጥ የሚያጋጥሙ ወሳኝ የስህተት ሁኔታዎች፣ የድንበር ወጥመዶች እና የደህንነት ወሰኖች ትንተና።`,
           description: `በድንበር ሁኔታዎች ወቅት የሚፈጠሩ ችግሮችን እና የስርዓት መበላሸትን የሚከላከሉ መርሆችን ይመረምራል።`,
           status: 'locked',
           estimatedMinutes: 20,
-          prerequisites: ['lesson-02'],
-          conceptsCovered: ['የመቆራረጥ መቋቋም', 'የደህንነት ዋስትናዎች', 'የመከፈል አደጋዎች'],
+          prerequisites: [lesson2Id],
+          conceptsCovered: ['የስህተት መቋቋም', 'የደህንነት ዋስትናዎች', 'የድንበር ሁኔታዎች'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson3Id, `${title}፡ የድንበር ወጥመዶች`, 3, true),
         },
         {
-          id: 'lesson-04',
+          id: lesson4Id,
           order: 4,
           title: `${title}፡ አጠቃላይ ውህደት እና የምህንድስና ሚዛኖች`,
           slug: '04_architectural_synthesis',
-          summary: `የተግባር ፈተናዎች፣ የፍጥነት እና አስተማማኝነት ሚዛኖች እና አጠቃላይ ውህደት።`,
+          summary: `የተግባር ፈተናዎች፣ የንድፍ ውሳኔዎች እና የ ${title} አጠቃላይ ውህደት።`,
           description: `ሙሉ እውቀቱን ወደ ተግባራዊ የምህንድስና ውሳኔዎች በማዋሃድ ስርዓቱን ያጠነክራል።`,
           status: 'locked',
           estimatedMinutes: 15,
-          prerequisites: ['lesson-03'],
+          prerequisites: [lesson3Id],
           conceptsCovered: ['የስርዓት ንድፍ', 'የምህንድስና ሚዛኖች', 'የስራ ላይ ጥንካሬ'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson4Id, `${title}፡ አጠቃላይ ውህደት`, 4, true),
         },
       ]
     : [
         {
-          id: 'lesson-01',
+          id: lesson1Id,
           order: 1,
-          title: `${title}: Foundational Principles`,
+          title: `${title}: Foundational Principles & Core Intuition`,
           slug: '01_foundational_principles',
-          summary: `Core mental models, fundamental axioms, and operational context for ${title}.`,
-          description: `Explores foundational principles of ${title}, establishing prerequisite baseline intuition and core trade-offs.`,
+          summary: `Fundamental mental models, core axioms, and conceptual architecture for ${title}.`,
+          description: `Establishes prerequisite intuition, fundamental primitives, and architectural baselines for ${title}.`,
           status: 'active',
           estimatedMinutes: 15,
           prerequisites: [],
           conceptsCovered: ['Foundational Axioms', 'Core Mechanics', 'Mental Models'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson1Id, `${title}: Foundational Principles`, 1, false),
         },
         {
-          id: 'lesson-02',
+          id: lesson2Id,
           order: 2,
-          title: `${title}: Operational Mechanism & State Transitions`,
+          title: `${title}: Operational Mechanism & Execution Dynamics`,
           slug: '02_operational_mechanism',
-          summary: `Detailed trace of execution cycles, message flows, and state machine transitions in ${title}.`,
-          description: `Deep dive into the operational mechanics governing state replication, verification protocols, and quorum consensus.`,
+          summary: `Detailed causal mechanics, step-by-step data flows, and runtime behavior in ${title}.`,
+          description: `Deep dive into internal execution workflows, state transformations, and operational dynamics of ${title}.`,
           status: 'locked',
           estimatedMinutes: 20,
-          prerequisites: ['lesson-01'],
-          conceptsCovered: ['Message Flow', 'State Transitions', 'Execution Cycles'],
+          prerequisites: [lesson1Id],
+          conceptsCovered: ['Execution Dynamics', 'Runtime Lifecycle', 'State Transitions'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson2Id, `${title}: Operational Mechanism`, 2, false),
         },
         {
-          id: 'lesson-03',
+          id: lesson3Id,
           order: 3,
-          title: `${title}: Failure Modes & Boundary Invariants`,
+          title: `${title}: Boundary Traps & Failure Modes`,
           slug: '03_boundary_invariants',
-          summary: `Analysis of network partitions, split-brain hazards, and safety property boundaries.`,
-          description: `Formal dissection of edge condition dynamics, timing anomalies, and invariants required to avoid silent corruption.`,
+          summary: `Analysis of critical failure conditions, edge cases, and safety invariant boundaries in ${title}.`,
+          description: `Dissects pathological edge conditions, common design missteps, and defensive safety guarantees for ${title}.`,
           status: 'locked',
           estimatedMinutes: 20,
-          prerequisites: ['lesson-02'],
-          conceptsCovered: ['Partition Tolerance', 'Safety Invariants', 'Split-Brain Hazards'],
+          prerequisites: [lesson2Id],
+          conceptsCovered: ['Boundary Traps', 'Failure Isolation', 'Safety Guarantees'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson3Id, `${title}: Boundary Traps`, 3, false),
         },
         {
-          id: 'lesson-04',
+          id: lesson4Id,
           order: 4,
-          title: `${title}: Synthesis & Architectural Trade-offs`,
+          title: `${title}: Real-World Synthesis & Trade-offs`,
           slug: '04_architectural_synthesis',
-          summary: `Production battle-testing, latency versus consistency trade-offs, and synthesis.`,
-          description: `Synthesizes end-to-end knowledge into production architecture decisions, benchmarking trade-offs under scale.`,
+          summary: `Production considerations, architectural compromises, and practical engineering synthesis for ${title}.`,
+          description: `Synthesizes learned mental models into robust architectural decision-making and practical engineering trade-offs.`,
           status: 'locked',
           estimatedMinutes: 15,
-          prerequisites: ['lesson-03'],
-          conceptsCovered: ['System Design', 'Benchmarking Trade-offs', 'Production Hardening'],
+          prerequisites: [lesson3Id],
+          conceptsCovered: ['Architectural Trade-offs', 'Production Design', 'Engineering Synthesis'],
           isRemediation: false,
+          sections: generateDefaultLessonSections(lesson4Id, `${title}: Real-World Synthesis`, 4, false),
         },
       ];
 
   const teacherWalkthrough = isAm
-    ? `ይህ ለ ${title} የተዘጋጀው የትምህርት ካርታ ነው። በመጀመሪያ መሰረታዊ ፅንሰ-ሀሳቦችን እንረዳለን፣ በመቀጠል ዝርዝር አሰራሩን እንመለከታለን፣ ከዚያም የተለመዱ የስህተት ወጥመዶችን ከመረመርን በኋላ በተግባራዊ ምሳሌዎች እናጠናቅቃለን። በዚህ ከተስማሙ ትምህርት 01ን ይጀምሩ፣ ወይም ማስተካከል የሚፈልጉትን በአስተያየት መስጫው ያሳውቁን።`
-    : `Here is your learning roadmap for ${title}. We will start with the basic ideas, look closely at how it works, examine common mistakes and edge cases, and finish with practical real-world examples. If this sounds good, you can start Lesson 01 now or leave a note below to adjust the plan.`;
+    ? `ይህ ለ ${title} የተዘጋጀው የትምህርት ካርታ ነው። በመጀመሪያ መሰረታዊ ፅንሰ-ሀሳቦችን እንረዳለን፣ በመቀጠል ዝርዝር አሰራሩን እንመለከታለን፣ ከዚያም የተለመዱ የስህተት ወጥመዶችን ከመረመርን በኋላ በተግባራዊ ምሳሌዎች እናጠናቅቃለን። በዚህ ከተስማሙ ኮርሱን ይጀምሩ፣ ወይም ማስተካከል የሚፈልጉትን በአስተያየት መስጫው ያሳውቁን።`
+    : `Here is your learning roadmap for ${title}. We will start with the basic ideas, look closely at how it works, examine common mistakes and edge cases, and finish with practical real-world examples. If this sounds good, you can start the course now or leave a note below to adjust the plan.`;
 
   return {
     id: courseId,
     title: isAm ? `${title} ሙሉ ትምህርት` : `${title} Mastery`,
     topic: title,
     sourceType: 'prompt',
+    sources: sources || [],
     targetGoal: targetGoal || (isAm ? `የ ${title}ን ዋና አሰራር እና የምህንድስና መርሆች መካን` : `Master architectural and operational dynamics of ${title}`),
     learnerBaseline: learnerBaseline || (isAm ? `የኮምፒውተር ሳይንስ መሰረታዊ እውቀት ያለው ተማሪ` : 'Intermediate engineer with core computer science literacy'),
     lessons,
-    activeLessonId: 'lesson-01',
+    activeLessonId: lesson1Id,
     teacherWalkthrough,
     createdAt: new Date().toISOString(),
     generatedAt: new Date().toISOString(),
@@ -169,6 +407,8 @@ export interface GenerateCurriculumOptions {
   answers?: Record<string, string>;
   sourceType?: 'prompt' | 'pdf' | 'document';
   sourceName?: string;
+  sources?: GroundedSource[];
+  files?: UploadedDoc[];
   useMock?: boolean;
   throwOnError?: boolean;
   language?: 'en' | 'am';
@@ -176,7 +416,7 @@ export interface GenerateCurriculumOptions {
 
 /**
  * Generates an atomic, sequenced CourseCurriculum adhering to the Single-Concept Invariant (15-20 min lessons).
- * Uses gemini-3.5-flash-lite or returns a deterministic structured curriculum.
+ * Uses gemini-3.5-flash-lite with thinkingConfig: { thinkingBudget: 1 } and maxOutputTokens: 1200 or returns a deterministic structured curriculum.
  */
 export async function generateCourseCurriculum(
   topicOrOptions: string | GenerateCurriculumOptions,
@@ -186,6 +426,8 @@ export async function generateCourseCurriculum(
   let answers: Record<string, string> = {};
   let sourceType: 'prompt' | 'pdf' | 'document' = 'prompt';
   let sourceName = '';
+  let sourcesArg: GroundedSource[] | undefined = undefined;
+  let filesArg: UploadedDoc[] | undefined = undefined;
   let useMock = false;
   let throwOnError = false;
   let language: 'en' | 'am' = 'en';
@@ -195,6 +437,8 @@ export async function generateCourseCurriculum(
     answers = topicOrOptions.answers || {};
     sourceType = topicOrOptions.sourceType || 'prompt';
     sourceName = topicOrOptions.sourceName || '';
+    sourcesArg = topicOrOptions.sources;
+    filesArg = topicOrOptions.files;
     useMock = !!topicOrOptions.useMock;
     throwOnError = !!topicOrOptions.throwOnError;
     language = topicOrOptions.language === 'am' ? 'am' : 'en';
@@ -213,16 +457,26 @@ export async function generateCourseCurriculum(
     return getViewerDemoCurriculum(language);
   }
 
+  // 1. Gather Grounded Sources
+  const sources: GroundedSource[] =
+    sourcesArg && sourcesArg.length > 0
+      ? sourcesArg
+      : await gatherGroundedSources(cleanTopic, filesArg, answers, language);
+
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
   if (useMock || !apiKey) {
-    return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language);
+    return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language, sources);
   }
 
   const answersFormatted = Object.entries(answers)
     .map(([k, v]) => `Question [${k}]: "${stripEmojis(v)}"`)
     .join('\n');
+
+  const sourcesFormatted = sources.length > 0
+    ? sources.map((s, idx) => `Source [${idx + 1}] (${s.type}): "${s.title}"${s.url ? ` <${s.url}>` : ''}${s.snippet ? `\n   Context/Snippet: ${s.snippet}` : ''}`).join('\n')
+    : 'Authoritative foundational documentation and canonical reference sources.';
 
   const languagePromptDirective = isAm
     ? `CRITICAL LANGUAGE INVARIANT:
@@ -230,34 +484,37 @@ You MUST author the title, targetGoal, learnerBaseline, and all lesson titles, s
     : `CRITICAL LANGUAGE INVARIANT:
 Author all fields in clear, articulate English.`;
 
-  const systemPrompt = `You are the Ater Living Curriculum Architect.
+    const courseSlug = cleanTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'topic';
+    const courseId = `course-${courseSlug}`;
+
+    const systemPrompt = `You are the Ater Living Curriculum Architect.
 Your task is to generate a sequenced, single-concept curriculum roadmap for a learner studying: "${cleanTopic}".
 
 ${languagePromptDirective}
+
+Grounded Authoritative Sources of Truth:
+${sourcesFormatted}
 
 Learner Diagnostic Inputs:
 ${answersFormatted || 'Standard intermediate engineering baseline.'}
 
 CRITICAL ARCHITECTURAL INVARIANTS:
-1. "Single-Concept Invariant": Each lesson must address strictly ONE atomic concept that can be deeply digested in 15 to 20 minutes (estimatedMinutes between 15 and 20).
-2. Generate between 3 and 6 ordered lessons.
-3. Lessons must be topologically ordered (1, 2, 3...):
+1. Grounding Invariant: The curriculum must be 100% dynamically derived from the provided Grounded Sources of Truth and the learner's diagnostic answers.
+2. "Single-Concept Invariant": Each lesson must address strictly ONE atomic concept that can be deeply digested in 15 to 20 minutes (estimatedMinutes between 15 and 20).
+3. Generate between 3 and 6 ordered lessons.
+4. Lessons must be topologically ordered (1, 2, 3...):
    - First lesson: status must be "active", prerequisites must be empty [].
    - Subsequent lessons: status must be "locked", prerequisites must reference the preceding lesson ID.
-4. Lesson Schema:
-   - "id": string (e.g. "lesson-01", "lesson-02")
-   - "order": number (1, 2, 3...)
-   - "title": string (concise concept name)
-   - "slug": string (e.g. "01_concept_name")
-   - "summary": string (continuous analytical prose, strictly zero bullet points)
-   - "description": string (1-2 sentences on what will be mastered)
-   - "status": "active" for first, "locked" for rest
-   - "estimatedMinutes": number (15 or 20)
-   - "prerequisites": string[]
-   - "conceptsCovered": string[]
-   - "isRemediation": false
-5. STRICT INVARIANT: ZERO EMOJIS in any string field.
-6. STRICT INVARIANT: All summary and description fields must use continuous analytical prose with strictly zero bullet points, asterisks, or numbered list prefixes.
+5. Unique Lesson ID Convention:
+   - "id": "${courseId}-l1", "${courseId}-l2", "${courseId}-l3", etc.
+6. Lesson Sections Architecture:
+   - For EACH lesson, plan 3 to 4 concrete sections:
+     * Section 1: Real-world analogy / intuition (ELI12).
+     * Sections 2-3: The dynamic middle (concepts, mechanisms, code/diagrams).
+     * Final section: Failure modes, edge cases, and boundary checkpoint.
+   - For EACH section, specify planned "artifactTypes" selected from: ["code", "mermaid", "math", "table", "timeline", "callout"].
+7. STRICT INVARIANT: ZERO EMOJIS in any string field.
+8. STRICT INVARIANT: All summary, description, and section fields must use continuous analytical prose with strictly zero bullet points, asterisks, or numbered list prefixes.
 
 Respond with ONLY valid JSON matching this schema:
 {
@@ -267,7 +524,7 @@ Respond with ONLY valid JSON matching this schema:
   "learnerBaseline": "string",
   "lessons": [
     {
-      "id": "lesson-01",
+      "id": "${courseId}-l1",
       "order": 1,
       "title": "string",
       "slug": "01_slug",
@@ -277,7 +534,33 @@ Respond with ONLY valid JSON matching this schema:
       "estimatedMinutes": 15,
       "prerequisites": [],
       "conceptsCovered": ["concept"],
-      "isRemediation": false
+      "isRemediation": false,
+      "sections": [
+        {
+          "order": 1,
+          "title": "string",
+          "summary": "string",
+          "artifactTypes": ["callout"]
+        },
+        {
+          "order": 2,
+          "title": "string",
+          "summary": "string",
+          "artifactTypes": ["code", "table"]
+        },
+        {
+          "order": 3,
+          "title": "string",
+          "summary": "string",
+          "artifactTypes": ["mermaid"]
+        },
+        {
+          "order": 4,
+          "title": "string",
+          "summary": "string",
+          "artifactTypes": ["callout", "math"]
+        }
+      ]
     }
   ],
   "teacherWalkthrough": "A spoken script by the AI teacher. First, introduce the course and target outcome. Then, walk sequentially through each generated lesson by title and give a clear, simple 1-sentence explanation of what will be learned and why it matters. Conclude by inviting the learner to approve and begin lesson 1 or type adjustments."
@@ -291,39 +574,69 @@ Respond with ONLY valid JSON matching this schema:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 2500,
+            thinkingConfig: {
+              thinkingBudget: 1,
+            },
+          },
         }),
       }
     );
 
     if (!response.ok) {
       if (throwOnError) throw new Error(`Gemini curriculum API returned ${response.status}`);
-      return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language);
+      return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language, sources);
     }
 
     const data = await response.json();
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
       if (throwOnError) throw new Error('Empty response from Gemini curriculum model');
-      return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language);
+      return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language, sources);
     }
 
     const parsed = extractJsonFromResponse(rawText);
     const rawLessons: any[] = Array.isArray(parsed.lessons) ? parsed.lessons : [];
     if (rawLessons.length === 0) {
-      return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language);
+      return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language, sources);
     }
 
-    const courseId = `course-${cleanTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     const normalizedLessons: RoadmapLesson[] = rawLessons.map((l, idx) => {
       const order = idx + 1;
-      const lessonId = l.id || `lesson-${String(order).padStart(2, '0')}`;
+      const lessonId = `${courseId}-l${order}`;
       const titleStr = stripEmojis(l.title || `Module ${order}`);
       const slug = l.slug || `${String(order).padStart(2, '0')}_${titleStr.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
       const summary = cleanContinuousProse(stripEmojis(l.summary || `Core principles of ${titleStr}.`));
       const description = cleanContinuousProse(stripEmojis(l.description || summary));
       const estimatedMinutes = Math.min(25, Math.max(10, Number(l.estimatedMinutes) || 15));
-      const prereqs = idx === 0 ? [] : (Array.isArray(l.prerequisites) && l.prerequisites.length > 0 ? l.prerequisites : [`lesson-${String(order - 1).padStart(2, '0')}`]);
+      const prereqs = idx === 0 ? [] : [`${courseId}-l${order - 1}`];
+
+      // Parse and normalize planned sections
+      const validArtifactTypes: ('code' | 'mermaid' | 'math' | 'table' | 'timeline' | 'callout')[] = [
+        'code', 'mermaid', 'math', 'table', 'timeline', 'callout'
+      ];
+      const rawSections = Array.isArray(l.sections) ? l.sections : [];
+      const sections: PlannedSection[] = rawSections.length > 0
+        ? rawSections.map((s: any, sIdx: number) => {
+            const sOrder = Number(s.order) || sIdx + 1;
+            const arts = Array.isArray(s.artifactTypes)
+              ? (s.artifactTypes as string[])
+                  .map((a) => String(a).toLowerCase().trim())
+                  .filter((a): a is ('code' | 'mermaid' | 'math' | 'table' | 'timeline' | 'callout') =>
+                    validArtifactTypes.includes(a as any)
+                  )
+              : [];
+            return {
+              id: `${lessonId}-s${sOrder}`,
+              order: sOrder,
+              title: cleanContinuousProse(stripEmojis(s.title || `Section ${sOrder}`)),
+              summary: cleanContinuousProse(stripEmojis(s.summary || `Planned section covering ${titleStr}.`)),
+              artifactTypes: arts.length > 0 ? arts : (sOrder === 1 ? ['callout'] : ['code', 'table']),
+            };
+          })
+        : generateDefaultLessonSections(lessonId, titleStr, order, isAm);
 
       return {
         id: lessonId,
@@ -337,6 +650,7 @@ Respond with ONLY valid JSON matching this schema:
         prerequisites: prereqs,
         conceptsCovered: Array.isArray(l.conceptsCovered) ? l.conceptsCovered.map(stripEmojis) : [titleStr],
         isRemediation: false,
+        sections,
       };
     });
 
@@ -352,17 +666,18 @@ Respond with ONLY valid JSON matching this schema:
       topic: cleanTopic,
       sourceType,
       sourceName,
+      sources,
       targetGoal: cleanContinuousProse(stripEmojis(parsed.targetGoal || `Master ${cleanTopic}`)),
       learnerBaseline: cleanContinuousProse(stripEmojis(parsed.learnerBaseline || 'Intermediate')),
       lessons: normalizedLessons,
-      activeLessonId: normalizedLessons[0]?.id || 'lesson-01',
+      activeLessonId: normalizedLessons[0]?.id || `${courseId}-l1`,
       teacherWalkthrough,
       createdAt: new Date().toISOString(),
       generatedAt: new Date().toISOString(),
     };
   } catch (err) {
     if (throwOnError) throw err;
-    return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language);
+    return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language, sources);
   }
 }
 
@@ -406,7 +721,7 @@ export async function generateRemediationLesson(
     summary: fallbackSummary,
     description: `Focussed remedial exercise isolating and resolving diagnosed misunderstandings in ${cleanParentTitle}.`,
     status: 'remediation',
-    estimatedMinutes: 10,
+    estimatedMinutes: 5,
     prerequisites: failedLesson.prerequisites,
     conceptsCovered: cleanMisconceptions.length > 0 ? cleanMisconceptions : [`${cleanParentTitle} Diagnostics`],
     isRemediation: true,
@@ -429,7 +744,7 @@ ${learnerExplanation ? `Learner's flawed explanation: "${stripEmojis(learnerExpl
 Generate a concise micro-remediation sub-lesson that addresses ONLY these specific misconceptions.
 CRITICAL INVARIANTS:
 1. Single concept: Laser-focused on the precise misconception failure points.
-2. Estimated time: 10-15 minutes.
+2. Estimated time: 5 minutes.
 3. Zero emojis.
 4. Continuous analytical prose only (zero bullets).
 
@@ -449,7 +764,11 @@ Respond with ONLY valid JSON:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 1 },
+            maxOutputTokens: 1000,
+          },
         }),
       }
     );
@@ -476,7 +795,7 @@ Respond with ONLY valid JSON:
       summary,
       description,
       status: 'remediation',
-      estimatedMinutes: 10,
+      estimatedMinutes: 5,
       prerequisites: failedLesson.prerequisites,
       conceptsCovered: Array.isArray(parsed.conceptsCovered) ? parsed.conceptsCovered.map(stripEmojis) : cleanMisconceptions,
       isRemediation: true,

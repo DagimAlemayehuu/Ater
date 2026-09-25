@@ -11,11 +11,43 @@ export interface GenerateGateQuestionsOptions {
 }
 
 /**
+ * Detects whether any forbidden taboo words appear in the learner's answer.
+ */
+export function detectTabooWordViolations(text: string, tabooWords?: string[]): string[] {
+  if (!text || !tabooWords || tabooWords.length === 0) return [];
+  const lowerText = text.toLowerCase();
+  const violations: string[] = [];
+
+  for (const word of tabooWords) {
+    const trimmed = word.trim();
+    if (!trimmed) continue;
+    const lowerWord = trimmed.toLowerCase();
+
+    // Check if word contains non-ASCII characters (e.g. Ge'ez / Amharic)
+    const hasNonAscii = /[^\x00-\x7F]/.test(lowerWord);
+    if (hasNonAscii) {
+      if (lowerText.includes(lowerWord)) {
+        violations.push(trimmed);
+      }
+    } else {
+      const escaped = lowerWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      if (regex.test(text)) {
+        violations.push(trimmed);
+      }
+    }
+  }
+
+  return Array.from(new Set(violations));
+}
+
+/**
  * Deterministically constructs the 3 initial open-ended questions for the Socratic Gate.
  */
 export function generateFallbackGateQuestions(
   lessonTitle: string,
-  language: 'en' | 'am' = 'en'
+  language: 'en' | 'am' = 'en',
+  _note?: Partial<DynamicLessonNote> | null
 ): GateQuestionTurn[] {
   const isAm = language === 'am';
   const cleanTitle = stripEmojis(lessonTitle || (isAm ? 'ትምህርት' : 'Foundational Lesson')).trim();
@@ -25,22 +57,22 @@ export function generateFallbackGateQuestions(
         {
           id: 'turn-1',
           index: 1,
-          question: `የ ${cleanTitle}ን ዋና ፅንሰ-ሀሳብ እንደ ኮረም ወይም ስልተ-ቀመር ያሉ ውስብስብ ቴክኒካዊ ቃላትን ሳትጠቀሙ ለ12 ዓመት ልጅ እንዴት ታስረዱታላችሁ?`,
-          spokenPrompt: `የ ${cleanTitle}ን ዋና ፅንሰ-ሀሳብ ምንም ዓይነት ውስብስብ ቴክኒካዊ ቃላት ሳትጠቀሙ ለ12 ዓመት ልጅ አስረዱ።`,
+          question: `የ ${cleanTitle}ን ዋና የዕለት ተዕለት ምሳሌ እና ሊታወቅ የሚችል ዓላማ ምንም ዓይነት ቴክኒካዊ ቃላት ሳትጠቀሙ ለ12 ዓመት ልጅ እንዴት ታስረዱታላችሁ?`,
+          spokenPrompt: `የ ${cleanTitle}ን ዋና የዕለት ተዕለት ምሳሌ እና ሊታወቅ የሚችል ዓላማ ምንም ዓይነት ቴክኒካዊ ቃላት ሳትጠቀሙ ለ12 ዓመት ልጅ አስረዱ?`,
           targetDimension: 'intuition',
         },
         {
           id: 'turn-2',
           index: 2,
-          question: `በ ${cleanTitle} የአሰራር ዑደት ውስጥ፣ መልእክቶች ከክፍል ወደ ክፍል እንዴት እንደሚዘዋወሩ እና ለውጡ በስርዓቱ ላይ በቋሚነት ከመጽደቁ በፊት ምን ዓይነት ማረጋገጫ እንደሚካሄድ ደረጃ በደረጃ አብራሩ።`,
-          spokenPrompt: `በ ${cleanTitle} ውስጥ መልእክቶች እንዴት እንደሚተላለፉ እና ለውጡ ከመጽደቁ በፊት ምን እንደሚረጋገጥ ደረጃ በደረጃ አስረዱ።`,
+          question: `በ ${cleanTitle} ውስጥ ያለውን ትክክለኛ የእርምጃ በደረጃ የአሰራር ሂደት አብራሩ። መረጃ ከመነሻው እስከ መጨረሻው ውጤት ድረስ እንዴት ይጓዛል?`,
+          spokenPrompt: `በ ${cleanTitle} ውስጥ መረጃ ከመነሻው እስከ መጨረሻው ውጤት ድረስ እንዴት ይጓዛል?`,
           targetDimension: 'mechanism',
         },
         {
           id: 'turn-3',
           index: 3,
-          question: `በአውታረ መረብ መቆራረጥ ወይም ክፍሎች ድንገት በሚጠፉበት ጊዜ ስርዓቱ እንዳይበላሽ ወይም የተሳሳተ መረጃ እንዳይመዘገብ የትኞቹ የደህንነት ወሰኖች ይጠብቁታል?`,
-          spokenPrompt: `የአውታረ መረብ መቆራረጥ ሲፈጠር ስርዓቱ እንዳይበላሽ የትኞቹ የደህንነት ወሰኖች ይጠብቁታል?`,
+          question: `በ ${cleanTitle} ውስጥ ዋነኛው የድንበር ወጥመድ ወይም የስርዓቱ መበላሸት ሁኔታ ምንድን ነው? አመክንዮው የት ጋር ይፈርሳል፣ ይህንስ ውድቀት እንዴት ይከላከላሉ ወይም ያገግማሉ?`,
+          spokenPrompt: `በ ${cleanTitle} ውስጥ አመክንዮው የት ጋር ይፈርሳል፣ ውድቀቱስ እንዴት ይከላከላል?`,
           targetDimension: 'boundary',
         },
       ]
@@ -48,22 +80,22 @@ export function generateFallbackGateQuestions(
         {
           id: 'turn-1',
           index: 1,
-          question: `Explain the core intuitive mental model of ${cleanTitle} as if teaching a 12-year-old, strictly avoiding technical buzzwords like consensus, quorum, or algorithm.`,
-          spokenPrompt: `Explain the core mental model of ${cleanTitle} to a twelve-year-old, without using technical jargon like quorum or consensus?`,
+          question: `Explain the core everyday analogy and intuitive purpose of ${cleanTitle} as if teaching a twelve-year-old, without using technical buzzwords.`,
+          spokenPrompt: `Explain the core everyday analogy and intuitive purpose of ${cleanTitle} to a twelve-year-old, without using technical buzzwords?`,
           targetDimension: 'intuition',
         },
         {
           id: 'turn-2',
           index: 2,
-          question: `Walk me through the exact step-by-step causal chain of events during an operational cycle in ${cleanTitle}. How are proposals validated before a commit is finalized?`,
-          spokenPrompt: `Walk me through the step-by-step operational cycle in ${cleanTitle}. How are state changes validated before being committed?`,
+          question: `Walk me through the exact step-by-step causal chain of execution in ${cleanTitle}. How does data flow from input to final output?`,
+          spokenPrompt: `Walk me through the exact step-by-step causal chain of execution in ${cleanTitle}. How does data flow from input to final output?`,
           targetDimension: 'mechanism',
         },
         {
           id: 'turn-3',
           index: 3,
-          question: `What is the primary boundary failure mode of ${cleanTitle}? Specifically, what happens during an asymmetric network partition, and how is split-brain prevented?`,
-          spokenPrompt: `What happens during a network partition in ${cleanTitle}, and how does the architecture prevent conflicting states?`,
+          question: `What is the primary boundary trap or failure mode in ${cleanTitle}? Where does the logic break down, and how do you prevent or recover from that failure?`,
+          spokenPrompt: `What is the primary boundary trap or failure mode in ${cleanTitle}, and how do you prevent or recover from that failure?`,
           targetDimension: 'boundary',
         },
       ];
@@ -136,7 +168,11 @@ Respond ONLY with valid JSON:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 1 },
+            maxOutputTokens: 1200,
+          },
         }),
       }
     );
@@ -168,6 +204,11 @@ Respond ONLY with valid JSON:
   }
 }
 
+/**
+ * Backwards compatibility alias for generateInitialGateQuestions.
+ */
+export const generateGateQuestions = generateInitialGateQuestions;
+
 export interface EvaluateGateTurnOptions {
   lessonTitle: string;
   currentTurn: GateQuestionTurn;
@@ -175,6 +216,8 @@ export interface EvaluateGateTurnOptions {
   attemptNumber?: number;
   language?: 'en' | 'am';
   useMock?: boolean;
+  tabooWords?: string[];
+  note?: Partial<DynamicLessonNote> | null;
 }
 
 export interface GateTurnEvaluationResult {
@@ -186,6 +229,7 @@ export interface GateTurnEvaluationResult {
   mastered: boolean;
   needsFollowUp: boolean;
   followUpTurn?: GateQuestionTurn;
+  violatedTabooWords?: string[];
 }
 
 /**
@@ -198,8 +242,16 @@ export interface GateTurnEvaluationResult {
 export async function evaluateGateTurn(
   options: EvaluateGateTurnOptions
 ): Promise<GateTurnEvaluationResult> {
-  const { lessonTitle, currentTurn, studentAnswer, attemptNumber = 1, language = 'en', useMock = false } = options;
+  const {
+    lessonTitle,
+    currentTurn,
+    studentAnswer,
+    attemptNumber = 1,
+    language = 'en',
+    useMock = false,
+  } = options;
   const isAm = language === 'am';
+  const cleanTitle = stripEmojis(lessonTitle || (isAm ? 'ትምህርት' : 'Lesson')).trim();
   const cleanAnswer = stripEmojis(studentAnswer).trim();
   const isUnknown =
     !cleanAnswer ||
@@ -207,17 +259,23 @@ export async function evaluateGateTurn(
       cleanAnswer.toLowerCase()
     );
 
-  const maxAttempts = 4;
+  const maxAttempts = 3;
   const canFollowUp = attemptNumber < maxAttempts;
+
+  // Extract taboo words from options or note criteria
+  const tabooWords: string[] = options.tabooWords || options.note?.feynmanCriteria?.tabooWords || [];
+  const violatedTabooWords = detectTabooWordViolations(cleanAnswer, tabooWords);
+  const hasTabooViolation = violatedTabooWords.length > 0;
 
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
-  if (useMock || !apiKey || isUnknown) {
-    if (isUnknown) {
-      const miniLesson = isAm
-        ? `ማንኛውም የተከፋፈለ ስርዓት አለመግባባትን ለመከላከል አብላጫ ድምፅ (Quorum) ይፈልጋል። ሁለት ክፍሎች ተቆራርጠው እያንዳንዳቸው መሪ ነን ቢሉ መረጃው ይጋጫል። ስለዚህ ከአጠቃላይ ክፍሎች ከግማሽ በላይ ድጋፍ ያገኘው ብቻ ውሳኔ እንዲያሳልፍ ይደረጋል።`
-        : `Distributed architectures require an odd-numbered quorum (strict majority) to prevent conflicting updates. When a network partition occurs, only the side with more than half the total membership may commit writes, safely rejecting writes on the minority side to prevent split-brain divergence.`;
+  if (useMock || !apiKey || isUnknown || hasTabooViolation) {
+    if (hasTabooViolation) {
+      const violatedListStr = violatedTabooWords.join(', ');
+      const tabooFeedback = isAm
+        ? `የተከለከለውን ቃል ተጠቅመዋል፡ ${violatedListStr}። ፅንሰ-ሀሳቡን ያለ ቴክኒካዊ ቃላት በግልጽ ቋንቋ ያስረዱ።`
+        : `You used the forbidden word: ${violatedListStr}. Explain the concept in plain English without relying on buzzwords.`;
 
       const followUpTurn: GateQuestionTurn | undefined = canFollowUp
         ? {
@@ -226,11 +284,49 @@ export async function evaluateGateTurn(
             isFollowUp: true,
             parentQuestionId: currentTurn.id,
             question: isAm
-              ? `ይህን መነሻ በማድረግ፡ 5 ክፍሎች ባሉት ስርዓት ውስጥ አውታረ መረቡ በ3 እና በ2 ቢከፈል፣ መረጃ መመዝገብ የሚችለው የትኛው ክፍል ነው? ለምን?`
-              : `Based on this rule: if a network partition splits a 5-node cluster into 3 nodes and 2 nodes, which side is permitted to commit state changes, and why?`,
+              ? `የተከለከሉትን ቃላት (${violatedListStr}) ሳትጠቀሙ የ ${cleanTitle}ን ፅንሰ-ሀሳብ በዕለት ተዕለት ምሳሌ እንደገና ያስረዱ።`
+              : `Re-explain the core intuition and mechanism of ${cleanTitle} in plain English without using the forbidden words: ${violatedListStr}.`,
             spokenPrompt: isAm
-              ? `5 ክፍሎች ያሉት ስርዓት በ3 እና በ2 ቢከፈል፣ መረጃ መመዝገብ የሚችለው የትኛው ነው?`
-              : `If a five node cluster splits into three and two nodes, which side commits updates and why?`,
+              ? `${violatedListStr} የሚሉትን ሳትጠቀሙ የ ${cleanTitle}ን ሂደት ማስረዳት ትችላላችሁ?`
+              : `Can you explain ${cleanTitle} without using ${violatedListStr}?`,
+            targetDimension: currentTurn.targetDimension,
+            tier: 'refinement',
+          }
+        : undefined;
+
+      return {
+        score: 4,
+        tier: 'mini_lesson',
+        feedback: tabooFeedback,
+        misconceptions: [
+          isAm
+            ? `የተከለከሉ ቴክኒካዊ ቃላት አጠቃቀም: ${violatedListStr}`
+            : `Relied on forbidden buzzwords: ${violatedListStr}`,
+        ],
+        mastered: false,
+        needsFollowUp: canFollowUp,
+        followUpTurn,
+        violatedTabooWords,
+      };
+    }
+
+    if (isUnknown) {
+      const miniLesson = isAm
+        ? `በ ${cleanTitle} ውስጥ ዋናው ደንብ ማንኛውም ለውጥ ከመጽደቁ በፊት ግልጽ የሆነ የደረጃ ቅደም ተከተል መከተል አለበት። አንድ እርምጃ ካልተሳካ ስርዓቱ እንዳይበላሽ ለውጡ ውድቅ መደረግ አለበት።`
+        : `In ${cleanTitle}, the core rule is that state transitions must follow a strict causal order from input to output. If an intermediate step fails or violates invariants, changes must not be applied so the system remains consistent.`;
+
+      const followUpTurn: GateQuestionTurn | undefined = canFollowUp
+        ? {
+            id: `${currentTurn.id}-probe-${attemptNumber}`,
+            index: currentTurn.index,
+            isFollowUp: true,
+            parentQuestionId: currentTurn.id,
+            question: isAm
+              ? `ይህን መርህ መሰረት በማድረግ፡ በ ${cleanTitle} ውስጥ አንዱ እርምጃ ካልተሳካ ለውጡ በቋሚነት እንዳይመዘገብ መከልከል ያለበት ለምንድን ነው?`
+              : `Based on this rule: why must ${cleanTitle} prevent state changes from taking effect if an intermediate step fails?`,
+            spokenPrompt: isAm
+              ? `አንዱ እርምጃ ካልተሳካ ለውጡ እንዳይመዘገብ መከልከል ያለበት ለምንድን ነው?`
+              : `Why must ${cleanTitle} prevent state changes if an intermediate step fails?`,
             targetDimension: currentTurn.targetDimension,
             tier: 'mini_lesson',
             miniLesson,
@@ -241,10 +337,10 @@ export async function evaluateGateTurn(
         score: 1,
         tier: 'mini_lesson',
         feedback: isAm
-          ? 'አለማወቅን በግልጽ መናገር ጥሩ ጅምር ነው። ከዚህ በታች የቀረበውን አጭር ትምህርት በጥሞና ያንብቡ።'
+          ? 'አለማወቅን በግልጽ መናገር ጥሩ ጅምር ነው። ከዚህ በታች የቀረበውን አጭር ትምህርት በጥሞና ይመልከቱ።'
           : 'Admitting uncertainty is honest. Study the mini-lesson below to grasp the causal rule.',
         miniLesson,
-        misconceptions: [isAm ? 'የፅንሰ-ሀሳብ አለመረዳት' : 'Knowledge gap acknowledged'],
+        misconceptions: [isAm ? 'የመሰረታዊ ግንዛቤ ክፍተት' : 'Foundational mental model gap'],
         mastered: false,
         needsFollowUp: canFollowUp,
         followUpTurn,
@@ -278,11 +374,11 @@ export async function evaluateGateTurn(
             isFollowUp: true,
             parentQuestionId: currentTurn.id,
             question: isAm
-              ? `ግንዛቤዎ ጠንካራ ነው። ነገር ግን አንድ ወሳኝ ጥቃቅን ነጥብ ያብራሩ፡ ስርዓቱ ያልተጠናቀቀ ዝውውርን በሚያጋጥመው ጊዜ የመጨረሻውን ሁኔታ እንዴት ያረጋግጣል?`
-              : `Your explanation is strong. To finalize mastery, clarify this edge nuance: how does the coordinator guarantee monotonicity if the network drops the final acknowledgment packet?`,
+              ? `ግንዛቤዎ ጠንካራ ነው። ነገር ግን አንድ ወሳኝ ጥቃቅን ነጥብ ያብራሩ፡ በ ${cleanTitle} ውስጥ የማስተካከያ እርምጃዎች ሲዘገዩ መረጃ እንዳይበላሽ የሚያደርገው ወሰን ምንድን ነው?`
+              : `Your explanation is strong. To finalize mastery, clarify this edge nuance: how does ${cleanTitle} preserve consistency if an acknowledgment is delayed or dropped?`,
             spokenPrompt: isAm
-              ? `ስርዓቱ ያልተጠናቀቀ ዝውውር ሲያጋጥመው የመጨረሻውን ሁኔታ እንዴት ያረጋግጣል?`
-              : `How is monotonicity preserved if the network drops the final acknowledgment packet?`,
+              ? `የማስተካከያ እርምጃዎች ሲዘገዩ መረጃ እንዳይበላሽ የሚያደርገው ወሰን ምንድን ነው?`
+              : `How is consistency preserved if an acknowledgment is delayed or dropped?`,
             targetDimension: currentTurn.targetDimension,
             tier: 'refinement',
           }
@@ -309,11 +405,11 @@ export async function evaluateGateTurn(
             isFollowUp: true,
             parentQuestionId: currentTurn.id,
             question: isAm
-              ? `አመክንዮውን በከፊል ገልጸዋል። አሁን ወደ ከበደው ጥያቄ እንለፍ፡ በአውታረ መረብ መዘግየት ወቅት የስርዓቱ ሁኔታ እንዳይዛባ የትኞቹ የደህንነት ወሰኖች ይሰራሉ?`
-              : `You captured the basic premise, but missed the causal mechanism. Let us push deeper: how does the system detect and resolve conflicting timestamps during high network latency without an external clock?`,
+              ? `አመክንዮውን በከፊል ገልጸዋል። አሁን ወደ ከበደው ጥያቄ እንለፍ፡ በ ${cleanTitle} ውስጥ ያልተጠበቁ ስህተቶች ሲያጋጥሙ የአሰራር ሂደቱ ደረጃ በደረጃ እንዴት እንደሚፈጸም አብራሩ።`
+              : `You captured the basic premise, but missed the causal mechanism. Let us push deeper: walk me through the precise step-by-step causal chain in ${cleanTitle} when unexpected inputs or failures happen.`,
             spokenPrompt: isAm
-              ? `በከፍተኛ መዘግየት ወቅት የስርዓቱ ሁኔታ እንዳይዛባ የትኞቹ ወሰኖች ይጠብቁታል?`
-              : `How does the system resolve conflicting timestamps without an external clock?`,
+              ? `በ ${cleanTitle} ውስጥ ስህተቶች ሲያጋጥሙ ሂደቱ እንዴት እንደሚፈጸም አስረዱ?`
+              : `Walk me through the precise step-by-step causal chain in ${cleanTitle} during unexpected failures?`,
             targetDimension: currentTurn.targetDimension,
             tier: 'harder_probe',
           }
@@ -334,8 +430,8 @@ export async function evaluateGateTurn(
 
     // Score < 5: Mini-lesson tier
     const miniLesson = isAm
-      ? `ዋናው የአሰራር ሂደት፡ ማንኛውም የውሳኔ ሃሳብ ከመጽደቁ በፊት በአብላጫ ክፍሎች መጽደቅ አለበት። ይህ ካልሆነ ሁለት የተለያዩ ቡድኖች ለየብቻ ውሳኔ በማሳለፍ መረጃውን ያበላሹታል።`
-      : `Core Invariant: State changes require causal validation across a strict quorum before committing. Without an odd-numbered majority agreement, parallel disjoint updates cause fatal split-brain state divergence.`;
+      ? `በ ${cleanTitle} ውስጥ ዋናው ደንብ ማንኛውም ለውጥ ከመጽደቁ በፊት ግልጽ የሆነ የደረጃ ቅደም ተከተል መከተል አለበት። አንድ እርምጃ ካልተሳካ ስርዓቱ እንዳይበላሽ ለውጡ ውድቅ መደረግ አለበት።`
+      : `In ${cleanTitle}, the core rule is that state transitions must follow a strict causal order from input to output. If an intermediate step fails or violates invariants, changes must not be applied so the system remains consistent.`;
 
     const followUpTurn: GateQuestionTurn | undefined = canFollowUp
       ? {
@@ -344,11 +440,11 @@ export async function evaluateGateTurn(
           isFollowUp: true,
           parentQuestionId: currentTurn.id,
           question: isAm
-            ? `ይህን አጭር ትምህርት መሰረት በማድረግ፡ የውሳኔ ሃሳቡ ከመጽደቁ በፊት አብላጫ ድምፅ የሚያስፈልገው ለምንድን ነው?`
-            : `Applying this mini-lesson: why must a proposal achieve strict quorum before being finalized into permanent state?`,
+            ? `ይህን አጭር ትምህርት መሰረት በማድረግ፡ በ ${cleanTitle} ውስጥ አንዱ እርምጃ ካልተሳካ ለውጡ በቋሚነት እንዳይመዘገብ መከልከል ያለበት ለምንድን ነው?`
+            : `Applying this mini-lesson: why must ${cleanTitle} prevent state changes from taking effect if an intermediate step fails?`,
           spokenPrompt: isAm
-            ? `የውሳኔ ሃሳቡ ከመጽደቁ በፊት አብላጫ ድምፅ የሚያስፈልገው ለምንድን ነው?`
-            : `Why must a proposal achieve strict quorum before being finalized into permanent state?`,
+            ? `አንዱ እርምጃ ካልተሳካ ለውጡ እንዳይመዘገብ መከልከል ያለበት ለምንድን ነው?`
+            : `Why must ${cleanTitle} prevent state changes if an intermediate step fails?`,
           targetDimension: currentTurn.targetDimension,
           tier: 'mini_lesson',
           miniLesson,
@@ -369,6 +465,12 @@ export async function evaluateGateTurn(
     };
   }
 
+  const tabooWordsDirective = tabooWords.length > 0
+    ? `TABOO BUZZWORDS INVARIANT:
+The learner is STRICTLY FORBIDDEN from using these buzzwords: ${tabooWords.join(', ')}.
+If they used any of them, penalize their score heavily (maximum score 4) and instruct them to re-explain in plain English without buzzwords.`
+    : '';
+
   const systemPrompt = `You are the Ater Socratic Gate Evaluator conducting a live, intense oral defense for: "${lessonTitle}".
 Current Question (${currentTurn.targetDimension}): "${currentTurn.question}"
 Student Explanation: "${cleanAnswer}"
@@ -377,13 +479,15 @@ Interrogation Attempt: #${attemptNumber} (Max: ${maxAttempts})
 LANGUAGE DIRECTIVE:
 ${isAm ? "Feedback, miniLesson, and follow-up must be strictly in articulate Amharic (አማርኛ) using Ge'ez script. Zero latin characters." : "Feedback, miniLesson, and follow-up in clear English."}
 
+${tabooWordsDirective}
+
 EVALUATION & SOCRATIC PROGRESSION INVARIANTS:
 Score strictly 1 to 10 based on first-principles causality, mechanistic precision, and boundary awareness.
 Apply the EXACT 4-tier pedagogical progression rules:
 
 1. Score < 5 (Foundational Gaps / Score 1-4):
    - "tier": "mini_lesson"
-   - "miniLesson": Exactly 2-3 concise, crystal-clear sentences teaching the core intuition or causal mechanism directly.
+   - "miniLesson": Exactly 2 concise, crystal-clear conversational sentences teaching the core intuition or causal mechanism directly.
    - "feedback": 1 concise sentence noting the foundational gap.
    - "needsFollowUp": ${canFollowUp ? 'true' : 'false'}
    - "mastered": false
@@ -442,7 +546,11 @@ Respond ONLY with valid JSON:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 1 },
+            maxOutputTokens: 1000,
+          },
         }),
       }
     );
@@ -472,7 +580,12 @@ Respond ONLY with valid JSON:
     }
 
     const parsed = extractJsonFromResponse(rawText);
-    const score = Math.max(1, Math.min(10, Math.round(Number(parsed.score) || 6)));
+    let score = Math.max(1, Math.min(10, Math.round(Number(parsed.score) || 6)));
+
+    // Deterministically enforce taboo words violation even if model missed it
+    if (hasTabooViolation) {
+      score = Math.min(score, 4);
+    }
 
     let tier: SocraticTier;
     let mastered = false;
@@ -501,9 +614,18 @@ Respond ONLY with valid JSON:
       needsFollowUp = canFollowUp;
     }
 
-    const feedback = cleanContinuousProse(stripEmojis(parsed.feedback || 'Response evaluated.'));
+    let feedback = cleanContinuousProse(stripEmojis(parsed.feedback || 'Response evaluated.'));
+    if (hasTabooViolation) {
+      feedback = isAm
+        ? `የተከለከለውን ቃል ተጠቅመዋል፡ ${violatedTabooWords.join(', ')}። ፅንሰ-ሀሳቡን ያለ ቴክኒካዊ ቃላት በግልጽ ቋንቋ ያስረዱ።`
+        : `You used the forbidden word: ${violatedTabooWords.join(', ')}. Explain the concept in plain English without relying on buzzwords.`;
+    }
+
     const miniLesson = tier === 'mini_lesson' && parsed.miniLesson ? cleanContinuousProse(stripEmojis(parsed.miniLesson)) : undefined;
     const misconceptions = Array.isArray(parsed.misconceptions) ? parsed.misconceptions.map(stripEmojis) : [];
+    if (hasTabooViolation) {
+      misconceptions.push(`Relied on forbidden buzzwords: ${violatedTabooWords.join(', ')}`);
+    }
 
     let followUpTurn: GateQuestionTurn | undefined = undefined;
     if (needsFollowUp && parsed.followUpQuestion) {
@@ -512,8 +634,16 @@ Respond ONLY with valid JSON:
         index: currentTurn.index,
         isFollowUp: true,
         parentQuestionId: currentTurn.id,
-        question: stripEmojis(parsed.followUpQuestion),
-        spokenPrompt: sanitizeSpokenPrompt(parsed.followUpSpokenPrompt || parsed.followUpQuestion),
+        question: hasTabooViolation
+          ? (isAm
+              ? `የተከለከሉትን ቃላት (${violatedTabooWords.join(', ')}) ሳትጠቀሙ የ ${cleanTitle}ን ፅንሰ-ሀሳብ እንደገና ያስረዱ።`
+              : `Re-explain ${cleanTitle} in plain English without using: ${violatedTabooWords.join(', ')}.`)
+          : stripEmojis(parsed.followUpQuestion),
+        spokenPrompt: sanitizeSpokenPrompt(
+          hasTabooViolation
+            ? (isAm ? `${violatedTabooWords.join(', ')} የሚሉትን ሳትጠቀሙ ማስረዳት ትችላላችሁ?` : `Can you explain ${cleanTitle} without using ${violatedTabooWords.join(', ')}?`)
+            : (parsed.followUpSpokenPrompt || parsed.followUpQuestion)
+        ),
         targetDimension: currentTurn.targetDimension,
         tier,
         miniLesson,
@@ -529,6 +659,7 @@ Respond ONLY with valid JSON:
       mastered,
       needsFollowUp,
       followUpTurn,
+      violatedTabooWords: hasTabooViolation ? violatedTabooWords : undefined,
     };
   } catch (_err) {
     return {

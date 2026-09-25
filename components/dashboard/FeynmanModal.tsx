@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle2, Loader2, Volume2, ShieldAlert, ArrowRight, Mic, MicOff } from 'lucide-react';
 import { playNeuralAudio, stopNeuralAudio } from '@/lib/voice/ttsClient';
-import type { FeynmanEvaluation, GateQuestionTurn } from '@/types';
-import { generateFallbackGateQuestions } from '@/lib/ai/gate';
+import type { FeynmanEvaluation, GateQuestionTurn, RoadmapLesson } from '@/types';
+import { generateFallbackGateQuestions, detectTabooWordViolations } from '@/lib/ai/gate';
 import { translations, type AppLanguage } from '@/lib/i18n/translations';
 import { saveGateSessionToStore } from '@/lib/sync/store';
 
@@ -15,8 +15,11 @@ interface FeynmanModalProps {
   onEvaluate: (concept: string, explanation: string) => Promise<FeynmanEvaluation>;
   onOpenRemediation?: () => void;
   onContinueNextLesson?: () => void;
+  onRemediationCreated?: (remediationLesson: RoadmapLesson, updatedLessons: RoadmapLesson[]) => void;
   language?: AppLanguage;
   lessonId?: string;
+  courseId?: string;
+  lessons?: RoadmapLesson[];
   tabooWords?: string[];
 }
 
@@ -27,8 +30,11 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
   onEvaluate,
   onOpenRemediation,
   onContinueNextLesson,
+  onRemediationCreated,
   language = 'en',
   lessonId,
+  courseId,
+  lessons,
   tabooWords = [],
 }) => {
   const t = translations[language] || translations.en;
@@ -46,6 +52,11 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
   const [isLoadingBattery, setIsLoadingBattery] = useState<boolean>(false);
   const [isSubmittingTurn, setIsSubmittingTurn] = useState<boolean>(false);
   const [lastTurnFeedback, setLastTurnFeedback] = useState<{ score: number; feedback: string } | null>(null);
+  const [violatedWords, setViolatedWords] = useState<string[]>([]);
+
+  // Live evaluation of taboo buzzwords inside explanation
+  const liveViolated = detectTabooWordViolations(explanation, tabooWords);
+  const activeViolations = Array.from(new Set([...liveViolated, ...violatedWords]));
 
   // Audio recording & live RMS waveform state
   const [isListeningSpeech, setIsListeningSpeech] = useState<boolean>(false);
@@ -89,6 +100,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
     setCompletedTurns([]);
     setExplanation('');
     setLastTurnFeedback(null);
+    setViolatedWords([]);
     setFinalResult(null);
     setIsLoadingBattery(true);
     stopNeuralAudio();
@@ -391,6 +403,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
           studentAnswer: answerText,
           attemptNumber,
           language,
+          tabooWords,
         }),
       });
 
@@ -399,10 +412,13 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
       const tier = evalData.tier;
       const feedback = evalData.feedback || (isAmharic ? 'ግንዛቤ ተመዝግቧል።' : 'Answer evaluated.');
 
-      setLastTurnFeedback({ score, feedback });
+      if (evalData.violatedTabooWords && evalData.violatedTabooWords.length > 0) {
+        setViolatedWords(evalData.violatedTabooWords);
+      } else {
+        setViolatedWords([]);
+      }
 
-      // Vocalize short turn feedback
-      playNeuralAudio(feedback, { voice: defaultVoice, readerId: 'defense-feedback' });
+      setLastTurnFeedback({ score, feedback });
 
       // Socratic Loop: If needs follow-up, update turn and stay on this base question
       if (evalData.needsFollowUp && evalData.followUpTurn) {
@@ -425,10 +441,8 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
             : `Question ${currentBaseIndex + 1} of 3 · Mini-Lesson`;
           setStatusMessage(miniLessonStatus);
 
-          // Vocalize mini-lesson teaching text
-          setTimeout(() => {
-            playNeuralAudio(lessonContent, { voice: defaultVoice, readerId: 'defense-minilesson' });
-          }, 1000);
+          // Vocalize feedback and mini-lesson cleanly without delay
+          playNeuralAudio(`${feedback} ${lessonContent}`, { voice: defaultVoice, readerId: 'defense-minilesson' });
         } else {
           setModalStage('question');
           const probeStatus = isAmharic
@@ -436,14 +450,54 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
             : `Question ${currentBaseIndex + 1} of 3 · Follow-Up Question`;
           setStatusMessage(probeStatus);
 
-          setTimeout(() => {
-            if (followUp.spokenPrompt) {
-              playNeuralAudio(followUp.spokenPrompt, { voice: defaultVoice, readerId: 'defense-followup' });
-            }
-          }, 1200);
+          // Vocalize feedback and question cleanly without delay
+          const fullSpeech = followUp.spokenPrompt ? `${feedback} ${followUp.spokenPrompt}` : feedback;
+          playNeuralAudio(fullSpeech, { voice: defaultVoice, readerId: 'defense-followup' });
         }
       } else {
-        // Mastered (or max attempts reached): record turn and advance to next question
+        // Mastered or max attempts reached: speak turn feedback
+        playNeuralAudio(feedback, { voice: defaultVoice, readerId: 'defense-feedback' });
+
+        // If after 3 attempts the score is still < 8, dynamically trigger micro-remediation
+        if (attemptNumber >= 3 && score < 8) {
+          try {
+            const remRes = await fetch('/api/curriculum/remediate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                courseId: courseId || 'course-default',
+                failedLessonId: lessonId || `lesson-${concept.toLowerCase().replace(/\s+/g, '-')}`,
+                misconceptions: evalData.misconceptions?.length
+                  ? evalData.misconceptions
+                  : [feedback],
+                learnerExplanation: answerText,
+                failedLesson: {
+                  id: lessonId || `lesson-${concept.toLowerCase().replace(/\s+/g, '-')}`,
+                  order: 1,
+                  title: concept,
+                  slug: concept.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                  summary: `Targeted remediation for ${concept}`,
+                  status: 'remediation',
+                  estimatedMinutes: 5,
+                  prerequisites: [],
+                  isRemediation: false,
+                },
+                lessons,
+              }),
+            });
+
+            if (remRes.ok) {
+              const remData = await remRes.json();
+              if (onRemediationCreated && remData.remediationLesson) {
+                onRemediationCreated(remData.remediationLesson, remData.updatedLessons);
+              }
+            }
+          } catch (remErr) {
+            console.error('Failed to trigger micro-remediation:', remErr);
+          }
+        }
+
+        // Record turn and advance to next question
         const updatedTurn: GateQuestionTurn = {
           ...currentTurn,
           studentAnswer: answerText,
@@ -464,17 +518,16 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
           setAttemptNumber(1);
           setActiveTurn(nextQ);
           setExplanation('');
+          setViolatedWords([]);
 
           const nextStatus = isAmharic
             ? `ጥያቄ ${nextIdx + 1} / 3`
             : `Question ${nextIdx + 1} of 3`;
           setStatusMessage(nextStatus);
 
-          setTimeout(() => {
-            if (nextQ?.spokenPrompt) {
-              playNeuralAudio(nextQ.spokenPrompt, { voice: defaultVoice, readerId: `gate-question-${nextIdx}` });
-            }
-          }, 1200);
+          if (nextQ?.spokenPrompt) {
+            playNeuralAudio(nextQ.spokenPrompt, { voice: defaultVoice, readerId: `gate-question-${nextIdx}` });
+          }
         } else {
           // All 3 base questions complete: finalize session
           const finalRes = await fetch('/api/ai/gate', {
@@ -490,6 +543,50 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
 
           const finalData = await finalRes.json();
           setFinalResult(finalData);
+
+          // If defense failed, dynamically call remediation to splice into roadmap DAG
+          if (!finalData.passed) {
+            try {
+              const remRes = await fetch('/api/curriculum/remediate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  courseId: courseId || 'course-default',
+                  failedLessonId: lessonId || `lesson-${concept.toLowerCase().replace(/\s+/g, '-')}`,
+                  misconceptions: finalData.misconceptions?.length
+                    ? finalData.misconceptions
+                    : ['Operational mechanics and boundary failure modes'],
+                  learnerExplanation: answerText,
+                  failedLesson: {
+                    id: lessonId || `lesson-${concept.toLowerCase().replace(/\s+/g, '-')}`,
+                    order: 1,
+                    title: concept,
+                    slug: concept.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                    summary: `Targeted remediation for ${concept}`,
+                    status: 'remediation',
+                    estimatedMinutes: 5,
+                    prerequisites: [],
+                    isRemediation: false,
+                  },
+                  lessons,
+                }),
+              });
+
+              if (remRes.ok) {
+                const remData = await remRes.json();
+                if (remData.remediationLesson?.title) {
+                  setFinalResult((prev) =>
+                    prev ? { ...prev, remediationTopic: remData.remediationLesson.title } : prev
+                  );
+                }
+                if (onRemediationCreated && remData.remediationLesson) {
+                  onRemediationCreated(remData.remediationLesson, remData.updatedLessons);
+                }
+              }
+            } catch (remErr) {
+              console.error('Failed to trigger micro-remediation on finalize:', remErr);
+            }
+          }
 
           // Persist Socratic Gate session transcript to store / Supabase
           if (lessonId || concept) {
@@ -508,9 +605,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
           setStatusMessage(doneStatus);
 
           if (finalData.summaryFeedback) {
-            setTimeout(() => {
-              playNeuralAudio(finalData.summaryFeedback, { voice: defaultVoice, readerId: 'gate-final' });
-            }, 1000);
+            playNeuralAudio(finalData.summaryFeedback, { voice: defaultVoice, readerId: 'gate-final' });
           }
 
           // Trigger page-level evaluation with aggregated defense text
@@ -771,7 +866,7 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
               </div>
             )}
 
-            {/* Question Card without Taboo Words */}
+            {/* Question Card */}
             <div className="p-4 bg-parchment-100/90 dark:bg-zinc-900/80 border border-parchment-300 dark:border-zinc-800/80 rounded-xl space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
@@ -790,6 +885,42 @@ export const FeynmanModal: React.FC<FeynmanModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Forbidden Taboo Words Badges */}
+            {tabooWords && tabooWords.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl bg-parchment-100/80 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800">
+                <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
+                  {isAmharic ? 'የተከለከሉ ቃላት:' : 'Forbidden Taboo Words:'}
+                </span>
+                {tabooWords.map((word, idx) => {
+                  const isViolated = activeViolations.includes(word);
+                  return (
+                    <span
+                      key={idx}
+                      className={`px-2 py-0.5 rounded-md font-mono text-[11px] border transition-colors ${
+                        isViolated
+                          ? 'bg-red-500/10 dark:bg-red-500/20 text-red-700 dark:text-red-300 border-red-300 dark:border-red-800 font-semibold line-through'
+                          : 'bg-parchment-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-parchment-300 dark:border-zinc-700'
+                      }`}
+                    >
+                      {word}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Violated Taboo Words Warning */}
+            {activeViolations.length > 0 && (
+              <div className="p-3 rounded-xl bg-red-500/10 dark:bg-red-500/15 border border-red-300 dark:border-red-800 text-xs text-red-800 dark:text-red-200 flex items-start gap-2">
+                <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+                <span className="font-medium leading-relaxed">
+                  {isAmharic
+                    ? `የተከለከለውን ቃል ተጠቅመዋል፡ ${activeViolations.join(', ')}። ፅንሰ-ሀሳቡን ያለ ቴክኒካዊ ቃላት በግልጽ ቋንቋ ያስረዱ።`
+                    : `You used the forbidden word: ${activeViolations.join(', ')}. Explain the concept in plain English without relying on buzzwords.`}
+                </span>
+              </div>
+            )}
 
             {/* Answer Form */}
             <form onSubmit={handleTurnSubmit} className="space-y-3">

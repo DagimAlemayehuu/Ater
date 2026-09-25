@@ -212,4 +212,108 @@ describe('Socratic Defense Gate Engine', () => {
     expect(result.remediationTopic).toBeDefined();
     expect(result.remediationTopic).toContain('Raft Algorithm');
   });
+
+  it('eradicates hardcoded distributed systems text from fallback questions', () => {
+    const nonDistributedTitle = 'Photosynthesis and Calvin Cycle';
+    const questions = generateFallbackGateQuestions(nonDistributedTitle, 'en');
+
+    expect(questions).toHaveLength(3);
+    const combinedText = questions.map((q) => `${q.question} ${q.spokenPrompt}`).join(' ').toLowerCase();
+
+    // Must not contain hardcoded distributed systems jargon
+    expect(combinedText).not.toContain('quorum');
+    expect(combinedText).not.toContain('split-brain');
+    expect(combinedText).not.toContain('network partition');
+
+    // Must dynamically derive from lesson title
+    expect(questions[0].question).toBe(
+      `Explain the core everyday analogy and intuitive purpose of ${nonDistributedTitle} as if teaching a twelve-year-old, without using technical buzzwords.`
+    );
+    expect(questions[1].question).toBe(
+      `Walk me through the exact step-by-step causal chain of execution in ${nonDistributedTitle}. How does data flow from input to final output?`
+    );
+    expect(questions[2].question).toBe(
+      `What is the primary boundary trap or failure mode in ${nonDistributedTitle}? Where does the logic break down, and how do you prevent or recover from that failure?`
+    );
+  });
+
+  it('enforces strict taboo words and penalizes buzzword violations', async () => {
+    const turn: GateQuestionTurn = {
+      id: 'turn-1',
+      index: 1,
+      question: 'Explain the core intuition of Raft Consensus.',
+      spokenPrompt: 'Explain the core intuition of Raft Consensus?',
+      targetDimension: 'intuition',
+    };
+
+    const tabooWords = ['consensus', 'quorum', 'leader'];
+
+    const result = await evaluateGateTurn({
+      lessonTitle: 'Raft Consensus',
+      currentTurn: turn,
+      studentAnswer: 'The system establishes consensus across nodes by selecting a leader that collects a quorum.',
+      tabooWords,
+      useMock: true,
+      language: 'en',
+    });
+
+    expect(result.violatedTabooWords).toBeDefined();
+    expect(result.violatedTabooWords).toContain('consensus');
+    expect(result.violatedTabooWords).toContain('quorum');
+    expect(result.violatedTabooWords).toContain('leader');
+    expect(result.score).toBeLessThanOrEqual(4);
+    expect(result.mastered).toBe(false);
+    expect(result.feedback).toContain('You used the forbidden word');
+    expect(result.followUpTurn?.question).toContain('without using the forbidden words');
+  });
+
+  it('enforces strict taboo words with Amharic Ge\'ez terms', async () => {
+    const turn: GateQuestionTurn = {
+      id: 'turn-1',
+      index: 1,
+      question: 'የስርዓቱን አሰራር ያስረዱ።',
+      spokenPrompt: 'የስርዓቱን አሰራር ያስረዱ?',
+      targetDimension: 'intuition',
+    };
+
+    const tabooWords = ['ስርዓት', 'አልጎሪዝም'];
+
+    const result = await evaluateGateTurn({
+      lessonTitle: 'የተሰራጩ ስርዓቶች',
+      currentTurn: turn,
+      studentAnswer: 'ይህ ስርዓት የተለየ አልጎሪዝም በመጠቀም ይሰራል',
+      tabooWords,
+      useMock: true,
+      language: 'am',
+    });
+
+    expect(result.violatedTabooWords).toBeDefined();
+    expect(result.violatedTabooWords).toContain('ስርዓት');
+    expect(result.violatedTabooWords).toContain('አልጎሪዝም');
+    expect(result.score).toBeLessThanOrEqual(4);
+    expect(result.feedback).toContain('የተከለከለውን ቃል ተጠቅመዋል');
+  });
+
+  it('strictly caps sparring loop after 3 attempts', async () => {
+    const turn: GateQuestionTurn = {
+      id: 'turn-1-probe-3',
+      index: 1,
+      isFollowUp: true,
+      parentQuestionId: 'turn-1',
+      question: 'Probe 3',
+      spokenPrompt: 'Probe 3?',
+      targetDimension: 'intuition',
+    };
+
+    const result = await evaluateGateTurn({
+      lessonTitle: 'Binary Search',
+      currentTurn: turn,
+      studentAnswer: 'Halving the array repeatedly',
+      attemptNumber: 3,
+      useMock: true,
+      language: 'en',
+    });
+
+    expect(result.needsFollowUp).toBe(false);
+  });
 });

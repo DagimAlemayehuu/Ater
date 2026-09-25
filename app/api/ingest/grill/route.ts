@@ -104,7 +104,12 @@ SCHEMA:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.3,
+            maxOutputTokens: 250,
+            thinkingConfig: { thinkingBudget: 1 },
+          },
         }),
       }
     );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateCourseCurriculum, generateFallbackCurriculum } from '@/lib/curriculum/generator';
+import { gatherGroundedSources } from '@/lib/curriculum/sources';
 import type { CurriculumGenerateRequest, CourseCurriculum } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     );
   }
 
-  const { topic, sourceType, answers, useMock, language } = body;
+  const { topic, sourceType, sourceName, answers, files, sources, useMock, language } = body;
   const appLang = language === 'am' ? 'am' : 'en';
 
   const trimmedTopic = typeof topic === 'string' ? topic.trim() : '';
@@ -35,12 +36,17 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
   }
 
   const resolvedAnswers = answers && typeof answers === 'object' && !Array.isArray(answers) ? answers : {};
+  const resolvedFiles = Array.isArray(files) ? files : undefined;
+  const resolvedSources = Array.isArray(sources) ? sources : undefined;
 
   try {
     const curriculum: CourseCurriculum = await generateCourseCurriculum({
       topic: trimmedTopic,
-      sourceType: sourceType || 'prompt',
+      sourceType: sourceType || (resolvedFiles && resolvedFiles.length > 0 ? 'document' : 'prompt'),
+      sourceName: sourceName || (resolvedFiles && resolvedFiles[0]?.fileName) || '',
       answers: resolvedAnswers,
+      files: resolvedFiles,
+      sources: resolvedSources,
       useMock: !!useMock,
       language: appLang,
       throwOnError: true,
@@ -53,7 +59,18 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
   } catch (error: any) {
     console.error('API /api/curriculum/generate route error:', error);
 
-    const fallback = generateFallbackCurriculum(trimmedTopic, resolvedAnswers.q1, resolvedAnswers.q2, appLang);
+    const fallbackSources =
+      resolvedSources && resolvedSources.length > 0
+        ? resolvedSources
+        : await gatherGroundedSources(trimmedTopic, resolvedFiles, resolvedAnswers, appLang);
+
+    const fallback = generateFallbackCurriculum(
+      trimmedTopic,
+      resolvedAnswers.q1,
+      resolvedAnswers.q2,
+      appLang,
+      fallbackSources
+    );
 
     return NextResponse.json(fallback, {
       status: 200,

@@ -9,12 +9,14 @@ export interface InlineMCQCardProps {
   mcq: LessonInlineQuestion;
   language?: 'en' | 'am';
   disableExpand?: boolean;
+  onAnswerChange?: (mcq: LessonInlineQuestion) => void;
 }
 
 export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
   mcq,
   language = 'en',
   disableExpand = false,
+  onAnswerChange,
 }) => {
   const isAmharic = language === 'am';
   const qType = mcq.type || 'mcq';
@@ -24,10 +26,22 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     mcq.userSelectedIndex !== undefined ? mcq.userSelectedIndex : null
   );
 
+  React.useEffect(() => {
+    if (mcq.userSelectedIndex !== undefined) {
+      setSelectedIndex(mcq.userSelectedIndex);
+    }
+  }, [mcq.userSelectedIndex]);
+
   // True / False state
   const [selectedBool, setSelectedBool] = useState<boolean | null>(
     mcq.userSelectedBoolean !== undefined ? mcq.userSelectedBoolean : null
   );
+
+  React.useEffect(() => {
+    if (mcq.userSelectedBoolean !== undefined) {
+      setSelectedBool(mcq.userSelectedBoolean);
+    }
+  }, [mcq.userSelectedBoolean]);
 
   // Fill in the Blank state
   const [fillBlankInput, setFillBlankInput] = useState<string>(
@@ -98,6 +112,7 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     setSelectedIndex(index);
     mcq.userSelectedIndex = index;
     mcq.isCorrect = index === mcq.correctOptionIndex;
+    onAnswerChange?.(mcq);
   };
 
   const handleBoolSelect = (val: boolean) => {
@@ -105,6 +120,7 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     setSelectedBool(val);
     mcq.userSelectedBoolean = val;
     mcq.isCorrect = val === mcq.correctBoolean;
+    onAnswerChange?.(mcq);
   };
 
   const handleFillSubmit = (e?: React.FormEvent) => {
@@ -116,6 +132,7 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     mcq.isCorrect = (mcq.acceptedAnswers || []).some(
       (ans) => ans.trim().toLowerCase() === cleanAnswer
     );
+    onAnswerChange?.(mcq);
   };
 
   const handleMatchingClickLeft = (leftId: string) => {
@@ -138,6 +155,7 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     mcq.userMatches = userMatches;
     const pairs = mcq.matchingPairs || [];
     mcq.isCorrect = pairs.every((p) => userMatches[p.id] === p.id);
+    onAnswerChange?.(mcq);
   };
 
   const handleMatchingReset = () => {
@@ -146,6 +164,7 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
     setIsMatchingSubmitted(false);
     mcq.userMatches = undefined;
     mcq.isCorrect = undefined;
+    onAnswerChange?.(mcq);
   };
 
   const handleShortAnswerSubmit = (e?: React.FormEvent) => {
@@ -159,6 +178,7 @@ export const InlineMCQCard: React.FC<InlineMCQCardProps> = ({
       cleanAnswer.includes(kw.toLowerCase())
     ).length;
     mcq.isCorrect = keywords.length > 0 ? matchCount >= Math.ceil(keywords.length * 0.5) : true;
+    onAnswerChange?.(mcq);
   };
 
   // Section & Type labels

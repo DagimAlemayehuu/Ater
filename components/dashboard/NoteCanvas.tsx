@@ -12,6 +12,7 @@ import {
   restartNeuralAudio,
   onAudioStateChange,
   getAudioPlaybackState,
+  getActiveReaderId,
   AudioPlaybackState,
 } from '@/lib/voice/ttsClient';
 import { translations } from '@/lib/i18n/translations';
@@ -25,9 +26,6 @@ import {
   InteractiveCanvasViewer,
 } from '@/components/viewers';
 import { InlineMCQCard } from '@/components/dashboard/InlineMCQCard';
-import { SourcesTray } from '@/components/dashboard/SourcesTray';
-import { StudioModal } from '@/components/dashboard/StudioModal';
-import { Sliders, BookOpen } from 'lucide-react';
 import type {
   DynamicLessonNote,
   AterAtomicNote,
@@ -35,7 +33,9 @@ import type {
   LessonCheckpoint,
   CourseCurriculum,
   RoadmapLesson,
+  LessonInlineQuestion,
 } from '@/types';
+import { saveNoteToStore, saveLessonProgress, getLessonProgress } from '@/lib/sync/store';
 
 export interface NoteCanvasProps {
   note: DynamicLessonNote | AterAtomicNote | null;
@@ -57,7 +57,8 @@ export interface NoteCanvasProps {
   isFeynmanOpen?: boolean;
   isIntakeOpen?: boolean;
   onResetDemo?: () => void;
-  isStudioEnabled?: boolean;
+  userId?: string;
+  onNoteUpdate?: (updatedNote: DynamicLessonNote) => void;
 }
 
 export const NoteCanvas: React.FC<NoteCanvasProps> = ({
@@ -75,20 +76,41 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   onOpenFeynman,
   onCheckpointStep,
   onOpenIntakeModal,
-  initialViewMode = 'full',
+  initialViewMode = 'interactive',
   language = 'en',
   isFeynmanOpen = false,
   isIntakeOpen = false,
   onResetDemo,
-  isStudioEnabled: isStudioEnabledProp,
+  userId,
+  onNoteUpdate,
 }) => {
   const t = translations[language] || translations.en;
   const isAmharic = language === 'am';
   const defaultVoice = isAmharic ? 'am-ET-MekdesNeural' : 'en-US-JennyNeural';
 
+  const uid = userId || 'guest';
+  const effectiveCourseId = curriculum?.id || (note as any)?.courseId || 'default_course';
+  const effectiveLessonId = activeLessonId || (note as any)?.lessonId || (note as any)?.id || 'default_lesson';
+
   const [viewMode, setViewMode] = useState<'interactive' | 'full'>(initialViewMode);
-  const [unlockedSection, setUnlockedSection] = useState<number>(1);
-  const [activeSectionTab, setActiveSectionTab] = useState<number>(1);
+  const [unlockedSection, setUnlockedSection] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = getLessonProgress(uid, effectiveCourseId, effectiveLessonId);
+      if (saved && typeof saved.unlockedSection === 'number' && saved.unlockedSection >= 1) {
+        return saved.unlockedSection;
+      }
+    }
+    return 1;
+  });
+  const [activeSectionTab, setActiveSectionTab] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = getLessonProgress(uid, effectiveCourseId, effectiveLessonId);
+      if (saved && typeof saved.activeSectionTab === 'number' && saved.activeSectionTab >= 1) {
+        return saved.activeSectionTab;
+      }
+    }
+    return 1;
+  });
   const [checkpointInput, setCheckpointInput] = useState('');
   const [isSubmittingCheckpoint, setIsSubmittingCheckpoint] = useState(false);
   const [revealedQuiz, setRevealedQuiz] = useState<Record<string, boolean>>({});
@@ -106,21 +128,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<string>('');
 
-  // Sources Tray & Studio Modal state
-  const [isSourcesTrayOpen, setIsSourcesTrayOpen] = useState<boolean>(false);
-  const [isStudioOpen, setIsStudioOpen] = useState<boolean>(false);
-  const [isStudioEnabledState, setIsStudioEnabledState] = useState<boolean>(true);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('ater_enable_notebooklm_studio');
-      if (stored !== null) {
-        setIsStudioEnabledState(stored === 'true');
-      }
-    } catch {}
-  }, []);
-
-  const isStudioEnabled = isStudioEnabledProp !== undefined ? isStudioEnabledProp : isStudioEnabledState;
 
   const activeLoading = isLoading || isCompiling;
 
@@ -138,6 +145,44 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   const teacherExplanations = dynamicNote?.teacherExplanations;
   const inlineMCQs = dynamicNote?.inlineMCQs || [];
   const sectionQuestions = (secIdx: number) => inlineMCQs.filter((m) => m.sectionIndex === secIdx);
+
+  const isCurrentMiniLesson = Boolean(
+    (note as any)?.isRemediation ||
+    (note as any)?.parentLessonId ||
+    curriculum?.lessons?.some((l) => l.id === ((note as any)?.lessonId || (note as any)?.id) && (l.isRemediation || l.parentLessonId))
+  );
+
+  const hasDynamicSections = Boolean(dynamicNote?.sections && dynamicNote.sections.length > 0);
+
+  const sectionsConfig = hasDynamicSections
+    ? dynamicNote.sections!.map((sec, idx) => ({
+        num: sec.order || idx + 1,
+        title: sec.title,
+        short: sec.shortTitle || sec.title,
+        content: sec.content,
+        inlineMCQs: sec.inlineMCQs,
+        checkpoint: sec.checkpoint,
+        teacherExplanation: sec.teacherExplanation,
+      }))
+    : isCurrentMiniLesson
+      ? [
+          {
+            num: 1,
+            title: isAmharic ? 'የማካካሻ ትምህርት' : 'Core Remediation',
+            short: isAmharic ? 'ክለሳ' : 'Mini-Lesson',
+            content: section1Text,
+            inlineMCQs: sectionQuestions(1),
+            checkpoint: undefined,
+            teacherExplanation: undefined,
+          },
+        ]
+      : [
+          { num: 1, title: t.sections.sec1Full, short: t.sections.intuition, content: section1Text, inlineMCQs: sectionQuestions(1), checkpoint: undefined, teacherExplanation: undefined },
+          { num: 2, title: t.sections.sec2Full, short: t.sections.framework, content: section2Text, inlineMCQs: sectionQuestions(2), checkpoint: undefined, teacherExplanation: undefined },
+          { num: 3, title: t.sections.sec3Full, short: t.sections.mechanism, content: section3Text, inlineMCQs: sectionQuestions(3), checkpoint: undefined, teacherExplanation: undefined },
+          { num: 4, title: t.sections.sec4Full, short: t.sections.checkpoint, content: section4Boundary, inlineMCQs: sectionQuestions(4), checkpoint: checkpoint, teacherExplanation: undefined },
+          { num: 5, title: t.sections.sec5Full, short: t.sections.synthesis, content: section5Text, inlineMCQs: sectionQuestions(5), checkpoint: undefined, teacherExplanation: undefined },
+        ];
 
   // Subscribe to audio state changes
   useEffect(() => {
@@ -160,6 +205,11 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   // Compute explanation text for a given section
   const getSectionExplanation = useCallback(
     (sectionIndex: number) => {
+      const dynamicSec = dynamicNote?.sections?.find((s, idx) => (s.order || idx + 1) === sectionIndex);
+      if (dynamicSec?.teacherExplanation && dynamicSec.teacherExplanation.trim()) {
+        return dynamicSec.teacherExplanation;
+      }
+
       const enFallback =
         sectionIndex === 1
           ? `Let's deeply explore the intuition behind ${note?.title}. Think of this as the core mental model to anchor every single mechanism we will cover. When you grasp this intuition from first principles, everything else flows naturally.`
@@ -251,15 +301,25 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
     if (previousNoteKeyRef.current !== currentNoteKey) {
       previousNoteKeyRef.current = currentNoteKey;
       setViewMode(initialViewMode);
-      setUnlockedSection(1);
-      setActiveSectionTab(1);
+      const savedProgress = getLessonProgress(uid, effectiveCourseId, effectiveLessonId);
+      setUnlockedSection(savedProgress?.unlockedSection || 1);
+      setActiveSectionTab(savedProgress?.activeSectionTab || 1);
       setCheckpointInput('');
       setIsSideQuestionOpen(false);
       stopNeuralAudio();
       setReadingSection(null);
       setActiveSpokenText('');
     }
-  }, [currentNoteKey, initialViewMode]);
+  }, [currentNoteKey, initialViewMode, uid, effectiveCourseId, effectiveLessonId]);
+
+  // Persist lesson section progress automatically whenever section or tab changes
+  useEffect(() => {
+    if (typeof window === 'undefined' || !effectiveCourseId || !effectiveLessonId) return;
+    saveLessonProgress(uid, effectiveCourseId, effectiveLessonId, {
+      unlockedSection,
+      activeSectionTab,
+    });
+  }, [uid, effectiveCourseId, effectiveLessonId, unlockedSection, activeSectionTab]);
 
   // Load saved side questions for current note from localStorage (scoped per language)
   useEffect(() => {
@@ -298,23 +358,28 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   // Auto-play teacher explanation when note is loaded and ready, strictly guarding against modal collisions
   useEffect(() => {
     if (note && note.title && !activeLoading && !isFeynmanOpen && !isIntakeOpen) {
-      const voiceToken = `${note.title}_${language}`;
+      const voiceToken = `${effectiveCourseId || ''}_${effectiveLessonId || note.title}_${language}`;
       if (lastSpokenNoteTitleRef.current !== voiceToken) {
         lastSpokenNoteTitleRef.current = voiceToken;
-        // Never auto-play over another actively speaking voice reader
-        if (getAudioPlaybackState() !== 'playing') {
-          playTeacherExplanationRef.current(1, 'Section 01');
+        // Never auto-play over another actively speaking or paused voice reader
+        if (getAudioPlaybackState() !== 'playing' && getAudioPlaybackState() !== 'paused') {
+          playTeacherExplanationRef.current(activeSectionTab, sectionsConfig[activeSectionTab - 1]?.title);
         }
       }
     }
-  }, [note?.title, activeLoading, isFeynmanOpen, isIntakeOpen]);
+  }, [note?.title, activeLoading, isFeynmanOpen, isIntakeOpen, effectiveCourseId, effectiveLessonId, language, activeSectionTab, sectionsConfig]);
 
   // Audio Play / Pause toggle with Side Question priority
   const handleTogglePause = () => {
     if (playbackState === 'playing') {
       pauseNeuralAudio();
     } else if (playbackState === 'paused') {
-      resumeNeuralAudio();
+      const activeReader = getActiveReaderId();
+      if (activeReader === `note-section-${activeSectionTab}`) {
+        resumeNeuralAudio();
+      } else {
+        playTeacherExplanation(activeSectionTab, sectionsConfig[activeSectionTab - 1]?.title);
+      }
     } else {
       const activeThread = sideQuestionThreads.find((t) => t.id === activeThreadId);
       if (isSideQuestionOpen && activeThread && activeThread.turns.length > 0) {
@@ -330,33 +395,65 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
         });
         return;
       }
-      playTeacherExplanation(activeSectionTab);
+      playTeacherExplanation(activeSectionTab, sectionsConfig[activeSectionTab - 1]?.title);
     }
   };
 
-  // Audio Restart / Retry
+  // Audio Restart / Retry: restarts spoken lecture for the active section
   const handleRestartAudio = () => {
-    restartNeuralAudio();
+    stopNeuralAudio();
+    playTeacherExplanation(activeSectionTab, sectionsConfig[activeSectionTab - 1]?.title);
   };
 
   const toggleQuiz = (id: string) => {
     setRevealedQuiz((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const persistNoteState = useCallback(
+    (updatedNote: DynamicLessonNote) => {
+      if (typeof window === 'undefined' || !effectiveCourseId || !effectiveLessonId) return;
+      try {
+        const noteKey = `ater_note_${uid}_${effectiveCourseId}_${effectiveLessonId}`;
+        localStorage.setItem(noteKey, JSON.stringify(updatedNote));
+        saveNoteToStore(effectiveCourseId, effectiveLessonId, updatedNote, uid).catch(() => {});
+        onNoteUpdate?.(updatedNote);
+      } catch (e) {
+        console.warn('Failed to persist note state:', e);
+      }
+    },
+    [uid, effectiveCourseId, effectiveLessonId, onNoteUpdate]
+  );
+
   const handleCheckpointSubmit = async (checkpointId: string) => {
     if (!checkpointInput.trim()) return;
+    const submittedAnswer = checkpointInput.trim();
     setIsSubmittingCheckpoint(true);
     try {
+      const markCp = (c?: LessonCheckpoint) => {
+        if (c && (c.id === checkpointId || !c.id)) {
+          c.studentAnswer = submittedAnswer;
+          c.isAnswered = true;
+        }
+      };
+      if (hasDynamicSections && dynamicNote?.sections) {
+        dynamicNote.sections.forEach((s) => markCp(s.checkpoint));
+      }
+      if (dynamicNote?.checkpoints) {
+        dynamicNote.checkpoints.forEach(markCp);
+      }
+      markCp(checkpoint);
+      markCp(dynamicNote?.section4MidwayCheckpoint);
+
       if (onCheckpointStep) {
-        await onCheckpointStep(checkpointId, checkpointInput.trim());
+        await onCheckpointStep(checkpointId, submittedAnswer);
       } else {
         const res = await fetch('/api/lesson/step', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            lessonId: (note as any)?.lessonId || 'lesson-01',
+            lessonId: effectiveLessonId,
             checkpointId,
-            learnerInput: checkpointInput.trim(),
+            learnerInput: submittedAnswer,
             activeNoteContent: note,
           }),
         });
@@ -367,10 +464,14 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             (note as any).section5SocraticSynthesis = data.synthesizedNoteAddendum;
           }
           if (data.passed) {
-            setUnlockedSection(5);
-            setActiveSectionTab(5);
+            setUnlockedSection(sectionsConfig.length);
+            setActiveSectionTab(sectionsConfig.length);
           }
         }
+      }
+
+      if (note) {
+        persistNoteState(note as DynamicLessonNote);
       }
       setCheckpointInput('');
     } finally {
@@ -438,13 +539,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
         if (data.summary) summary = data.summary;
       }
 
-      // Guarantee at least 2000ms of thinking state
-      const elapsed = Date.now() - startTime;
-      const minThinkingTime = 2000;
-      if (elapsed < minThinkingTime) {
-        await new Promise((resolve) => setTimeout(resolve, minThinkingTime - elapsed));
-      }
-      const finalDuration = Math.max(2, Math.round((Date.now() - startTime) / 1000));
+      const finalDuration = Math.max(1, Math.round((Date.now() - startTime) / 1000));
 
       const newTurn: QaTurn = {
         id: `turn_${Date.now()}`,
@@ -605,28 +700,85 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
     );
   }
 
-  const isCurrentMiniLesson = Boolean(
-    (note as any)?.isRemediation ||
-    (note as any)?.parentLessonId ||
-    curriculum?.lessons?.some((l) => l.id === ((note as any)?.lessonId || (note as any)?.id) && (l.isRemediation || l.parentLessonId))
-  );
+  const renderCheckpoint = (cp?: LessonCheckpoint) => {
+    if (!cp) return null;
+    return (
+      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/70 dark:bg-zinc-900/50 space-y-3">
+        <div className="flex items-center justify-between text-xs text-zinc-400 font-sans">
+          <span className="uppercase text-[10px] text-zinc-700 dark:text-zinc-300 font-semibold tracking-wider">
+            {t.socraticCheckpoint}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              stopNeuralAudio();
+              playNeuralAudio(cp.spokenPrompt || cp.question, {
+                voice: defaultVoice,
+                readerId: 'note-checkpoint-prompt',
+              });
+            }}
+            className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+          >
+            {t.playAudio}
+          </button>
+        </div>
 
-  const sectionsConfig = isCurrentMiniLesson
-    ? [
-        {
-          num: 1,
-          title: isAmharic ? 'የማካካሻ ትምህርት' : 'Core Remediation',
-          short: isAmharic ? 'ክለሳ' : 'Mini-Lesson',
-          text: section1Text,
-        },
-      ]
-    : [
-        { num: 1, title: t.sections.sec1Full, short: t.sections.intuition, text: section1Text },
-        { num: 2, title: t.sections.sec2Full, short: t.sections.framework, text: section2Text },
-        { num: 3, title: t.sections.sec3Full, short: t.sections.mechanism, text: section3Text },
-        { num: 4, title: t.sections.sec4Full, short: t.sections.checkpoint, text: section4Boundary },
-        { num: 5, title: t.sections.sec5Full, short: t.sections.synthesis, text: section5Text },
-      ];
+        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+          {cp.question}
+        </p>
+
+        {cp.isAnswered ? (
+          <div className="text-xs text-zinc-600 dark:text-zinc-400 space-y-1.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                {isAmharic ? 'የእርስዎ ምላሽ' : 'Your Answer'}:
+              </span>
+              <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                {isAmharic ? 'ተመልሷል' : 'Completed'}
+              </span>
+            </div>
+            <p className="p-2.5 rounded-lg bg-white/80 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 font-sans leading-relaxed">
+              {cp.studentAnswer}
+            </p>
+            {cp.evaluation && (
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{cp.evaluation.feedback}</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="relative">
+              <input
+                type="text"
+                value={checkpointInput}
+                onChange={(e) => setCheckpointInput(e.target.value)}
+                onFocus={() => setFocusedInput('checkpoint')}
+                onBlur={() => setFocusedInput(null)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCheckpointSubmit(cp.id)}
+                placeholder={t.typeSynthesis}
+                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 pr-7"
+              />
+              <InputVoiceIndicator
+                isFocused={focusedInput === 'checkpoint'}
+                isProcessingOverride={isSubmittingCheckpoint && focusedInput === 'checkpoint'}
+                language={language}
+                className="top-2.5 right-2"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => handleCheckpointSubmit(cp.id)}
+                disabled={isSubmittingCheckpoint || !checkpointInput.trim()}
+                className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isSubmittingCheckpoint ? '...' : t.submitCheckpoint}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Active quote for "What the Agent Just Said"
   const currentDisplayedSpeech = activeSpokenText || getSectionExplanation(activeSectionTab);
@@ -713,35 +865,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             </button>
           </div>
 
-          {/* NotebookLM Studio Button (when enabled) */}
-          {isStudioEnabled && (
-            <button
-              type="button"
-              onClick={() => setIsStudioOpen(true)}
-              aria-label={isAmharic ? 'ማስታወሻ ስቱዲዮ' : 'NotebookLM Studio'}
-              title={isAmharic ? 'ማስታወሻ ስቱዲዮ' : 'NotebookLM Studio'}
-              className="p-1.5 px-2.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
-            >
-              <Sliders className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="hidden sm:inline">{isAmharic ? 'ስቱዲዮ' : 'Studio'}</span>
-            </button>
-          )}
-
-          {/* Sources Tray Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setIsSourcesTrayOpen((prev) => !prev)}
-            aria-label={isAmharic ? 'ጥናታዊ ምንጮች' : 'Literature Sources'}
-            title={isAmharic ? 'ጥናታዊ ምንጮች' : 'Literature Sources'}
-            className={`p-1.5 px-2.5 rounded-lg border transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs ${
-              isSourcesTrayOpen
-                ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                : 'border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800'
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{isAmharic ? 'ምንጮች' : 'Sources'}</span>
-          </button>
 
           {/* Reset Demo / New Journey button (integrated cleanly to prevent overlap) */}
           {onResetDemo && (
@@ -825,7 +948,19 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             <div className="max-w-3xl w-full mx-auto space-y-4 pb-8">
 
             {/* Stepper Progression Navigation Bar (Section tabs: Intuition, Framework, etc.) */}
-            <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-parchment-200/70 dark:bg-zinc-900/60 border border-parchment-300/70 dark:border-zinc-800/60">
+            <nav
+              aria-label="Lesson sections"
+              className="flex items-center gap-1.5 p-1 rounded-xl bg-parchment-200/70 dark:bg-zinc-900/60 border border-parchment-300/70 dark:border-zinc-800/60"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowRight' && activeSectionTab < unlockedSection) {
+                  setActiveSectionTab(activeSectionTab + 1);
+                  playTeacherExplanation(activeSectionTab + 1, sectionsConfig[activeSectionTab]?.title);
+                } else if (e.key === 'ArrowLeft' && activeSectionTab > 1) {
+                  setActiveSectionTab(activeSectionTab - 1);
+                  playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
+                }
+              }}
+            >
               {sectionsConfig.map((sec) => {
                 const isUnlocked = sec.num <= unlockedSection;
                 const isActive = sec.num === activeSectionTab;
@@ -838,274 +973,383 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       setActiveSectionTab(sec.num);
                       playTeacherExplanation(sec.num, sec.title);
                     }}
-                    className={`flex-1 py-1 px-2 rounded-lg text-center transition-colors ${
+                    className={`flex-1 py-1 px-2 min-h-[44px] rounded-lg text-center transition-colors flex items-center justify-center gap-1.5 ${
                       isActive
                         ? 'bg-parchment-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
                         : isUnlocked
                           ? 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                           : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
                     }`}
+                    title={!isUnlocked ? (isAmharic ? 'ይህንን ክፍል ለማየት ቀዳሚውን ያጠናቅቁ' : 'Complete previous section to unlock') : undefined}
                   >
-                    <span className="block text-[11px] truncate">
-                      {sec.short}
-                    </span>
+                    {!isUnlocked && (
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    )}
+                    <span className="block text-[11px] font-medium sm:hidden">{sec.num}</span>
+                    <span className="hidden sm:block text-[11px] truncate">{sec.short}</span>
                   </button>
                 );
               })}
             </nav>
 
-          {/* STEPS VIEW MODE (Focused Stepper with Smooth Navigation) */}
+          {/* STEPS VIEW MODE (Focused Stepper with Dynamic Sections & Smooth Navigation) */}
           {viewMode === 'interactive' && (
             <div className="space-y-4">
-              {/* Section 1: Core Intuition */}
-              {activeSectionTab === 1 && (
-                <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
-                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
-                    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {t.sections.sec1Full}
-                    </h3>
-                  </div>
-                  <RichContentRenderer content={section1Text} />
-                  {sectionQuestions(1).map((q) => (
-                    <InlineMCQCard key={q.id} mcq={q} language={language} />
-                  ))}
-                </article>
-              )}
+              {hasDynamicSections ? (
+                (() => {
+                  const activeSec = sectionsConfig.find((s) => s.num === activeSectionTab) || sectionsConfig[0];
+                  if (!activeSec) return null;
+                  const isFinalSec = activeSec.num === sectionsConfig.length;
 
-              {/* Section 2: Framework (if active) */}
-              {activeSectionTab === 2 && (
-                <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
-                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
-                    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {t.sections.sec2Full}
-                    </h3>
-                  </div>
-                  <RichContentRenderer content={section2Text} />
-                  {sectionQuestions(2).map((q) => (
-                    <InlineMCQCard key={q.id} mcq={q} language={language} />
-                  ))}
-                </article>
-              )}
-
-              {/* Section 3: Mechanism (if active) */}
-              {activeSectionTab === 3 && (
-                <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
-                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
-                    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {t.sections.sec3Full}
-                    </h3>
-                  </div>
-                  <RichContentRenderer content={section3Text} />
-                  {sectionQuestions(3).map((q) => (
-                    <InlineMCQCard key={q.id} mcq={q} language={language} />
-                  ))}
-                </article>
-              )}
-
-              {/* Section 4: Boundary Traps & Socratic Midway Checkpoint */}
-              {activeSectionTab === 4 && (
-                <article className="space-y-4 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
-                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
-                    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {t.sections.sec4Full}
-                    </h3>
-                  </div>
-
-                  {section4Boundary && (
-                    <RichContentRenderer content={section4Boundary} />
-                  )}
-
-                  {artifactCode && (
-                    dynamicNote?.artifactLanguage === 'mermaid' ? (
-                      <MermaidViewer code={artifactCode} />
-                    ) : dynamicNote?.artifactLanguage === 'diff' ? (
-                      <CodeViewer code={artifactCode} isDiff={true} language="diff" />
-                    ) : dynamicNote?.artifactLanguage === 'math' ? (
-                      <MathViewer math={artifactCode} displayMode={true} />
-                    ) : dynamicNote?.artifactLanguage === 'table' ? (
-                      <TableViewer content={artifactCode} />
-                    ) : dynamicNote?.artifactLanguage === 'timeline' ? (
-                      <TimelineViewer content={artifactCode} />
-                    ) : dynamicNote?.artifactLanguage === 'interactive' ? (
-                      <InteractiveCanvasViewer code={artifactCode} title={note.title} />
-                    ) : (
-                      <CodeViewer code={artifactCode} language={dynamicNote?.artifactLanguage || 'typescript'} />
-                    )
-                  )}
-
-                  {/* Socratic Checkpoint */}
-                  {checkpoint && (
-                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/70 dark:bg-zinc-900/50 space-y-3">
-                      <div className="flex items-center justify-between text-xs text-zinc-400 font-sans">
-                        <span className="uppercase text-[10px] text-zinc-700 dark:text-zinc-300 font-semibold tracking-wider">
-                          {t.socraticCheckpoint}
+                  return (
+                    <article className="space-y-4 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                      <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5 flex items-center justify-between">
+                        <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {activeSec.title}
+                        </h3>
+                        <span className="text-[10px] font-mono text-zinc-400">
+                          {String(activeSec.num).padStart(2, '0')} / {String(sectionsConfig.length).padStart(2, '0')}
                         </span>
-                        <button
-                          onClick={() => {
-                            stopNeuralAudio();
-                            playNeuralAudio(checkpoint.spokenPrompt || checkpoint.question, {
-                              voice: defaultVoice,
-                              readerId: 'note-checkpoint-prompt',
-                            });
-                          }}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                        >
-                          {t.playAudio}
-                        </button>
                       </div>
 
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {checkpoint.question}
-                      </p>
+                      <RichContentRenderer content={activeSec.content} />
 
-                      {checkpoint.isAnswered ? (
-                        <div className="text-xs text-zinc-600 dark:text-zinc-400 space-y-1 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/60">
-                          <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                            {isAmharic ? 'ትንተና' : 'Summary'}: {checkpoint.studentAnswer}
-                          </p>
-                          {checkpoint.evaluation && (
-                            <p>{checkpoint.evaluation.feedback}</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="relative">
-                            <input
-                              type="text"
-                              value={checkpointInput}
-                              onChange={(e) => setCheckpointInput(e.target.value)}
-                              onFocus={() => setFocusedInput('checkpoint')}
-                              onBlur={() => setFocusedInput(null)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleCheckpointSubmit(checkpoint.id)}
-                              placeholder={t.typeSynthesis}
-                              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 pr-7"
-                            />
-                            <InputVoiceIndicator
-                              isFocused={focusedInput === 'checkpoint'}
-                              isProcessingOverride={isSubmittingCheckpoint && focusedInput === 'checkpoint'}
+                      {activeSec.inlineMCQs && activeSec.inlineMCQs.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          {activeSec.inlineMCQs.map((q) => (
+                            <InlineMCQCard
+                              key={q.id}
+                              mcq={q}
                               language={language}
-                              className="top-2.5 right-2"
+                              onAnswerChange={() => {
+                                if (note) persistNoteState(note as DynamicLessonNote);
+                              }}
                             />
-                          </div>
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => handleCheckpointSubmit(checkpoint.id)}
-                              disabled={isSubmittingCheckpoint || !checkpointInput.trim()}
-                              className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 disabled:opacity-50 transition-colors"
-                            >
-                              {isSubmittingCheckpoint ? '...' : t.submitCheckpoint}
-                            </button>
-                          </div>
+                          ))}
                         </div>
                       )}
-                    </div>
-                  )}
-                </article>
-              )}
 
-              {/* Section 5: Real-Time Mutations & Socratic Synthesis */}
-              {activeSectionTab === 5 && (
-                <article className="space-y-4 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
-                  <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
-                    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {t.sections.sec5Full}
-                    </h3>
-                  </div>
+                      {renderCheckpoint(activeSec.checkpoint)}
 
-                  <RichContentRenderer content={section5Text} />
-
-                  {mutations.length > 0 && (
-                    <div className="space-y-1.5 pt-1">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                        {isAmharic ? 'የተዋሃዱ ማስታወሻዎች' : 'Integrated Notes'}
-                      </span>
-                      {mutations.map((mut, idx) => (
-                        <div
-                          key={idx}
-                          className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-xs text-zinc-600 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800/60"
-                        >
-                          <RichContentRenderer content={mut} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Proving Grounds */}
-                  {provingGrounds.length > 0 && (
-                    <div className="space-y-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/60">
-                      <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
-                        {t.provingGrounds}
-                      </h4>
-                      {provingGrounds.map((q) => (
-                        <div
-                          key={q.id}
-                          className="p-4 rounded-xl border border-parchment-300 dark:border-zinc-800/80 bg-parchment-100/60 dark:bg-zinc-900/40 space-y-3"
-                        >
-                          <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-parchment-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold">
-                            {q.difficulty}
-                          </span>
-                          <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
-                            {q.question}
-                          </p>
-                          {q.options && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                              {Object.entries(q.options).map(([optKey, optVal]) => (
+                      {isFinalSec && (
+                        <>
+                          {mutations.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                                {isAmharic ? 'የተዋሃዱ ማስታወሻዎች' : 'Integrated Notes'}
+                              </span>
+                              {mutations.map((mut, idx) => (
                                 <div
-                                  key={optKey}
-                                  className="p-2.5 rounded-lg border border-parchment-300/80 dark:border-zinc-800/60 bg-parchment-50 dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300"
+                                  key={idx}
+                                  className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-xs text-zinc-600 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800/60"
                                 >
-                                  <span className="font-semibold mr-1.5 text-zinc-900 dark:text-zinc-100">
-                                    {optKey}:
-                                  </span>
-                                  {optVal}
+                                  <RichContentRenderer content={mut} />
                                 </div>
                               ))}
                             </div>
                           )}
-                          <div className="pt-2 flex items-center justify-between">
-                            <button
-                              type="button"
-                              onClick={() => toggleQuiz(q.id)}
-                              className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-                            >
-                              {revealedQuiz[q.id] ? t.hideAnswer : t.revealAnswer}
-                            </button>
-                            {revealedQuiz[q.id] && (
-                              <div className="text-xs text-zinc-700 dark:text-zinc-300 font-sans">
-                                <span className="font-semibold">{q.answer}</span> - {q.explanation}
+
+                          {provingGrounds.length > 0 && (
+                            <div className="space-y-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/60">
+                              <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                                {t.provingGrounds}
+                              </h4>
+                              {provingGrounds.map((q) => (
+                                <div
+                                  key={q.id}
+                                  className="p-4 rounded-xl border border-parchment-300 dark:border-zinc-800/80 bg-parchment-100/60 dark:bg-zinc-900/40 space-y-3"
+                                >
+                                  <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-parchment-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold">
+                                    {q.difficulty}
+                                  </span>
+                                  <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
+                                    {q.question}
+                                  </p>
+                                  {q.options && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                      {Object.entries(q.options).map(([optKey, optVal]) => (
+                                        <div
+                                          key={optKey}
+                                          className="p-2.5 rounded-lg border border-parchment-300/80 dark:border-zinc-800/60 bg-parchment-50 dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300"
+                                        >
+                                          <span className="font-semibold mr-1.5 text-zinc-900 dark:text-zinc-100">
+                                            {optKey}:
+                                          </span>
+                                          {optVal}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="pt-2 flex items-center justify-between">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleQuiz(q.id)}
+                                      className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+                                    >
+                                      {revealedQuiz[q.id] ? t.hideAnswer : t.revealAnswer}
+                                    </button>
+                                    {revealedQuiz[q.id] && (
+                                      <div className="text-xs text-zinc-700 dark:text-zinc-300 font-sans">
+                                        <span className="font-semibold">{q.answer}</span> - {q.explanation}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {!curriculum?.disableGate && (
+                            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-xl bg-zinc-900 dark:bg-zinc-100 border border-zinc-800 dark:border-zinc-200 shadow-md">
+                              <div className="flex-1 w-full">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-semibold text-zinc-50 dark:text-zinc-900">
+                                    {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
+                                  </h4>
+                                  <span title={isAmharic ? 'ወደ ቀጣዩ ትምህርት ለማለፍ ይህን ማለፍ ግዴታ ነው' : 'This defense validates your understanding and commits it to long-term memory before moving on.'} className="cursor-help w-4 h-4 rounded-full bg-zinc-800 dark:bg-zinc-200 text-zinc-400 dark:text-zinc-600 flex items-center justify-center text-[10px] font-bold">?</span>
+                                </div>
+                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 leading-relaxed">
+                                  {isAmharic
+                                    ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
+                                    : 'Answer 3 progressively challenging questions to prove complete mastery and unlock the next lesson.'}
+                                </p>
+                                {/* Progress Bar */}
+                                <div className="mt-3 flex items-center gap-3 w-full sm:w-2/3">
+                                  <div className="h-1.5 flex-1 bg-zinc-800 dark:bg-zinc-300 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 dark:bg-blue-600 transition-all" style={{ width: `${curriculum?.lessons?.length ? (curriculum.lessons.filter(l => l.status === 'mastered').length / curriculum.lessons.length) * 100 : 0}%` }} />
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
+                                    {curriculum?.lessons?.filter(l => l.status === 'mastered').length || 0} / {curriculum?.lessons?.length || 0} {isAmharic ? 'ተጠናቋል' : 'mastered'}
+                                  </span>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
+                              {onOpenFeynman && (
+                                <button
+                                  type="button"
+                                  onClick={onOpenFeynman}
+                                  className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 transition-all shrink-0 cursor-pointer shadow-sm"
+                                >
+                                  {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </article>
+                  );
+                })()
+              ) : (
+                /* Legacy 5-tab structure fallback */
+                <>
+                  {/* Section 1: Core Intuition */}
+                  {activeSectionTab === 1 && (
+                    <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                      <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
+                        <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {t.sections.sec1Full}
+                        </h3>
+                      </div>
+                      <RichContentRenderer content={section1Text} />
+                      {sectionQuestions(1).map((q) => (
+                        <InlineMCQCard
+                          key={q.id}
+                          mcq={q}
+                          language={language}
+                          onAnswerChange={() => {
+                            if (note) persistNoteState(note as DynamicLessonNote);
+                          }}
+                        />
                       ))}
-                    </div>
+                    </article>
                   )}
 
-                  {/* Defense Launch Card (Hidden if disableGate is true on curriculum) */}
-                  {!curriculum?.disableGate && (
-                    <div className="pt-4 border-t border-parchment-200 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-parchment-100/80 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800/80">
-                      <div>
-                        <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                          {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
-                        </h4>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                          {isAmharic
-                            ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
-                            : 'Answer 3 progressively challenging questions to prove complete mastery and unlock the next lesson.'}
-                        </p>
+                  {/* Section 2: Framework */}
+                  {activeSectionTab === 2 && (
+                    <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                      <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
+                        <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {t.sections.sec2Full}
+                        </h3>
                       </div>
-                      {onOpenFeynman && (
-                        <button
-                          type="button"
-                          onClick={onOpenFeynman}
-                          className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
-                        >
-                          {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
-                        </button>
-                      )}
-                    </div>
+                      <RichContentRenderer content={section2Text} />
+                      {sectionQuestions(2).map((q) => (
+                        <InlineMCQCard
+                          key={q.id}
+                          mcq={q}
+                          language={language}
+                          onAnswerChange={() => {
+                            if (note) persistNoteState(note as DynamicLessonNote);
+                          }}
+                        />
+                      ))}
+                    </article>
                   )}
-                </article>
+
+                  {/* Section 3: Mechanism */}
+                  {activeSectionTab === 3 && (
+                    <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                      <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
+                        <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {t.sections.sec3Full}
+                        </h3>
+                      </div>
+                      <RichContentRenderer content={section3Text} />
+                      {sectionQuestions(3).map((q) => (
+                        <InlineMCQCard
+                          key={q.id}
+                          mcq={q}
+                          language={language}
+                          onAnswerChange={() => {
+                            if (note) persistNoteState(note as DynamicLessonNote);
+                          }}
+                        />
+                      ))}
+                    </article>
+                  )}
+
+                  {/* Section 4: Boundary Traps & Socratic Midway Checkpoint */}
+                  {activeSectionTab === 4 && (
+                    <article className="space-y-4 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                      <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
+                        <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {t.sections.sec4Full}
+                        </h3>
+                      </div>
+
+                      {section4Boundary && (
+                        <RichContentRenderer content={section4Boundary} />
+                      )}
+
+                      {artifactCode && (
+                        dynamicNote?.artifactLanguage === 'mermaid' ? (
+                          <MermaidViewer code={artifactCode} />
+                        ) : dynamicNote?.artifactLanguage === 'diff' ? (
+                          <CodeViewer code={artifactCode} isDiff={true} language="diff" />
+                        ) : dynamicNote?.artifactLanguage === 'math' ? (
+                          <MathViewer math={artifactCode} displayMode={true} />
+                        ) : dynamicNote?.artifactLanguage === 'table' ? (
+                          <TableViewer content={artifactCode} />
+                        ) : dynamicNote?.artifactLanguage === 'timeline' ? (
+                          <TimelineViewer content={artifactCode} />
+                        ) : dynamicNote?.artifactLanguage === 'interactive' ? (
+                          <InteractiveCanvasViewer code={artifactCode} title={note.title} />
+                        ) : (
+                          <CodeViewer code={artifactCode} language={dynamicNote?.artifactLanguage || 'typescript'} />
+                        )
+                      )}
+
+                      {renderCheckpoint(checkpoint)}
+                    </article>
+                  )}
+
+                  {/* Section 5: Real-Time Mutations & Socratic Synthesis */}
+                  {activeSectionTab === 5 && (
+                    <article className="space-y-4 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/30 p-5 shadow-sm animate-in fade-in duration-150">
+                      <div className="border-b border-zinc-100 dark:border-zinc-800/60 pb-2.5">
+                        <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {t.sections.sec5Full}
+                        </h3>
+                      </div>
+
+                      <RichContentRenderer content={section5Text} />
+
+                      {mutations.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                            {isAmharic ? 'የተዋሃዱ ማስታወሻዎች' : 'Integrated Notes'}
+                          </span>
+                          {mutations.map((mut, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-xs text-zinc-600 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800/60"
+                            >
+                              <RichContentRenderer content={mut} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Proving Grounds */}
+                      {provingGrounds.length > 0 && (
+                        <div className="space-y-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/60">
+                          <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                            {t.provingGrounds}
+                          </h4>
+                          {provingGrounds.map((q) => (
+                            <div
+                              key={q.id}
+                              className="p-4 rounded-xl border border-parchment-300 dark:border-zinc-800/80 bg-parchment-100/60 dark:bg-zinc-900/40 space-y-3"
+                            >
+                              <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-parchment-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold">
+                                {q.difficulty}
+                              </span>
+                              <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
+                                {q.question}
+                              </p>
+                              {q.options && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                  {Object.entries(q.options).map(([optKey, optVal]) => (
+                                    <div
+                                      key={optKey}
+                                      className="p-2.5 rounded-lg border border-parchment-300/80 dark:border-zinc-800/60 bg-parchment-50 dark:bg-zinc-950 text-xs text-zinc-700 dark:text-zinc-300"
+                                    >
+                                      <span className="font-semibold mr-1.5 text-zinc-900 dark:text-zinc-100">
+                                        {optKey}:
+                                      </span>
+                                      {optVal}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="pt-2 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleQuiz(q.id)}
+                                  className="text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+                                >
+                                  {revealedQuiz[q.id] ? t.hideAnswer : t.revealAnswer}
+                                </button>
+                                {revealedQuiz[q.id] && (
+                                  <div className="text-xs text-zinc-700 dark:text-zinc-300 font-sans">
+                                    <span className="font-semibold">{q.answer}</span> - {q.explanation}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Defense Launch Card (Hidden if disableGate is true on curriculum) */}
+                      {!curriculum?.disableGate && (
+                        <div className="pt-4 border-t border-parchment-200 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-parchment-100/80 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800/80">
+                          <div>
+                            <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                              {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
+                            </h4>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                              {isAmharic
+                                ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
+                                : 'Answer 3 progressively challenging questions to prove complete mastery and unlock the next lesson.'}
+                            </p>
+                          </div>
+                          {onOpenFeynman && (
+                            <button
+                              type="button"
+                              onClick={onOpenFeynman}
+                              className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
+                            >
+                              {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  )}
+                </>
               )}
 
               {/* Step Advancement CTA */}
@@ -1117,7 +1361,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       setActiveSectionTab(activeSectionTab - 1);
                       playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
                     }}
-                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100/70 hover:bg-parchment-200 dark:bg-transparent transition-colors flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100/70 hover:bg-parchment-200 dark:bg-transparent transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>←</span>
                     <span>{isAmharic ? 'ተመለስ' : 'Previous'}</span>
@@ -1138,35 +1382,115 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             </div>
           )}
 
-          {/* TRANSCRIPTION VIEW MODE (Spoken transcript for active section, matching main note logic) */}
-          {viewMode === 'full' && (
-            <div className="space-y-4">
-              <article className="space-y-3 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
-                <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5">
-                  <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                    {sectionsConfig[activeSectionTab - 1]?.title || `Section 0${activeSectionTab}`}
-                  </h3>
-                </div>
-                <div className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-line font-sans">
-                  <RichContentRenderer content={getSectionExplanation(activeSectionTab)} />
-                </div>
-              </article>
+          {/* TRANSCRIPTION VIEW MODE (Single active section spoken lecture transcript only) */}
+          {viewMode === 'full' && (() => {
+            const activeSec = sectionsConfig.find((s) => s.num === activeSectionTab) || sectionsConfig[0];
+            if (!activeSec) return null;
+            const isFinalSec = activeSec.num === sectionsConfig.length;
+            const transcript =
+              activeSec.teacherExplanation ||
+              (dynamicNote?.teacherExplanations &&
+                (dynamicNote.teacherExplanations as any)['section' + activeSec.num]) ||
+              getSectionExplanation(activeSec.num);
 
-              {/* Step Advancement CTA in Transcription mode */}
-              {unlockedSection < 5 && (
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleAdvanceSection(unlockedSection + 1)}
-                    className="px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-750 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <span>{isAmharic ? 'ቀጥል' : 'Continue'}</span>
-                    <span>→</span>
-                  </button>
+            return (
+              <div className="space-y-4">
+                <article className="space-y-4 rounded-2xl border border-parchment-300 dark:border-zinc-800/70 bg-parchment-50/90 dark:bg-zinc-900/30 p-5 shadow-xs animate-in fade-in duration-150">
+                  <div className="border-b border-parchment-200 dark:border-zinc-800/60 pb-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-parchment-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold">
+                        {String(activeSec.num).padStart(2, '0')}
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {activeSec.title}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => playTeacherExplanation(activeSec.num, activeSec.title)}
+                        className="text-[11px] font-mono flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-parchment-200/80 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition-colors cursor-pointer shadow-2xs"
+                        title={isAmharic ? 'የንግግር ትምህርቱን አዳምጥ' : 'Listen to Spoken Lecture'}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                        <span>{isAmharic ? 'አዳምጥ' : 'Listen'}</span>
+                      </button>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        {String(activeSec.num).padStart(2, '0')} / {String(sectionsConfig.length).padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Single Column Lecture Transcript (Only what the AI says) */}
+                  <div className="p-4 sm:p-5 rounded-xl bg-white/70 dark:bg-zinc-950/70 border border-parchment-300/80 dark:border-zinc-800/80 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800/60">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
+                        {isAmharic ? 'የአስተማሪ ንግግር ጽሑፍ' : 'Spoken Lecture Transcript'}
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        {isAmharic ? 'ክፍል ' + activeSec.num : 'Section ' + activeSec.num}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed font-sans whitespace-pre-line">
+                      {transcript}
+                    </p>
+                  </div>
+
+                  {isFinalSec && !curriculum?.disableGate && onOpenFeynman && (
+                    <div className="pt-4 border-t border-parchment-200 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-parchment-100/80 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800/80">
+                      <div>
+                        <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
+                        </h4>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                          {isAmharic
+                            ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
+                            : 'Answer 3 progressively challenging questions to prove complete mastery and unlock the next lesson.'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={onOpenFeynman}
+                        className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
+                      >
+                        {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
+                      </button>
+                    </div>
+                  )}
+                </article>
+
+                {/* Step Advancement CTA */}
+                <div className="flex justify-between items-center pt-2">
+                  {activeSectionTab > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSectionTab(activeSectionTab - 1);
+                        playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
+                      }}
+                      className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100/70 hover:bg-parchment-200 dark:bg-transparent transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>←</span>
+                      <span>{isAmharic ? 'ተመለስ' : 'Previous'}</span>
+                    </button>
+                  ) : <div />}
+
+                  {activeSectionTab < sectionsConfig.length ? (
+                    <button
+                      type="button"
+                      onClick={() => handleAdvanceSection(activeSectionTab + 1)}
+                      className="px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-750 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <span>{isAmharic ? 'ቀጥል' : 'Continue'}</span>
+                      <span>→</span>
+                    </button>
+                  ) : null}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
 
           </main>
@@ -1220,26 +1544,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
           />
         </div>
 
-        {/* Collapsible In-Lesson Sources Tray in Right Column */}
-        <SourcesTray
-          isOpen={isSourcesTrayOpen}
-          onToggle={() => setIsSourcesTrayOpen((prev) => !prev)}
-          topicTitle={note.title}
-          language={language}
-        />
       </div>
-
-      {/* Non-Blocking NotebookLM Studio Creator Modal */}
-      {isStudioEnabled && (
-        <StudioModal
-          isOpen={isStudioOpen}
-          onClose={() => setIsStudioOpen(false)}
-          topicTitle={note.title}
-          sourceContext={`${section1Text}\n${section2Text}\n${section3Text}\n${section4Boundary}\n${section5Text}`}
-          notebookId={(curriculum as any)?.notebookId || (note as any)?.notebookId}
-          language={language}
-        />
-      )}
     </div>
   );
 };

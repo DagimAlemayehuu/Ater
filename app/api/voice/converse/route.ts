@@ -139,6 +139,7 @@ Respond ONLY with valid JSON:
           generationConfig: {
             responseMimeType: 'application/json',
             maxOutputTokens: 900,
+            thinkingConfig: { thinkingBudget: 1 },
           },
         }),
       }

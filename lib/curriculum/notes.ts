@@ -4,6 +4,9 @@ import path from 'path';
 import os from 'os';
 import type {
   DynamicLessonNote,
+  DynamicLessonSection,
+  PlannedSection,
+  GroundedSource,
   LessonCheckpoint,
   LessonCheckpointEvaluation,
   DynamicLessonNoteFeynmanCriteria,
@@ -67,7 +70,8 @@ export function generateFallbackNote(
   lessonId: string,
   title: string,
   courseId?: string,
-  language: 'en' | 'am' = 'en'
+  language: 'en' | 'am' = 'en',
+  plannedSections?: PlannedSection[]
 ): DynamicLessonNote {
   if (lessonId.startsWith('lesson-viewer-') || (title && title.toLowerCase().includes('viewer demo'))) {
     return getViewerDemoLessonNote(lessonId, language);
@@ -139,15 +143,15 @@ export function generateFallbackNote(
     ? {
         section1: `እንኳን ወደ ${cleanTitle} ጥልቅ ትምህርት በደህና መጡ። ይህንን ፅንሰ-ሀሳብ ከመሰረቱ ለመረዳት፣ በመቶዎች የሚቆጠሩ ሰዎች የጋራ የሰዓት ስምምነት የሚፈልጉበትን አንድ አዳራሽ በዓይነ-ህሊናዎ ይሳሉ። እያንዳንዱ ሰው በየግል የእጅ ሰዓቱ ላይ ቢተማመን፣ የሰዓት ልዩነትና ውዥንብር መፈጠሩ አይቀሬ ነው። ይልቁንም ህዝቡ አንድ የተመረጠ አዋጅ ነጋሪ ትልቅ የነሐስ ደወል እንዲመታ ይስማማል። ዋናው ቁምነገር፣ የደወሉ ድምፅ ተቀባይነት የሚያገኘው ከአዳራሹ ከግማሽ በላይ የሆኑ ሰዎች ሲሰሙትና ሲያረጋግጡት ብቻ ነው። ይህ የአብላጫ ድምፅ ማረጋገጫ ማንም ሰው እርስ በርሱ የሚጋጭ ሰዓት እንዳይጠቀም ያደርጋል። በሶፍትዌር ኢንጂነሪንግ ውስጥም ይኸው ተጨባጭ መርህ የኮምፒውተር ስርዓቶችን አስተማማኝ ያደርጋል። ይህንን ግልጽ ምሳሌ አእምሮዎ ውስጥ ከያዙ፣ የቀሩት የአሰራር ሂደቶች በሙሉ በቀላሉ ይገቡዎታል።`,
         section2: `አሁን ይህ መደበኛ መዋቅር በእውነተኛ የስራ አለም ለምን እንዳስፈለገ እንመልከት። በተሰራጩ የኮምፒውተር አውታረ መረቦች ውስጥ፣ ሰርቨሮች ድንገት ሊጠፉ ይችላሉ፣ መልእክቶች በመንገድ ላይ ሊዘገዩ ይችላሉ፣ እና የኮምፒውተሮች ውስጣዊ ሰዓት ሙሉ ለሙሉ ሊለያይ ይችላል። የ ${cleanTitle} ዋና አላማ በማንኛውም ሁኔታ ውስጥ የሚከሰቱ ክስተቶችን ወደ አንድ ወጥ የሆነ ቅደም ተከተል ማምጣት ነው። ይህ የሚሳካው ባልተረጋገጠ አካላዊ ሰዓት ከመመካት ይልቅ፣ በቅደም ተከተል ቁጥሮች እና በአብላጫ ድምፅ ማረጋገጫዎች ላይ በመመስረት ነው። ይህ ጥብቅ ማዕቀፍ ባይኖር ኖሮ፣ ተፎካካሪ መረጃዎች ስርዓቱን ሙሉ በሙሉ ያበላሹት ነበር። ሁለቱ ተከታታይ ውሳኔዎች ቢያንስ አንድ የጋራ አባል እንዲኖራቸው የሚያስችለው የሂሳብ መርህ የስርዓቱን ቀጣይነት ያረጋግጣል።`,
-        section3: `አሁን ደግሞ ወደ ውስጠኛው ሞተር ገብተን የአሰራር ዑደቱን ደረጃ በደረጃ እንመልከት። ሁሉም ነገር የሚጀምረው በመሪው ሰርቨር በሚላኩ የውሳኔ ሃሳቦች ነው። መሪው እጩ መረጃዎችን አዘጋጅቶ ለሁሉም ተከታይ ክፍሎች በአንድ ጊዜ ይልካል። እያንዳንዱ ተከታይ ክፍል የመጣውን መረጃ ከራሱ መዝገብ ጋር በጥንቃቄ ያወዳድራል፣ የቀደመ ወይም የተሳሳተ ከሆነም ውድቅ ያደርገዋል። ተከታዩ መረጃው ትክክል መሆኑን ሲያረጋግጥ በሃርድ ድራይቭ ላይ ጽፎ ማረጋገጫ ደረሰኝ ይመልሳል። መሪው ክፍል ከአብላጫዎቹ ተከታዮች ደረሰኝ ሲሰበስብ፣ መረጃውን በቋሚነት ያጸድቀዋል። በዚያች ቅጽበት ለውጡ በስርዓቱ ላይ ይተገበራል እንዲሁም ለሁሉም ተከታዮች ይሰራጫል። ምንም ክፍል የሂሳብ መስፈርቱ ሳይሟላ በግምት እንደማይሰራ ልብ ይበሉ።`,
-        section4: `እያንዳንዱ እውነተኛ የምህንድስና ስራ የሚመዘነው በተመቻቸ ሁኔታ ውስጥ ብቻ ሳይሆን፣ ችግሮች ሲፈጠሩ በሚሰጠው ምላሽ ነው። በ ${cleanTitle} ውስጥ ስርዓቱ ደህንነቱን የሚጠብቀው የአውታረ መረብ መቆራረጥ ከአናሳዎቹ ክፍሎች በማይበልጥ ጊዜ ብቻ ነው። የ5 ሰርቨሮች ስርዓት በኔትወርክ ብልሽት ምክንያት ወደ 2 እና 3 ቢከፈል፣ ሁለቱ ያሉት አናሳ ክፍል የስቴት መበላሸትን ለመከላከል ሲል ስራውን ወዲያውኑ ያቆማል። ብዙ መሃንዲሶች ስርዓት ፈጽሞ መቆም የለበትም ብለው ያስባሉ፣ ነገር ግን የተሳሳተ መረጃ ከመመዝገብ ይልቅ ደህንነትን ጠብቆ ማቆም እጅግ የተሻለ ነው። ከላይ ያለው የቅደም ተከተል ንድፍ ይህንን ግንኙነት በግልጽ ያሳያል። አሁን ይህንን መርህ በተግባር ለመፈተሽ፣ ከታች የቀረበውን የሶቅራጥስ መመዘኛ ጥያቄ አብረን እንመርምር።`,
+        section3: `አሁን ደግሞ ወደ ውስጠኛው ሞተር ገብተን የአሰራር ዑደቱን ደረጃ በደረጃ እንመልከት። በስክሪኑ ላይ የቀረበውን የኮድ ክፍል በጥንቃቄ ይመልከቱ። መሪው ሰርቨር እጩ መረጃዎችን አዘጋጅቶ ለሁሉም ተከታይ ክፍሎች በአንድ ጊዜ ያስተላልፋል። እያንዳንዱ ተከታይ ክፍል የመጣውን መረጃ ከመዝገቡ ጋር በማነፃፀር ትክክለኛነቱን ሲያረጋግጥ በሃርድ ድራይቭ ላይ ጽፎ ደረሰኝ ይመልሳል። መሪው ክፍል ከአብላጫዎቹ ተከታዮች ደረሰኝ ሲሰበስብ፣ መረጃውን በቋሚነት ያጸድቀዋል። በዚያች ቅጽበት ለውጡ በስርዓቱ ላይ ይተገበራል እንዲሁም ለሁሉም ተከታዮች ይሰራጫል። ምንም ክፍል የሂሳብ መስፈርቱ ሳይሟላ በግምት እንደማይሰራ ልብ ይበሉ።`,
+        section4: `እያንዳንዱ እውነተኛ የምህንድስና ስራ የሚመዘነው በተመቻቸ ሁኔታ ውስጥ ብቻ ሳይሆን፣ ችግሮች ሲፈጠሩ በሚሰጠው ምላሽ ነው። በስክሪኑ ላይ ያለውን የሜርሜይድ የቅደም ተከተል ንድፍ ይመልከቱ። በመጀመሪያው እርምጃ መሪው መልእክት ይልካል፣ ተከታይ ሀ ደግሞ መረጃውን አረጋግጦ የአብላጫ ድምፅ ማረጋገጫ ይመልሳል። ይህ ማረጋገጫ እንደደረሰው መሪው ለውጡን በስቴት ማሽኑ ላይ ይተገብራል። የአውታረ መረብ መቆራረጥ ከአናሳዎቹ ክፍሎች እስካልበለጠ ድረስ ስርዓቱ ደህንነቱን ይጠብቃል። አሁን ይህንን መርህ በተግባር ለመፈተሽ፣ ከታች የቀረበውን የሶቅራጥስ መመዘኛ ጥያቄ አብረን እንመርምር።`,
         section5: `እጅግ በጣም ጥሩ ጉዞ አድርገናል። ከተጨባጩ ምሳሌ ጀምረን፣ ዋናውን አላማ መርምረን፣ ዝርዝር የአሰራር ዑደቱን በሚገባ አይተናል። አእምሮዎ ውስጥ ሊቀር የሚገባው ዋናው መርህ፣ የአብላጫ ድምፅ ኮረም የአካላዊ ሰዓት ጥገኝነትን በማስቀረት ስርዓቱ እንዳይበላሽ ዋስትና ይሰጣል። በእውነተኛ የስራ አለም ውስጥ ስትሰሩ ስርዓቱ በድንበር ላይ እንዴት እንደሚሰራ እና መቆራረጦች ሲቀረፉ እንዴት እንደሚያገግም ሁልጊዜ ማስተዋል ያስፈልጋል። በስክሪኑ ላይ የቀረበውን አጭር ማጠቃለያ ካነበቡ በኋላ፣ ፅንሰ-ሀሳቡን በራስዎ ቃላት ያዋህዱት። ዝግጁ ሲሆኑ ደግሞ ወደ ፋይንማን የቃል ፈተና ገብተው ያለ ቴክኒካዊ ቃላት በግልጽ ያስረዱ።`,
       }
     : {
         section1: `Welcome to our deep dive on ${cleanTitle}. To truly understand this concept from first principles, picture a bustling ancient town hall where hundreds of citizens need to agree on official clock time. If everyone relied on their own pocket watch or sun angle, chaos would inevitably emerge from conflicting records. Instead, the assembly agrees that a single town crier strikes a resonant bronze bell whenever an hour turns. Crucially, the strike only becomes official when heard and acknowledged by more than half the assembly. That majority quorum ensures that even if several citizens step outside or fall asleep, conflicting times can never be validated. In software architecture, this very same intuition powers our core state transitions. By anchoring ourselves in this mental model, the rest of the machinery will fall naturally into place.`,
         section2: `Now let's examine why this formal framework exists in production engineering. In distributed networks, machines crash without notice, packets get delayed across transatlantic cables, and clock drift makes physical time completely untrustworthy. The fundamental purpose of ${cleanTitle} is to linearize arbitrary asynchronous events into a single, indisputable sequence order. We accomplish this by replacing fragile wall-clock timestamps with monotonic logical terms and strict majority confirmations. Without such a formal framework, concurrent writes would tear state machines apart into irreversible split-brain divergence. Notice how the mathematics of quorum intersection guarantees that any two successive decision quorums must share at least one overlapping member. That overlapping witness acts as the unbreakable thread of causal continuity across the entire life of your cluster.`,
-        section3: `Now let's step under the hood and watch the operational execution cycles turn. Everything begins with disciplined proposal cycles initiated by the active leader node. The leader constructs candidate entries and broadcasts them concurrently to all replica nodes across the cluster. Each follower node rigorously compares the proposed term against its own local persistent state, rejecting any stale proposals from prior terms. Once a follower verifies the log consistency invariant, it writes the entry to non-volatile disk and issues an acceptance receipt. When the leader accumulates receipts representing a strict majority, it stamps the entry as permanently committed. At that exact moment, the mutation is applied to the local finite state machine and committed indices propagate outward. Notice how no node ever assumes success until the mathematical threshold is undeniably satisfied.`,
-        section4: `Every real-world architecture is defined not by how it behaves in optimal conditions, but by how it fails under stress. In ${cleanTitle}, the system guarantees safety strictly as long as network partitions do not isolate more than a minority of active participants. If a catastrophic network split divides a five-node cluster into two and three nodes, the minority side instantly halts write progress to preserve safety. Many engineers mistakenly believe that availability should never be sacrificed, but in consistent systems, halting is vastly superior to corrupting financial balances or historical ledgers. Notice the sequence diagram above, which highlights the exact causal handshake between nodes. Now, to verify your causal intuition, take a look at the midway checkpoint question below and think about what happens when partitions collide.`,
+        section3: `Now let's step under the hood and watch the operational execution cycles turn. Everything begins with disciplined proposal cycles initiated by the active leader node. Notice the code block on your screen: the leader constructs candidate transactions and broadcasts them concurrently across all replica nodes. Follow along line by line: each replica validates that the proposed term is strictly greater than or equal to its highest observed term before committing to disk. Once written to non-volatile storage, the follower issues an acceptance receipt. When the leader accumulates receipts representing a strict majority, it stamps the entry as permanently committed and executes the mutation. Notice how no node ever assumes success until the mathematical threshold is undeniably satisfied.`,
+        section4: `Every real-world architecture is defined not by how it behaves in optimal conditions, but by how it fails under stress. In ${cleanTitle}, the system guarantees safety strictly as long as network partitions do not isolate more than a minority of active participants. Examine the Mermaid sequence diagram displayed on your screen. In step one, the leader dispatches an AppendEntries RPC across the network. Follower A processes the call, verifies local log invariants, and returns an acknowledgment, bringing the ack count to two out of three. That constitutes a majority quorum, allowing the leader in step four to apply the commit to its finite state machine. If network isolation cuts off Follower B, safety is preserved because quorum was already established. Now, to verify your causal intuition, take a look at the midway checkpoint question below and think about what happens when partitions collide.`,
         section5: `Outstanding progress. You have now journeyed from the foundational physical analogy, through the formal requirements, and into the precise operational cycles of ${cleanTitle}. The key invariant to cement in your mind is that majority quorum intersection eliminates the need for trusted clocks and prevents split-brain state divergence. When evaluating architectures in production, always ask yourself where the boundaries lie and how the system recovers when partitions heal. As you review your concise note summary on screen, synthesize these mechanisms in your own words. When you feel ready, step into the Feynman Sparring Gate and explain these principles without relying on technical jargon.`,
       };
 
@@ -209,20 +213,138 @@ export function generateFallbackNote(
         },
       ];
 
+  const defaultArtifactCode = 'sequenceDiagram\n  autonumber\n  Leader->>Follower A: AppendEntries RPC\n  Leader->>Follower B: AppendEntries RPC\n  Follower A-->>Leader: Quorum Ack (2/3)\n  Leader->>State Machine: Apply Commit';
+
+  const sec1Text = isAm
+    ? cleanContinuousProse(
+        `በመቶዎች የሚቆጠሩ ሰዎች የጋራ የሰዓት ስምምነት የሚፈልጉበትን አንድ አዳራሽ በዓይነ-ህሊናዎ ይሳሉ። እያንዳንዱ ሰው በየግል የእጅ ሰዓቱ ላይ ከመመካት ይልቅ፣ ህዝቡ አንድ የተመረጠ አዋጅ ነጋሪ ትልቅ የነሐስ ደወል እንዲመታ ይስማማል። የደወሉ ድምፅ ከአዳራሹ ከግማሽ በላይ በሆኑ ሰዎች ዘንድ ሲሰማና ሲረጋገጥ፣ ሁሉም ሰዓቱን በዚያ ድምፅ ያስተካክላል፣ ይህም ማንም ሰው እርስ በርሱ በሚጋጭ ሰዓት እንዳይጠቀም ያደርጋል።`
+      )
+    : cleanContinuousProse(
+        `Imagine a bustling town hall where hundreds of citizens need to agree on the official clock time. Instead of trusting anyone's individual pocket watch, the town selects a single town crier using an hourglass timer. As long as more than half the room hears the crier strike the bell, everyone synchronizes their watches to that stroke, ensuring no two people operate on conflicting hours.`
+      );
+
+  const sec2Text = isAm
+    ? cleanContinuousProse(
+        `በተሰራጩ የኮምፒውተር አውታረ መረቦች ውስጥ ተፎካካሪ ድርጊቶች እርስ በርሳቸው ተጋጭተው ወደማይመለስ ጥፋት ያመራሉ። የ ${cleanTitle} ዋና አላማ በዘፈቀደ የሚከናወኑ ክስተቶችን ወደ አንድ ወጥ ቅደም ተከተል ማምጣት ነው። ፍፁም የሆነውን የኮምፒውተር ሰዓት በቅደም ተከተል ቁጥሮች እና በአብላጫ ኮረም በመተካት፣ ሰርቨሮች ቢጠፉም ወይም ኔትወርክ ቢዘገይም ስርዓቱ ፍጹም የሆነ አንድነት እንዲኖረው ያደርጋል።`
+      )
+    : cleanContinuousProse(
+        `In complex distributed environments, concurrent actions inevitably collide and produce irrecoverable ambiguities. The intuitive purpose of ${cleanTitle} is to linearize arbitrary asynchronous events into a globally agreed sequence without relying on physical synchronized wall-clocks. By replacing absolute time with causal sequence numbers and strict majority quorums, systems maintain rigorous state consistency despite unannounced server deaths and unpredictable network transit delays.`
+      );
+
+  const sec3Text = isAm
+    ? cleanContinuousProse(
+        `የአሰራር ሂደቱ በታቀደ የውሳኔ ሃሳብ፣ ማረጋገጫ እና ማጽደቅ ዑደት ውስጥ ይካሄዳል። መሪው ክፍል እጩ መረጃዎችን ለሁሉም ተከታዮች በአንድ ጊዜ ያስተላልፋል። እያንዳንዱ ተከታይ ክፍል የመጣውን መረጃ ከመዝገቡ ጋር በማነፃፀር ትክክለኛነቱን ሲያረጋግጥ በሃርድ ድራይቭ ላይ ጽፎ ደረሰኝ ይመልሳል። መሪው ክፍል ከአብላጫዎቹ ተከታዮች ደረሰኝ ሲቀበል፣ መረጃውን በቋሚነት ያጸድቃል እንዲሁም ለሌሎቹም እንዲተገብሩት ትዕዛዝ ይሰጣል።`
+      )
+    : cleanContinuousProse(
+        `Execution unfolds through disciplined cycles of proposals, heartbeats, and acknowledgments. A leader node broadcasts candidate transactions to all active replicas concurrently. Each replica validates that the proposed term is strictly greater than or equal to its highest observed term, writes the transaction to durable storage, and replies with an acceptance receipt. Once the leader accumulates receipts from a majority of nodes, it issues a commit command, applying the state mutation locally and instructing followers to update their committed index.`
+      );
+
+  const sec4Text = isAm
+    ? cleanContinuousProse(
+        `ይህ አሰራር ሙሉ ደህንነትን የሚያረጋግጠው የአውታረ መረብ መቆራረጥ ከአናሳዎቹ ክፍሎች ባልበለጠ ጊዜ ብቻ ነው። ከሚፈቀደው በላይ የሆኑ ሰርቨሮች ከተበላሹ፣ ስርዓቱ ደህንነቱን ለመጠበቅ ሲል ስራውን ያቆማል።`
+      )
+    : cleanContinuousProse(
+        `The protocol guarantees safety strictly as long as network partitions do not isolate more than a minority of nodes simultaneously. If Byzantine faults or correlated hardware bugs corrupt more than the theoretical fault threshold, safety guarantees lapse.`
+      );
+
+  const sec5Text = isAm
+    ? cleanContinuousProse(`የተማሪውን የመጀመሪያ ምላሽ እና የሶቅራጥስ መመዘኛ ነጥብ ውጤት በመጠባበቅ ላይ።`)
+    : cleanContinuousProse(`Awaiting learner synthesis and midway checkpoint submission to integrate dynamic reflections.`);
+
+  let dynamicSections: DynamicLessonSection[] = [];
+  if (plannedSections && plannedSections.length > 0) {
+    dynamicSections = plannedSections.map((ps, idx) => {
+      const orderNum = ps.order || idx + 1;
+      const isFirst = idx === 0;
+      const isLast = idx === plannedSections.length - 1;
+      let content = '';
+      if (isFirst) {
+        content = sec1Text;
+      } else if (isLast) {
+        content = `${sec4Text}\n\n\`\`\`mermaid\n${defaultArtifactCode}\n\`\`\``;
+      } else if (idx === 1) {
+        content = sec2Text;
+      } else {
+        content = `${sec3Text}\n\n\`\`\`python\n# Implementation mechanism for ${ps.title}\ndef execute_step():\n    return True\n\`\`\``;
+      }
+      return {
+        id: `sec-${lessonId}-${orderNum}`,
+        order: orderNum,
+        title: stripEmojis(ps.title),
+        shortTitle: stripEmojis(ps.title),
+        type: isFirst ? 'analogy' : isLast ? 'boundary' : 'mechanism',
+        content,
+        teacherExplanation: isFirst
+          ? teacherExplanations.section1
+          : isLast
+          ? teacherExplanations.section4
+          : teacherExplanations.section2,
+        checkpoint: isLast ? checkpoint : undefined,
+        inlineMCQs: isFirst ? [inlineMCQs[0]] : idx === 1 ? [inlineMCQs[1]] : undefined,
+      };
+    });
+  } else {
+    dynamicSections = [
+      {
+        id: `sec-${lessonId}-1`,
+        order: 1,
+        title: isAm ? 'መሰረታዊ የአስተሳሰብ ማዕቀፍ እና ምሳሌ' : 'Physical Analogy & Intuition (ELI12)',
+        shortTitle: isAm ? 'ምሳሌ' : 'Intuition',
+        type: 'analogy',
+        content: sec1Text,
+        teacherExplanation: teacherExplanations.section1,
+        inlineMCQs: [inlineMCQs[0]],
+      },
+      {
+        id: `sec-${lessonId}-2`,
+        order: 2,
+        title: isAm ? 'መደበኛ ዓላማ እና ማዕቀፍ' : 'Intuitive Purpose & Formal Framework',
+        shortTitle: isAm ? 'ማዕቀፍ' : 'Framework',
+        type: 'concept',
+        content: sec2Text,
+        teacherExplanation: teacherExplanations.section2,
+      },
+      {
+        id: `sec-${lessonId}-3`,
+        order: 3,
+        title: isAm ? 'የአሰራር ሂደት እና ዑደት' : 'Operational Mechanism & Cycles',
+        shortTitle: isAm ? 'አሰራር' : 'Mechanism',
+        type: 'mechanism',
+        content: `${sec3Text}\n\n\`\`\`python\n# Execution logic for ${cleanTitle}\ndef execute_step():\n    pass\n\`\`\``,
+        teacherExplanation: teacherExplanations.section3,
+        inlineMCQs: [inlineMCQs[1]],
+      },
+      {
+        id: `sec-${lessonId}-4`,
+        order: 4,
+        title: isAm ? 'የድንበር ሁኔታዎች እና ፈተናዎች' : 'Boundary Traps & Architecture Artifact',
+        shortTitle: isAm ? 'ድንበር' : 'Boundary',
+        type: 'boundary',
+        content: `${sec4Text}\n\n\`\`\`mermaid\n${defaultArtifactCode}\n\`\`\``,
+        teacherExplanation: teacherExplanations.section4,
+        checkpoint,
+      },
+      {
+        id: `sec-${lessonId}-5`,
+        order: 5,
+        title: isAm ? 'የተዋሃደ እውቀት እና ማጠቃለያ' : 'Dynamic Synthesis & Proving Grounds',
+        shortTitle: isAm ? 'ማጠቃለያ' : 'Synthesis',
+        type: 'synthesis',
+        content: sec5Text,
+        teacherExplanation: teacherExplanations.section5,
+      },
+    ];
+  }
+
   return {
     id: `note-${lessonId}`,
     lessonId,
     courseId: courseId || 'course-default',
     title: cleanTitle,
+    sections: dynamicSections,
 
     // Section 1: Physical Analogy (ELI12) / Core Intuition
-    mentalModel: isAm
-      ? cleanContinuousProse(
-          `በመቶዎች የሚቆጠሩ ሰዎች የጋራ የሰዓት ስምምነት የሚፈልጉበትን አንድ አዳራሽ በዓይነ-ህሊናዎ ይሳሉ። እያንዳንዱ ሰው በየግል የእጅ ሰዓቱ ላይ ከመመካት ይልቅ፣ ህዝቡ አንድ የተመረጠ አዋጅ ነጋሪ ትልቅ የነሐስ ደወል እንዲመታ ይስማማል። የደወሉ ድምፅ ከአዳራሹ ከግማሽ በላይ በሆኑ ሰዎች ዘንድ ሲሰማና ሲረጋገጥ፣ ሁሉም ሰዓቱን በዚያ ድምፅ ያስተካክላል፣ ይህም ማንም ሰው እርስ በርሱ በሚጋጭ ሰዓት እንዳይጠቀም ያደርጋል።`
-        )
-      : cleanContinuousProse(
-          `Imagine a bustling town hall where hundreds of citizens need to agree on the official clock time. Instead of trusting anyone's individual pocket watch, the town selects a single town crier using an hourglass timer. As long as more than half the room hears the crier strike the bell, everyone synchronizes their watches to that stroke, ensuring no two people operate on conflicting hours.`
-        ),
+    mentalModel: sec1Text,
     section1CoreIntuition: isAm
       ? cleanContinuousProse(
           `የ ${cleanTitle} ዋና ፅንሰ-ሀሳብ በአንድ ወጥ ባለስልጣን ላይ በማተኮር እና በአብላጫ ድምፅ ምስክርነት በመታገዝ ስርዓቱ በማንኛውም ሁኔታ እንዳይበላሽ ማድረግ ነው።`
@@ -232,13 +354,7 @@ export function generateFallbackNote(
         ),
 
     // Section 2: Intuitive Purpose (Continuous analytical prose, zero bullets)
-    intuitivePurpose: isAm
-      ? cleanContinuousProse(
-          `በተሰራጩ የኮምፒውተር አውታረ መረቦች ውስጥ ተፎካካሪ ድርጊቶች እርስ በርሳቸው ተጋጭተው ወደማይመለስ ጥፋት ያመራሉ። የ ${cleanTitle} ዋና አላማ በዘፈቀደ የሚከናወኑ ክስተቶችን ወደ አንድ ወጥ ቅደም ተከተል ማምጣት ነው። ፍፁም የሆነውን የኮምፒውተር ሰዓት በቅደም ተከተል ቁጥሮች እና በአብላጫ ኮረም በመተካት፣ ሰርቨሮች ቢጠፉም ወይም ኔትወርክ ቢዘገይም ስርዓቱ ፍጹም የሆነ አንድነት እንዲኖረው ያደርጋል።`
-        )
-      : cleanContinuousProse(
-          `In complex distributed environments, concurrent actions inevitably collide and produce irrecoverable ambiguities. The intuitive purpose of ${cleanTitle} is to linearize arbitrary asynchronous events into a globally agreed sequence without relying on physical synchronized wall-clocks. By replacing absolute time with causal sequence numbers and strict majority quorums, systems maintain rigorous state consistency despite unannounced server deaths and unpredictable network transit delays.`
-        ),
+    intuitivePurpose: sec2Text,
     section2FormalFramework: isAm
       ? cleanContinuousProse(
           `ይህ አሰራር የስቴት ለውጥን በደረጃዎች የሚመራ ሲሆን፣ እያንዳንዱ ለውጥ ከመጽደቁ በፊት በቅደም ተከተል መረጋገጥ እና በአብላጫ ድምፅ መመስከር አለበት።`
@@ -248,13 +364,7 @@ export function generateFallbackNote(
         ),
 
     // Section 3: Operational Mechanism (Continuous analytical prose, zero bullets)
-    operationalMechanism: isAm
-      ? cleanContinuousProse(
-          `የአሰራር ሂደቱ በታቀደ የውሳኔ ሃሳብ፣ ማረጋገጫ እና ማጽደቅ ዑደት ውስጥ ይካሄዳል። መሪው ክፍል እጩ መረጃዎችን ለሁሉም ተከታዮች በአንድ ጊዜ ያስተላልፋል። እያንዳንዱ ተከታይ ክፍል የመጣውን መረጃ ከመዝገቡ ጋር በማነፃፀር ትክክለኛነቱን ሲያረጋግጥ በሃርድ ድራይቭ ላይ ጽፎ ደረሰኝ ይመልሳል። መሪው ክፍል ከአብላጫዎቹ ተከታዮች ደረሰኝ ሲቀበል፣ መረጃውን በቋሚነት ያጸድቃል እንዲሁም ለሌሎቹም እንዲተገብሩት ትዕዛዝ ይሰጣል።`
-        )
-      : cleanContinuousProse(
-          `Execution unfolds through disciplined cycles of proposals, heartbeats, and acknowledgments. A leader node broadcasts candidate transactions to all active replicas concurrently. Each replica validates that the proposed term is strictly greater than or equal to its highest observed term, writes the transaction to durable storage, and replies with an acceptance receipt. Once the leader accumulates receipts from a majority of nodes, it issues a commit command, applying the state mutation locally and instructing followers to update their committed index.`
-        ),
+    operationalMechanism: sec3Text,
     section3ConcreteCaseStudy: isAm
       ? cleanContinuousProse(
           `በተለያዩ ሀገራት የሚገኙ ሶስት የባንክ መረጃ ማዕከላትን እንደ ምሳሌ እንውሰድ። አንዱ ማዕከል የኔትወርክ ግንኙነት ቢያጣ እንኳ፣ የቀሩት ሁለቱ ማዕከላት ችግሩን ተረድተው አዲስ አስተባባሪ በመምረጥ ክፍያዎችን ያለምንም መቆራረጥ ይቀጥላሉ፣ ምክንያቱም ሁለት ከሶስት አብላጫ ድምፅ ስለሚሰጣቸው ነው።`
@@ -264,14 +374,8 @@ export function generateFallbackNote(
         ),
 
     // Section 4: Boundary Traps & Architecture Artifact / Midway Checkpoint
-    boundaryConditions: isAm
-      ? cleanContinuousProse(
-          `ይህ አሰራር ሙሉ ደህንነትን የሚያረጋግጠው የአውታረ መረብ መቆራረጥ ከአናሳዎቹ ክፍሎች ባልበለጠ ጊዜ ብቻ ነው። ከሚፈቀደው በላይ የሆኑ ሰርቨሮች ከተበላሹ፣ ስርዓቱ ደህንነቱን ለመጠበቅ ሲል ስራውን ያቆማል።`
-        )
-      : cleanContinuousProse(
-          `The protocol guarantees safety strictly as long as network partitions do not isolate more than a minority of nodes simultaneously. If Byzantine faults or correlated hardware bugs corrupt more than the theoretical fault threshold, safety guarantees lapse.`
-        ),
-    artifactCode: 'sequenceDiagram\n  autonumber\n  Leader->>Follower A: AppendEntries RPC\n  Leader->>Follower B: AppendEntries RPC\n  Follower A-->>Leader: Quorum Ack (2/3)\n  Leader->>State Machine: Apply Commit',
+    boundaryConditions: sec4Text,
+    artifactCode: defaultArtifactCode,
     artifactLanguage: 'mermaid',
     checkpoints: [checkpoint],
     section4MidwayCheckpoint: checkpoint,
@@ -282,13 +386,7 @@ export function generateFallbackNote(
     // Section 5: Dynamic Mutations & Socratic Synthesis
     userNotes: [],
     mutations: [],
-    section5SocraticSynthesis: isAm
-      ? cleanContinuousProse(
-          `የተማሪውን የመጀመሪያ ምላሽ እና የሶቅራጥስ መመዘኛ ነጥብ ውጤት በመጠባበቅ ላይ።`
-        )
-      : cleanContinuousProse(
-          `Awaiting learner synthesis and midway checkpoint submission to integrate dynamic reflections.`
-        ),
+    section5SocraticSynthesis: sec5Text,
 
     teacherExplanations,
     provingGrounds,
@@ -301,19 +399,21 @@ export interface CompileNoteOptions {
   title: string;
   summary?: string;
   courseId?: string;
+  sources?: GroundedSource[];
+  plannedSections?: PlannedSection[];
   useMock?: boolean;
   throwOnError?: boolean;
   language?: 'en' | 'am';
 }
 
 /**
- * Compiles a 5-section dynamic lesson note with embedded midway checkpoint.
- * Enforces Zero-Bullet Invariant on sections 1, 2, and 3.
+ * Compiles a dynamic lesson note with embedded midway checkpoint and multi-modal artifacts.
+ * Enforces Zero-Bullet Invariant on foundational sections.
  */
 export async function compileDynamicLessonNote(
   options: CompileNoteOptions
 ): Promise<DynamicLessonNote> {
-  const { lessonId, title, summary, courseId, useMock, throwOnError, language = 'en' } = options;
+  const { lessonId, title, summary, courseId, sources, plannedSections, useMock, throwOnError, language = 'en' } = options;
   const cleanTitle = stripEmojis(title || 'Foundational Principles').trim();
   const isAm = language === 'am';
 
@@ -330,43 +430,75 @@ export async function compileDynamicLessonNote(
   const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
   if (useMock || !apiKey) {
-    return generateFallbackNote(lessonId, cleanTitle, courseId, language);
+    return generateFallbackNote(lessonId, cleanTitle, courseId, language, plannedSections);
   }
 
   const languagePromptDirective = isAm
     ? `CRITICAL LANGUAGE INVARIANT:
 You MUST author the entire response strictly in articulate, natural, highly educated Amharic (አማርኛ) using Ge'ez script.
-Zero English words, zero latin letters in the title, mentalModel, intuitivePurpose, operationalMechanism, boundaryConditions, checkpoints, feynmanCriteria, and teacherExplanations.`
+Zero English words, zero latin letters in the title, sections content, checkpoints, feynmanCriteria, and teacherExplanations.`
     : `CRITICAL LANGUAGE INVARIANT:
 Author the entire note and teacher explanations in clear, articulate English.`;
 
+  const sourcesContext = sources && sources.length > 0
+    ? `AUTHORITATIVE GROUND TRUTH SOURCES:
+${sources.map((s, idx) => `[${idx + 1}] ${s.title}${s.url ? ` (${s.url})` : ''}: ${s.snippet || ''}`).join('\n')}
+Use the facts, mechanisms, and syntax from these authoritative sources as ground truth.`
+    : '';
+
+  const plannedSectionsContext = plannedSections && plannedSections.length > 0
+    ? `APPROVED ROADMAP PLANNED SECTIONS:
+${plannedSections.map((ps) => `Section ${ps.order}: "${ps.title}" - ${ps.summary} (Target artifacts: ${ps.artifactTypes?.join(', ') || 'code, mermaid, tables'})`).join('\n')}
+Generate exactly ${plannedSections.length} sections in the "sections" array matching these planned sections.`
+    : `Generate 5 structured sections in the "sections" array:
+Section 1: Physical Analogy & Core Intuition (ELI12)
+Section 2: Intuitive Purpose & Formal Framework
+Section 3: Operational Mechanism & Execution Cycles
+Section 4: Boundary Traps, Architecture Artifact, & Causal Checkpoint
+Section 5: Dynamic Synthesis & Proving Grounds`;
+
   const systemPrompt = `You are the Ater Dynamic Note Compiler.
-Your goal is to author a deep, 5-section pedagogical study note for the lesson: "${cleanTitle}".
+Your goal is to author a deep, multi-section pedagogical study note for the lesson: "${cleanTitle}".
 Summary: "${summary || cleanTitle}"
+
+${sourcesContext}
+
+${plannedSectionsContext}
 
 ${languagePromptDirective}
 
 CRITICAL SYSTEM INVARIANTS:
-1. ZERO-BULLET INVARIANT:
-   - Section 1 (mentalModel & section1CoreIntuition), Section 2 (intuitivePurpose & section2FormalFramework), and Section 3 (operationalMechanism & section3ConcreteCaseStudy) MUST strictly use continuous analytical prose.
+1. SUMMARY VS. TRANSCRIPT PEDAGOGICAL SEPARATION:
+   - On-screen "content" field: Visual summary designed for high-signal readability. Keep the content clean, structured, and easy to read without wall-of-text fatigue. Embed clear code blocks, mermaid diagrams, comparison tables, and callouts directly in the content so the student has structured visual anchors.
+   - "teacherExplanation" on each section: The rich spoken audio and full text transcript. Must be a comprehensive, engaging conversational lecture (6-10 full sentences each) delivered by an expert teacher. The teacher specifically talks through and explains the visual artifacts in that section (e.g. walking through the code block line by line, explaining the nodes and message steps in the Mermaid diagram, and breaking down the rows in the comparison table). Never truncate or cut off after a few words.
+2. CONTINUOUS PROSE ON FOUNDATIONAL SECTIONS:
+   - Section 1 must strictly use continuous analytical prose.
    - ZERO bullet points, asterisks, plus signs, dashes, or numbered lists ("- ", "* ", "+ ", "1. ", "(1)").
-2. STRICT ZERO-EMOJIS: Zero emoji characters in any string field.
-3. TEACHER EXPLANATIONS VS NOTE SUMMARY SEPARATION:
-   - Screen notes (mentalModel, intuitivePurpose, operationalMechanism, boundaryConditions): Concise, high-density analytical summaries (3-5 sentences) capturing the core mental models to remember.
-   - teacherExplanations (section1 through section5): Comprehensive, engaging, conversational spoken lectures (6-10 full sentences each). Spoken by an expert mentor explaining analogies, causal mechanisms, intuition, and failure modes in deep detail. Never truncate or cut off after a few words.
-4. Section 4 Midway Checkpoint:
-   - Must contain exactly 1 conceptual checkpoint question targeting a critical causal relationship or failure mode.
-   - Includes "spokenPrompt" formatted cleanly for Edge Neural TTS (ends with a question mark, no markdown).
-   - Includes "expectedInsight".
-5. Feynman Criteria:
+3. STRICT ZERO-EMOJIS: Zero emoji characters in any string field.
+4. MULTI-MODAL ARTIFACTS IN MIDDLE SECTIONS:
+   - Middle Sections: In-depth technical mechanisms, code, and diagrams.
+   - Freely embed multi-modal markdown artifacts inline wherever they clarify concepts: \`\`\`python (or relevant language) for runnable code snippets, \`\`\`diff for bug hunts/fixes, \`\`\`mermaid for state/flow diagrams, $$...$$ for math equations, markdown tables |...| for trade-offs, > [!WARNING] for failure warnings. Do not artificially limit yourself to one artifact.
+5. FINAL SECTION BOUNDARY TRAPS & CHECKPOINT:
+   - Final section dissects boundary traps, failure modes, midway checkpoint question, and taboo words for the Feynman Gate.
+   - Midway checkpoint includes "spokenPrompt" formatted cleanly for Edge Neural TTS (ends with a question mark, no markdown) and "expectedInsight".
+6. FEYNMAN CRITERIA:
    - 4-6 forbidden "tabooWords" (most common jargon terms).
    - "challengeQuestion" demanding explanation to a 12-year-old.
    - "spokenPrompt" for TTS.
-6. Mermaid code artifact in section 4.
 
 Respond with ONLY valid JSON matching this schema:
 {
   "title": "${cleanTitle}",
+  "sections": [
+    {
+      "order": 1,
+      "title": "string",
+      "shortTitle": "string",
+      "type": "analogy",
+      "content": "string",
+      "teacherExplanation": "string"
+    }
+  ],
   "mentalModel": "string",
   "intuitivePurpose": "string",
   "operationalMechanism": "string",
@@ -401,13 +533,6 @@ Respond with ONLY valid JSON matching this schema:
     "tabooWords": ["word1", "word2"],
     "challengeQuestion": "string",
     "spokenPrompt": "string"
-  },
-  "teacherExplanations": {
-    "section1": "A comprehensive, highly engaging, multi-sentence (6-10 sentences) conversational spoken lecture explaining the deep intuition, causal mechanics, real-world analogies, and foundational mental models like an expert university professor, completely avoiding reading note text verbatim",
-    "section2": "A comprehensive, highly detailed 6-10 sentence conversational spoken lecture explaining why this structure exists in real engineering practice and the exact production problems it solves",
-    "section3": "A comprehensive, highly detailed 6-10 sentence conversational spoken lecture walking through operational cycles, state transitions, message passing, and algorithmic checkpoints step by step",
-    "section4": "A comprehensive, highly detailed 6-10 sentence conversational spoken lecture dissecting failure traps, edge cases, boundary breakdown points, and introducing the midway checkpoint challenge",
-    "section5": "A comprehensive, highly detailed 6-10 sentence conversational spoken synthesis connecting all invariants, addressing common misconceptions, and preparing the student for the oral Feynman Gate"
   }
 }`;
 
@@ -418,7 +543,7 @@ Respond with ONLY valid JSON matching this schema:
   }
 
   try {
-    const response = await fetch(
+    let response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
@@ -428,26 +553,47 @@ Respond with ONLY valid JSON matching this schema:
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.2,
+            maxOutputTokens: 3500,
+            thinkingConfig: { thinkingBudget: 1 },
           },
         }),
       }
     );
 
     if (!response.ok) {
+      // Retry without thinkingConfig if older endpoint rejects it
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+              maxOutputTokens: 3500,
+            },
+          }),
+        }
+      );
+    }
+
+    if (!response.ok) {
       if (throwOnError) throw new Error(`Gemini note compilation returned ${response.status}`);
-      return generateFallbackNote(lessonId, cleanTitle, courseId, language);
+      return generateFallbackNote(lessonId, cleanTitle, courseId, language, plannedSections);
     }
 
     const data = await response.json();
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) return generateFallbackNote(lessonId, cleanTitle, courseId, language);
+    if (!rawText) return generateFallbackNote(lessonId, cleanTitle, courseId, language, plannedSections);
 
     const parsed = extractJsonFromResponse(rawText);
 
     const cp = parsed.midwayCheckpoint || {};
     const checkpoint: LessonCheckpoint = {
       id: `cp-${lessonId}-01`,
-      sectionIndex: 4,
+      sectionIndex: (Array.isArray(parsed.sections) ? parsed.sections.length : 4),
       question: stripEmojis(cp.question || (isAm ? `በ ${cleanTitle} ውስጥ ዋናው መርህ ምንድን ነው?` : `What is the critical causal dependency in ${cleanTitle}?`)),
       promptHint: stripEmojis(cp.promptHint || (isAm ? 'ስለ ድንበር ሁኔታዎች ያስቡ።' : 'Think about the core boundary trade-offs.')),
       spokenPrompt: sanitizeSpokenPrompt(cp.spokenPrompt || cp.question || (isAm ? `በ ${cleanTitle} ውስጥ ዋናው መርህ ምንድን ነው?` : `What is the critical dependency in ${cleanTitle}?`)),
@@ -455,13 +601,13 @@ Respond with ONLY valid JSON matching this schema:
       isAnswered: false,
     };
 
-    const fallbackNote = generateFallbackNote(lessonId, cleanTitle, courseId, language);
+    const fallbackNote = generateFallbackNote(lessonId, cleanTitle, courseId, language, plannedSections);
     const fallbackMCQs = fallbackNote.inlineMCQs || [];
     let parsedMCQs: LessonInlineMCQ[] = [];
     if (Array.isArray(parsed.inlineMCQs) && parsed.inlineMCQs.length > 0) {
       parsedMCQs = parsed.inlineMCQs.map((m: any, idx: number) => ({
         id: `mcq-${lessonId}-${idx + 1}`,
-        sectionIndex: Number(m.sectionIndex) === 3 ? 3 : 1,
+        sectionIndex: Number(m.sectionIndex) || (idx === 0 ? 1 : 3),
         question: stripEmojis(m.question || ''),
         options: Array.isArray(m.options) && m.options.length >= 2 ? m.options.map(stripEmojis) : ['Option A', 'Option B'],
         correctOptionIndex: Number(m.correctOptionIndex) || 0,
@@ -479,14 +625,83 @@ Respond with ONLY valid JSON matching this schema:
       spokenPrompt: sanitizeSpokenPrompt(fc.spokenPrompt || fc.challengeQuestion || (isAm ? `${cleanTitle}ን በቀላል አስረዱ።` : `Explain ${cleanTitle} simply.`)),
     };
 
-    const te = parsed.teacherExplanations || {};
-    const fallback = fallbackNote.teacherExplanations || {};
+    // Construct dynamic sections from parsed payload
+    let generatedSections: DynamicLessonSection[] = [];
+    if (Array.isArray(parsed.sections) && parsed.sections.length > 0) {
+      generatedSections = parsed.sections.map((s: any, idx: number) => {
+        const orderNum = Number(s.order) || idx + 1;
+        const isFirst = idx === 0;
+        const isLast = idx === parsed.sections.length - 1;
+        return {
+          id: `sec-${lessonId}-${orderNum}`,
+          order: orderNum,
+          title: stripEmojis(s.title || (plannedSections?.[idx]?.title ?? `Section ${orderNum}`)),
+          shortTitle: stripEmojis(s.shortTitle || s.title || (plannedSections?.[idx]?.title ?? `Section ${orderNum}`)),
+          type: s.type || (isFirst ? 'analogy' : isLast ? 'boundary' : 'mechanism'),
+          content: stripEmojis(s.content || ''),
+          teacherExplanation: stripEmojis(s.teacherExplanation || ''),
+          inlineMCQs: parsedMCQs.filter((m) => m.sectionIndex === orderNum),
+          checkpoint: isLast ? checkpoint : undefined,
+        };
+      });
+    }
+
+    // Repair missing sections deterministically using plannedSections if model dropped any
+    if (plannedSections && plannedSections.length > 0) {
+      if (generatedSections.length < plannedSections.length) {
+        for (let i = generatedSections.length; i < plannedSections.length; i++) {
+          const ps = plannedSections[i];
+          const orderNum = ps.order || i + 1;
+          const isFirst = i === 0;
+          const isLast = i === plannedSections.length - 1;
+          generatedSections.push({
+            id: `sec-${lessonId}-${orderNum}`,
+            order: orderNum,
+            title: stripEmojis(ps.title),
+            shortTitle: stripEmojis(ps.title),
+            type: isFirst ? 'analogy' : isLast ? 'boundary' : 'mechanism',
+            content: cleanContinuousProse(ps.summary),
+            teacherExplanation: isFirst
+              ? fallbackNote.teacherExplanations?.section1
+              : isLast
+              ? fallbackNote.teacherExplanations?.section4
+              : fallbackNote.teacherExplanations?.section2,
+            checkpoint: isLast ? checkpoint : undefined,
+          });
+        }
+      }
+    }
+
+    if (generatedSections.length === 0) {
+      generatedSections = fallbackNote.sections || [];
+    }
+
+    // Normalize legacy fields from sections for 100% backward compatibility
+    const sec1 = generatedSections[0];
+    const sec2 = generatedSections[1] || sec1;
+    const sec3 = generatedSections[2] || sec2;
+    const lastSec = generatedSections[generatedSections.length - 1] || sec3;
+
+    let extractedArtifactCode = parsed.artifactCode;
+    if (!extractedArtifactCode) {
+      for (const s of generatedSections) {
+        const mermaidMatch = s.content.match(/```mermaid([\s\S]*?)```/);
+        if (mermaidMatch) {
+          extractedArtifactCode = mermaidMatch[1].trim();
+          break;
+        }
+      }
+    }
+    if (!extractedArtifactCode) {
+      extractedArtifactCode = fallbackNote.artifactCode || 'graph LR\n  A[Input] --> B[Processing] --> C[Output]';
+    }
+
     const teacherExplanations = {
-      section1: stripEmojis(te.section1 || fallback.section1 || ''),
-      section2: stripEmojis(te.section2 || fallback.section2 || ''),
-      section3: stripEmojis(te.section3 || fallback.section3 || ''),
-      section4: stripEmojis(te.section4 || fallback.section4 || ''),
-      section5: stripEmojis(te.section5 || fallback.section5 || ''),
+      section1: stripEmojis(sec1?.teacherExplanation || fallbackNote.teacherExplanations?.section1 || ''),
+      section2: stripEmojis(sec2?.teacherExplanation || fallbackNote.teacherExplanations?.section2 || ''),
+      section3: stripEmojis(sec3?.teacherExplanation || fallbackNote.teacherExplanations?.section3 || ''),
+      section4: stripEmojis(lastSec?.teacherExplanation || fallbackNote.teacherExplanations?.section4 || ''),
+      section5: stripEmojis(generatedSections[4]?.teacherExplanation || fallbackNote.teacherExplanations?.section5 || ''),
     };
 
     const compiledNote: DynamicLessonNote = {
@@ -494,14 +709,15 @@ Respond with ONLY valid JSON matching this schema:
       lessonId,
       courseId: courseId || 'course-default',
       title: stripEmojis(parsed.title || cleanTitle),
-      mentalModel: cleanContinuousProse(stripEmojis(parsed.mentalModel || '')),
-      section1CoreIntuition: cleanContinuousProse(stripEmojis(parsed.mentalModel || '')),
-      intuitivePurpose: cleanContinuousProse(stripEmojis(parsed.intuitivePurpose || '')),
-      section2FormalFramework: cleanContinuousProse(stripEmojis(parsed.intuitivePurpose || '')),
-      operationalMechanism: cleanContinuousProse(stripEmojis(parsed.operationalMechanism || '')),
-      section3ConcreteCaseStudy: cleanContinuousProse(stripEmojis(parsed.operationalMechanism || '')),
-      boundaryConditions: cleanContinuousProse(stripEmojis(parsed.boundaryConditions || '')),
-      artifactCode: parsed.artifactCode || 'graph LR\n  A[Input] --> B[Processing] --> C[Output]',
+      sections: generatedSections,
+      mentalModel: cleanContinuousProse(stripEmojis(parsed.mentalModel || sec1?.content || '')),
+      section1CoreIntuition: cleanContinuousProse(stripEmojis(parsed.mentalModel || sec1?.content || '')),
+      intuitivePurpose: cleanContinuousProse(stripEmojis(parsed.intuitivePurpose || sec2?.content || '')),
+      section2FormalFramework: cleanContinuousProse(stripEmojis(parsed.intuitivePurpose || sec2?.content || '')),
+      operationalMechanism: cleanContinuousProse(stripEmojis(parsed.operationalMechanism || sec3?.content || '')),
+      section3ConcreteCaseStudy: cleanContinuousProse(stripEmojis(parsed.operationalMechanism || sec3?.content || '')),
+      boundaryConditions: cleanContinuousProse(stripEmojis(parsed.boundaryConditions || lastSec?.content || '')),
+      artifactCode: extractedArtifactCode,
       artifactLanguage: 'mermaid',
       checkpoints: [checkpoint],
       section4MidwayCheckpoint: checkpoint,
@@ -521,7 +737,7 @@ Respond with ONLY valid JSON matching this schema:
     return compiledNote;
   } catch (err) {
     if (throwOnError) throw err;
-    const fallbackNote = generateFallbackNote(lessonId, cleanTitle, courseId, language);
+    const fallbackNote = generateFallbackNote(lessonId, cleanTitle, courseId, language, plannedSections);
     saveCachedNote(cacheKey, fallbackNote);
     return fallbackNote;
   }
