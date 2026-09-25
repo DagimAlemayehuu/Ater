@@ -363,7 +363,11 @@ Respond with ONLY valid JSON matching this schema:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 600,
+            thinkingConfig: { thinkingBudget: 1 },
+          },
         }),
       }
     );

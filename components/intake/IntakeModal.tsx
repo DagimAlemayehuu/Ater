@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { X, Volume2, Upload, FileText, Trash2, Plus } from 'lucide-react';
+import { X, Volume2, Upload, FileText, Trash2, Plus, Mic, Check, Globe, ExternalLink, BookOpen } from 'lucide-react';
 import { playNeuralAudio, stopNeuralAudio, onAudioStateChange } from '@/lib/voice/ttsClient';
 import { InputVoiceIndicator } from '@/components/voice/InputVoiceIndicator';
 import { translations, type AppLanguage } from '@/lib/i18n/translations';
@@ -9,6 +9,8 @@ import type {
   CourseCurriculum,
   SocraticDiscoveryQuestion,
   IntakeResponse,
+  GroundedSource,
+  UploadedDoc,
 } from '@/types';
 
 interface IntakeModalProps {
@@ -22,13 +24,38 @@ interface IntakeModalProps {
 type ModalStage = 'intake' | 'discovery' | 'synthesizing' | 'roadmap' | 'generating_course';
 type IntakeMode = 'prompt' | 'files';
 
-interface UploadedDoc {
-  fileName: string;
-  fileBase64?: string;
-  fileType: string;
-  textContent?: string;
-  sizeBytes: number;
-}
+const formatArtifactLabel = (type: string): string => {
+  switch (type.toLowerCase()) {
+    case 'code':
+      return 'Code';
+    case 'mermaid':
+      return 'Mermaid';
+    case 'math':
+      return 'Math';
+    case 'table':
+      return 'Table';
+    case 'timeline':
+      return 'Timeline';
+    case 'callout':
+      return 'Alert';
+    default:
+      return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+};
+
+const SYNTHESIZING_STATUS_EN = [
+  'Looking at your goals...',
+  'Planning your lessons and sections...',
+  'Organizing key concepts and artifacts...',
+  'Almost ready...',
+];
+
+const SYNTHESIZING_STATUS_AM = [
+  'ግብዎን እየተመለከትን ነው...',
+  'ትምህርቶችን እና ክፍሎችን እያዘጋጀን ነው...',
+  'ዋና ዋና ነጥቦችን በማቀናጀት ላይ...',
+  'ሊጠናቀቅ ተቃርቧል...',
+];
 
 export const IntakeModal: React.FC<IntakeModalProps> = ({
   isOpen,
@@ -61,6 +88,9 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
   const [isTranscribingSpeech, setIsTranscribingSpeech] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
+  // Stage 3 Synthesizing Progress State
+  const [synthesizingStepIdx, setSynthesizingStepIdx] = useState(0);
+
   // Stage 4 Roadmap Preview State
   const [generatedCurriculum, setGeneratedCurriculum] = useState<CourseCurriculum | null>(null);
   const [roadmapFeedback, setRoadmapFeedback] = useState('');
@@ -88,6 +118,17 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
       stopNeuralAudio();
     };
   }, [isOpen]);
+
+  React.useEffect(() => {
+    if (stage !== 'synthesizing') {
+      setSynthesizingStepIdx(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setSynthesizingStepIdx((prev) => (prev + 1) % SYNTHESIZING_STATUS_EN.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [stage]);
 
   if (!isOpen) return null;
 
@@ -409,8 +450,10 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic,
-          sourceType: selectedMode || 'prompt',
+          sourceType: selectedMode || (uploadedFiles.length > 0 ? 'document' : 'prompt'),
+          sourceName: uploadedFiles[0]?.fileName || '',
           answers: finalAnswers,
+          files: uploadedFiles,
           useMock,
           language,
         }),
@@ -493,6 +536,23 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
   };
 
   const isFollowUp = activeQuestionIdx >= initialQuestionCount;
+
+  const handleReadyToPlan = () => {
+    const parts: string[] = [];
+    if (selectedOptions.length > 0) {
+      parts.push(selectedOptions.join(', '));
+    }
+    if (customDetail.trim()) {
+      parts.push(customDetail.trim());
+    }
+    const finalAnswer = parts.join(' — ');
+    const activeQ = discoveryQuestions[activeQuestionIdx];
+    const updatedAnswers = { ...answers };
+    if (activeQ && finalAnswer) {
+      updatedAnswers[activeQ.id] = finalAnswer;
+    }
+    handleGenerateCurriculum(updatedAnswers);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -683,75 +743,56 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
           {/* Stage 2: Socratic Discovery Dialogue */}
           {stage === 'discovery' && discoveryQuestions.length > 0 && (
             <div className="space-y-4">
-              {/* Progress Indicator */}
-              <div className="space-y-1.5">
-                {/* Number indicator for initial set of questions */}
-                <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
-                  <span>
-                    {!isFollowUp
-                      ? `${activeQuestionIdx + 1} / ${Math.max(initialQuestionCount, 1)}`
-                      : `${Math.max(initialQuestionCount, 1)} / ${Math.max(initialQuestionCount, 1)}`}
-                  </span>
+              {/* Single Unified Ultra-Minimalist Progress Indicator */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                      {activeQuestionIdx + 1} / {discoveryQuestions.length}
+                    </span>
+                    {isFollowUp && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/80">
+                        {isAmharic ? 'ተከታታይ ጥያቄ' : 'Follow-up'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                {/* Primary Initial Questions Bar */}
+                {/* Unified Segmented Progress Bar */}
                 <div className="flex items-center gap-1.5">
-                  {discoveryQuestions.slice(0, Math.max(initialQuestionCount, 1)).map((q, idx) => (
+                  {discoveryQuestions.map((q, idx) => (
                     <div
                       key={q.id}
-                      className={`h-1 flex-1 rounded-full transition-all ${
-                        idx === activeQuestionIdx && !isFollowUp
+                      className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                        idx === activeQuestionIdx
                           ? 'bg-zinc-900 dark:bg-zinc-100'
-                          : idx < activeQuestionIdx || isFollowUp
+                          : idx < activeQuestionIdx
                             ? 'bg-zinc-400 dark:bg-zinc-600'
                             : 'bg-zinc-200 dark:bg-zinc-800'
                       }`}
                     />
                   ))}
                 </div>
-
-                {/* Follow-up Questions Mini Sub-bar (Shows just 'Follow-up', NO numbers) */}
-                {discoveryQuestions.length > initialQuestionCount && (
-                  <div className="pt-0.5 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex items-center text-[10px] text-zinc-400 font-mono">
-                      <span>{isAmharic ? 'ተከታታይ ጥያቄ' : 'Follow-up'}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {discoveryQuestions.slice(initialQuestionCount).map((q, subIdx) => {
-                        const actualIdx = initialQuestionCount + subIdx;
-                        return (
-                          <div
-                            key={q.id}
-                            className={`h-0.5 flex-1 rounded-full transition-all ${
-                              actualIdx === activeQuestionIdx
-                                ? 'bg-zinc-900 dark:bg-zinc-100'
-                                : actualIdx < activeQuestionIdx
-                                  ? 'bg-zinc-400 dark:bg-zinc-500'
-                                  : 'bg-zinc-200/80 dark:bg-zinc-800/80'
-                            }`}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Socratic Question Container (NO redundant QUESTION text) */}
-              <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/60 dark:bg-zinc-900/40 p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
+              {/* Socratic Question Container */}
+              <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-start justify-between gap-3.5">
+                  <p className="text-sm sm:text-[15px] font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed tracking-tight">
                     {discoveryQuestions[activeQuestionIdx]?.question}
                   </p>
 
                   <button
+                    type="button"
                     onClick={() => speakQuestion(discoveryQuestions[activeQuestionIdx])}
-                    className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 shrink-0 transition-colors"
-                    title="Hear question via voice"
+                    className={`p-2 rounded-lg border transition-all shrink-0 cursor-pointer ${
+                      isPlayingAudio
+                        ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                        : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                    }`}
+                    title={isAmharic ? 'ጥያቄውን በድምጽ ያዳምጡ' : 'Hear question via voice'}
                   >
-                    <svg className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-zinc-900 dark:text-zinc-100' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                    </svg>
+                    <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse' : ''}`} />
                   </button>
                 </div>
 
@@ -774,7 +815,7 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
 
                   return (
                     <div className="space-y-2 pt-1">
-                      {/* Stacked options without dots, easy to read */}
+                      {/* Stacked options with balanced padding & clean selected indicator */}
                       <div className="space-y-2">
                         {options.map((option) => {
                           const isSelected = selectedOptions.includes(option);
@@ -783,23 +824,32 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                               key={option}
                               type="button"
                               onClick={() => toggleOption(option)}
-                              className={`w-full px-4 py-3 text-sm rounded-xl border text-left transition-all ${
+                              className={`w-full px-4 py-2.5 sm:py-3 text-sm rounded-xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer ${
                                 isSelected
-                                  ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium'
-                                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700'
+                                  ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-100/90 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-2xs'
+                                  : 'border-zinc-200/90 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/40 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-white dark:hover:bg-zinc-900/80'
                               }`}
                             >
-                              {option}
+                              <span className="leading-snug">{option}</span>
+                              <div
+                                className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                                  isSelected
+                                    ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
+                                    : 'border-zinc-300 dark:border-zinc-700'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                              </div>
                             </button>
                           );
                         })}
 
                         {/* "Other..." card matching the exact same size, height and border radius */}
                         <div
-                          className={`w-full rounded-xl border transition-all relative flex items-center px-4 py-3 ${
+                          className={`w-full rounded-xl border transition-all relative flex items-center px-4 py-2.5 sm:py-3 ${
                             customDetail.trim()
-                              ? 'border-zinc-400 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-900'
-                              : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700'
+                              ? 'border-zinc-800 dark:border-zinc-200 bg-zinc-50 dark:bg-zinc-900/90'
+                              : 'border-zinc-200/90 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700'
                           }`}
                         >
                           <input
@@ -821,9 +871,9 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                             type="button"
                             onClick={toggleSpeechInput}
                             disabled={isTranscribingSpeech}
-                            className={`absolute right-2.5 p-1.5 rounded-md transition-colors ${
+                            className={`absolute right-2.5 p-1.5 rounded-lg transition-colors cursor-pointer ${
                               isListeningSpeech
-                                ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 animate-pulse'
+                                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 animate-pulse'
                                 : isTranscribingSpeech
                                   ? 'text-zinc-400'
                                   : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -839,9 +889,7 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                             {isTranscribingSpeech ? (
                               <div className="w-4 h-4 border-2 border-zinc-400 border-t-zinc-800 dark:border-t-zinc-200 rounded-full animate-spin" />
                             ) : (
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                              </svg>
+                              <Mic className="w-4 h-4" />
                             )}
                           </button>
                         </div>
@@ -858,15 +906,15 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
             <div className="py-14 text-center space-y-3">
               <div className="inline-block w-5 h-5 border-[1.5px] border-zinc-200 dark:border-zinc-800 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
               <div className="space-y-1">
-                <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 transition-opacity duration-300">
                   {isAmharic
-                    ? `ለ "${topic || 'ኮርስ'}" የትምህርት ካርታ በማዘጋጀት ላይ...`
-                    : `Generating roadmap for "${topic || 'topic'}"...`}
+                    ? SYNTHESIZING_STATUS_AM[synthesizingStepIdx]
+                    : SYNTHESIZING_STATUS_EN[synthesizingStepIdx]}
                 </p>
                 <p className="text-[11px] text-zinc-400 max-w-xs mx-auto">
                   {isAmharic
-                    ? 'በሰጧቸው ምላሾች መሰረት የትምህርት ቅደም ተከተል እየተቀመረ ነው።'
-                    : 'Calibrating structured lesson sequence based on your responses.'}
+                    ? `ለ "${topic || 'ኮርስ'}" የትምህርት ካርታ በማዘጋጀት ላይ...`
+                    : `Building custom curriculum for "${topic || 'topic'}"`}
                 </p>
               </div>
             </div>
@@ -893,7 +941,7 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
 
           {/* Stage 4: Interactive Roadmap Review & Modification */}
           {stage === 'roadmap' && generatedCurriculum && (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div className="space-y-0.5">
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                   {generatedCurriculum.title || generatedCurriculum.topic}
@@ -905,31 +953,127 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                 )}
               </div>
 
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {/* Sources of Truth Section */}
+              {generatedCurriculum.sources && generatedCurriculum.sources.length > 0 && (
+                <div className="space-y-1.5 pt-0.5 pb-1">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                    <BookOpen className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    <span>{isAmharic ? 'የእውቀት ምንጮች (Sources of Truth)' : 'Sources of Truth'}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {generatedCurriculum.sources.map((src) => (
+                      <div
+                        key={src.id}
+                        title={src.snippet || src.url || src.title}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-zinc-200/80 dark:border-zinc-800 bg-zinc-100/70 dark:bg-zinc-900/60 text-[11px] text-zinc-700 dark:text-zinc-300 max-w-full"
+                      >
+                        {src.type === 'document' ? (
+                          <FileText className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <Globe className="w-3 h-3 text-sky-600 dark:text-sky-400 shrink-0" />
+                        )}
+                        <span className="truncate max-w-[220px] font-medium">{src.title}</span>
+                        {src.url && (
+                          <a
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Open link for ${src.title}`}
+                          >
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sequenced 15-20 min Lessons */}
+              <div className="space-y-2.5 max-h-72 sm:max-h-80 overflow-y-auto pr-1">
                 {generatedCurriculum.lessons.map((lesson, idx) => (
                   <div
                     key={lesson.id}
-                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 flex items-start gap-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                    className="p-3.5 rounded-xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 flex items-start gap-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
                   >
-                    <span className="font-mono text-xs text-zinc-400 mt-0.5">
+                    <span className="font-mono text-xs font-semibold text-zinc-400 mt-0.5 shrink-0">
                       {String(idx + 1).padStart(2, '0')}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
-                        {lesson.title}
-                      </h4>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5 leading-relaxed">
-                        {lesson.summary}
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {lesson.title}
+                        </h4>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400 shrink-0 font-mono px-2 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60">
+                          {lesson.estimatedMinutes} {isAmharic ? 'ደቂቃ' : 'min'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
+                        {lesson.description || lesson.summary}
                       </p>
+                      {lesson.conceptsCovered && lesson.conceptsCovered.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {lesson.conceptsCovered.map((concept, cIdx) => (
+                            <span
+                              key={cIdx}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 font-mono"
+                            >
+                              {concept}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Planned Sections Subtle Nested View */}
+                      {lesson.sections && lesson.sections.length > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/60 space-y-1.5">
+                          <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                            {isAmharic ? 'የታቀዱ ክፍሎች' : 'Planned Sections'}
+                          </div>
+                          <div className="space-y-1.5">
+                            {lesson.sections.map((section, sIdx) => (
+                              <div
+                                key={section.id || sIdx}
+                                className="p-2 rounded-lg bg-white/70 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/60 space-y-1"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
+                                    <span className="font-mono text-zinc-400 mr-1.5">
+                                      {section.order || sIdx + 1}.
+                                    </span>
+                                    {section.title}
+                                  </span>
+                                  {section.artifactTypes && section.artifactTypes.length > 0 && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {section.artifactTypes.map((art, aIdx) => (
+                                        <span
+                                          key={aIdx}
+                                          className="border border-zinc-200 dark:border-zinc-800 text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100/60 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
+                                        >
+                                          {formatArtifactLabel(art)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {section.summary && (
+                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                    {section.summary}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-[11px] text-zinc-400 shrink-0 font-mono">
-                      {lesson.estimatedMinutes} {isAmharic ? 'ደቂቃ' : 'min'}
-                    </span>
                   </div>
                 ))}
               </div>
 
-              {/* Real-Time Roadmap Modification Input */}
+              {/* Natural-Language Tweak Input */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -943,20 +1087,20 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                   onChange={(e) => setRoadmapFeedback(e.target.value)}
                   placeholder={
                     isAmharic
-                      ? 'ካርታውን ያሻሽሉ (ለምሳሌ፡ "የላቀ የደህንነት ትምህርት ጨምር")...'
-                      : 'Modify roadmap (e.g. "Add advanced practical examples", "Make it deeper")...'
+                      ? 'እቅዱን ማስተካከል ይፈልጋሉ? በX ላይ የበለጠ ትኩረት ይጨምሩ...'
+                      : 'Want to adjust this plan? Add more focus on X...'
                   }
                   className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
                 />
                 <button
                   type="submit"
                   disabled={isModifyingRoadmap || !roadmapFeedback.trim()}
-                  className="px-3 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                  className="px-3.5 py-2 text-xs font-medium rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-all disabled:opacity-40 flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
                 >
                   {isModifyingRoadmap ? (
                     <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
                   ) : (
-                    <span>{isAmharic ? 'አሻሽል' : 'Refine'}</span>
+                    <span>{isAmharic ? 'ፕላኑን አድስ' : 'Update Plan'}</span>
                   )}
                 </button>
               </form>
@@ -967,20 +1111,22 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
         {/* Modal Footer */}
         <div className="px-6 py-3.5 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-950 flex items-center justify-between shrink-0">
           <button
+            type="button"
             onClick={handleClose}
-            className="px-3.5 py-1.5 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+            className="px-3.5 py-1.5 text-xs font-medium rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
           >
             {t.intake.cancel}
           </button>
 
           {stage === 'intake' && selectedMode !== null && (
             <button
+              type="button"
               onClick={handleIntakeSubmit}
               disabled={isLoading || (selectedMode === 'prompt' ? !promptText.trim() : uploadedFiles.length === 0)}
-              className="px-4 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-1.5 text-xs font-medium rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               {isLoading && (
-                <div className="w-3 h-3 border-2 border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
+                <div className="w-3 h-3 border-2 border-zinc-400 border-t-white dark:border-t-zinc-900 rounded-full animate-spin" />
               )}
               <span>{isLoading ? (isAmharic ? 'እየጫነ ነው...' : 'Loading...') : (isAmharic ? 'ቀጥል' : 'Continue')}</span>
             </button>
@@ -988,17 +1134,19 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
 
           {stage === 'discovery' && (
             <div className="flex items-center gap-2">
-              {/* Secondary action: End exploration / Generate roadmap early (hidden or static during loading) */}
-              {!isLoading && (isFollowUp || activeQuestionIdx >= 2) && (
+              {/* Secondary action: Ready to Plan / End exploration */}
+              {!isLoading && (isFollowUp || activeQuestionIdx >= Math.max(initialQuestionCount - 1, 0) || activeQuestionIdx >= 2) && (
                 <button
                   type="button"
-                  onClick={() => handleGenerateCurriculum(answers)}
+                  onClick={handleReadyToPlan}
                   disabled={isLoading}
-                  className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all cursor-pointer shadow-xs disabled:opacity-40"
                 >
-                  {isFollowUp
-                    ? (isAmharic ? 'ማጣሪያውን አጠናቅቅ' : 'End exploration')
-                    : (isAmharic ? 'ቀጥታ ካርታ አዘጋጅ' : 'Generate roadmap')}
+                  {isAmharic
+                    ? 'ወደ ካርታ እለፍ'
+                    : isFollowUp
+                      ? 'Ready to Plan'
+                      : 'End exploration'}
                 </button>
               )}
 
@@ -1007,10 +1155,10 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                 type="button"
                 onClick={handleAnswerSubmit}
                 disabled={isLoading}
-                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-40"
               >
                 {isLoading && (
-                  <div className="w-3 h-3 border-[1.5px] border-zinc-400 border-t-zinc-900 dark:border-t-zinc-100 rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-[1.5px] border-zinc-400 border-t-white dark:border-t-zinc-900 rounded-full animate-spin" />
                 )}
                 <span>
                   {isLoading
@@ -1027,9 +1175,9 @@ export const IntakeModal: React.FC<IntakeModalProps> = ({
                 type="button"
                 onClick={handleApproveRoadmap}
                 disabled={isLoading || isModifyingRoadmap}
-                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 transition-colors cursor-pointer shadow-xs"
+                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 transition-colors cursor-pointer shadow-xs disabled:opacity-40"
               >
-                {isAmharic ? 'አጽድቅ እና ትምህርት 01 ጀምር' : 'Approve & Start Lesson 01'}
+                {isAmharic ? 'ኮርሱን አጽድቅ እና ጀምር' : 'Approve & Start Course'}
               </button>
             </div>
           )}

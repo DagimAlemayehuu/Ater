@@ -5,6 +5,9 @@ import {
   finalizeGateSession,
 } from '@/lib/ai/gate';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -30,6 +33,8 @@ export async function POST(req: NextRequest) {
       const currentTurn = body?.currentTurn;
       const studentAnswer = body?.studentAnswer || '';
       const attemptNumber = Number(body?.attemptNumber) || 1;
+      const tabooWords = Array.isArray(body?.tabooWords) ? body.tabooWords : undefined;
+      const note = body?.note || null;
 
       if (!currentTurn) {
         return NextResponse.json({ error: 'currentTurn is required' }, { status: 400 });
@@ -42,6 +47,8 @@ export async function POST(req: NextRequest) {
         attemptNumber,
         language,
         useMock,
+        tabooWords,
+        note,
       });
 
       return NextResponse.json(result);

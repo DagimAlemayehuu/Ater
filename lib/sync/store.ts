@@ -50,6 +50,8 @@ export function clearUserSessionCache(targetUserId?: string | null): void {
       localStorage.removeItem(`ater_notes_${targetUserId}`);
       localStorage.removeItem(`ater_bilingual_notes_${targetUserId}`);
       localStorage.removeItem(`ater_bilingual_curricula_${targetUserId}`);
+      localStorage.removeItem(`ater_active_course_${targetUserId}`);
+      localStorage.removeItem(`ater_last_view_${targetUserId}`);
     }
 
     const allKeys: string[] = [];
@@ -64,7 +66,11 @@ export function clearUserSessionCache(targetUserId?: string | null): void {
 
     allKeys.forEach((key) => {
       if (targetUserId) {
-        if (key.startsWith(`ater_note_${targetUserId}_`)) {
+        if (
+          key.startsWith(`ater_note_${targetUserId}_`) ||
+          key.startsWith(`ater_active_lesson_${targetUserId}_`) ||
+          key.startsWith(`ater_lesson_progress_${targetUserId}_`)
+        ) {
           localStorage.removeItem(key);
         }
       } else {
@@ -73,7 +79,10 @@ export function clearUserSessionCache(targetUserId?: string | null): void {
           key.startsWith('ater_note_') ||
           key.startsWith('ater_courses_') ||
           key.startsWith('ater_curricula_') ||
-          key.startsWith('ater_bilingual_')
+          key.startsWith('ater_bilingual_') ||
+          key.startsWith('ater_active_') ||
+          key.startsWith('ater_last_view_') ||
+          key.startsWith('ater_lesson_progress_')
         ) {
           localStorage.removeItem(key);
         }
@@ -81,6 +90,95 @@ export function clearUserSessionCache(targetUserId?: string | null): void {
     });
   } catch (e) {
     console.warn('Failed to clear user session cache:', e);
+  }
+}
+
+export interface LessonProgressState {
+  unlockedSection: number;
+  activeSectionTab: number;
+}
+
+export function saveLessonProgress(
+  uid: string,
+  courseId: string,
+  lessonId: string,
+  progress: LessonProgressState
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = `ater_lesson_progress_${uid}_${courseId}_${lessonId}`;
+    localStorage.setItem(key, JSON.stringify(progress));
+  } catch (e) {
+    console.warn('Failed to save lesson progress:', e);
+  }
+}
+
+export function getLessonProgress(
+  uid: string,
+  courseId: string,
+  lessonId: string
+): LessonProgressState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const key = `ater_lesson_progress_${uid}_${courseId}_${lessonId}`;
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+export function saveActiveCourse(uid: string, courseId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`ater_active_course_${uid}`, courseId);
+  } catch (e) {
+    console.warn('Failed to save active course:', e);
+  }
+}
+
+export function getActiveCourse(uid: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(`ater_active_course_${uid}`);
+  } catch (_e) {
+    return null;
+  }
+}
+
+export function saveLastView(uid: string, view: 'library' | 'study'): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`ater_last_view_${uid}`, view);
+  } catch (e) {
+    console.warn('Failed to save last view:', e);
+  }
+}
+
+export function getLastView(uid: string): 'library' | 'study' | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(`ater_last_view_${uid}`) as 'library' | 'study' | null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+export function saveActiveLesson(uid: string, courseId: string, lessonId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`ater_active_lesson_${uid}_${courseId}`, lessonId);
+  } catch (e) {
+    console.warn('Failed to save active lesson:', e);
+  }
+}
+
+export function getActiveLesson(uid: string, courseId: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(`ater_active_lesson_${uid}_${courseId}`);
+  } catch (_e) {
+    return null;
   }
 }
 
@@ -324,8 +422,16 @@ export async function saveNoteToStore(
 
   if (typeof window !== 'undefined') {
     try {
-      const noteKey = userId ? `ater_note_${userId}_${lessonId}` : `ater_note_${lessonId}`;
-      localStorage.setItem(noteKey, JSON.stringify(note));
+      const uid = userId || 'guest';
+      const userScopedKey = `ater_note_${uid}_${courseId}_${lessonId}`;
+      localStorage.setItem(userScopedKey, JSON.stringify(note));
+
+      // Also persist legacy keys for backward compatibility
+      const legacyCourseKey = `ater_note_${courseId}_${lessonId}`;
+      localStorage.setItem(legacyCourseKey, JSON.stringify(note));
+
+      const legacyKey = userId ? `ater_note_${userId}_${lessonId}` : `ater_note_${lessonId}`;
+      localStorage.setItem(legacyKey, JSON.stringify(note));
     } catch (e) {
       console.warn('Local note save failed:', e);
     }
@@ -366,11 +472,29 @@ export async function saveNoteToStore(
 /**
  * Retrieves note from Supabase or localStorage.
  */
-export async function getNoteFromStore(lessonId: string, explicitUserId?: string): Promise<DynamicLessonNote | null> {
+export async function getNoteFromStore(
+  lessonId: string,
+  explicitUserId?: string,
+  courseId?: string
+): Promise<DynamicLessonNote | null> {
   const userId = explicitUserId || (await getCurrentUserId());
+  const uid = userId || 'guest';
 
   if (typeof window !== 'undefined') {
     try {
+      if (courseId) {
+        const userScopedKey = `ater_note_${uid}_${courseId}_${lessonId}`;
+        const scopedLocal = localStorage.getItem(userScopedKey);
+        if (scopedLocal) {
+          return JSON.parse(scopedLocal);
+        }
+
+        const legacyCourseKey = `ater_note_${courseId}_${lessonId}`;
+        const legacyCourseLocal = localStorage.getItem(legacyCourseKey);
+        if (legacyCourseLocal) {
+          return JSON.parse(legacyCourseLocal);
+        }
+      }
       const noteKey = userId ? `ater_note_${userId}_${lessonId}` : `ater_note_${lessonId}`;
       const local = localStorage.getItem(noteKey);
       if (local) {
@@ -384,6 +508,9 @@ export async function getNoteFromStore(lessonId: string, explicitUserId?: string
 
   try {
     let query = supabase.from('ater_notes').select('*').eq('lesson_id', lessonId);
+    if (courseId) {
+      query = query.eq('course_id', courseId);
+    }
     if (userId) {
       query = query.eq('user_id', userId);
     } else {
@@ -533,3 +660,46 @@ export async function getLatestLabArtifact(): Promise<LabArtifact | null> {
 
   return null;
 }
+
+/**
+ * Saves the Gemini API key to local storage.
+ */
+export function saveGeminiKeyToStore(apiKey: string): void {
+  const cleanKey = apiKey.trim();
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('ater_gemini_api_key', cleanKey);
+    } catch (e) {
+      console.warn('Failed to save Gemini key to localStorage:', e);
+    }
+  }
+}
+
+/**
+ * Retrieves the Gemini API key from local storage.
+ */
+export function getGeminiKeyFromStore(): string | null {
+  if (typeof window !== 'undefined') {
+    try {
+      return (
+        localStorage.getItem('ater_gemini_api_key') ||
+        null
+      );
+    } catch (_e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Removes the Gemini API key from local storage.
+ */
+export function removeGeminiKeyFromStore(): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('ater_gemini_api_key');
+    } catch (_e) {}
+  }
+}
+

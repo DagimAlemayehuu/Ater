@@ -164,6 +164,7 @@ Respond with ONLY valid JSON:
       topic: curriculum.topic,
       sourceType: curriculum.sourceType || 'prompt',
       sourceName: curriculum.sourceName,
+      sources: curriculum.sources,
       targetGoal: cleanContinuousProse(stripEmojis(parsed.targetGoal || curriculum.targetGoal)),
       learnerBaseline: cleanContinuousProse(stripEmojis(parsed.learnerBaseline || curriculum.learnerBaseline || 'Intermediate')),
       lessons: normalizedLessons,

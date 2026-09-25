@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { compileDynamicLessonNote } from '@/lib/curriculum/notes';
 import { compilePedagogicalNote } from '@/lib/ai/gemini';
 import { warmTtsInBackground } from '@/lib/voice/ttsCache';
+import type { GroundedSource, PlannedSection } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,8 @@ export async function POST(request: Request) {
     const title = body?.title || body?.paper?.title;
     const summary = body?.summary || body?.sourceText || body?.paper?.abstract;
     const courseId = body?.courseId;
+    const sources: GroundedSource[] | undefined = body?.sources;
+    const plannedSections: PlannedSection[] | undefined = body?.plannedSections;
     const useMock = body?.useMock || false;
     const language = body?.language === 'am' ? 'am' : 'en';
 
@@ -30,6 +33,8 @@ export async function POST(request: Request) {
         title: title.trim(),
         summary: summary?.trim(),
         courseId,
+        sources,
+        plannedSections,
         useMock: !!useMock,
         throwOnError: false,
         language,

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     slug: `${resolvedFailedId}_concept`,
     summary: 'Core concepts requiring remediation.',
     status: 'remediation',
-    estimatedMinutes: 15,
+    estimatedMinutes: 5,
     prerequisites: [],
     isRemediation: false,
   };
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
       slug: `${targetLesson.slug}_remediation`,
       summary: `Micro-remediation targeting diagnosed misconceptions in ${targetLesson.title}.`,
       status: 'remediation',
-      estimatedMinutes: 10,
+      estimatedMinutes: 5,
       prerequisites: targetLesson.prerequisites,
       conceptsCovered: resolvedMisconceptions.length > 0 ? resolvedMisconceptions : ['Remedial Concept'],
       isRemediation: true,

@@ -13,6 +13,17 @@
 export type LessonStatus = 'locked' | 'active' | 'mastered' | 'remediation';
 
 /**
+ * Planned pedagogical section within a roadmap lesson.
+ */
+export interface PlannedSection {
+  id?: string;
+  order: number;
+  title: string;
+  summary: string;
+  artifactTypes?: ('code' | 'mermaid' | 'math' | 'table' | 'timeline' | 'callout')[];
+}
+
+/**
  * An atomic, single-concept lesson in the living curriculum roadmap DAG.
  * Enforces the Single-Concept Invariant (15-20 min pacing).
  */
@@ -29,6 +40,29 @@ export interface RoadmapLesson {
   conceptsCovered?: string[];
   isRemediation?: boolean;
   parentLessonId?: string;
+  sections?: PlannedSection[];
+}
+
+/**
+ * Reference source grounding a living curriculum.
+ */
+export interface GroundedSource {
+  id: string;
+  title: string;
+  url?: string;
+  type: 'document' | 'web';
+  snippet?: string;
+}
+
+/**
+ * Uploaded document payload during intake.
+ */
+export interface UploadedDoc {
+  fileName: string;
+  fileBase64?: string;
+  fileType: string;
+  textContent?: string;
+  sizeBytes: number;
 }
 
 /**
@@ -40,6 +74,7 @@ export interface CourseCurriculum {
   topic: string;
   sourceType?: 'prompt' | 'pdf' | 'document';
   sourceName?: string;
+  sources?: GroundedSource[];
   targetGoal?: string;
   learnerBaseline?: string;
   learnerLevel?: string;
@@ -180,6 +215,21 @@ export interface DynamicLessonNoteFeynmanCriteria {
 }
 
 /**
+ * A concrete pedagogical section within a dynamic study note.
+ */
+export interface DynamicLessonSection {
+  id: string;
+  order: number;
+  title: string;
+  shortTitle?: string;
+  type?: 'analogy' | 'concept' | 'mechanism' | 'case_study' | 'boundary' | 'synthesis';
+  content: string; // rich markdown with inline artifacts
+  teacherExplanation?: string;
+  checkpoint?: LessonCheckpoint;
+  inlineMCQs?: LessonInlineMCQ[];
+}
+
+/**
  * 5-section pedagogical study note with embedded checkpoints, inline MCQs, and mutation blocks.
  * Sections 1, 2, and 3 must strictly adhere to the Zero-Bullet Invariant.
  */
@@ -188,6 +238,9 @@ export interface DynamicLessonNote {
   lessonId: string;
   courseId?: string;
   title: string;
+
+  // Pedagogical sections
+  sections?: DynamicLessonSection[];
 
   // Section 1: Physical Analogy (ELI12) / Core Intuition
   mentalModel?: string;
@@ -314,7 +367,12 @@ export interface IntakeResponse {
 export interface CurriculumGenerateRequest {
   topic: string;
   sourceType?: 'prompt' | 'pdf' | 'document';
+  sourceName?: string;
   answers: Record<string, string>;
+  files?: UploadedDoc[];
+  sources?: GroundedSource[];
+  useMock?: boolean;
+  language?: 'en' | 'am';
 }
 
 /**
@@ -365,7 +423,7 @@ export interface LessonStepResponse {
 // ============================================================================
 
 /**
- * @deprecated Retained for ScholarXIV preprint search references and backward compatibility.
+ * @deprecated Retained for academic paper references and backward compatibility.
  */
 export interface ScholarPaper {
   id: string;
@@ -414,11 +472,10 @@ export interface AterAtomicNote {
 export interface LabArtifact {
   title: string;
   html: string;
-  files?: Record<string, string>; // e.g. { 'index.html': '...', 'engine.js': '...', 'styles.css': '...' }
-  entryPoint?: string; // default 'index.html'
+  files?: Record<string, string>;
+  entryPoint?: string;
   description?: string;
   timestamp?: string;
 }
 
-export * from './scholarxiv';
 

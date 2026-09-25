@@ -182,7 +182,10 @@ Respond with ONLY valid JSON matching this schema:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 1 },
+          },
         }),
       }
     );
@@ -306,7 +309,10 @@ Respond ONLY with valid JSON matching:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 1 },
+          },
         }),
       }
     );
