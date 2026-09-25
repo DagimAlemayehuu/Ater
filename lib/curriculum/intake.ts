@@ -92,6 +92,8 @@ export function generateFallbackIntake(topicHint?: string, language: 'en' | 'am'
     ? {
         topic,
         initialSummary: `ስለ ${topic} መሰረታዊ መርሆች፣ የአሰራር ሚዛኖች እና የድንበር ሁኔታዎች አጠቃላይ ጥናት።`,
+        coreConcepts: ['መሰረታዊ መርሆች', 'የስራ ፍሰት', 'የድንበር ሁኔታዎች'],
+        misconceptions: ['የስርዓት ደህንነትን መዘንጋት', 'የስቴት መዛባትን አለማስተዋል'],
         questions: [
           {
             id: 'q1',
@@ -140,6 +142,8 @@ export function generateFallbackIntake(topicHint?: string, language: 'en' | 'am'
     : {
         topic,
         initialSummary: `A clear, step-by-step guide to ${topic}, covering core ideas, practical examples, and common mistakes.`,
+        coreConcepts: ['Core Architecture', 'Operational Mechanism', 'Failure Modes & Invariants'],
+        misconceptions: ['Assuming reliable network', 'Confusing consistency with availability'],
         questions: [
           {
             id: 'q1',
@@ -301,11 +305,13 @@ ${files.length > 0 ? `Uploaded Learning Materials:\n${filesSummary}` : ''}
 CRITICAL INVARIANTS:
 1. Extract "topic": A concise canonical title of the domain or subject (2-5 words).
 2. Formulate "initialSummary": Exactly 1-2 analytical sentences summarizing the core focus. STRICT INVARIANT: Continuous prose only, strictly zero bullet points, asterisks, plus signs, or numbered list prefixes.
-3. Formulate "questions": Generate diagnostic Socratic discovery questions tailored to the input.
+3. Extract "coreConcepts": An array of 3-5 core concepts of the topic.
+4. Extract "misconceptions": An array of 3-5 commonly confused points or misconceptions about the topic.
+5. Formulate "questions": Generate diagnostic Socratic discovery questions tailored to the input.
    - If the user prompt is broad, short, or vague (e.g. "learn programming", "AI", "physics"), formulate 4 to 5 foundational diagnostic questions (probing specific sub-domain, target real-world project, prior baseline, target depth, and preferred focus).
    - If the user prompt is detailed or provided via PDF/syllabus files, formulate 3 to 4 focused diagnostic questions.
    - Question Categories: "goal", "baseline", "depth", "style", "followup".
-4. Question Schema Fields:
+6. Question Schema Fields:
    - "id": Unique string identifier ("q1", "q2", "q3", etc.).
    - "question": Written text formatted clearly for screen reading.
    - "spokenPrompt": Conversational question written specifically for Edge Neural TTS vocalization (clean spoken text, ending with a question mark ?, no markdown formatting, no bullet prefixes).
@@ -313,13 +319,15 @@ CRITICAL INVARIANTS:
    - "conceptTarget": Specific prerequisite or learning attribute being probed.
    - "difficulty": One of "L1", "L2", "L3".
    - "options": An array of exactly 3-4 concise, diverse, realistic student calibration answers tailored precisely to this question.
-5. STRICT INVARIANT: ZERO EMOJIS in any text field.
-6. STRICT INVARIANT: spokenPrompt must be clean, natural spoken text without markdown formatting, asterisks, backticks, brackets, or URLs, and must end with a question mark ?.
+7. STRICT INVARIANT: ZERO EMOJIS in any text field.
+8. STRICT INVARIANT: spokenPrompt must be clean, natural spoken text without markdown formatting, asterisks, backticks, brackets, or URLs, and must end with a question mark ?.
 
 Respond with ONLY valid JSON matching this schema:
 {
   "topic": "string",
   "initialSummary": "string",
+  "coreConcepts": ["string"],
+  "misconceptions": ["string"],
   "questions": [
     {
       "id": "q1",
@@ -445,6 +453,12 @@ Respond with ONLY valid JSON matching this schema:
     return {
       topic: resolvedTopic,
       initialSummary: resolvedSummary,
+      coreConcepts: Array.isArray(parsed.coreConcepts)
+        ? parsed.coreConcepts.map((c: any) => stripEmojis(String(c)).trim()).filter(Boolean)
+        : undefined,
+      misconceptions: Array.isArray(parsed.misconceptions)
+        ? parsed.misconceptions.map((m: any) => stripEmojis(String(m)).trim()).filter(Boolean)
+        : undefined,
       questions: finalQuestions,
     };
   } catch (err: any) {

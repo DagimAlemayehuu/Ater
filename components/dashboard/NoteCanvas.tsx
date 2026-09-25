@@ -948,7 +948,19 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             <div className="max-w-3xl w-full mx-auto space-y-4 pb-8">
 
             {/* Stepper Progression Navigation Bar (Section tabs: Intuition, Framework, etc.) */}
-            <nav aria-label="Lesson sections" className="flex items-center gap-1.5 p-1 rounded-xl bg-parchment-200/70 dark:bg-zinc-900/60 border border-parchment-300/70 dark:border-zinc-800/60">
+            <nav
+              aria-label="Lesson sections"
+              className="flex items-center gap-1.5 p-1 rounded-xl bg-parchment-200/70 dark:bg-zinc-900/60 border border-parchment-300/70 dark:border-zinc-800/60"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowRight' && activeSectionTab < unlockedSection) {
+                  setActiveSectionTab(activeSectionTab + 1);
+                  playTeacherExplanation(activeSectionTab + 1, sectionsConfig[activeSectionTab]?.title);
+                } else if (e.key === 'ArrowLeft' && activeSectionTab > 1) {
+                  setActiveSectionTab(activeSectionTab - 1);
+                  playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
+                }
+              }}
+            >
               {sectionsConfig.map((sec) => {
                 const isUnlocked = sec.num <= unlockedSection;
                 const isActive = sec.num === activeSectionTab;
@@ -961,17 +973,22 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       setActiveSectionTab(sec.num);
                       playTeacherExplanation(sec.num, sec.title);
                     }}
-                    className={`flex-1 py-1 px-2 rounded-lg text-center transition-colors ${
+                    className={`flex-1 py-1 px-2 min-h-[44px] rounded-lg text-center transition-colors flex items-center justify-center gap-1.5 ${
                       isActive
                         ? 'bg-parchment-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
                         : isUnlocked
                           ? 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                           : 'text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed'
                     }`}
+                    title={!isUnlocked ? (isAmharic ? 'ይህንን ክፍል ለማየት ቀዳሚውን ያጠናቅቁ' : 'Complete previous section to unlock') : undefined}
                   >
-                    <span className="block text-[11px] truncate">
-                      {sec.short}
-                    </span>
+                    {!isUnlocked && (
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    )}
+                    <span className="block text-[11px] font-medium sm:hidden">{sec.num}</span>
+                    <span className="hidden sm:block text-[11px] truncate">{sec.short}</span>
                   </button>
                 );
               })}
@@ -1085,22 +1102,34 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                           )}
 
                           {!curriculum?.disableGate && (
-                            <div className="pt-4 border-t border-parchment-200 dark:border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-parchment-100/80 dark:bg-zinc-900/60 border border-parchment-300 dark:border-zinc-800/80">
-                              <div>
-                                <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                                  {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
-                                </h4>
-                                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-xl bg-zinc-900 dark:bg-zinc-100 border border-zinc-800 dark:border-zinc-200 shadow-md">
+                              <div className="flex-1 w-full">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-semibold text-zinc-50 dark:text-zinc-900">
+                                    {isAmharic ? 'የቃል መከላከያ · ማስተሪን አረጋግጥ' : 'Defense · Prove Mastery'}
+                                  </h4>
+                                  <span title={isAmharic ? 'ወደ ቀጣዩ ትምህርት ለማለፍ ይህን ማለፍ ግዴታ ነው' : 'This defense validates your understanding and commits it to long-term memory before moving on.'} className="cursor-help w-4 h-4 rounded-full bg-zinc-800 dark:bg-zinc-200 text-zinc-400 dark:text-zinc-600 flex items-center justify-center text-[10px] font-bold">?</span>
+                                </div>
+                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 leading-relaxed">
                                   {isAmharic
                                     ? 'የ3 ጥልቅ ክፍት ጥያቄዎችን የቃል ፈተና በማለፍ ትምህርቱን ማስተር ያድርጉ እና ቀጣዩን ይክፈቱ።'
                                     : 'Answer 3 progressively challenging questions to prove complete mastery and unlock the next lesson.'}
                                 </p>
+                                {/* Progress Bar */}
+                                <div className="mt-3 flex items-center gap-3 w-full sm:w-2/3">
+                                  <div className="h-1.5 flex-1 bg-zinc-800 dark:bg-zinc-300 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 dark:bg-blue-600 transition-all" style={{ width: `${curriculum?.lessons?.length ? (curriculum.lessons.filter(l => l.status === 'mastered').length / curriculum.lessons.length) * 100 : 0}%` }} />
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
+                                    {curriculum?.lessons?.filter(l => l.status === 'mastered').length || 0} / {curriculum?.lessons?.length || 0} {isAmharic ? 'ተጠናቋል' : 'mastered'}
+                                  </span>
+                                </div>
                               </div>
                               {onOpenFeynman && (
                                 <button
                                   type="button"
                                   onClick={onOpenFeynman}
-                                  className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-parchment-200 hover:bg-parchment-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-parchment-400 dark:border-zinc-700 transition-all shrink-0 cursor-pointer shadow-xs"
+                                  className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 transition-all shrink-0 cursor-pointer shadow-sm"
                                 >
                                   {isAmharic ? 'የቃል መከላከያ ጀምር' : 'Enter Defense'}
                                 </button>
