@@ -1,5 +1,5 @@
 /**
- * Ater_V2 Core Type Definitions & System Contracts
+ * Ater Core Type Definitions & System Contracts
  * Cognitive Learning Engine & Socratic Tutor Architecture
  */
 
