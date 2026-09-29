@@ -40,3 +40,11 @@ pnpm-debug.log*
 # System files
 .DS_Store
 *.pem
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local scratch and sandbox files
+scratch/

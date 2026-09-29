@@ -27,6 +27,18 @@ let activeSpokenText: string | null = null;
 let lastSpokenText: string | null = null;
 let lastSpokenOptions: PlayAudioOptions | null = null;
 let activeAbortController: AbortController | null = null;
+let voiceModeActive = false;
+
+export function setVoiceModeActive(active: boolean): void {
+  voiceModeActive = active;
+  if (active) {
+    stopNeuralAudio();
+  }
+}
+
+export function isVoiceModeActive(): boolean {
+  return voiceModeActive;
+}
 
 const stateListeners = new Set<AudioStateListener>();
 const clientAudioCache = new Map<string, Blob>();
@@ -138,6 +150,7 @@ export function pauseNeuralAudio(): void {
 }
 
 export function resumeNeuralAudio(): void {
+  if (voiceModeActive) return;
   if (currentAudio && currentAudio.paused) {
     try {
       currentAudio.play();
@@ -152,6 +165,7 @@ export function resumeNeuralAudio(): void {
 }
 
 export function restartNeuralAudio(): void {
+  if (voiceModeActive) return;
   if (currentAudio) {
     try {
       currentAudio.currentTime = 0;
@@ -277,7 +291,15 @@ export async function playNeuralAudio(
   text: string,
   options: PlayAudioOptions = {}
 ): Promise<void> {
-  if (typeof window === 'undefined' || !text || !text.trim()) return;
+  if (typeof window === 'undefined' || !text || !text.trim() || voiceModeActive) return;
+
+  // Strict invariant: In library mode, zero voice or TTS audio is permitted
+  try {
+    const currentMode = localStorage.getItem('ater_voxide_mode');
+    if (currentMode === 'library' || !currentMode) {
+      return;
+    }
+  } catch {}
 
   // Immediately preempt and silence any active playback
   stopNeuralAudio();

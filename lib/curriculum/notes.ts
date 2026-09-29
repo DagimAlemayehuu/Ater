@@ -427,7 +427,7 @@ export async function compileDynamicLessonNote(
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     return generateFallbackNote(lessonId, cleanTitle, courseId, language, plannedSections);
@@ -543,41 +543,22 @@ Respond with ONLY valid JSON matching this schema:
   }
 
   try {
-    let response = await fetch(
+    const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(12000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.2,
             maxOutputTokens: 3500,
-            thinkingConfig: { thinkingBudget: 1 },
           },
         }),
       }
     );
-
-    if (!response.ok) {
-      // Retry without thinkingConfig if older endpoint rejects it
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: systemPrompt }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-              maxOutputTokens: 3500,
-            },
-          }),
-        }
-      );
-    }
 
     if (!response.ok) {
       if (throwOnError) throw new Error(`Gemini note compilation returned ${response.status}`);
@@ -770,7 +751,7 @@ export async function evaluateCheckpointAnswer(
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     // Deterministic heuristic for mock testing

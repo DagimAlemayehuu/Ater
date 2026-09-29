@@ -144,37 +144,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }, 1500);
 
-    // 1. Initial session check
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      if (!isMounted) return;
-      if (initialSession) {
-        setSession(initialSession);
-        setUser(initialSession.user || null);
-        if (initialSession.user?.email) {
-          await resolvePermissions(initialSession.user.email);
-        } else {
-          await resolvePermissions(null);
-        }
-      } else if (typeof window !== 'undefined') {
-        try {
-          const storedDev = localStorage.getItem('ater_dev_user');
-          if (storedDev) {
-            const parsedUser = JSON.parse(storedDev) as User;
-            const parsedSession = createDevSession(parsedUser);
-            setUser(parsedUser);
-            setSession(parsedSession);
-            await resolvePermissions(parsedUser.email);
+    // 1. Initial session check with strict 1000ms timeout guarantee
+    const sessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+      setTimeout(() => resolve({ data: { session: null } }), 1000)
+    );
+
+    Promise.race([sessionPromise, timeoutPromise])
+      .then(async (result: any) => {
+        const initialSession = result?.data?.session;
+        if (initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user || null);
+          if (initialSession.user?.email) {
+            await resolvePermissions(initialSession.user.email);
+          } else {
+            await resolvePermissions(null);
           }
-        } catch (_e) {}
-      }
-      clearTimeout(safetyTimeout);
-      setIsLoading(false);
-    }).catch(() => {
-      if (isMounted) {
-        clearTimeout(safetyTimeout);
+        } else if (typeof window !== 'undefined') {
+          try {
+            const storedDev = localStorage.getItem('ater_dev_user');
+            if (storedDev) {
+              const parsedUser = JSON.parse(storedDev) as User;
+              const parsedSession = createDevSession(parsedUser);
+              setUser(parsedUser);
+              setSession(parsedSession);
+              await resolvePermissions(parsedUser.email);
+            }
+          } catch (_e) {}
+        }
+      })
+      .catch((_e) => {})
+      .finally(() => {
         setIsLoading(false);
-      }
-    });
+      });
 
     // 2. Continuous auth state listener (auto token refresh, sign-in, sign-out)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

@@ -9,7 +9,7 @@ import crypto from 'crypto';
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
     if (!apiKey) {
       return NextResponse.json({ error: 'Gemini API key is not configured' }, { status: 500 });
@@ -55,9 +55,9 @@ CROSS-LANGUAGE COMPREHENSION & TARGET RESPONSE RULES:
 2. TARGET RESPONSE LANGUAGE:
    - Your response MUST ALWAYS be strictly in fluent, natural, grammatically correct Amharic (አማርኛ) using Ge'ez script.
    - ZERO English words or latin alphabet letters in "summary", "thought", and "spokenResponse".
-3. ZERO GREETINGS & ZERO WELCOMING FLUFF:
-   - NEVER say "እንኳን ደህና መጣህ", "ሰላም", or any welcoming introductory pleasantries.
-   - Jump immediately and directly into the core answer in the very first word.
+3. ሰላምታ እና የውይይት አያያዝ:
+   - ተማሪው ሰላምታ ከሰጠ (ለምሳሌ "ሰላም"፣ "እንደምን አለህ")፣ በአጭር እና ሞቅ ባለ መልኩ ይመልሱለት እና ስለ ${activeNoteTitle ? `"${activeNoteTitle}"` : 'ይህ ትምህርት'} ምን ማወቅ እንደፈለገ ይጠይቁ።
+   - ለቀረቡ ጥያቄዎች አላስፈላጊ ቃላትን ሳያበዙ በቀጥታ ወደ ዋናው ማብራሪያ ይግቡ።
 4. THOUGHT & SUMMARY:
    - "thought": A 1-2 sentence thinking trace explaining your reasoning strategy in Amharic.
    - "summary": A crisp, 1-sentence key takeaway answering the core question directly in Amharic.
@@ -95,9 +95,9 @@ CROSS-LANGUAGE COMPREHENSION & TARGET RESPONSE RULES:
    - In "transcript", provide the English transcript/translation.
 2. TARGET RESPONSE LANGUAGE:
    - Your response MUST ALWAYS be strictly in clear, articulate, fluent English.
-3. ZERO GREETINGS & ZERO WELCOMING FLUFF:
-   - NEVER say "Welcome Dagim", "Hello", "Welcome to...", "Great question", "Certainly", or any throat-clearing pleasantries.
-   - Jump immediately and directly into answering the question in the very first sentence.
+3. GREETING & CONVERSATIONAL HANDLING:
+   - If the learner greets you (e.g. "hello", "hi", "hey"), greet them back warmly and naturally in 1 sentence, and ask what question they have about ${activeNoteTitle ? `"${activeNoteTitle}"` : 'this lesson'}.
+   - For actual questions, jump directly into the core causal explanation without sycophantic filler phrases like "Certainly" or "Great question".
 4. THOUGHT & SUMMARY:
    - "thought": A 1-2 sentence pedagogical thinking trace explaining your reasoning and mental model selection.
    - "summary": A crisp, 1-sentence key takeaway answering the question directly in simple plain English.
@@ -139,7 +139,7 @@ Respond ONLY with valid JSON:
           generationConfig: {
             responseMimeType: 'application/json',
             maxOutputTokens: 900,
-            thinkingConfig: { thinkingBudget: 1 },
+            
           },
         }),
       }

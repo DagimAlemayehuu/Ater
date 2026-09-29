@@ -107,7 +107,7 @@ export async function compilePedagogicalNote(
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     return {
@@ -184,7 +184,7 @@ Respond with ONLY valid JSON matching this schema:
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 1 },
+            
           },
         }),
       }
@@ -255,7 +255,7 @@ export async function evaluateFeynmanExplanation(
 
   const isAm = language === 'am';
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     const pass = forcePass !== undefined ? forcePass : explanation.length > 30;
@@ -311,7 +311,7 @@ Respond ONLY with valid JSON matching:
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 1 },
+            
           },
         }),
       }

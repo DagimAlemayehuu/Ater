@@ -352,7 +352,7 @@ export async function gatherGroundedSources(
   // PATH B: Prompt-based with Google Search Grounding / Structured Synthesis
   // --------------------------------------------------------------------------
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (!apiKey || !cleanTopic) {
     return synthesizeTopicSources(cleanTopic || 'General Study', isAm);
@@ -376,9 +376,6 @@ For each source, provide the authoritative title, canonical official URL, and a 
           tools: [{ googleSearch: {} }],
           generationConfig: {
             maxOutputTokens: 600,
-            thinkingConfig: {
-              thinkingBudget: 1,
-            },
           },
         }),
       }

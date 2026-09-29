@@ -12,7 +12,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     const isAm = language === 'am';
 
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
     const count = previousQA.length;
 
@@ -108,7 +108,7 @@ SCHEMA:
             responseMimeType: 'application/json',
             temperature: 0.3,
             maxOutputTokens: 250,
-            thinkingConfig: { thinkingBudget: 1 },
+            
           },
         }),
       }

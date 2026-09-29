@@ -11,6 +11,8 @@ vi.mock('@/lib/voice/ttsClient', () => ({
   pauseNeuralAudio: vi.fn(),
   resumeNeuralAudio: vi.fn(),
   restartNeuralAudio: vi.fn(),
+  setVoiceModeActive: vi.fn(),
+  isVoiceModeActive: vi.fn(() => false),
   onAudioStateChange: vi.fn(() => () => {}),
   getAudioPlaybackState: vi.fn(() => 'idle'),
 }));
@@ -168,9 +170,8 @@ describe('NoteCanvas - Transcription Mode & Persistence UI', () => {
     ).toBeInTheDocument();
   });
 
-  it('plays active section audio when restarting audio on section 2', async () => {
+  it('hides audio controls in Library Mode and exposes functional controls in Voice Mode', async () => {
     const { fireEvent } = await import('@testing-library/react');
-    const { playNeuralAudio } = await import('@/lib/voice/ttsClient');
 
     // Pre-populate saved progress in localStorage with Section 2 active
     localStorage.setItem(
@@ -178,27 +179,30 @@ describe('NoteCanvas - Transcription Mode & Persistence UI', () => {
       JSON.stringify({ unlockedSection: 2, activeSectionTab: 2 })
     );
 
+    const { VoxideProvider } = await import('@/components/voice/VoxideProvider');
+
     render(
-      <NoteCanvas
-        note={mockNote}
-        curriculum={mockCourse}
-        activeLessonId="lesson-lsm-1"
-        initialViewMode="interactive"
-        language="en"
-        userId={mockUid}
-      />
+      <VoxideProvider initialMode="library">
+        <NoteCanvas
+          note={mockNote}
+          curriculum={mockCourse}
+          activeLessonId="lesson-lsm-1"
+          initialViewMode="interactive"
+          language="en"
+          userId={mockUid}
+        />
+      </VoxideProvider>
     );
 
-    vi.clearAllMocks();
+    // In Library Mode (default), Restart and Play/Pause buttons must NOT be present
+    expect(screen.queryByRole('button', { name: /^Restart$/i })).not.toBeInTheDocument();
 
-    const restartBtn = screen.getByRole('button', { name: /^Restart$/i });
-    fireEvent.click(restartBtn);
+    // Switch to Voice Mode
+    const voiceModeBtn = screen.getByTitle(/Voice Mode/i);
+    fireEvent.click(voiceModeBtn);
 
-    // Verify it plays section 2 explanation, not section 1
-    expect(playNeuralAudio).toHaveBeenCalledWith(
-      expect.stringContaining('Examine the Mermaid diagram on your screen'),
-      expect.objectContaining({ readerId: 'note-section-2' })
-    );
+    // In Voice Mode, Restart button appears
+    expect(screen.getByRole('button', { name: /^Restart$/i })).toBeInTheDocument();
   });
 });
 
