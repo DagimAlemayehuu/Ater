@@ -5,6 +5,17 @@ import { vi } from 'vitest';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 
+// Provide safe test fallback environment variables if not present (e.g. in CI)
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://mock-test.supabase.co';
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'mock-anon-key-for-test-isolation';
+}
+if (!process.env.GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = 'mock-gemini-key-for-test-isolation';
+}
+
 // Isolated Supabase Client Mock to prevent network calls and FK timeouts in tests
 export const createMockQueryBuilder = () => {
   const builder: any = {
