@@ -703,3 +703,72 @@ export function removeGeminiKeyFromStore(): void {
   }
 }
 
+/**
+ * Updates a lesson's mastery status when evaluated (e.g. by gradeExplanation tool).
+ * If score >= 80:
+ *   - Mutates lesson status to 'mastered'
+ *   - Unlocks the next lesson in the roadmap (changes status from 'locked' to 'active')
+ *   - Saves the updated course in store (localStorage and Supabase)
+ *   - Records gate session in store
+ * If score < 80:
+ *   - Records failed gate session in store
+ */
+export async function updateLessonMasteryInStore(
+  courseId: string,
+  lessonId: string,
+  score: number,
+  feedback: string,
+  explicitUserId?: string
+): Promise<{ updatedCurriculum: CourseCurriculum | null; passed: boolean }> {
+  const userId = explicitUserId || (await getCurrentUserId());
+  const passed = score >= 80;
+
+  // Retrieve existing courses
+  const courses = await getCoursesFromStore(userId || undefined);
+  const targetCourseIndex = courses.findIndex((c) => c.id === courseId);
+
+  if (targetCourseIndex === -1) {
+    await saveGateSessionToStore({
+      lessonId,
+      finalScore: score,
+      passed,
+      summaryFeedback: feedback,
+      status: passed ? 'passed' : 'failed',
+    });
+    return { updatedCurriculum: null, passed };
+  }
+
+  const course = courses[targetCourseIndex];
+  let updatedCurriculum: CourseCurriculum = course;
+
+  if (passed) {
+    const updatedLessons = course.lessons.map((l, idx, arr) => {
+      if (l.id === lessonId) {
+        return { ...l, status: 'mastered' as const };
+      }
+      if (idx > 0 && arr[idx - 1].id === lessonId && l.status === 'locked') {
+        return { ...l, status: 'active' as const };
+      }
+      return l;
+    });
+
+    updatedCurriculum = {
+      ...course,
+      lessons: updatedLessons,
+    };
+
+    await saveCourseToStore(updatedCurriculum, userId || undefined);
+  }
+
+  await saveGateSessionToStore({
+    lessonId,
+    lessonTitle: course.lessons.find((l) => l.id === lessonId)?.title || lessonId,
+    finalScore: score,
+    passed,
+    summaryFeedback: feedback,
+    status: passed ? 'passed' : 'failed',
+  });
+
+  return { updatedCurriculum, passed };
+}
+

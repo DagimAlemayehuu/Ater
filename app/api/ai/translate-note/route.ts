@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
     const body = await req.json();
     const { note, targetLanguage } = body;
@@ -122,6 +122,7 @@ Respond with ONLY valid JSON:
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(12000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: { responseMimeType: 'application/json' },

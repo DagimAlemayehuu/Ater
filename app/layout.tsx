@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { VoxideProvider } from '@/components/voice/VoxideProvider';
 
 export const metadata: Metadata = {
   title: 'ATER | Active Recall & Socratic Learning Studio',
@@ -20,7 +21,9 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider>
             <LanguageProvider>
-              {children}
+              <VoxideProvider>
+                {children}
+              </VoxideProvider>
             </LanguageProvider>
           </ThemeProvider>
         </AuthProvider>

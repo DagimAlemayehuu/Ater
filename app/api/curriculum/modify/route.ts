@@ -20,7 +20,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
 
     const cleanFeedback = stripEmojis(feedback).trim();
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
     if (!apiKey) {
       // Offline fallback: append or adjust an updated lesson title based on feedback

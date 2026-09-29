@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { BookOpen, Mic, Volume2, VolumeX } from 'lucide-react';
+import { useVoiceBridge } from '@/components/voice/VoxideProvider';
 import { InputVoiceIndicator } from '@/components/voice/InputVoiceIndicator';
 import { AskTeacherBar } from '@/components/dashboard/AskTeacherBar';
 import { SideQuestionModal, QaThread, QaTurn } from '@/components/dashboard/SideQuestionModal';
@@ -87,6 +89,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
   const t = translations[language] || translations.en;
   const isAmharic = language === 'am';
   const defaultVoice = isAmharic ? 'am-ET-MekdesNeural' : 'en-US-JennyNeural';
+  const voxide = useVoiceBridge();
 
   const uid = userId || 'guest';
   const effectiveCourseId = curriculum?.id || (note as any)?.courseId || 'default_course';
@@ -262,21 +265,13 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
     ]
   );
 
-  // Play conversational teacher explanation for a section
+  // Play conversational teacher explanation for a section (strictly Library Mode only)
   const playTeacherExplanation = useCallback(
-    (sectionIndex: number, _title?: string) => {
+    (_sectionIndex: number, _title?: string) => {
       stopNeuralAudio();
-      const explanation = getSectionExplanation(sectionIndex);
-      setActiveSpokenText(explanation);
-      setReadingSection(isAmharic ? `አስተማሪ፡ ክፍል 0${sectionIndex}` : `Teacher: Section 0${sectionIndex}`);
-      playNeuralAudio(explanation, {
-        voice: defaultVoice,
-        readerId: `note-section-${sectionIndex}`,
-        onEnd: () => setReadingSection(null),
-        onError: () => setReadingSection(null),
-      });
+      // Library mode is 100% silent reading; Voice mode is driven exclusively by Gemini Live
     },
-    [getSectionExplanation, isAmharic, defaultVoice]
+    []
   );
 
   const playTeacherExplanationRef = useRef(playTeacherExplanation);
@@ -321,6 +316,111 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
     });
   }, [uid, effectiveCourseId, effectiveLessonId, unlockedSection, activeSectionTab]);
 
+  // Synchronize active section with Gemini Live companion when in Voice Mode
+  useEffect(() => {
+    if (voxide.mode !== 'voice' || !note?.title || isFeynmanOpen) return;
+    const cleanTopic = note.title.replace(/^(\d+\s*[\cdot·\-–—]\s*)+/u, '').trim();
+    const activeSec = sectionsConfig.find((s) => s.num === activeSectionTab) || sectionsConfig[0];
+    const sectionTranscript =
+      activeSec?.teacherExplanation ||
+      (dynamicNote?.teacherExplanations &&
+        (dynamicNote.teacherExplanations as any)['section' + activeSec?.num]) ||
+      getSectionExplanation(activeSectionTab);
+    const totalSecs = sectionsConfig.length || 4;
+
+    voxide.connect({
+      topic: cleanTopic,
+      stage: 'reading',
+      question: sectionTranscript,
+      questionNum: activeSectionTab,
+      totalQuestions: totalSecs,
+      language: language as 'en' | 'am',
+      courseId: effectiveCourseId,
+      lessonId: effectiveLessonId,
+    });
+  }, [
+    voxide.mode,
+    note?.title,
+    activeSectionTab,
+    isFeynmanOpen,
+    language,
+    getSectionExplanation,
+    sectionsConfig,
+    dynamicNote,
+    effectiveCourseId,
+    effectiveLessonId,
+  ]);
+
+  // Synchronize completed voice Q&A turns with side questions in Voice Mode
+  const lastHandledVoiceTurnIndexRef = useRef<number>(-1);
+  useEffect(() => {
+    if (voxide.mode !== 'voice' || isFeynmanOpen) return;
+    if (voxide.turns.length === 0) return;
+
+    const latestIndex = voxide.turns.length - 1;
+    if (latestIndex <= lastHandledVoiceTurnIndexRef.current) return;
+
+    const latestTurn = voxide.turns[latestIndex];
+
+    if (latestTurn.role === 'user') {
+      lastHandledVoiceTurnIndexRef.current = latestIndex;
+      setPendingQuestion(latestTurn.text);
+      setIsAskingTeacher(true);
+      // Keep modal closed while thinking so previous question does not flash
+    } else if (latestTurn.role === 'assistant') {
+      lastHandledVoiceTurnIndexRef.current = latestIndex;
+      setIsAskingTeacher(false);
+      const prevTurn = voxide.turns[latestIndex - 1];
+      const userText = pendingQuestion || (prevTurn?.role === 'user' ? prevTurn.text : (isAmharic ? 'የድምፅ ጥያቄ' : 'Voice Question'));
+
+      const newTurn: QaTurn = {
+        id: `turn_${Date.now()}`,
+        question: userText,
+        thought: isAmharic ? 'የድምፅ ምላሽ በመተንተን ላይ።' : 'Analyzing causal principles.',
+        thoughtDuration: 1,
+        summary: isAmharic ? 'የድምፅ ማብራሪያ' : 'Voice explanation',
+        answer: latestTurn.text,
+        timestamp: Date.now(),
+      };
+
+      const activeThread = sideQuestionThreads.find((t) => t.id === activeThreadId) || null;
+      let updatedThreads: QaThread[];
+      if (isSideQuestionOpen && activeThread) {
+        updatedThreads = sideQuestionThreads.map((t) => {
+          if (t.id === activeThread.id) {
+            return {
+              ...t,
+              turns: [...t.turns, newTurn],
+            };
+          }
+          return t;
+        });
+      } else {
+        const newThread: QaThread = {
+          id: `thread_${Date.now()}`,
+          noteKey: String(currentNoteKey || 'default'),
+          title: userText,
+          turns: [newTurn],
+          createdAt: Date.now(),
+        };
+        updatedThreads = [...sideQuestionThreads, newThread];
+        setActiveThreadId(newThread.id);
+      }
+      persistThreads(updatedThreads);
+      setIsSideQuestionOpen(true);
+    }
+  }, [
+    voxide.turns,
+    voxide.mode,
+    isFeynmanOpen,
+    pendingQuestion,
+    isSideQuestionOpen,
+    activeThreadId,
+    sideQuestionThreads,
+    currentNoteKey,
+    isAmharic,
+  ]);
+
   // Load saved side questions for current note from localStorage (scoped per language)
   useEffect(() => {
     if (!currentNoteKey || typeof window === 'undefined') return;
@@ -354,20 +454,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
       console.warn('Failed to save side questions to localStorage:', e);
     }
   };
-
-  // Auto-play teacher explanation when note is loaded and ready, strictly guarding against modal collisions
-  useEffect(() => {
-    if (note && note.title && !activeLoading && !isFeynmanOpen && !isIntakeOpen) {
-      const voiceToken = `${effectiveCourseId || ''}_${effectiveLessonId || note.title}_${language}`;
-      if (lastSpokenNoteTitleRef.current !== voiceToken) {
-        lastSpokenNoteTitleRef.current = voiceToken;
-        // Never auto-play over another actively speaking or paused voice reader
-        if (getAudioPlaybackState() !== 'playing' && getAudioPlaybackState() !== 'paused') {
-          playTeacherExplanationRef.current(activeSectionTab, sectionsConfig[activeSectionTab - 1]?.title);
-        }
-      }
-    }
-  }, [note?.title, activeLoading, isFeynmanOpen, isIntakeOpen, effectiveCourseId, effectiveLessonId, language, activeSectionTab, sectionsConfig]);
 
   // Audio Play / Pause toggle with Side Question priority
   const handleTogglePause = () => {
@@ -479,12 +565,12 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
     }
   };
 
-  // Ask teacher a question with Antigravity-style Side Question modal, 2s thinking simulation, and context persistence
+  // Ask teacher a question with Antigravity-style Side Question modal and context persistence
   const handleAskQuestion = async (qText: string) => {
     if (!qText.trim() || isAskingTeacher) return;
     setIsAskingTeacher(true);
     setPendingQuestion(qText);
-    setIsSideQuestionOpen(true);
+    // Keep modal closed while answer is generating so previous question is never displayed
 
     const activeThread = sideQuestionThreads.find((t) => t.id === activeThreadId) || null;
     const isFollowUp = isSideQuestionOpen && !!activeThread;
@@ -515,16 +601,17 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Question about ${note?.title} (${activeSectionTitle}): ${qText}`,
+          text: qText,
           activeNoteTitle: note?.title,
+          sectionTitle: activeSectionTitle,
           language,
           history,
         }),
       });
 
       let teacherAnswer = isAmharic
-        ? 'ተረድቻለሁ። ዋናውን መርህ እንመልከት።'
-        : 'Understood. Focus on how the core invariant prevents invalid states.';
+        ? 'ተረድቻለሁ። ምን ማወቅ እንደፈለጉ በጥልቀት እንመርምር።'
+        : 'I am here to help you master this section. What question do you have about the concepts or mechanisms?';
       let thought = isAmharic
         ? 'ዋናውን ፅንሰ-ሀሳብ እና የአሰራር ሂደት በመተንተን ላይ።'
         : 'Analyzing the core mental model and clarifying the causal mechanism.';
@@ -575,18 +662,12 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
       }
 
       persistThreads(updatedThreads);
+      setIsSideQuestionOpen(true);
 
-      // Vocalize response: only the transcript/explanation
-      const spoken = teacherAnswer;
-      stopNeuralAudio();
-      setActiveSpokenText(spoken);
-      setReadingSection(isAmharic ? 'የአስተማሪ ምላሽ' : 'Teacher: Q&A');
-      playNeuralAudio(spoken, {
-        voice: defaultVoice,
-        readerId: 'side-question-reader',
-        onEnd: () => setReadingSection(null),
-        onError: () => setReadingSection(null),
-      });
+      // In Voice Mode only: speak response aloud via Gemini Live
+      if (voxide.mode === 'voice') {
+        voxide.sendText(`Please explain this directly aloud: "${teacherAnswer}"`);
+      }
     } catch {
       const fallbackDuration = 2;
       const fallbackTurn: QaTurn = {
@@ -611,6 +692,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
       const updatedThreads = [...sideQuestionThreads, newThread];
       setActiveThreadId(newThread.id);
       persistThreads(updatedThreads);
+      setIsSideQuestionOpen(true);
     } finally {
       setIsAskingTeacher(false);
       setPendingQuestion('');
@@ -625,7 +707,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
       setUnlockedSection(nextSec);
     }
     setActiveSectionTab(nextSec);
-    playTeacherExplanation(nextSec, `Section 0${nextSec}`);
   };
 
   if (activeLoading) {
@@ -653,7 +734,7 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
       <main className="flex-1 flex flex-col items-center justify-center bg-[#fbf7f0] dark:bg-zinc-950 p-8 font-sans overflow-y-auto">
         <div className="max-w-md w-full text-center space-y-6">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-parchment-300 dark:border-zinc-800 text-[11px] font-mono text-zinc-600 dark:text-zinc-400 bg-parchment-200/60 dark:bg-zinc-900/60">
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" />
             <span>{isAmharic ? 'የሶቅራጥስ እውቀት ሞተር' : 'Socratic Cognitive Engine'}</span>
           </div>
 
@@ -708,19 +789,21 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
           <span className="uppercase text-[10px] text-zinc-700 dark:text-zinc-300 font-semibold tracking-wider">
             {t.socraticCheckpoint}
           </span>
-          <button
-            type="button"
-            onClick={() => {
-              stopNeuralAudio();
-              playNeuralAudio(cp.spokenPrompt || cp.question, {
-                voice: defaultVoice,
-                readerId: 'note-checkpoint-prompt',
-              });
-            }}
-            className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
-          >
-            {t.playAudio}
-          </button>
+          {voxide.mode === 'voice' && (
+            <button
+              type="button"
+              onClick={() => {
+                stopNeuralAudio();
+                playNeuralAudio(cp.spokenPrompt || cp.question, {
+                  voice: defaultVoice,
+                  readerId: 'note-checkpoint-prompt',
+                });
+              }}
+              className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+            >
+              {t.playAudio}
+            </button>
+          )}
         </div>
 
         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
@@ -745,36 +828,72 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             )}
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="relative">
-              <input
-                type="text"
-                value={checkpointInput}
-                onChange={(e) => setCheckpointInput(e.target.value)}
-                onFocus={() => setFocusedInput('checkpoint')}
-                onBlur={() => setFocusedInput(null)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCheckpointSubmit(cp.id)}
-                placeholder={t.typeSynthesis}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 pr-7"
-              />
-              <InputVoiceIndicator
-                isFocused={focusedInput === 'checkpoint'}
-                isProcessingOverride={isSubmittingCheckpoint && focusedInput === 'checkpoint'}
-                language={language}
-                className="top-2.5 right-2"
-              />
+          voxide.mode === 'voice' ? (
+            <div className="p-3 rounded-lg border border-parchment-300 dark:border-zinc-800 bg-parchment-100/70 dark:bg-zinc-900/70 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Mic className={`w-3.5 h-3.5 ${voxide.isListening ? 'text-red-500' : 'text-zinc-500'}`} />
+                  {voxide.isListening
+                    ? (isAmharic ? 'በማዳመጥ ላይ... መልስዎን ይናገሩ' : 'Listening... speak your explanation')
+                    : (isAmharic ? 'የስፔስ ቁልፍን (Spacebar) ተጭነው መልስዎን ይናገሩ' : 'Hold Spacebar to speak your causal answer')}
+                </span>
+                {voxide.isConnected && (
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {isAmharic ? 'ድምፅ ተገናኝቷል' : 'Live Voice'}
+                  </span>
+                )}
+              </div>
+              {voxide.liveSpeech && (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-zinc-800 dark:text-zinc-200 italic bg-white/70 dark:bg-zinc-950/70 p-2 rounded border border-parchment-300 dark:border-zinc-800 flex-1">
+                    "{voxide.liveSpeech}"
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckpointInput(voxide.liveSpeech);
+                      handleCheckpointSubmit(cp.id);
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 shrink-0 cursor-pointer"
+                  >
+                    {isAmharic ? 'አስገባ' : 'Submit'}
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => handleCheckpointSubmit(cp.id)}
-                disabled={isSubmittingCheckpoint || !checkpointInput.trim()}
-                className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 disabled:opacity-50 transition-colors cursor-pointer"
-              >
-                {isSubmittingCheckpoint ? '...' : t.submitCheckpoint}
-              </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={checkpointInput}
+                  onChange={(e) => setCheckpointInput(e.target.value)}
+                  onFocus={() => setFocusedInput('checkpoint')}
+                  onBlur={() => setFocusedInput(null)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCheckpointSubmit(cp.id)}
+                  placeholder={t.typeSynthesis}
+                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 pr-7"
+                />
+                <InputVoiceIndicator
+                  isFocused={focusedInput === 'checkpoint'}
+                  isProcessingOverride={isSubmittingCheckpoint && focusedInput === 'checkpoint'}
+                  language={language}
+                  className="top-2.5 right-2"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleCheckpointSubmit(cp.id)}
+                  disabled={isSubmittingCheckpoint || !checkpointInput.trim()}
+                  className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-300/80 dark:border-zinc-700/80 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {isSubmittingCheckpoint ? '...' : t.submitCheckpoint}
+                </button>
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
     );
@@ -793,51 +912,135 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
           </h1>
           {readingSection && (
             <p className="text-[11px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" />
               <span>{readingSection}</span>
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Audio Play/Pause Button */}
-          <button
-            type="button"
-            onClick={handleTogglePause}
-            aria-label={playbackState === 'playing' ? t.pauseAudio : t.resumeAudio}
-            className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
-            title={playbackState === 'playing' ? t.pauseAudio : t.resumeAudio}
-          >
-            {playbackState === 'playing' ? (
-              <>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
-                </svg>
-                <span className="text-[11px] hidden sm:inline">{t.pauseAudio}</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                </svg>
-                <span className="text-[11px] hidden sm:inline">{playbackState === 'paused' ? t.resumeAudio : t.playAudio}</span>
-              </>
-            )}
-          </button>
+          {/* Socratic Mode Switcher: Library Mode vs Voice Mode */}
+          <div className="flex items-center rounded-lg border border-parchment-300 dark:border-zinc-800 p-0.5 bg-parchment-200/70 dark:bg-zinc-900 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                stopNeuralAudio();
+                voxide.setMode('library');
+              }}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                voxide.mode === 'library'
+                  ? 'bg-parchment-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+              }`}
+              title="Library Mode (Silent text-first)"
+            >
+              <BookOpen size={12} />
+              <span className="text-[11px] hidden sm:inline">{isAmharic ? 'ቤተ-መጽሐፍት' : 'Library'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                stopNeuralAudio();
+                voxide.setMode('voice');
+                const cleanTopic = (note?.title || 'Lesson').replace(/^(\d+\s*[\cdot·\-–—]\s*)+/u, '').trim();
+                const activeSec = sectionsConfig.find((s) => s.num === activeSectionTab) || sectionsConfig[0];
+                const sectionTranscript =
+                  activeSec?.teacherExplanation ||
+                  (dynamicNote?.teacherExplanations &&
+                    (dynamicNote.teacherExplanations as any)['section' + activeSec?.num]) ||
+                  getSectionExplanation(activeSectionTab);
+                voxide.connect({
+                  topic: cleanTopic,
+                  stage: 'reading',
+                  question: sectionTranscript,
+                  questionNum: activeSectionTab,
+                  totalQuestions: sectionsConfig.length || 4,
+                  language: language as 'en' | 'am',
+                  courseId: effectiveCourseId,
+                  lessonId: effectiveLessonId,
+                });
+              }}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                voxide.mode === 'voice'
+                  ? 'bg-parchment-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+              }`}
+              title="Voice Mode (Hands-free hold-to-talk)"
+            >
+              <Mic size={12} />
+              <span className="text-[11px] hidden sm:inline">{isAmharic ? 'ድምፅ' : 'Voice'}</span>
+            </button>
+          </div>
 
-          {/* Audio Restart Button */}
-          <button
-            type="button"
-            onClick={handleRestartAudio}
-            aria-label={t.restartAudio}
-            className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
-            title={t.restartAudio}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span className="text-[11px] hidden sm:inline">{t.restartAudio}</span>
-          </button>
+          {/* Voice Mode Audio Controls (Mute, Play/Pause, Restart) */}
+          {voxide.mode === 'voice' && (
+            <>
+              {/* Audio Mute Toggle */}
+              <button
+                type="button"
+                onClick={voxide.toggleMute}
+                aria-label={voxide.isMuted ? 'Unmute AI Audio' : 'Mute AI Audio'}
+                className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
+                title={voxide.isMuted ? 'Audio Muted' : 'Audio Sound On'}
+              >
+                {voxide.isMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 text-zinc-400" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 text-zinc-800 dark:text-zinc-200" />
+                )}
+                <span className="text-[11px] hidden md:inline">
+                  {voxide.isMuted ? (isAmharic ? 'ዝም' : 'Muted') : (isAmharic ? 'ድምፅ' : 'Sound On')}
+                </span>
+              </button>
+
+              {/* Audio Play/Pause Button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (voxide.isSpeaking && !voxide.isPaused) {
+                    await voxide.pauseAudio();
+                  } else if (voxide.isPaused) {
+                    await voxide.resumeAudio();
+                  } else {
+                    voxide.restartSession();
+                  }
+                }}
+                aria-label={voxide.isSpeaking && !voxide.isPaused ? t.pauseAudio : t.resumeAudio}
+                className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
+                title={voxide.isSpeaking && !voxide.isPaused ? t.pauseAudio : t.resumeAudio}
+              >
+                {voxide.isSpeaking && !voxide.isPaused ? (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
+                    </svg>
+                    <span className="text-[11px] hidden sm:inline">{t.pauseAudio}</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    </svg>
+                    <span className="text-[11px] hidden sm:inline">{voxide.isPaused ? t.resumeAudio : t.playAudio}</span>
+                  </>
+                )}
+              </button>
+
+              {/* Audio Restart Button */}
+              <button
+                type="button"
+                onClick={() => voxide.restartSession()}
+                aria-label={t.restartAudio}
+                className="p-1.5 rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-200/80 dark:bg-zinc-900 hover:bg-parchment-300 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-xs"
+                title={t.restartAudio}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="text-[11px] hidden sm:inline">{t.restartAudio}</span>
+              </button>
+            </>
+          )}
 
           {/* View Mode Toggle: Summary | Transcription */}
           <div className="flex items-center rounded-lg border border-parchment-300 dark:border-zinc-800 p-0.5 bg-parchment-200/70 dark:bg-zinc-900 text-xs">
@@ -954,10 +1157,8 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'ArrowRight' && activeSectionTab < unlockedSection) {
                   setActiveSectionTab(activeSectionTab + 1);
-                  playTeacherExplanation(activeSectionTab + 1, sectionsConfig[activeSectionTab]?.title);
                 } else if (e.key === 'ArrowLeft' && activeSectionTab > 1) {
                   setActiveSectionTab(activeSectionTab - 1);
-                  playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
                 }
               }}
             >
@@ -971,7 +1172,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     disabled={!isUnlocked}
                     onClick={() => {
                       setActiveSectionTab(sec.num);
-                      playTeacherExplanation(sec.num, sec.title);
                     }}
                     className={`flex-1 py-1 px-2 min-h-[44px] rounded-lg text-center transition-colors flex items-center justify-center gap-1.5 ${
                       isActive
@@ -1359,7 +1559,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                     type="button"
                     onClick={() => {
                       setActiveSectionTab(activeSectionTab - 1);
-                      playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
                     }}
                     className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100/70 hover:bg-parchment-200 dark:bg-transparent transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
@@ -1468,7 +1667,6 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
                       type="button"
                       onClick={() => {
                         setActiveSectionTab(activeSectionTab - 1);
-                        playTeacherExplanation(activeSectionTab - 1, sectionsConfig[activeSectionTab - 2]?.title);
                       }}
                       className="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-parchment-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-parchment-100/70 hover:bg-parchment-200 dark:bg-transparent transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
@@ -1517,6 +1715,12 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             isLoading={isAskingTeacher}
             language={language}
             disabled={activeLoading}
+            mode={voxide.mode}
+            isListening={voxide.isListening}
+            isProcessing={voxide.isProcessing}
+            liveSpeech={voxide.liveSpeech}
+            onHoldToTalkStart={voxide.startTalking}
+            onHoldToTalkEnd={voxide.stopTalking}
             placeholder={
               isSideQuestionOpen
                 ? (isAmharic ? 'ተጨማሪ ጥያቄ ይጠይቁ...' : 'Ask a follow-up question...')
@@ -1541,6 +1745,14 @@ export const NoteCanvas: React.FC<NoteCanvasProps> = ({
             language={language}
             defaultVoice={defaultVoice}
             containerClassName="inset-x-0 sm:left-60 lg:left-72 sm:right-0"
+            mode={voxide.mode}
+            onPlayVoiceAnswer={(ans) => {
+              voxide.sendText(`Please read this explanation aloud word-for-word: "${ans}"`);
+            }}
+            onRestartVoiceAnswer={(ans) => {
+              voxide.sendText(`Please read this explanation aloud word-for-word: "${ans}"`);
+            }}
+            isVoiceSpeaking={voxide.isSpeaking}
           />
         </div>
 

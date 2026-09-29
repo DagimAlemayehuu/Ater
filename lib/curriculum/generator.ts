@@ -416,7 +416,7 @@ export interface GenerateCurriculumOptions {
 
 /**
  * Generates an atomic, sequenced CourseCurriculum adhering to the Single-Concept Invariant (15-20 min lessons).
- * Uses gemini-3.5-flash-lite with thinkingConfig: { thinkingBudget: 1 } and maxOutputTokens: 1200 or returns a deterministic structured curriculum.
+ * Uses gemini-3.1-flash-lite-preview with thinkingConfig: { thinkingBudget: 1 } and maxOutputTokens: 1200 or returns a deterministic structured curriculum.
  */
 export async function generateCourseCurriculum(
   topicOrOptions: string | GenerateCurriculumOptions,
@@ -464,7 +464,7 @@ export async function generateCourseCurriculum(
       : await gatherGroundedSources(cleanTopic, filesArg, answers, language);
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     return generateFallbackCurriculum(cleanTopic, answers.q1, answers.q2, language, sources);
@@ -572,14 +572,12 @@ Respond with ONLY valid JSON matching this schema:
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(12000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
             maxOutputTokens: 2500,
-            thinkingConfig: {
-              thinkingBudget: 1,
-            },
           },
         }),
       }
@@ -729,7 +727,7 @@ export async function generateRemediationLesson(
   };
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     return fallbackLesson;
@@ -762,11 +760,11 @@ Respond with ONLY valid JSON:
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 1 },
             maxOutputTokens: 1000,
           },
         }),

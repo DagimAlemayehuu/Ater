@@ -3,14 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { AppLanguage } from '@/lib/i18n/translations';
 import {
-  playNeuralAudio,
   pauseNeuralAudio,
   resumeNeuralAudio,
-  restartNeuralAudio,
   stopNeuralAudio,
   onAudioStateChange,
   getAudioPlaybackState,
-  getActiveSpokenText,
   AudioPlaybackState,
 } from '@/lib/voice/ttsClient';
 
@@ -43,6 +40,10 @@ export interface SideQuestionModalProps {
   language?: AppLanguage;
   defaultVoice?: string;
   containerClassName?: string;
+  mode?: 'voice' | 'library';
+  onPlayVoiceAnswer?: (answer: string) => void;
+  onRestartVoiceAnswer?: (answer: string) => void;
+  isVoiceSpeaking?: boolean;
 }
 
 export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
@@ -54,8 +55,11 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
   onClose,
   onSelectThread,
   language = 'en',
-  defaultVoice = 'en-US-JennyNeural',
   containerClassName = '',
+  mode = 'library',
+  onPlayVoiceAnswer,
+  onRestartVoiceAnswer,
+  isVoiceSpeaking = false,
 }) => {
   const [playbackState, setPlaybackState] = useState<AudioPlaybackState>(getAudioPlaybackState());
   const [copied, setCopied] = useState(false);
@@ -82,38 +86,19 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
     return unsub;
   }, []);
 
-  const isCurrentAudioPlaying =
-    playbackState === 'playing' && getActiveSpokenText() === currentAnswer;
-
   const handleToggleAudio = () => {
     if (!currentAnswer) return;
-    if (playbackState === 'playing') {
-      pauseNeuralAudio();
-    } else if (playbackState === 'paused' && getActiveSpokenText() === currentAnswer) {
-      resumeNeuralAudio();
-    } else {
-      stopNeuralAudio();
-      playNeuralAudio(currentAnswer, {
-        voice: defaultVoice,
-        readerId: 'side-question-reader',
-        onEnd: () => {},
-        onError: () => {},
-      });
+    if (onPlayVoiceAnswer) {
+      onPlayVoiceAnswer(currentAnswer);
     }
   };
 
   const handleRestart = () => {
     if (!currentAnswer) return;
-    if (getActiveSpokenText() === currentAnswer) {
-      restartNeuralAudio();
-    } else {
-      stopNeuralAudio();
-      playNeuralAudio(currentAnswer, {
-        voice: defaultVoice,
-        readerId: 'side-question-reader',
-        onEnd: () => {},
-        onError: () => {},
-      });
+    if (onRestartVoiceAnswer) {
+      onRestartVoiceAnswer(currentAnswer);
+    } else if (onPlayVoiceAnswer) {
+      onPlayVoiceAnswer(currentAnswer);
     }
   };
 
@@ -147,7 +132,7 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
         className="fixed inset-0 z-30 bg-black/20 dark:bg-black/50 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
       />
 
-      {/* Floating Card Container extending directly from above the bottom input bar */}
+      {/* Floating Card Container */}
       <div className={`fixed bottom-20 z-40 flex flex-col items-center pointer-events-none px-3 sm:px-4 ${containerClassName || 'inset-x-0'}`}>
         <div
           role="dialog"
@@ -156,7 +141,7 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
         >
           {/* Header Bar */}
           <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/70 select-none">
-            {/* Left: Question title without "Side Question:" text */}
+            {/* Left: Question title */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <svg className="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -168,10 +153,6 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
               >
                 {currentTitle}
               </h3>
-              {/* Very minimal indicator when loading */}
-              {isLoading && (
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-ping shrink-0" />
-              )}
             </div>
 
             {/* Middle: History Navigation Chevrons */}
@@ -209,46 +190,45 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
 
             {/* Right: Audio Play, Restart, Copy, Close */}
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Play / Pause Button */}
-              {currentAnswer && (
-                <button
-                  type="button"
-                  onClick={handleToggleAudio}
-                  aria-label={isCurrentAudioPlaying ? (isAmharic ? 'አቁም' : 'Pause audio') : (isAmharic ? 'አጫውት' : 'Play audio')}
-                  className="px-2 py-1 rounded-md bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-colors flex items-center gap-1 text-[11px] font-medium"
-                  title={isCurrentAudioPlaying ? (isAmharic ? 'አቁም' : 'Pause') : (isAmharic ? 'አጫውት' : 'Play')}
-                >
-                  {isCurrentAudioPlaying ? (
-                    <>
-                      <svg className="w-3 h-3 text-zinc-900 dark:text-zinc-100 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
-                      </svg>
-                      <span className="hidden sm:inline">{isAmharic ? 'አቁም' : 'Pause'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3 h-3 text-zinc-700 dark:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      </svg>
-                      <span className="hidden sm:inline">{isAmharic ? 'አጫውት' : 'Play'}</span>
-                    </>
-                  )}
-                </button>
-              )}
+              {/* Play / Restart Controls strictly in Voice Mode */}
+              {mode === 'voice' && currentAnswer && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleToggleAudio}
+                    aria-label={isVoiceSpeaking ? (isAmharic ? 'አቁም' : 'Pause audio') : (isAmharic ? 'አጫውት' : 'Play audio')}
+                    className="px-2 py-1 rounded-md bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 transition-colors flex items-center gap-1 text-[11px] font-medium"
+                    title={isVoiceSpeaking ? (isAmharic ? 'አቁም' : 'Pause') : (isAmharic ? 'አጫውት' : 'Play')}
+                  >
+                    {isVoiceSpeaking ? (
+                      <>
+                        <svg className="w-3 h-3 text-zinc-900 dark:text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
+                        </svg>
+                        <span className="hidden sm:inline">{isAmharic ? 'አቁም' : 'Pause'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3 h-3 text-zinc-700 dark:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        </svg>
+                        <span className="hidden sm:inline">{isAmharic ? 'አጫውት' : 'Play'}</span>
+                      </>
+                    )}
+                  </button>
 
-              {/* Audio Restart Button */}
-              {currentAnswer && (
-                <button
-                  type="button"
-                  onClick={handleRestart}
-                  aria-label={isAmharic ? 'እንደገና ጀምር' : 'Restart audio'}
-                  className="p-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  title={isAmharic ? 'እንደገና ጀምር' : 'Restart'}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleRestart}
+                    aria-label={isAmharic ? 'እንደገና ጀምር' : 'Restart audio'}
+                    className="p-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    title={isAmharic ? 'እንደገና ጀምር' : 'Restart'}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </>
               )}
 
               {/* Copy Button */}
@@ -287,16 +267,16 @@ export const SideQuestionModal: React.FC<SideQuestionModalProps> = ({
             </div>
           </div>
 
-          {/* Clean Explanation Body - No Chat Window, No Fluff, No Thinking Accordions */}
+          {/* Clean Explanation Body */}
           <div className="p-4 sm:p-5 overflow-y-auto max-h-[48vh] text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-            {currentAnswer ? (
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-zinc-400 py-3">
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-zinc-400 border-t-zinc-800 dark:border-t-zinc-200 animate-spin" />
+                <span className="text-[11px] font-sans">{isAmharic ? 'በማዘጋጀት ላይ...' : 'Generating explanation...'}</span>
+              </div>
+            ) : currentAnswer ? (
               <div className="whitespace-pre-wrap leading-relaxed space-y-2">
                 {currentAnswer}
-              </div>
-            ) : isLoading ? (
-              <div className="flex items-center gap-2 text-zinc-400 py-3">
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-ping" />
-                <span className="text-[11px] font-sans">{isAmharic ? 'በመጫን ላይ...' : 'Loading...'}</span>
               </div>
             ) : null}
           </div>

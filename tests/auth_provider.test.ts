@@ -9,6 +9,14 @@ import {
 } from '@/lib/sync/store';
 import type { CourseCurriculum, DynamicLessonNote } from '@/types';
 
+vi.mock('@/lib/supabase/client', () => ({
+  getSupabaseBrowserClient: () => null,
+}));
+
+vi.mock('@/lib/supabase/server', () => ({
+  getSupabaseServerClient: () => null,
+}));
+
 describe('Auth & Multi-Tenant Isolation Suite', () => {
   beforeEach(() => {
     localStorage.clear();

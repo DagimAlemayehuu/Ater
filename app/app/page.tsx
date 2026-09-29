@@ -974,7 +974,16 @@ export default function AterCognitiveStudio() {
     });
   }, [voiceBridge, handleFeynmanSubmit, loadLesson, activeNote?.title]);
 
-  if (isAuthLoading) {
+  const [sessionTimeoutReached, setSessionTimeoutReached] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSessionTimeoutReached(true);
+    }, 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (isAuthLoading && !sessionTimeoutReached) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#fbf7f0] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
         <div className="flex flex-col items-center gap-3">

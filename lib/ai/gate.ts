@@ -112,7 +112,7 @@ export async function generateInitialGateQuestions(
   const cleanTitle = stripEmojis(lessonTitle || 'Lesson').trim();
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     return generateFallbackGateQuestions(cleanTitle, language);
@@ -166,11 +166,11 @@ Respond ONLY with valid JSON:
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(6000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 1 },
             maxOutputTokens: 1200,
           },
         }),
@@ -268,7 +268,7 @@ export async function evaluateGateTurn(
   const hasTabooViolation = violatedTabooWords.length > 0;
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey || isUnknown || hasTabooViolation) {
     if (hasTabooViolation) {
@@ -544,11 +544,11 @@ Respond ONLY with valid JSON:
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(6000),
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 1 },
             maxOutputTokens: 1000,
           },
         }),

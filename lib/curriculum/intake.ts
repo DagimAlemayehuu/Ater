@@ -213,7 +213,7 @@ export interface AnalyzeIntakeOptions {
 const VALID_CATEGORIES: SocraticQuestionCategory[] = ['goal', 'baseline', 'depth', 'style', 'followup'];
 
 /**
- * Analyzes dual intake material (text prompt or multiple uploaded files) using gemini-3.5-flash-lite,
+ * Analyzes dual intake material (text prompt or multiple uploaded files) using gemini-3.1-flash-lite-preview,
  * extracting the learning topic and generating 3-5 calibrated Socratic discovery questions.
  */
 export async function analyzeIntakeMaterial(
@@ -279,7 +279,7 @@ export async function analyzeIntakeMaterial(
   if (!derivedTopic) derivedTopic = isAm ? 'የተሰራጩ ስርዓቶች' : 'Foundational Computing';
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
   if (useMock || !apiKey) {
     return generateFallbackIntake(derivedTopic, language);
@@ -369,12 +369,12 @@ Respond with ONLY valid JSON matching this schema:
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(8000),
         body: JSON.stringify({
           contents: [{ parts }],
           generationConfig: {
             responseMimeType: 'application/json',
-            maxOutputTokens: 600,
-            thinkingConfig: { thinkingBudget: 1 },
+            maxOutputTokens: 1500,
           },
         }),
       }
@@ -396,10 +396,16 @@ Respond with ONLY valid JSON matching this schema:
       return generateFallbackIntake(derivedTopic, language);
     }
 
-    const parsed = extractJsonFromResponse(rawText);
-    const resolvedTopic = stripEmojis(parsed.topic || derivedTopic).trim() || derivedTopic;
+    let parsed: any;
+    try {
+      parsed = extractJsonFromResponse(rawText);
+    } catch {
+      return generateFallbackIntake(derivedTopic, language);
+    }
+
+    const resolvedTopic = stripEmojis(parsed?.topic || derivedTopic).trim() || derivedTopic;
     const resolvedSummary = cleanContinuousProse(
-      stripEmojis(parsed.initialSummary || `An exploration of ${resolvedTopic} focusing on foundational mechanics.`)
+      stripEmojis(parsed?.initialSummary || `An exploration of ${resolvedTopic} focusing on foundational mechanics.`)
     );
 
     const rawQuestions: any[] = Array.isArray(parsed.questions) ? parsed.questions : [];

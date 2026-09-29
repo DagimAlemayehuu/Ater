@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
     const body = await req.json();
     const { curriculum, targetLanguage } = body;
@@ -98,6 +98,7 @@ CRITICAL INVARIANTS:
     const geminiRes = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10000),
       body: JSON.stringify({
         contents: [{ parts: [{ text: systemPrompt }] }],
         generationConfig: {

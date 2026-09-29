@@ -38,7 +38,7 @@ export const InputVoiceIndicator: React.FC<InputVoiceIndicatorProps> = ({
     );
   }
 
-  // 2. Listening / Recording State: ONLY dynamic pulsing/blinking dot icon
+  // 2. Listening / Recording State: Static indicator, zero blinking
   if (isListening) {
     return (
       <div
@@ -46,15 +46,14 @@ export const InputVoiceIndicator: React.FC<InputVoiceIndicatorProps> = ({
         className={`absolute z-10 pointer-events-none flex items-center justify-center p-1 rounded-md bg-zinc-100/90 dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-sm shadow-sm ${className}`}
         title={isAmharic ? 'እያዳመጠ ነው...' : 'Listening...'}
       >
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-zinc-600 dark:bg-zinc-300" />
+        <span className="relative flex h-2 w-2">
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
         </span>
       </div>
     );
   }
 
-  // 3. Speaking / TTS Playback State: ONLY dynamic audio wave pulse icon
+  // 3. Speaking / Audio Playback State: Clean audio icon, zero pulsing
   if (isSpeaking && isFocused) {
     return (
       <div
@@ -62,7 +61,7 @@ export const InputVoiceIndicator: React.FC<InputVoiceIndicatorProps> = ({
         className={`absolute z-10 pointer-events-none flex items-center justify-center p-1 rounded-md bg-zinc-100/90 dark:bg-zinc-800/90 border border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-sm shadow-sm ${className}`}
         title={isAmharic ? 'በመናገር ላይ...' : 'Speaking...'}
       >
-        <svg className="w-3 h-3 text-zinc-700 dark:text-zinc-200 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3 h-3 text-zinc-700 dark:text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
         </svg>
       </div>

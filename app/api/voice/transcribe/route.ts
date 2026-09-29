@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
     if (!apiKey) {
       return NextResponse.json({ error: 'Gemini API key is not configured' }, { status: 500 });
@@ -56,7 +56,7 @@ If Amharic: Output in proper Amharic Ge'ez script (ፊደል). Never translate A
 If English: Output in clear English.
 Return ONLY the raw transcribed text. No preambles, no quotes, no explanations.${languageHint ? ` Language hint: ${languageHint === 'am' ? 'Amharic' : 'English'}` : ''}`;
 
-    const candidateModels = ['gemini-flash-lite-latest', 'gemini-3.5-transcribe', 'gemini-3.5-flash-lite', model];
+    const candidateModels = ['gemini-flash-lite-latest', 'gemini-3.5-transcribe', 'gemini-3.1-flash-lite-preview', model];
     let lastError = '';
     let transcript = '';
 
